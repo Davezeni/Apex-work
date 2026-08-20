@@ -1,0 +1,43 @@
+{
+  "name": "apex-work",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Apex-Work — Ethiopia's most powerful freelance marketplace",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:web dev:api",
+    "dev:web": "npm --workspace @apex-work/web run dev",
+    "dev:api": "npm --workspace @apex-work/api run dev",
+    "build": "npm-run-all build:shared build:web build:api",
+    "build:shared": "npm --workspace @apex-work/shared run build",
+    "build:web": "npm --workspace @apex-work/web run build",
+    "build:api": "npm --workspace @apex-work/api run build",
+    "lint": "npm-run-all --parallel lint:*",
+    "lint:web": "npm --workspace @apex-work/web run lint",
+    "lint:api": "npm --workspace @apex-work/api run lint",
+    "typecheck": "npm-run-all --parallel typecheck:*",
+    "typecheck:web": "npm --workspace @apex-work/web run typecheck",
+    "typecheck:api": "npm --workspace @apex-work/api run typecheck",
+    "db:generate": "npm --workspace @apex-work/api run db:generate",
+    "db:migrate": "npm --workspace @apex-work/api run db:migrate",
+    "db:seed": "npm --workspace @apex-work/api run db:seed",
+    "db:studio": "npm --workspace @apex-work/api run db:studio",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,css}\"",
+    "clean": "rm -rf apps/*/node_modules apps/*/.next apps/*/dist packages/*/node_modules packages/*/dist node_modules",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
