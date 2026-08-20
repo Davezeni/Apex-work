@@ -1,0 +1,11 @@
+# Don't deploy the API — it belongs on Koyeb/Fly/Render.
+apps/api/
+
+# Docs and non-runtime files
+docs/
+*.md
+!apps/web/**/*.md
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
