@@ -1,0 +1,320 @@
+import { OTP_LENGTH, OTP_TTL_SECONDS, type UserRole } from '@apex-work/shared';
+import type { OtpPurpose, User } from '@prisma/client';
+import { prisma } from '../lib/prisma.js';
+import {
+  generateOtp,
+  hashPassword,
+  randomToken,
+  sha256,
+  verifyPassword,
+} from '../lib/hash.js';
+import { signAccessToken, signRefreshToken } from '../lib/jwt.js';
+import { env } from '../config/env.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '../lib/errors.js';
+import { redis } from '../lib/redis.js';
+import { sms } from './sms.service.js';
+import { logger } from '../config/logger.js';
+
+const OTP_TOKEN_PREFIX = 'otp-verified:'; // Redis key prefix
+const OTP_TOKEN_TTL_SEC = 15 * 60; // token to complete signup after OTP
+
+/**
+ * Convert an "expires-in" like "30d" / "15m" / "1h" to seconds.
+ * Only supports simple units — no ms lib needed.
+ */
+const parseDurationSec = (input: string): number => {
+  const m = /^(\d+)([smhdw])$/.exec(input);
+  if (!m) return 900;
+  const [, n, unit] = m;
+  const value = Number(n);
+  switch (unit) {
+    case 's': return value;
+    case 'm': return value * 60;
+    case 'h': return value * 3600;
+    case 'd': return value * 86400;
+    case 'w': return value * 604800;
+    default: return 900;
+  }
+};
+
+// ==========================================
+// OTP
+// ==========================================
+
+export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<void> => {
+  // Business rules:
+  // - SIGNUP: phone must NOT already have a user
+  // - LOGIN: phone MUST have a user
+  const existing = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
+  if (purpose === 'SIGNUP' && existing) {
+    throw new ConflictError('This phone number is already registered. Please sign in instead.');
+  }
+  if (purpose === 'LOGIN' && !existing) {
+    throw new NotFoundError('No account found for this phone number');
+  }
+
+  const code = generateOtp(OTP_LENGTH);
+  const codeHash = sha256(code);
+  const expiresAt = new Date(Date.now() + OTP_TTL_SECONDS * 1000);
+
+  // Invalidate any pending OTPs for this phone/purpose
+  await prisma.otp.updateMany({
+    where: { phone, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+    data: { consumedAt: new Date() },
+  });
+
+  await prisma.otp.create({ data: { phone, codeHash, purpose, expiresAt } });
+
+  const message = `Your Apex-Work code is ${code}. Valid for ${OTP_TTL_SECONDS / 60} minutes. Do not share.`;
+  const result = await sms.send(phone, message);
+  if (!result.ok) {
+    logger.warn({ phone }, 'SMS send failed, but OTP stored');
+  }
+};
+
+/**
+ * Verify OTP. On success, returns a short-lived token the client uses
+ * to complete signup or perform actions like password reset.
+ */
+export const verifyOtp = async (
+  phone: string,
+  code: string,
+): Promise<{ verifiedToken: string; userId: string | null }> => {
+  const codeHash = sha256(code);
+
+  // Grab most recent unconsumed OTP for phone
+  const otp = await prisma.otp.findFirst({
+    where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!otp) throw new BadRequestError('Code expired or invalid. Request a new one.');
+
+  // Constant-time compare via hash equality
+  if (otp.codeHash !== codeHash) {
+    // Track attempts; lock after N failures
+    const updated = await prisma.otp.update({
+      where: { id: otp.id },
+      data: { attempts: { increment: 1 } },
+    });
+    if (updated.attempts >= 5) {
+      await prisma.otp.update({
+        where: { id: otp.id },
+        data: { consumedAt: new Date() },
+      });
+      throw new BadRequestError('Too many wrong attempts. Request a new code.');
+    }
+    throw new BadRequestError('Incorrect code');
+  }
+
+  await prisma.otp.update({
+    where: { id: otp.id },
+    data: { consumedAt: new Date() },
+  });
+
+  const existing = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
+
+  // Issue a short-lived Redis-backed token so signup/reset flows can prove OTP passed
+  const verifiedToken = randomToken(24);
+  await redis.setex(
+    `${OTP_TOKEN_PREFIX}${verifiedToken}`,
+    OTP_TOKEN_TTL_SEC,
+    JSON.stringify({ phone, purpose: otp.purpose, userId: existing?.id ?? null }),
+  );
+
+  return { verifiedToken, userId: existing?.id ?? null };
+};
+
+const consumeVerifiedToken = async (token: string): Promise<{ phone: string; purpose: OtpPurpose; userId: string | null }> => {
+  const raw = await redis.get(`${OTP_TOKEN_PREFIX}${token}`);
+  if (!raw) throw new UnauthorizedError('Verification token expired. Restart the flow.');
+  await redis.del(`${OTP_TOKEN_PREFIX}${token}`);
+  return JSON.parse(raw) as { phone: string; purpose: OtpPurpose; userId: string | null };
+};
+
+// ==========================================
+// Sessions / Tokens
+// ==========================================
+
+const issueTokens = async (
+  user: Pick<User, 'id' | 'role'>,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const accessToken = signAccessToken({ sub: user.id, role: user.role as UserRole });
+  const jti = randomToken(16);
+  const refreshToken = signRefreshToken({ sub: user.id, jti });
+
+  const refreshExpiresMs = parseDurationSec(env.JWT_REFRESH_EXPIRES_IN) * 1000;
+
+  await prisma.refreshToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: sha256(jti), // store hash, not token
+      expiresAt: new Date(Date.now() + refreshExpiresMs),
+      userAgent: ctx.userAgent,
+      ipAddress: ctx.ipAddress,
+    },
+  });
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: parseDurationSec(env.JWT_ACCESS_EXPIRES_IN),
+  };
+};
+
+// ==========================================
+// Public API
+// ==========================================
+
+export interface SignupData {
+  phone: string;
+  otpToken: string;
+  fullName: string;
+  role: UserRole;
+  email?: string;
+  password?: string;
+  referralCode?: string;
+}
+
+const generateUniqueUsername = async (base: string): Promise<string> => {
+  const clean = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .slice(0, 20) || 'user';
+  // Try N times with a numeric suffix
+  for (let i = 0; i < 10; i++) {
+    const candidate = i === 0 ? clean : `${clean}${Math.floor(1000 + Math.random() * 9000)}`;
+    const exists = await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } });
+    if (!exists) return candidate;
+  }
+  return `${clean}${Date.now().toString(36)}`;
+};
+
+export const signup = async (data: SignupData, ctx: { userAgent?: string; ipAddress?: string }) => {
+  const verified = await consumeVerifiedToken(data.otpToken);
+  if (verified.phone !== data.phone) throw new UnauthorizedError('Token mismatch');
+  if (verified.userId) throw new ConflictError('Account already exists');
+
+  const passwordHash = data.password ? await hashPassword(data.password) : null;
+  const username = await generateUniqueUsername(data.fullName);
+
+  let referredById: string | null = null;
+  if (data.referralCode) {
+    const referrer = await prisma.user.findUnique({
+      where: { referralCode: data.referralCode },
+      select: { id: true },
+    });
+    referredById = referrer?.id ?? null;
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      phone: data.phone,
+      email: data.email ?? null,
+      passwordHash,
+      fullName: data.fullName,
+      username,
+      role: data.role,
+      isPhoneVerified: true,
+      referredById,
+      wallet: { create: {} },
+    },
+    select: { id: true, role: true },
+  });
+
+  const tokens = await issueTokens(user, ctx);
+  return { user, tokens };
+};
+
+export const loginWithOtp = async (
+  otpToken: string,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const verified = await consumeVerifiedToken(otpToken);
+  if (!verified.userId) throw new NotFoundError('User');
+
+  const user = await prisma.user.findUnique({
+    where: { id: verified.userId },
+    select: { id: true, role: true, isActive: true },
+  });
+  if (!user || !user.isActive) throw new UnauthorizedError('Account inactive');
+
+  const tokens = await issueTokens(user, ctx);
+  return { user, tokens };
+};
+
+export const loginWithPassword = async (
+  email: string,
+  password: string,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, role: true, passwordHash: true, isActive: true },
+  });
+  // Constant-time-ish: always run verify to avoid user-enumeration timing attack
+  const dummyHash = '$argon2id$v=19$m=19456,t=2,p=1$aaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const ok = await verifyPassword(user?.passwordHash ?? dummyHash, password).catch(() => false);
+  if (!user || !user.passwordHash || !ok) {
+    throw new UnauthorizedError('Invalid email or password');
+  }
+  if (!user.isActive) throw new UnauthorizedError('Account inactive');
+
+  const tokens = await issueTokens({ id: user.id, role: user.role }, ctx);
+  return { user: { id: user.id, role: user.role }, tokens };
+};
+
+export const refresh = async (
+  refreshTokenRaw: string,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  // We already verify JWT signature/expiry in the router via verifyRefreshToken()
+  // Here we handle rotation + DB revocation
+  const { verifyRefreshToken } = await import('../lib/jwt.js');
+  const decoded = verifyRefreshToken(refreshTokenRaw);
+  const stored = await prisma.refreshToken.findUnique({
+    where: { tokenHash: sha256(decoded.jti) },
+  });
+  if (!stored || stored.revokedAt || stored.expiresAt < new Date() || stored.userId !== decoded.sub) {
+    // Possible token reuse — revoke ALL user tokens (defensive)
+    if (stored?.userId) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: stored.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
+    throw new UnauthorizedError('Refresh token invalid or already used');
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: stored.userId },
+    select: { id: true, role: true, isActive: true },
+  });
+  if (!user?.isActive) throw new UnauthorizedError('Account inactive');
+
+  // Revoke old, issue new (rotation)
+  await prisma.refreshToken.update({
+    where: { id: stored.id },
+    data: { revokedAt: new Date() },
+  });
+  return issueTokens({ id: user.id, role: user.role }, ctx);
+};
+
+export const logout = async (refreshTokenRaw: string): Promise<void> => {
+  const { verifyRefreshToken } = await import('../lib/jwt.js');
+  try {
+    const decoded = verifyRefreshToken(refreshTokenRaw);
+    await prisma.refreshToken.updateMany({
+      where: { tokenHash: sha256(decoded.jti), revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+  } catch {
+    // ignore — logout is idempotent
+  }
+};

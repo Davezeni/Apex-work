@@ -1,0 +1,489 @@
+// =============================================================
+// Apex-Work — Prisma schema
+// PostgreSQL. Prefer cuid() IDs, timestamped rows, soft-delete
+// where user-facing, hard-delete for ephemeral tables.
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ================= ENUMS =================
+
+enum UserRole {
+  CLIENT
+  FREELANCER
+  ADMIN
+}
+
+enum OtpPurpose {
+  SIGNUP
+  LOGIN
+  RESET
+}
+
+enum GigStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum PackageTier {
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum OrderStatus {
+  PENDING       // Awaiting payment
+  ACTIVE        // Paid, freelancer working
+  IN_REVIEW     // Delivered, awaiting client approval
+  DELIVERED     // Approved
+  COMPLETED     // Funds released
+  CANCELLED
+  DISPUTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  ORDER_PAYMENT       // Client pays into escrow
+  ORDER_PAYOUT        // Escrow -> freelancer
+  ORDER_REFUND
+  WITHDRAWAL
+  PLATFORM_FEE
+  REFERRAL_BONUS
+}
+
+enum NotificationType {
+  ORDER_UPDATE
+  NEW_MESSAGE
+  NEW_BID
+  PAYMENT
+  SYSTEM
+  REVIEW
+}
+
+// ================= USERS =================
+
+model User {
+  id             String   @id @default(cuid())
+  phone          String   @unique
+  email          String?  @unique
+  passwordHash   String?  // null until user sets one (OTP-only accounts)
+  fullName       String
+  username       String   @unique
+  avatarUrl      String?
+  role           UserRole @default(CLIENT)
+
+  // Profile
+  bio            String?
+  title          String?  // e.g. "Senior UI Designer"
+  city           String?
+  country        String   @default("ET")
+  hourlyRateEtb  Int?
+  languages      String[] @default([])
+
+  // Verification & status
+  isPhoneVerified Boolean @default(false)
+  isEmailVerified Boolean @default(false)
+  isIdVerified   Boolean  @default(false)
+  isOnboarded    Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  suspendedAt    DateTime?
+
+  // Denormalized stats (rebuilt via triggers/jobs)
+  rating         Float    @default(0)
+  ratingCount    Int      @default(0)
+  completedOrders Int     @default(0)
+
+  // Referrals
+  referralCode   String   @unique @default(cuid())
+  referredById   String?
+  referredBy     User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals      User[]   @relation("Referrals")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastSeenAt     DateTime?
+
+  // Relations
+  skills         UserSkill[]
+  portfolio      PortfolioItem[]
+  gigs           Gig[]                @relation("GigOwner")
+  jobsPosted     Job[]                @relation("JobClient")
+  bidsPlaced     Bid[]
+  ordersAsClient Order[]              @relation("OrderClient")
+  ordersAsSeller Order[]              @relation("OrderSeller")
+  reviewsWritten Review[]             @relation("ReviewAuthor")
+  reviewsAbout   Review[]             @relation("ReviewSubject")
+  refreshTokens  RefreshToken[]
+  sessions       Session[]
+  conversations  ConversationMember[]
+  messages       Message[]
+  wallet         Wallet?
+  transactions   Transaction[]
+  notifications  Notification[]
+
+  @@index([role, isActive])
+  @@index([createdAt])
+  @@index([city])
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique // hash, never store raw
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  userAgent  String?
+  ipAddress  String?
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  device    String?
+  ipAddress String?
+  lastUsed  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Otp {
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String     // never store raw
+  purpose    OtpPurpose
+  attempts   Int        @default(0)
+  consumedAt DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose])
+  @@index([expiresAt])
+}
+
+// ================= SKILLS & PORTFOLIO =================
+
+model Skill {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  slug      String      @unique
+  category  String?
+
+  users     UserSkill[]
+
+  @@index([name])
+}
+
+model UserSkill {
+  userId  String
+  skillId String
+  level   Int    @default(1) // 1-5
+
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill   Skill  @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@index([skillId])
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  imageUrl    String
+  externalUrl String?
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+}
+
+// ================= GIGS =================
+
+model Gig {
+  id             String       @id @default(cuid())
+  ownerId        String
+  title          String
+  slug           String       @unique
+  categoryId     String
+  tags           String[]     @default([])
+  description    String       @db.Text
+  coverImageUrl  String?
+  galleryUrls    String[]     @default([])
+  status         GigStatus    @default(DRAFT)
+
+  // Denormalized aggregates
+  rating         Float        @default(0)
+  ratingCount    Int          @default(0)
+  ordersCount    Int          @default(0)
+  viewsCount     Int          @default(0)
+  startingPriceEtb Int        @default(0)
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  owner          User         @relation("GigOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  packages       GigPackage[]
+  orders         Order[]
+
+  @@index([ownerId])
+  @@index([categoryId, status])
+  @@index([status, rating(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model GigPackage {
+  id            String      @id @default(cuid())
+  gigId         String
+  tier          PackageTier
+  title         String
+  description   String
+  priceEtb      Int
+  deliveryDays  Int
+  revisions     Int         @default(0)
+
+  gig           Gig         @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@unique([gigId, tier])
+}
+
+// ================= JOBS (client posts) =================
+
+model Job {
+  id            String    @id @default(cuid())
+  clientId      String
+  title         String
+  categoryId    String
+  description   String    @db.Text
+  budgetMinEtb  Int?
+  budgetMaxEtb  Int?
+  requiredSkills String[] @default([])
+  isRemote      Boolean   @default(true)
+  isOpen        Boolean   @default(true)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  closedAt      DateTime?
+
+  client        User      @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
+  bids          Bid[]
+
+  @@index([clientId])
+  @@index([isOpen, createdAt(sort: Desc)])
+  @@index([categoryId, isOpen])
+}
+
+model Bid {
+  id            String   @id @default(cuid())
+  jobId         String
+  freelancerId  String
+  message       String   @db.Text
+  priceEtb      Int
+  deliveryDays  Int
+  createdAt     DateTime @default(now())
+  withdrawnAt   DateTime?
+
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  freelancer    User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, freelancerId])
+  @@index([freelancerId])
+}
+
+// ================= ORDERS & PAYMENTS =================
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique @default(cuid()) // for user-facing display
+  clientId        String
+  sellerId        String
+  gigId           String?
+  packageTier     PackageTier?
+  title           String
+  amountEtb       Int           // client-paid
+  platformFeeEtb  Int           // deducted from seller
+  sellerNetEtb    Int           // seller receives
+  status          OrderStatus   @default(PENDING)
+  deliveryDays    Int
+  requirements    String?       @db.Text
+  deliverables    Json?         // {files:[...], notes:''}
+  deadline        DateTime?
+  deliveredAt     DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  client          User          @relation("OrderClient", fields: [clientId], references: [id])
+  seller          User          @relation("OrderSeller", fields: [sellerId], references: [id])
+  gig             Gig?          @relation(fields: [gigId], references: [id])
+  payments        Payment[]
+  reviews         Review[]
+  conversation    Conversation?
+
+  @@index([clientId, status])
+  @@index([sellerId, status])
+  @@index([status])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  amountEtb       Int
+  provider        String        // "chapa"
+  providerRef     String?       @unique
+  method          String?       // "telebirr", "cbebirr", "card"
+  status          PaymentStatus @default(PENDING)
+  rawPayload      Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model Wallet {
+  id               String        @id @default(cuid())
+  userId           String        @unique
+  balanceEtb       Int           @default(0)
+  pendingEtb       Int           @default(0)  // held funds (in-review)
+  lifetimeEarnedEtb Int          @default(0)
+  updatedAt        DateTime      @updatedAt
+
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id           String          @id @default(cuid())
+  userId       String
+  type         TransactionType
+  amountEtb    Int             // signed (+ credit, - debit)
+  description  String
+  relatedId    String?         // orderId / paymentId
+  createdAt    DateTime        @default(now())
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([type])
+}
+
+// ================= REVIEWS =================
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String
+  authorId    String
+  subjectId   String
+  rating      Int      // 1-5
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  author      User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  subject     User     @relation("ReviewSubject", fields: [subjectId], references: [id])
+
+  @@unique([orderId, authorId])
+  @@index([subjectId, createdAt(sort: Desc)])
+}
+
+// ================= CHAT =================
+
+model Conversation {
+  id          String              @id @default(cuid())
+  orderId     String?             @unique
+  isGroup     Boolean             @default(false)
+  title       String?             // groups
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  lastMessageAt DateTime?
+
+  order       Order?              @relation(fields: [orderId], references: [id])
+  members     ConversationMember[]
+  messages    Message[]
+
+  @@index([lastMessageAt(sort: Desc)])
+}
+
+model ConversationMember {
+  conversationId String
+  userId         String
+  joinedAt       DateTime @default(now())
+  lastReadAt     DateTime?
+  isMuted        Boolean  @default(false)
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id              String       @id @default(cuid())
+  conversationId  String
+  senderId        String
+  body            String?      @db.Text
+  attachmentUrl   String?
+  attachmentType  String?      // image, audio, video, file
+  attachmentMeta  Json?        // {size, duration, name...}
+  replyToId       String?
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime     @default(now())
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User         @relation(fields: [senderId], references: [id])
+  replyTo         Message?     @relation("MessageReply", fields: [replyToId], references: [id])
+  replies         Message[]    @relation("MessageReply")
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([senderId])
+}
+
+// ================= NOTIFICATIONS =================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String?
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt(sort: Desc)])
+}
