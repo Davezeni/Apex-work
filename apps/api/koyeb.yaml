@@ -1,0 +1,45 @@
+# Koyeb service definition for Apex-Work API
+# Deploy: `koyeb app init apex-work-api --git github.com/Davezeni/Apex-work --git-branch main`
+# Docs: https://www.koyeb.com/docs
+
+name: apex-work-api
+type: web
+
+git:
+  branch: main
+  build_command: |
+    npm install
+    npm --workspace @apex-work/api run db:generate
+    npm --workspace @apex-work/api run build
+  run_command: node apps/api/dist/server.js
+  workdir: /
+
+ports:
+  - port: 4000
+    protocol: http
+
+routes:
+  - path: /
+
+health_check:
+  http:
+    path: /v1/health
+    port: 4000
+
+instance_types:
+  - type: free # eco tier, always-on
+
+regions:
+  - fra # Frankfurt — closest to Ethiopia
+
+scaling:
+  min: 1
+  max: 1
+
+env:
+  - key: NODE_ENV
+    value: production
+  - key: API_PORT
+    value: "4000"
+  # Set these as secrets in Koyeb dashboard:
+  # DATABASE_URL, JWT_SECRET, REDIS_URL, CHAPA_SECRET_KEY, AFROMESSAGE_API_KEY, etc.
