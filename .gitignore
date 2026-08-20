@@ -68,3 +68,4 @@ logs/
 # Local storage
 uploads/
 tmp/
+.env*
