@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, USER_ROLES } from '../constants';
+import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, USER_ROLES } from '../constants/index.js';
 
 /** Ethiopian mobile phone: +2519XXXXXXXX / +2517XXXXXXXX */
 export const phoneSchema = z

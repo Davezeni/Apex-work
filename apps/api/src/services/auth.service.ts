@@ -258,9 +258,10 @@ export const loginWithPassword = async (
     where: { email },
     select: { id: true, role: true, passwordHash: true, isActive: true },
   });
-  // Constant-time-ish: always run verify to avoid user-enumeration timing attack
-  const dummyHash = '$argon2id$v=19$m=19456,t=2,p=1$aaaaaaaaaaaaaaaaaaaaaa$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const ok = await verifyPassword(user?.passwordHash ?? dummyHash, password).catch(() => false);
+  // Constant-time-ish: always run verify to avoid user-enumeration timing attacks.
+  // Dummy bcrypt hash of a random string — verify will fail but takes similar time.
+  const DUMMY_BCRYPT = '$2a$12$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUV';
+  const ok = await verifyPassword(user?.passwordHash ?? DUMMY_BCRYPT, password).catch(() => false);
   if (!user || !user.passwordHash || !ok) {
     throw new UnauthorizedError('Invalid email or password');
   }

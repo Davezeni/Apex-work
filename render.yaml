@@ -1,0 +1,65 @@
+# Render Blueprint — deploys the Apex-Work API.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# One-click deploy: connect this repo in Render dashboard, and Render will
+# detect this file and provision the service automatically.
+
+services:
+  - type: web
+    name: apex-work-api
+    runtime: node
+    plan: free # 512 MB RAM, sleeps after 15 min idle
+    region: frankfurt # Closest to Ethiopia
+    branch: main
+    autoDeploy: true
+
+    # Build: install deps, build shared, generate Prisma client, compile API
+    buildCommand: |
+      npm ci --include=dev
+      npm --workspace @apex-work/shared run build
+      npm --workspace @apex-work/api run db:generate
+      npm --workspace @apex-work/api run build
+
+    # Start: run the compiled server
+    startCommand: node apps/api/dist/server.js
+
+    # Render sets PORT automatically; our server reads it
+    healthCheckPath: /v1/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false" # keep devDeps for prisma generate & tsc
+
+      # Secrets — set these in the Render dashboard, do NOT commit values here
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true # Render generates a secure random value
+      - key: JWT_ACCESS_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: BCRYPT_ROUNDS
+        value: "12"
+      - key: CORS_ORIGINS
+        value: https://apex-work-gold.vercel.app,http://localhost:3000
+      - key: WEB_URL
+        value: https://apex-work-gold.vercel.app
+      - key: AFROMESSAGE_API_KEY
+        sync: false
+      - key: AFROMESSAGE_IDENTIFIER_ID
+        sync: false
+      - key: AFROMESSAGE_SENDER
+        value: ApexWork
+      - key: CHAPA_SECRET_KEY
+        sync: false
+      - key: CHAPA_PUBLIC_KEY
+        sync: false
+      - key: CHAPA_WEBHOOK_SECRET
+        generateValue: true

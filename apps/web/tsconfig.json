@@ -19,12 +19,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@apex-work/shared": [
-        "../../packages/shared/src/index.ts"
-      ],
-      "@apex-work/shared/*": [
-        "../../packages/shared/src/*"
       ]
     },
     "allowJs": true

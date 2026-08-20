@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CATEGORIES, MAX_GIG_PRICE_ETB, MIN_GIG_PRICE_ETB } from '../constants';
+import { CATEGORIES, MAX_GIG_PRICE_ETB, MIN_GIG_PRICE_ETB } from '../constants/index.js';
 
 const categoryIds = CATEGORIES.map((c) => c.id) as [string, ...string[]];
 

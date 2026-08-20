@@ -47,8 +47,10 @@ const start = async (): Promise<void> => {
     // We initialize lazily — errors here shouldn't kill the API
     initSocket(httpServer).catch((err) => logger.error({ err }, 'Socket init failed'));
 
-    httpServer.listen(env.API_PORT, '0.0.0.0', () => {
-      logger.info(`🚀 API listening on http://0.0.0.0:${env.API_PORT} (${env.NODE_ENV})`);
+    // Prefer PORT (set by Render/Koyeb/Fly/Heroku); fall back to API_PORT for local dev.
+    const port = env.PORT ?? env.API_PORT;
+    httpServer.listen(port, '0.0.0.0', () => {
+      logger.info(`🚀 API listening on http://0.0.0.0:${port} (${env.NODE_ENV})`);
     });
   } catch (err) {
     logger.fatal({ err }, 'Failed to start');

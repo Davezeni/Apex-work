@@ -4,7 +4,11 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
-    "composite": true
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
   },
   "include": ["src/**/*"]
 }
