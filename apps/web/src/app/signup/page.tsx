@@ -24,9 +24,11 @@ export default function SignupPage() {
 
 function SignupInner() {
   const params = useSearchParams();
-  const [step, setStep] = useState<Step>('role');
+  // Prefill phone from URL (e.g. redirected from /login when no account exists)
+  const phoneFromQuery = params.get('phone');
+  const [step, setStep] = useState<Step>(phoneFromQuery ? 'phone' : 'role');
   const [role, setRole] = useState<UserRole>((params.get('role') as UserRole) ?? 'CLIENT');
-  const [phone, setPhone] = useState('+251');
+  const [phone, setPhone] = useState(phoneFromQuery ?? '+251');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState('');
   const [fullName, setFullName] = useState('');

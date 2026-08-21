@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
 import { useAuthStore } from '@/stores/auth-store';
 
-type Step = 'phone' | 'otp';
+type Step = 'phone' | 'otp' | 'no-account';
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('phone');
@@ -33,7 +33,12 @@ export default function LoginPage() {
       toast.success('Code sent to your phone');
     } catch (err) {
       const e = err as ApiError;
-      toast.error(e.message ?? 'Failed to send code');
+      // Special case: phone not registered → show sign-up CTA instead of raw error toast
+      if (e.code === 'ACCOUNT_NOT_FOUND') {
+        setStep('no-account');
+      } else {
+        toast.error(e.message ?? 'Failed to send code');
+      }
     } finally {
       setLoading(false);
     }
@@ -131,6 +136,37 @@ export default function LoginPage() {
                   Create an account
                 </Link>
               </p>
+            </motion.div>
+          ) : step === 'no-account' ? (
+            <motion.div
+              key="no-account"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="grad-hero mb-6 grid h-14 w-14 place-items-center rounded-2xl text-white">
+                <UserPlus className="h-7 w-7" />
+              </div>
+              <h1 className="text-3xl font-extrabold tracking-tight">No account yet</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                We couldn&apos;t find an account for{' '}
+                <span className="font-semibold text-foreground">{phone}</span>. Would you like to
+                create one?
+              </p>
+
+              <Button asChild variant="brand" size="lg" className="mt-8 w-full">
+                <Link href={`/signup?phone=${encodeURIComponent(phone)}`}>
+                  Create account <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+
+              <button
+                onClick={() => setStep('phone')}
+                className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                Use a different phone number
+              </button>
             </motion.div>
           ) : (
             <motion.div

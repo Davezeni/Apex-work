@@ -55,7 +55,13 @@ export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<vo
     throw new ConflictError('This phone number is already registered. Please sign in instead.');
   }
   if (purpose === 'LOGIN' && !existing) {
-    throw new NotFoundError('No account found for this phone number');
+    // Use a specific code so the frontend can offer "Create an account?" fallback.
+    const { AppError } = await import('../lib/errors.js');
+    throw new AppError(
+      'No account found for this phone. Sign up to create one.',
+      404,
+      'ACCOUNT_NOT_FOUND',
+    );
   }
 
   const code = generateOtp(OTP_LENGTH);
