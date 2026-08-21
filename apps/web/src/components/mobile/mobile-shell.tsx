@@ -7,6 +7,7 @@ import { Home, Search, MessageCircle, User, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Drawer } from 'vaul';
 import { cn } from '@/lib/utils';
+import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
 
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
@@ -28,6 +29,9 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  // Auto-redirect freelancers who haven't finished onboarding.
+  useOnboardingGuard();
 
   const currentTab: MobileTab | undefined =
     activeTab ??
