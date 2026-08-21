@@ -9,6 +9,8 @@ import usersRoutes from './users.routes.js';
 import ordersRoutes from './orders.routes.js';
 import paymentsRoutes from './payments.routes.js';
 import notificationsRoutes from './notifications.routes.js';
+import passkeyRoutes from './passkey.routes.js';
+import devicesRoutes from './devices.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -47,7 +49,9 @@ router.get('/ready', async (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/auth/passkey', passkeyRoutes);
 router.use('/me', meRoutes);
+router.use('/me/devices', devicesRoutes);
 router.use('/gigs', gigsRoutes);
 router.use('/skills', skillsRoutes);
 router.use('/onboarding', onboardingRoutes);

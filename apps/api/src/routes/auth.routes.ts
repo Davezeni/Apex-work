@@ -1,22 +1,33 @@
 import { Router } from 'express';
 import {
   loginSchema,
+  loginWithPinSchema,
   refreshSchema,
   requestOtpSchema,
+  setPinSchema,
   signupSchema,
+  trustedDeviceLoginSchema,
   verifyOtpSchema,
 } from '@apex-work/shared';
 import { validate } from '../middleware/validate.js';
-import { authLimiter, otpLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, otpLimiter, pinLimiter } from '../middleware/rateLimit.js';
+import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { success } from '../lib/response.js';
+import { BadRequestError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
 
 const router: Router = Router();
 
-const clientCtx = (req: Parameters<typeof asyncHandler>[0] extends never ? never : Parameters<Parameters<typeof asyncHandler>[0]>[0]) => ({
-  userAgent: (req as { headers: Record<string, string | undefined> }).headers?.['user-agent'],
-  ipAddress: (req as { ip?: string }).ip,
+/**
+ * Extract user-agent + IP for audit fields on tokens and trusted devices.
+ * Kept type-loose because Express's Request typings don't play nice with
+ * cross-cutting helpers.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const clientCtx = (req: any) => ({
+  userAgent: req?.headers?.['user-agent'],
+  ipAddress: req?.ip,
 });
 
 router.post(
@@ -24,10 +35,9 @@ router.post(
   otpLimiter,
   validate(requestOtpSchema),
   asyncHandler(async (req, res) => {
-    const { phone, purpose } = req.body as import('@apex-work/shared').RequestOtpInput;
-    await authService.requestOtp(phone, purpose);
-    // Never confirm existence of user in this response
-    return success(res, { sent: true });
+    const body = req.body as import('@apex-work/shared').RequestOtpInput;
+    const result = await authService.requestOtp(body.phone, body.purpose, body.deviceToken);
+    return success(res, result);
   }),
 );
 
@@ -58,9 +68,66 @@ router.post(
   authLimiter,
   asyncHandler(async (req, res) => {
     const { otpToken } = req.body as { otpToken: string };
-    if (!otpToken) throw new (await import('../lib/errors.js')).BadRequestError('otpToken required');
+    if (!otpToken) throw new BadRequestError('otpToken required');
     const result = await authService.loginWithOtp(otpToken, clientCtx(req));
     return success(res, result);
+  }),
+);
+
+/**
+ * Skip-OTP login using a device token minted on a previous OTP verification.
+ * The token is stored client-side (localStorage) and hashed server-side.
+ */
+router.post(
+  '/login/trusted-device',
+  authLimiter,
+  validate(trustedDeviceLoginSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').TrustedDeviceLoginInput;
+    const result = await authService.loginWithTrustedDevice(
+      body.phone,
+      body.deviceToken,
+      clientCtx(req),
+    );
+    return success(res, result);
+  }),
+);
+
+/** PIN-based repeat login (also requires a trusted device). */
+router.post(
+  '/login/pin',
+  pinLimiter,
+  validate(loginWithPinSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').LoginWithPinInput;
+    const result = await authService.loginWithPin(
+      body.phone,
+      body.pin,
+      body.deviceToken,
+      clientCtx(req),
+    );
+    return success(res, result);
+  }),
+);
+
+/** Set / replace the current user's PIN. */
+router.post(
+  '/pin',
+  requireAuth,
+  validate(setPinSchema),
+  asyncHandler(async (req, res) => {
+    const { pin } = req.body as import('@apex-work/shared').SetPinInput;
+    await authService.setPin(req.user!.sub, pin);
+    return success(res, { ok: true });
+  }),
+);
+
+router.delete(
+  '/pin',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    await authService.removePin(req.user!.sub);
+    return success(res, { ok: true });
   }),
 );
 

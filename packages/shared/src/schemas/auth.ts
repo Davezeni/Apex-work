@@ -21,8 +21,17 @@ export const passwordSchema = z
 export const requestOtpSchema = z.object({
   phone: phoneSchema,
   purpose: z.enum(['SIGNUP', 'LOGIN', 'RESET']).default('LOGIN'),
+  /** If present + matches a trusted device on record, no OTP is sent. */
+  deviceToken: z.string().min(20).max(200).optional(),
 });
 export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
+
+/** Skip-OTP login using a previously-issued trusted-device token. */
+export const trustedDeviceLoginSchema = z.object({
+  phone: phoneSchema,
+  deviceToken: z.string().min(20).max(200),
+});
+export type TrustedDeviceLoginInput = z.infer<typeof trustedDeviceLoginSchema>;
 
 /** Verify OTP */
 export const verifyOtpSchema = z.object({

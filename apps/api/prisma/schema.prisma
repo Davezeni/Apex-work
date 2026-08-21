@@ -83,6 +83,7 @@ model User {
   phone          String   @unique
   email          String?  @unique
   passwordHash   String?  // null until user sets one (OTP-only accounts)
+  pinHash        String?  // Argon2 hash of a 6-digit PIN, optional shortcut for repeat logins
   fullName       String
   username       String   @unique
   avatarUrl      String?
@@ -131,6 +132,8 @@ model User {
   reviewsAbout   Review[]             @relation("ReviewSubject")
   refreshTokens  RefreshToken[]
   sessions       Session[]
+  trustedDevices TrustedDevice[]
+  passkeys       Passkey[]
   conversations  ConversationMember[]
   messages       Message[]
   wallet         Wallet?
@@ -486,4 +489,51 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt(sort: Desc)])
+}
+
+// ================= TRUSTED DEVICES =================
+
+/// A device the user has verified once via OTP. Presenting a valid device
+/// token lets them skip OTP on subsequent logins from the same phone.
+/// We store only a HASH of the token — the raw value lives in the browser's
+/// localStorage. Compromising the DB reveals nothing usable.
+model TrustedDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  tokenHash    String   @unique  // sha256 of the device token
+  label        String?          // "iPhone 14 · Chrome" (from UA parsing)
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime @default(now())
+  expiresAt    DateTime         // rolling 30-day window
+  revokedAt    DateTime?
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ================= PASSKEYS (WebAuthn) =================
+
+/// FIDO2 / WebAuthn credentials for biometric login (Face ID, fingerprint,
+/// Windows Hello, hardware keys). Stored per user; a user may register
+/// multiple passkeys (one per device / browser).
+model Passkey {
+  id              String   @id @default(cuid())
+  userId          String
+  credentialId    String   @unique  // base64url-encoded credential id
+  publicKey       String            // base64url-encoded COSE public key
+  counter         BigInt   @default(0)
+  transports      String[] @default([]) // 'internal', 'usb', 'nfc', 'ble'
+  deviceType      String?           // 'singleDevice' | 'multiDevice'
+  backedUp        Boolean  @default(false)
+  label           String?           // "iPhone Face ID"
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

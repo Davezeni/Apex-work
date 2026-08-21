@@ -63,27 +63,36 @@ export function useMe() {
   };
 }
 
-/** Logout mutation — calls API to revoke refresh token, then clears local state. */
+/**
+ * Sign out.
+ *
+ * By default we KEEP the trusted-device token so the user can sign back in
+ * with one tap (Telegram / WhatsApp behaviour). Callers that want a full
+ * scrub — e.g. "Forget this device" on a shared computer — should call
+ * `logout(true)`.
+ */
 export function useLogout() {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const clear = useAuthStore((s) => s.clear);
+  const clearAndForgetDevice = useAuthStore((s) => s.clearAndForgetDevice);
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  return useMutation({
-    mutationFn: async () => {
-      // Best-effort: revoke on server so the refresh token can't be reused.
-      // Ignore errors — client-side logout must always succeed.
+  return useMutation<{ forgetDevice: boolean }, unknown, boolean | undefined>({
+    mutationFn: async (forgetDevice) => {
+      // Best-effort: revoke the refresh token so it can't be reused server-side.
+      // Never let a network error block the client-side logout.
       if (refreshToken) {
         await apiFetch('/auth/logout', {
           method: 'POST',
           body: { refreshToken },
         }).catch(() => undefined);
       }
+      return { forgetDevice: !!forgetDevice };
     },
-    onSettled: () => {
-      // Always run these, even if the API call failed.
-      clear();
+    onSettled: (data) => {
+      if (data?.forgetDevice) clearAndForgetDevice();
+      else clear();
       queryClient.clear();
       // Hard reload — guarantees every component re-reads from fresh state
       // and any stale in-memory data is gone.

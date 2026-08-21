@@ -63,3 +63,15 @@ export const otpLimiter = makeLimiter('otp', RATE_LIMITS.otp.window, RATE_LIMITS
   },
 });
 export const apiLimiter = makeLimiter('api', RATE_LIMITS.api.window, RATE_LIMITS.api.max);
+
+/**
+ * PIN-specific limiter. PINs have only 1M possible values (6 digits), so an
+ * attacker with a stolen device token could brute-force in minutes without
+ * throttling. Cap PIN attempts at 10 per hour per phone.
+ */
+export const pinLimiter = makeLimiter('pin', 60 * 60 * 1000, 10, {
+  keyGenerator: (req) => {
+    const body = req.body as { phone?: string } | undefined;
+    return body?.phone ?? req.ip ?? 'unknown';
+  },
+});

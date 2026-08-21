@@ -15,6 +15,7 @@ import {
   Sparkles,
   Package,
   Bell,
+  ShieldCheck,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -142,6 +143,12 @@ export default function ProfilePage() {
           subtitle="Mon–Fri · 9AM–6PM"
         />
         <MenuItem
+          icon={<ShieldCheck className="h-4 w-4" />}
+          title="Security"
+          subtitle="PIN, biometrics, devices"
+          href="/settings/security"
+        />
+        <MenuItem
           icon={<Settings className="h-4 w-4" />}
           title={t('profile.settings')}
           subtitle={t('language.label')}
@@ -155,7 +162,7 @@ export default function ProfilePage() {
             )
           }
           title={logout.isPending ? t('common.signingOut') : t('common.signOut')}
-          onClick={() => !logout.isPending && logout.mutate()}
+          onClick={() => !logout.isPending && logout.mutate(false)}
           destructive
           disabled={logout.isPending}
         />

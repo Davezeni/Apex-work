@@ -94,11 +94,12 @@ function SignupInner() {
         method: 'POST',
         body: { phone, otpToken, fullName: fullName.trim(), role },
       });
-      setSession(result.tokens);
+      setSession(result.tokens, phone);
       toast.success(`Welcome to Apex-Work, ${fullName.split(' ')[0]}!`);
-      // Freelancers finish setting up their profile before landing on Home.
-      // Clients skip straight to the feed — they can browse right away.
-      router.push(role === 'FREELANCER' ? '/onboarding' : '/');
+      // Offer to set a PIN so the next login skips the SMS step. It routes
+      // onward to onboarding (freelancer) or home (client) via ?next=.
+      const next = role === 'FREELANCER' ? '/onboarding' : '/';
+      router.push(`/settings/pin?next=${encodeURIComponent(next)}`);
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Signup failed');
     } finally {

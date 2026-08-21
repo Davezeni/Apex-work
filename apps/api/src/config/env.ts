@@ -46,6 +46,14 @@ const envSchema = z.object({
   GEMINI_API_KEY: z.string().optional(),
 
   SENTRY_DSN: z.string().optional(),
+
+  // WebAuthn (passkeys / biometric login).
+  // RP_ID must be the domain WITHOUT scheme or port (e.g. "apex-work-gold.vercel.app").
+  // RP_ORIGIN is the full https origin the browser sees.
+  // In dev, RP_ID='localhost' and RP_ORIGIN='http://localhost:3000'.
+  WEBAUTHN_RP_ID: z.string().optional(),
+  WEBAUTHN_RP_NAME: z.string().default('Apex-Work'),
+  WEBAUTHN_RP_ORIGIN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

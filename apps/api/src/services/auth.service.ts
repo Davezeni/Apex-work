@@ -19,6 +19,10 @@ import {
 import { redis } from '../lib/redis.js';
 import { sms } from './sms.service.js';
 import { logger } from '../config/logger.js';
+import {
+  findUserByTrustedDevice,
+  issueTrustedDevice,
+} from './trustedDevice.service.js';
 
 const OTP_TOKEN_PREFIX = 'otp-verified:'; // Redis key prefix
 const OTP_TOKEN_TTL_SEC = 15 * 60; // token to complete signup after OTP
@@ -46,11 +50,27 @@ const parseDurationSec = (input: string): number => {
 // OTP
 // ==========================================
 
-export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<void> => {
+export interface RequestOtpResult {
+  /** true if we actually sent an SMS; false if the device is trusted (skip OTP). */
+  sent: boolean;
+  /** Set when sent=false — client should call POST /auth/login/trusted-device to complete login. */
+  deviceTrusted?: boolean;
+  /** Set when we already know who this is (for the client to show "signing in as X" hint). */
+  hasPin?: boolean;
+}
+
+export const requestOtp = async (
+  phone: string,
+  purpose: OtpPurpose,
+  deviceToken?: string,
+): Promise<RequestOtpResult> => {
   // Business rules:
   // - SIGNUP: phone must NOT already have a user
   // - LOGIN: phone MUST have a user
-  const existing = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
+  const existing = await prisma.user.findUnique({
+    where: { phone },
+    select: { id: true, pinHash: true },
+  });
   if (purpose === 'SIGNUP' && existing) {
     throw new ConflictError('This phone number is already registered. Please sign in instead.');
   }
@@ -62,6 +82,16 @@ export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<vo
       404,
       'ACCOUNT_NOT_FOUND',
     );
+  }
+
+  // Fast path for LOGIN: if the caller has a trusted-device token for this
+  // phone, tell them to complete via the trusted-device endpoint — no SMS,
+  // no cost, no friction.
+  if (purpose === 'LOGIN' && existing && deviceToken) {
+    const trustedUser = await findUserByTrustedDevice(phone, deviceToken);
+    if (trustedUser) {
+      return { sent: false, deviceTrusted: true, hasPin: !!existing.pinHash };
+    }
   }
 
   const code = generateOtp(OTP_LENGTH);
@@ -83,14 +113,13 @@ export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<vo
     // will never receive the code. Surface it as a service unavailability.
     // In dev (console provider) result.ok is always true.
     logger.error({ phone, provider: sms.name, error: result.error }, 'SMS delivery failed');
-    // Still store the OTP so an operator can retrieve it from logs / DB if needed
-    // But tell the client so they don't wait forever.
     throw new (await import('../lib/errors.js')).AppError(
       'We could not send an SMS to that number. Please try again in a moment.',
       503,
       'SMS_DELIVERY_FAILED',
     );
   }
+  return { sent: true, hasPin: !!existing?.pinHash };
 };
 
 /**
@@ -212,6 +241,22 @@ const generateUniqueUsername = async (base: string): Promise<string> => {
   return `${clean}${Date.now().toString(36)}`;
 };
 
+/**
+ * Combined helper: issue JWT tokens AND mint a trusted-device token so the
+ * next login on this browser skips OTP entirely. Called from signup, OTP
+ * login, and trusted-device login — one place, one behaviour.
+ */
+const issueTokensAndTrustDevice = async (
+  user: Pick<User, 'id' | 'role'>,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const [tokens, device] = await Promise.all([
+    issueTokens(user, ctx),
+    issueTrustedDevice({ userId: user.id, userAgent: ctx.userAgent, ipAddress: ctx.ipAddress }),
+  ]);
+  return { ...tokens, deviceToken: device.deviceToken, deviceExpiresAt: device.expiresAt };
+};
+
 export const signup = async (data: SignupData, ctx: { userAgent?: string; ipAddress?: string }) => {
   const verified = await consumeVerifiedToken(data.otpToken);
   if (verified.phone !== data.phone) throw new UnauthorizedError('Token mismatch');
@@ -244,7 +289,7 @@ export const signup = async (data: SignupData, ctx: { userAgent?: string; ipAddr
     select: { id: true, role: true },
   });
 
-  const tokens = await issueTokens(user, ctx);
+  const tokens = await issueTokensAndTrustDevice(user, ctx);
   return { user, tokens };
 };
 
@@ -261,8 +306,68 @@ export const loginWithOtp = async (
   });
   if (!user || !user.isActive) throw new UnauthorizedError('Account inactive');
 
-  const tokens = await issueTokens(user, ctx);
+  const tokens = await issueTokensAndTrustDevice(user, ctx);
   return { user, tokens };
+};
+
+/**
+ * OTP-free login: caller presents a valid trusted-device token.
+ * Trust was established during a prior full OTP flow on this browser.
+ */
+export const loginWithTrustedDevice = async (
+  phone: string,
+  deviceToken: string,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const user = await findUserByTrustedDevice(phone, deviceToken);
+  if (!user) throw new UnauthorizedError('Device is not trusted or has expired');
+  // issueTokens (not issueTokensAndTrustDevice) — the device is ALREADY trusted;
+  // rolling extension happened inside findUserByTrustedDevice.
+  const tokens = await issueTokens({ id: user.id, role: user.role as UserRole }, ctx);
+  return { user: { id: user.id, role: user.role }, tokens };
+};
+
+// ==========================================
+// PIN
+// ==========================================
+
+/**
+ * Set (or replace) the user's 6-digit PIN.
+ * Rate-limited at the route layer; here we just hash & store.
+ */
+export const setPin = async (userId: string, pin: string): Promise<void> => {
+  const pinHash = await hashPassword(pin);
+  await prisma.user.update({ where: { id: userId }, data: { pinHash } });
+};
+
+/** Remove the user's PIN (they can always set a new one). */
+export const removePin = async (userId: string): Promise<void> => {
+  await prisma.user.update({ where: { id: userId }, data: { pinHash: null } });
+};
+
+/**
+ * Verify a PIN against a stored device token. Used for repeat-visit login.
+ * Requires BOTH:
+ *   - deviceToken must be trusted for the phone (same as trusted-device login)
+ *   - PIN must match the user's stored hash
+ * We check device first so an unknown attacker can't brute-force via arbitrary
+ * phone numbers.
+ *
+ * On success, mints a fresh session and rolls the device.
+ */
+export const loginWithPin = async (
+  phone: string,
+  pin: string,
+  deviceToken: string,
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const user = await findUserByTrustedDevice(phone, deviceToken);
+  if (!user) throw new UnauthorizedError('Device is not trusted or has expired');
+  if (!user.pinHash) throw new UnauthorizedError('No PIN is set for this account');
+  const ok = await verifyPassword(user.pinHash, pin).catch(() => false);
+  if (!ok) throw new UnauthorizedError('Incorrect PIN');
+  const tokens = await issueTokens({ id: user.id, role: user.role as UserRole }, ctx);
+  return { user: { id: user.id, role: user.role }, tokens };
 };
 
 export const loginWithPassword = async (

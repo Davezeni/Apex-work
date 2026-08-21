@@ -73,3 +73,13 @@ services:
         # Set to the value shown in Chapa dashboard when you configure the
         # webhook URL. Leave empty in test mode; production should always have one.
         sync: false
+
+      # WebAuthn / passkeys — must exactly match the web app's origin.
+      # RP_ID = the domain (no scheme, no port). RP_ORIGIN = the full https origin.
+      # Update these if you move to a custom domain.
+      - key: WEBAUTHN_RP_ID
+        value: apex-work-gold.vercel.app
+      - key: WEBAUTHN_RP_ORIGIN
+        value: https://apex-work-gold.vercel.app
+      - key: WEBAUTHN_RP_NAME
+        value: Apex-Work
