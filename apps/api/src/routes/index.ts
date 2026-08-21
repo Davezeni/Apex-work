@@ -11,6 +11,8 @@ import paymentsRoutes from './payments.routes.js';
 import notificationsRoutes from './notifications.routes.js';
 import passkeyRoutes from './passkey.routes.js';
 import devicesRoutes from './devices.routes.js';
+import uploadsRoutes from './uploads.routes.js';
+import portfolioRoutes from './portfolio.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -52,6 +54,8 @@ router.use('/auth', authRoutes);
 router.use('/auth/passkey', passkeyRoutes);
 router.use('/me', meRoutes);
 router.use('/me/devices', devicesRoutes);
+router.use('/me/portfolio', portfolioRoutes);
+router.use('/uploads', uploadsRoutes);
 router.use('/gigs', gigsRoutes);
 router.use('/skills', skillsRoutes);
 router.use('/onboarding', onboardingRoutes);

@@ -66,16 +66,25 @@ export function useMessages(conversationId: string | undefined) {
   });
 }
 
+export interface SendMessagePayload {
+  body?: string;
+  attachmentUrl?: string;
+  attachmentType?: 'image' | 'audio' | 'video' | 'file';
+}
+
 export function useSendMessage(conversationId: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
+    mutationFn: (payload: string | SendMessagePayload) => {
+      const body: SendMessagePayload =
+        typeof payload === 'string' ? { body: payload } : payload;
+      return apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: { body },
+        body,
         token,
-      }),
+      });
+    },
     onSuccess: (msg) => {
       // Optimistically append to the list; server also broadcasts via socket
       qc.setQueryData<{ items: ChatMessage[]; nextCursor: string | null; hasMore: boolean }>(

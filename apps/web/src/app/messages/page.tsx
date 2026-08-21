@@ -7,6 +7,7 @@ import { cn, timeAgo } from '@/lib/utils';
 import { useConversations, type ChatSummary } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -27,18 +28,17 @@ function initialsOf(name: string): string {
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
   const { data, isLoading, error } = useConversations();
+  const { t } = useI18n();
 
   if (!isAuthed) {
     return (
       <MobileShell activeTab="chat">
         <div className="flex min-h-[80dvh] flex-col items-center justify-center px-6 text-center">
           <MessageCircleOff className="h-12 w-12 text-muted-foreground" />
-          <h2 className="mt-4 text-xl font-extrabold">Sign in to see messages</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Chat with freelancers and clients in real time.
-          </p>
+          <h2 className="mt-4 text-xl font-extrabold">{t('chat.signInPrompt')}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{t('chat.signInBody')}</p>
           <Button asChild variant="brand" size="lg" className="mt-6">
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">{t('nav.signIn')}</Link>
           </Button>
         </div>
       </MobileShell>
@@ -48,7 +48,7 @@ export default function MessagesPage() {
   return (
     <MobileShell activeTab="chat">
       <header className="safe-top flex items-center justify-between px-5 pb-3 pt-4">
-        <h1 className="text-2xl font-extrabold tracking-tight">Messages</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('chat.messages')}</h1>
         <div className="flex gap-2">
           <button
             aria-label="Search"
@@ -73,19 +73,17 @@ export default function MessagesPage() {
 
       {error && !isLoading && (
         <div className="mx-5 mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          Could not load messages. Pull down to retry.
+          {t('chat.loadFailed')}
         </div>
       )}
 
       {!isLoading && (data?.items.length ?? 0) === 0 && (
         <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
           <div className="text-4xl">💬</div>
-          <p className="mt-3 text-sm font-semibold">No conversations yet</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Message a freelancer from their gig page to get started.
-          </p>
+          <p className="mt-3 text-sm font-semibold">{t('chat.noConversations')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('chat.noConversationsBody')}</p>
           <Button asChild variant="brand" size="sm" className="mt-5">
-            <Link href="/">Explore gigs</Link>
+            <Link href="/">{t('chat.exploreGigs')}</Link>
           </Button>
         </div>
       )}
@@ -98,13 +96,20 @@ export default function MessagesPage() {
 }
 
 function ConvRow({ c, selfId: _selfId }: { c: ChatSummary; selfId: string }) {
+  const { t } = useI18n();
   const peer = c.peer;
   const name = peer?.fullName ?? c.title ?? 'Conversation';
+  const previewByType: Record<string, string> = {
+    image: `🖼️ ${t('chat.photo')}`,
+    audio: `🎤 ${t('chat.voice')}`,
+    video: `🎬 ${t('chat.file')}`,
+    file: `📎 ${t('chat.file')}`,
+  };
   const preview = c.lastMessage?.body
     ? c.lastMessage.body
     : c.lastMessage?.attachmentType
-      ? `📎 ${c.lastMessage.attachmentType}`
-      : 'Say hi 👋';
+      ? previewByType[c.lastMessage.attachmentType] ?? `📎 ${t('chat.file')}`
+      : t('chat.sayHi');
   const when = c.lastMessageAt ? timeAgo(c.lastMessageAt) : '';
   const gradient = peer ? gradientFor(peer.id) : gradientFor(c.id);
 

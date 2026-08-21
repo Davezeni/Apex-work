@@ -22,6 +22,7 @@ import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
 import { useAuthStore, type AuthSessionTokens } from '@/stores/auth-store';
 import { getDeviceToken } from '@/lib/device';
 import { startAuthentication } from '@simplewebauthn/browser';
+import { useI18n } from '@/i18n';
 
 type Step = 'phone' | 'pin' | 'otp' | 'no-account' | 'auto';
 
@@ -45,6 +46,7 @@ function LoginInner() {
   const rememberedPhone = useAuthStore((s) => s.lastPhone);
   const setLastPhone = useAuthStore((s) => s.setLastPhone);
 
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState<string>(rememberedPhone ?? '+251');
   const [code, setCode] = useState('');
@@ -55,7 +57,7 @@ function LoginInner() {
   const next = params.get('next') ?? '/';
   const finishLogin = (result: AuthResponse, phoneJustUsed: string) => {
     setSession(result.tokens, phoneJustUsed);
-    toast.success('Welcome back!');
+    toast.success(t('loginSmart.welcomeBack'));
     router.push(next);
   };
 
@@ -83,7 +85,7 @@ function LoginInner() {
   // ---------------------------------------
   const submitPhone = async (isResend = false) => {
     if (!ETHIOPIAN_PHONE_REGEX.test(phone)) {
-      toast.error('Enter a valid Ethiopian mobile number');
+      toast.error(t('auth.invalidPhone'));
       return;
     }
     setLastPhone(phone);
@@ -109,11 +111,11 @@ function LoginInner() {
 
       // Full OTP needed
       if (!isResend) setStep('otp');
-      toast.success(isResend ? 'New code sent' : 'Code sent to your phone');
+      toast.success(isResend ? t('auth.codeResent') : t('auth.codeSent'));
     } catch (err) {
       const e = err as ApiError;
       if (e.code === 'ACCOUNT_NOT_FOUND') setStep('no-account');
-      else toast.error(e.message ?? 'Failed to send code');
+      else toast.error(e.message ?? t('auth.invalidPhone'));
     } finally {
       setLoading(false);
       setResending(false);
@@ -234,10 +236,11 @@ function LoginInner() {
         <Link
           href="/"
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <span className="text-sm font-medium text-muted-foreground">Back</span>
+        <span className="text-sm font-medium text-muted-foreground">{t('common.back')}</span>
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-10">
@@ -250,20 +253,20 @@ function LoginInner() {
             <StepBox key="auto">
               <div className="flex items-center gap-3">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-sm text-muted-foreground">Signing you in…</span>
+                <span className="text-sm text-muted-foreground">{t('loginSmart.signingIn')}</span>
               </div>
             </StepBox>
           )}
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('loginSmart.welcomeBack')}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                We&apos;ll only send a code the first time you sign in on this device.
+                {t('loginSmart.smartSubtitle')}
               </p>
 
               <label className="mt-8 block text-xs font-semibold text-muted-foreground">
-                Phone number
+                {t('auth.phoneLabel')}
               </label>
               <input
                 type="tel"
@@ -271,7 +274,7 @@ function LoginInner() {
                 autoFocus
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+251 9XX XXX XXX"
+                placeholder={t('auth.phonePlaceholder')}
                 className="mt-2 h-14 w-full rounded-2xl border border-border bg-card px-4 text-lg font-medium tracking-wider outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
 
@@ -286,7 +289,7 @@ function LoginInner() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    Continue <ArrowRight className="h-4 w-4" />
+                    {t('common.continue')} <ArrowRight className="h-4 w-4" />
                   </>
                 )}
               </Button>
@@ -297,13 +300,13 @@ function LoginInner() {
                 className="mt-4 flex w-full items-center justify-center gap-2 text-sm font-semibold text-primary hover:underline"
               >
                 <Fingerprint className="h-4 w-4" />
-                Use Face ID / fingerprint
+                {t('loginSmart.useBiometrics')}
               </button>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                New to Apex-Work?{' '}
+                {t('auth.newHere')}{' '}
                 <Link href="/signup" className="font-semibold text-primary">
-                  Create an account
+                  {t('auth.createAccount')}
                 </Link>
               </p>
             </StepBox>
@@ -312,10 +315,9 @@ function LoginInner() {
           {step === 'pin' && (
             <StepBox key="pin">
               <LockKeyhole className="mb-4 h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-extrabold tracking-tight">Welcome back</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('loginSmart.welcomeBack')}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                Signed in as{' '}
-                <span className="font-semibold text-foreground">{phone}</span>
+                {t('loginSmart.signedInAs', { phone })}
               </p>
 
               <div className="mt-8">
@@ -343,7 +345,7 @@ function LoginInner() {
                   className="flex w-full items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold"
                 >
                   <Fingerprint className="h-4 w-4" />
-                  Use Face ID / fingerprint
+                  {t('loginSmart.useBiometrics')}
                 </button>
                 <button
                   type="button"
@@ -351,14 +353,14 @@ function LoginInner() {
                   className="flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Send me a code instead
+                  {t('loginSmart.sendCodeInstead')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep('phone')}
                   className="mt-2 text-center text-xs text-muted-foreground hover:text-foreground"
                 >
-                  Use a different phone number
+                  {t('loginSmart.useDifferentPhone')}
                 </button>
               </div>
             </StepBox>
@@ -369,16 +371,14 @@ function LoginInner() {
               <div className="grad-hero mb-6 grid h-14 w-14 place-items-center rounded-2xl text-white">
                 <UserPlus className="h-7 w-7" />
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight">No account yet</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.noAccount')}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                We couldn&apos;t find an account for{' '}
-                <span className="font-semibold text-foreground">{phone}</span>. Would you like to
-                create one?
+                {t('auth.noAccountBody', { phone })}
               </p>
 
               <Button asChild variant="brand" size="lg" className="mt-8 w-full">
                 <Link href={`/signup?phone=${encodeURIComponent(phone)}`}>
-                  Create account <ArrowRight className="h-4 w-4" />
+                  {t('auth.createAccount')} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
 
@@ -386,14 +386,14 @@ function LoginInner() {
                 onClick={() => setStep('phone')}
                 className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
               >
-                Use a different phone number
+                {t('auth.useDifferentNumber')}
               </button>
             </StepBox>
           )}
 
           {step === 'otp' && (
             <StepBox key="otp">
-              <h1 className="text-3xl font-extrabold tracking-tight">Enter your code</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.enterCode')}</h1>
               <OtpInput
                 phone={phone}
                 code={code}
@@ -411,13 +411,13 @@ function LoginInner() {
                 onClick={() => verifyAndLogin()}
                 disabled={loading}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify & sign in'}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.verifyAndSignIn')}
               </Button>
               <button
                 onClick={() => setStep('phone')}
                 className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
               >
-                Use a different phone number
+                {t('auth.useDifferentNumber')}
               </button>
             </StepBox>
           )}

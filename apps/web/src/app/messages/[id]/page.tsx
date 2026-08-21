@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Paperclip, Phone } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
+import { VoiceRecorder } from '@/components/chat/voice-recorder';
+import { AttachButton } from '@/components/chat/attach-button';
+import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -31,7 +35,9 @@ export default function ConversationPage() {
   const { data, isLoading, error } = useMessages(id);
   const send = useSendMessage(id);
   const socket = useChatSocket(id);
+  const { t } = useI18n();
   const [text, setText] = useState('');
+  const [composerMode, setComposerMode] = useState<'text' | 'voice'>('text');
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -155,41 +161,65 @@ export default function ConversationPage() {
       {/* Composer */}
       <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 py-2 backdrop-blur-xl">
         <div className="mx-auto flex max-w-md items-end gap-2">
-          <button
-            aria-label="Attach"
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground active:scale-90"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
-          <textarea
-            value={text}
-            onChange={(e) => handleTextChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void handleSend();
-              }
-            }}
-            rows={1}
-            placeholder="Type a message…"
-            className="flex-1 resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
-            style={{ maxHeight: '120px' }}
-          />
-          <button
-            onClick={() => void handleSend()}
-            disabled={!text.trim() || send.isPending}
-            aria-label="Send"
-            className={cn(
-              'grid h-11 w-11 shrink-0 place-items-center rounded-full text-white transition-transform active:scale-90 disabled:opacity-40',
-              text.trim() ? 'grad-hero shadow-md shadow-primary/40' : 'bg-muted-foreground',
-            )}
-          >
-            {send.isPending ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Send className="h-5 w-5" />
-            )}
-          </button>
+          {composerMode === 'voice' ? (
+            <VoiceRecorder
+              onSend={async (att) => {
+                await send.mutateAsync({
+                  attachmentUrl: att.url,
+                  attachmentType: 'audio',
+                });
+                setComposerMode('text');
+              }}
+            />
+          ) : (
+            <>
+              <AttachButton
+                disabled={send.isPending}
+                onAttached={async (att) => {
+                  await send.mutateAsync({
+                    attachmentUrl: att.url,
+                    attachmentType: att.type === 'image' ? 'image' : 'file',
+                  });
+                }}
+              />
+              <textarea
+                value={text}
+                onChange={(e) => handleTextChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                rows={1}
+                placeholder={t('chat.typePlaceholder')}
+                className="flex-1 resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+                style={{ maxHeight: '120px' }}
+              />
+              {text.trim() ? (
+                <button
+                  onClick={() => void handleSend()}
+                  disabled={send.isPending}
+                  aria-label={t('common.post')}
+                  className="grad-hero grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40"
+                >
+                  {send.isPending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setComposerMode('voice')}
+                  aria-label={t('chat.voice')}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
+                >
+                  <Mic className="h-5 w-5" />
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -205,6 +235,11 @@ function MessageBubble({
   isMine: boolean;
   showAvatar: boolean;
 }) {
+  const isImage = m.attachmentType === 'image';
+  const isAudio = m.attachmentType === 'audio';
+  const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
+  const hasAttachment = !!m.attachmentUrl;
+
   return (
     <div className={cn('flex items-end gap-2', isMine ? 'justify-end' : 'justify-start')}>
       {!isMine && (
@@ -223,17 +258,69 @@ function MessageBubble({
       )}
       <div
         className={cn(
-          'max-w-[80%] rounded-2xl px-3.5 py-2 text-sm leading-snug',
+          'max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
+          // Image bubbles are edge-to-edge; text/file bubbles keep padding.
+          isImage ? 'p-0' : 'px-3.5 py-2',
           isMine
             ? 'grad-hero rounded-br-md text-white shadow-md shadow-primary/30'
             : 'rounded-bl-md bg-card text-foreground',
         )}
       >
-        {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+        {isImage && m.attachmentUrl && (
+          <a href={m.attachmentUrl} target="_blank" rel="noreferrer" className="block">
+            <div className="relative aspect-[4/3] w-64 max-w-full bg-black/20">
+              <Image
+                src={m.attachmentUrl}
+                alt="Attachment"
+                fill
+                sizes="256px"
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          </a>
+        )}
+
+        {isAudio && m.attachmentUrl && (
+          <div className="flex items-center gap-2">
+            <PlayCircle
+              className={cn('h-5 w-5 shrink-0', isMine ? 'text-white' : 'text-primary')}
+              aria-hidden
+            />
+            <audio
+              src={m.attachmentUrl}
+              controls
+              preload="metadata"
+              className="h-8 flex-1 max-w-[220px]"
+            />
+          </div>
+        )}
+
+        {isFile && m.attachmentUrl && (
+          <a
+            href={m.attachmentUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              'flex items-center gap-2 text-sm font-semibold',
+              isMine ? 'text-white' : 'text-primary',
+            )}
+          >
+            <FileText className="h-5 w-5" />
+            <span className="truncate">{humanFileName(m.attachmentUrl)}</span>
+          </a>
+        )}
+
+        {m.body && (
+          <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
+        )}
+
         <div
           className={cn(
-            'mt-1 text-[10px] font-medium',
+            'text-[10px] font-medium',
+            isImage ? 'px-3 pb-2' : 'mt-1',
             isMine ? 'text-white/70' : 'text-muted-foreground',
+            hasAttachment && !m.body && !isImage && 'mt-1',
           )}
         >
           {timeAgo(m.createdAt)}
@@ -241,4 +328,16 @@ function MessageBubble({
       </div>
     </div>
   );
+}
+
+/** Pull the last path segment (usually a random slug + original filename). */
+function humanFileName(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const seg = path.split('/').pop() ?? url;
+    // Drop our 12-char random prefix ("abc123def456-")
+    return seg.replace(/^[a-zA-Z0-9]{6,12}-/, '');
+  } catch {
+    return url;
+  }
 }

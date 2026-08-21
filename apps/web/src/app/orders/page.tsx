@@ -8,21 +8,23 @@ import { Button } from '@/components/ui/button';
 import { useMyOrders, type OrderStatus, type OrderSummary } from '@/hooks/use-orders';
 import { useMe } from '@/hooks/use-me';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { useI18n } from '@/i18n';
 
-const STATUS_STYLE: Record<OrderStatus, { label: string; className: string }> = {
-  PENDING: { label: 'Awaiting payment', className: 'bg-amber-500/15 text-amber-500' },
-  ACTIVE: { label: 'In progress', className: 'bg-blue-500/15 text-blue-500' },
-  IN_REVIEW: { label: 'In review', className: 'bg-violet-500/15 text-violet-500' },
-  DELIVERED: { label: 'Delivered', className: 'bg-emerald-500/15 text-emerald-500' },
-  COMPLETED: { label: 'Completed', className: 'bg-emerald-500/15 text-emerald-500' },
-  CANCELLED: { label: 'Cancelled', className: 'bg-muted text-muted-foreground' },
-  DISPUTED: { label: 'Disputed', className: 'bg-red-500/15 text-red-500' },
+const STATUS_KEY: Record<OrderStatus, { key: string; className: string }> = {
+  PENDING: { key: 'orders.statusPending', className: 'bg-amber-500/15 text-amber-500' },
+  ACTIVE: { key: 'orders.statusActive', className: 'bg-blue-500/15 text-blue-500' },
+  IN_REVIEW: { key: 'orders.statusInReview', className: 'bg-violet-500/15 text-violet-500' },
+  DELIVERED: { key: 'orders.statusDelivered', className: 'bg-emerald-500/15 text-emerald-500' },
+  COMPLETED: { key: 'orders.statusCompleted', className: 'bg-emerald-500/15 text-emerald-500' },
+  CANCELLED: { key: 'orders.statusCancelled', className: 'bg-muted text-muted-foreground' },
+  DISPUTED: { key: 'orders.statusDisputed', className: 'bg-red-500/15 text-red-500' },
 };
 
 export default function OrdersPage() {
   const { data: me, isAuthed } = useMe();
   const [role, setRole] = useState<'client' | 'seller'>('client');
   const { data, isLoading } = useMyOrders(role);
+  const { t } = useI18n();
 
   // If the user is a freelancer, default to their seller view
   const showRoleTabs = me?.role === 'FREELANCER';
@@ -32,9 +34,9 @@ export default function OrdersPage() {
       <MobileShell activeTab="profile">
         <div className="flex min-h-[70dvh] flex-col items-center justify-center px-6 text-center">
           <ShoppingBag className="h-12 w-12 text-muted-foreground" />
-          <h1 className="mt-4 text-xl font-extrabold">Sign in to see your orders</h1>
+          <h1 className="mt-4 text-xl font-extrabold">{t('orders.signInPrompt')}</h1>
           <Button asChild variant="brand" size="lg" className="mt-6">
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">{t('nav.signIn')}</Link>
           </Button>
         </div>
       </MobileShell>
@@ -46,7 +48,7 @@ export default function OrdersPage() {
   return (
     <MobileShell activeTab="profile">
       <header className="safe-top px-5 pb-3 pt-4">
-        <h1 className="text-2xl font-extrabold tracking-tight">Orders</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('orders.title')}</h1>
       </header>
 
       {showRoleTabs && (
@@ -58,7 +60,7 @@ export default function OrdersPage() {
               role === 'client' ? 'grad-hero text-white shadow' : 'text-muted-foreground',
             )}
           >
-            As Client
+            {t('orders.asClient')}
           </button>
           <button
             onClick={() => setRole('seller')}
@@ -67,7 +69,7 @@ export default function OrdersPage() {
               role === 'seller' ? 'grad-hero text-white shadow' : 'text-muted-foreground',
             )}
           >
-            As Freelancer
+            {t('orders.asFreelancer')}
           </button>
         </div>
       )}
@@ -81,14 +83,12 @@ export default function OrdersPage() {
       {!isLoading && items.length === 0 && (
         <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
           <Package className="mx-auto h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 text-sm font-semibold">No orders yet</p>
+          <p className="mt-3 text-sm font-semibold">{t('orders.empty')}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {role === 'client'
-              ? 'Hire a freelancer to see orders here.'
-              : 'You will see incoming orders here.'}
+            {role === 'client' ? t('orders.emptyClient') : t('orders.emptySeller')}
           </p>
           <Button asChild variant="brand" size="sm" className="mt-4">
-            <Link href="/">Explore gigs</Link>
+            <Link href="/">{t('chat.exploreGigs')}</Link>
           </Button>
         </div>
       )}
@@ -103,8 +103,9 @@ export default function OrdersPage() {
 }
 
 function OrderRow({ o, role }: { o: OrderSummary; role: 'client' | 'seller' }) {
+  const { t } = useI18n();
   const other = role === 'client' ? o.seller : o.client;
-  const status = STATUS_STYLE[o.status];
+  const status = STATUS_KEY[o.status];
   return (
     <Link
       href={`/orders/${o.id}`}
@@ -116,7 +117,7 @@ function OrderRow({ o, role }: { o: OrderSummary; role: 'client' | 'seller' }) {
       <div className="min-w-0 flex-1">
         <div className="line-clamp-2 text-sm font-semibold leading-tight">{o.title}</div>
         <div className="mt-1 text-[11px] text-muted-foreground">
-          {role === 'client' ? 'Seller' : 'Client'}:{' '}
+          {role === 'client' ? t('orders.seller') : t('orders.client')}:{' '}
           <span className="font-semibold text-foreground">{other.fullName}</span>
         </div>
         <div className="mt-1.5 flex items-center justify-between">
@@ -126,7 +127,7 @@ function OrderRow({ o, role }: { o: OrderSummary; role: 'client' | 'seller' }) {
               status.className,
             )}
           >
-            {status.label}
+            {t(status.key)}
           </span>
           <span className="text-xs text-muted-foreground">{timeAgo(o.createdAt)}</span>
         </div>

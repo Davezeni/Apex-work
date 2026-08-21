@@ -54,6 +54,11 @@ const envSchema = z.object({
   WEBAUTHN_RP_ID: z.string().optional(),
   WEBAUTHN_RP_NAME: z.string().default('Apex-Work'),
   WEBAUTHN_RP_ORIGIN: z.string().optional(),
+
+  // Supabase Storage (files: portfolio, chat attachments, avatars)
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -11,3 +11,4 @@ export * from './chat.js';
 export * from './skill.js';
 export * from './order.js';
 export * from './security.js';
+export * from './upload.js';

@@ -8,6 +8,7 @@ import { useNotifications, useMarkAllRead, type AppNotification } from '@/hooks/
 import { useMe } from '@/hooks/use-me';
 import { cn, timeAgo } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/i18n';
 
 const ICON: Record<string, string> = {
   ORDER_UPDATE: '📦',
@@ -22,6 +23,7 @@ export default function NotificationsPage() {
   const { isAuthed } = useMe();
   const { data, isLoading } = useNotifications();
   const markAll = useMarkAllRead();
+  const { t } = useI18n();
 
   const items = data?.items ?? [];
   const hasUnread = items.some((n) => !n.readAt);
@@ -37,9 +39,9 @@ export default function NotificationsPage() {
       <MobileShell activeTab="profile">
         <div className="flex min-h-[70dvh] flex-col items-center justify-center px-6 text-center">
           <Bell className="h-12 w-12 text-muted-foreground" />
-          <h1 className="mt-4 text-xl font-extrabold">Sign in to see notifications</h1>
+          <h1 className="mt-4 text-xl font-extrabold">{t('notifications.signInPrompt')}</h1>
           <Button asChild variant="brand" size="lg" className="mt-6">
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">{t('nav.signIn')}</Link>
           </Button>
         </div>
       </MobileShell>
@@ -49,13 +51,13 @@ export default function NotificationsPage() {
   return (
     <MobileShell activeTab="profile">
       <header className="safe-top flex items-center justify-between px-5 pb-3 pt-4">
-        <h1 className="text-2xl font-extrabold tracking-tight">Notifications</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('notifications.title')}</h1>
         {hasUnread && (
           <button
             onClick={() => markAll.mutate()}
             className="flex items-center gap-1 text-xs font-semibold text-primary"
           >
-            <Check className="h-3.5 w-3.5" /> Mark all read
+            <Check className="h-3.5 w-3.5" /> {t('notifications.markAllRead')}
           </button>
         )}
       </header>
@@ -69,10 +71,8 @@ export default function NotificationsPage() {
       {!isLoading && items.length === 0 && (
         <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 text-sm font-semibold">You&apos;re all caught up</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Notifications about your orders and messages will appear here.
-          </p>
+          <p className="mt-3 text-sm font-semibold">{t('notifications.empty')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t('notifications.emptyBody')}</p>
         </div>
       )}
 

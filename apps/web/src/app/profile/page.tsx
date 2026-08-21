@@ -16,6 +16,7 @@ import {
   Package,
   Bell,
   ShieldCheck,
+  ImageIcon,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -142,10 +143,18 @@ export default function ProfilePage() {
           title={t('profile.availability')}
           subtitle="Mon–Fri · 9AM–6PM"
         />
+        {me.role === 'FREELANCER' && (
+          <MenuItem
+            icon={<ImageIcon className="h-4 w-4" />}
+            title={t('portfolio.title')}
+            subtitle={t('portfolio.menuSubtitle')}
+            href="/settings/portfolio"
+          />
+        )}
         <MenuItem
           icon={<ShieldCheck className="h-4 w-4" />}
-          title="Security"
-          subtitle="PIN, biometrics, devices"
+          title={t('profile.security')}
+          subtitle={t('profile.securitySubtitle')}
           href="/settings/security"
         />
         <MenuItem

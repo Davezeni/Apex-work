@@ -83,3 +83,13 @@ services:
         value: https://apex-work-gold.vercel.app
       - key: WEBAUTHN_RP_NAME
         value: Apex-Work
+
+      # Supabase Storage (portfolio images, chat attachments, avatars).
+      # Only SERVICE_ROLE key touches the API; ANON key is public and used
+      # by the browser for direct-to-Supabase uploads via signed URLs.
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
