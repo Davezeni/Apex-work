@@ -16,10 +16,13 @@ import {
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useI18n } from '@/i18n';
 
 export default function ProfilePage() {
   const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
   const logout = useLogout();
+  const { t } = useI18n();
 
   // Not signed in → show sign-in CTA
   if (!isAuthed) {
@@ -101,31 +104,43 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Language switcher */}
+      <div className="mt-6 flex items-center justify-between px-5">
+        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {t('language.label')}
+        </div>
+        <LanguageSwitcher />
+      </div>
+
       {/* Menu */}
-      <div className="mt-6 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        Account
+      <div className="mt-4 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        {t('profile.account')}
       </div>
       <div className="px-3 pb-8">
         <MenuItem
           icon={<CreditCard className="h-4 w-4" />}
-          title="Payment methods"
+          title={t('profile.paymentMethods')}
           subtitle="Telebirr, CBE Birr"
         />
         <MenuItem
           icon={<Calendar className="h-4 w-4" />}
-          title="Availability"
+          title={t('profile.availability')}
           subtitle="Mon–Fri · 9AM–6PM"
         />
         <MenuItem
           icon={<Settings className="h-4 w-4" />}
-          title="Settings"
-          subtitle="Language, notifications"
+          title={t('profile.settings')}
+          subtitle={t('language.label')}
         />
         <MenuItem
           icon={
-            logout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />
+            logout.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )
           }
-          title={logout.isPending ? 'Signing out…' : 'Sign out'}
+          title={logout.isPending ? t('common.signingOut') : t('common.signOut')}
           onClick={() => !logout.isPending && logout.mutate()}
           destructive
           disabled={logout.isPending}

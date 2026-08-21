@@ -7,6 +7,7 @@ import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
+import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -30,13 +31,14 @@ function initialsOf(name: string): string {
 export function MobileHome() {
   const [activeCategory, setActiveCategory] = useState<string>('for-you');
   const { data: me } = useMe();
+  const { t } = useI18n();
   const { data: gigsData, isLoading } = useGigs({
     category: activeCategory !== 'for-you' ? activeCategory : undefined,
     limit: 20,
   });
 
   const gigs = gigsData?.items ?? [];
-  const firstName = me?.fullName.split(' ')[0] ?? 'Welcome';
+  const firstName = me?.fullName.split(' ')[0] ?? t('nav.home');
 
   return (
     <div className="min-h-dvh">
@@ -44,7 +46,7 @@ export function MobileHome() {
       <header className="safe-top sticky top-0 z-30 flex items-center justify-between bg-background/85 px-5 pb-3 pt-4 backdrop-blur-xl">
         <div>
           <div className="text-xs text-muted-foreground">
-            {me ? 'ጤና ይስጥልኝ 👋' : 'Discover talent'}
+            {me ? t('home.greeting') : t('home.greetingGuest')}
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
@@ -75,7 +77,7 @@ export function MobileHome() {
           className="flex h-12 items-center gap-3 rounded-2xl border border-border bg-card px-4 text-sm text-muted-foreground"
         >
           <Search className="h-4 w-4 shrink-0" />
-          <span className="flex-1">Search freelancers, gigs, skills…</span>
+          <span className="flex-1">{t('home.searchPlaceholder')}</span>
           <button
             aria-label="Voice search"
             className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-white"
@@ -88,14 +90,14 @@ export function MobileHome() {
 
       {/* Category chips */}
       <div className="mb-4 flex items-center justify-between px-5">
-        <h2 className="text-base font-bold tracking-tight">Explore</h2>
+        <h2 className="text-base font-bold tracking-tight">{t('home.explore')}</h2>
         <Link href="/browse" className="text-xs font-semibold text-primary">
-          See all
+          {t('home.seeAll')}
         </Link>
       </div>
       <div className="flex gap-2 overflow-x-auto px-5 pb-6 no-scrollbar">
         <CategoryChip
-          label="✨ For you"
+          label={t('home.forYou')}
           active={activeCategory === 'for-you'}
           onClick={() => setActiveCategory('for-you')}
         />
@@ -111,9 +113,9 @@ export function MobileHome() {
 
       {/* Feed */}
       <div className="mb-4 flex items-center justify-between px-5">
-        <h2 className="text-base font-bold tracking-tight">Top talent nearby</h2>
+        <h2 className="text-base font-bold tracking-tight">{t('home.topTalent')}</h2>
         <Link href="/browse" className="text-xs font-semibold text-primary">
-          View all
+          {t('home.viewAll')}
         </Link>
       </div>
 
@@ -126,10 +128,8 @@ export function MobileHome() {
         {!isLoading && gigs.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
             <div className="text-2xl">🌱</div>
-            <p className="mt-2 text-sm font-semibold">No gigs in this category yet</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Be the first — post one to get noticed.
-            </p>
+            <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
           </div>
         )}
         {gigs.map((g) => (

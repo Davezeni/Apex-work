@@ -5,6 +5,7 @@ import gigsRoutes from './gigs.routes.js';
 import skillsRoutes from './skills.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import chatRoutes from './chat.routes.js';
+import usersRoutes from './users.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -48,5 +49,6 @@ router.use('/gigs', gigsRoutes);
 router.use('/skills', skillsRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/conversations', chatRoutes);
+router.use('/users', usersRoutes);
 
 export default router;

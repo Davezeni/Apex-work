@@ -1,13 +1,43 @@
 import { Router } from 'express';
-import { gigListQuerySchema } from '@apex-work/shared';
+import { createGigSchema, gigListQuerySchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
-import { optionalAuth } from '../middleware/auth.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import type { Prisma } from '@prisma/client';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 
 const router: Router = Router();
+
+/**
+ * Turn a gig title into a URL-safe slug. Same rules as skills but keeps a
+ * numeric suffix if we need to disambiguate against an existing gig.
+ */
+function slugifyTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
+/** Given a base slug, return a unique variant (base, base-2, base-3, ...). */
+async function ensureUniqueSlug(base: string): Promise<string> {
+  const existing = await prisma.gig.findMany({
+    where: { slug: { startsWith: base } },
+    select: { slug: true },
+  });
+  const taken = new Set(existing.map((g) => g.slug));
+  if (!taken.has(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${base}-${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${base}-${Date.now().toString(36)}`;
+}
 
 /** GET /gigs — public list, cursor-paginated */
 router.get(
@@ -111,6 +141,80 @@ router.get(
       .catch(() => undefined);
 
     return success(res, gig);
+  }),
+);
+
+/**
+ * POST /gigs — freelancer creates a new gig.
+ * Validates ownership role, generates a unique slug, and creates the gig
+ * plus packages in a single transaction. Derives `startingPriceEtb` from
+ * the cheapest package for cheap sort/filter queries.
+ */
+router.post(
+  '/',
+  requireAuth,
+  validate(createGigSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').CreateGigInput;
+    const userId = req.user!.sub;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, isOnboarded: true },
+    });
+    if (!user) throw new NotFoundError('User');
+    if (user.role !== 'FREELANCER') {
+      throw new ForbiddenError('Only freelancers can post gigs');
+    }
+    if (!user.isOnboarded) {
+      throw new BadRequestError('Please complete your profile before posting a gig');
+    }
+
+    // Enforce a soft cap so a single user can't spam gigs
+    const existingCount = await prisma.gig.count({
+      where: { ownerId: userId, status: { not: 'ARCHIVED' } },
+    });
+    if (existingCount >= 20) {
+      throw new ConflictError('You have reached the maximum of 20 active gigs');
+    }
+
+    const base = slugifyTitle(body.title);
+    if (base.length < 3) {
+      throw new BadRequestError('Title must contain at least 3 slug-friendly characters');
+    }
+    const slug = await ensureUniqueSlug(base);
+
+    const startingPrice = Math.min(...body.packages.map((p) => p.priceEtb));
+
+    const gig = await prisma.gig.create({
+      data: {
+        ownerId: userId,
+        title: body.title,
+        slug,
+        categoryId: body.categoryId,
+        tags: body.tags.map((t) => t.toLowerCase()),
+        description: body.description,
+        coverImageUrl: body.coverImageUrl,
+        galleryUrls: body.galleryUrls,
+        status: 'ACTIVE',
+        startingPriceEtb: startingPrice,
+        packages: {
+          create: body.packages.map((p) => ({
+            tier: p.tier,
+            title: p.title,
+            description: p.description,
+            priceEtb: p.priceEtb,
+            deliveryDays: p.deliveryDays,
+            revisions: p.revisions,
+          })),
+        },
+      },
+      include: {
+        packages: { orderBy: { priceEtb: 'asc' } },
+      },
+    });
+
+    return success(res, gig, 201);
   }),
 );
 
