@@ -8,8 +8,8 @@ import { redis } from '../lib/redis.js';
 const router: Router = Router();
 
 /**
- * Health check — must ALWAYS respond, even if Redis/DB is down.
- * Do not depend on any external service here.
+ * Liveness — must ALWAYS respond, even if Redis/DB is down.
+ * Never depends on any external service. Use this for load-balancer health checks.
  */
 router.get('/health', (_req, res) => {
   res.json({
@@ -22,67 +22,21 @@ router.get('/health', (_req, res) => {
 });
 
 /**
- * Deep diagnostic — checks DB + Redis + env, exposes real errors.
- * TEMPORARY: remove or protect with a token once deploy is stable.
+ * Readiness — actually pings DB + Redis. Slower but says whether the app
+ * can serve real traffic. Useful for smoke tests + orchestrators that
+ * distinguish "alive" from "ready".
  */
-router.get('/_debug', async (_req, res) => {
-  const out: Record<string, unknown> = {
-    node: process.version,
-    env: process.env.NODE_ENV,
-    port: process.env.PORT,
-    hasDBUrl: !!process.env.DATABASE_URL,
-    hasUnpooled: !!process.env.DATABASE_URL_UNPOOLED,
-    hasRedisUrl: !!process.env.REDIS_URL,
-    hasJwtSecret: !!process.env.JWT_SECRET,
-    redisStatus: redis.status,
-  };
-
-  // Test DB
+router.get('/ready', async (_req, res) => {
+  const checks: Record<string, 'ok' | string> = { db: 'pending', redis: 'pending' };
   try {
-    const rows = await prisma.$queryRaw<Array<{ n: number }>>`SELECT 1 as n`;
-    out.dbPing = rows[0]?.n === 1 ? 'ok' : 'unexpected';
+    await prisma.$queryRaw`SELECT 1`;
+    checks.db = 'ok';
   } catch (e) {
-    out.dbError = {
-      name: (e as Error)?.name,
-      message: (e as Error)?.message,
-      stack: (e as Error)?.stack?.split('\n').slice(0, 3),
-    };
+    checks.db = (e as Error).message.slice(0, 200);
   }
-
-  // Test count
-  try {
-    const gigsCount = await prisma.gig.count();
-    const usersCount = await prisma.user.count();
-    out.counts = { gigs: gigsCount, users: usersCount };
-  } catch (e) {
-    out.countError = {
-      name: (e as Error)?.name,
-      message: (e as Error)?.message,
-      stack: (e as Error)?.stack?.split('\n').slice(0, 3),
-    };
-  }
-
-  // Test the exact gigs findMany the failing route uses
-  try {
-    const items = await prisma.gig.findMany({
-      where: { status: 'ACTIVE' },
-      take: 1,
-      select: {
-        id: true,
-        title: true,
-        owner: { select: { id: true, username: true } },
-      },
-    });
-    out.findManySample = items;
-  } catch (e) {
-    out.findManyError = {
-      name: (e as Error)?.name,
-      message: (e as Error)?.message,
-      stack: (e as Error)?.stack?.split('\n').slice(0, 5),
-    };
-  }
-
-  res.json(out);
+  checks.redis = redis.status === 'ready' ? 'ok' : `not-ready (${redis.status})`;
+  const allOk = Object.values(checks).every((v) => v === 'ok');
+  res.status(allOk ? 200 : 503).json({ ok: allOk, checks });
 });
 
 router.use('/auth', authRoutes);
