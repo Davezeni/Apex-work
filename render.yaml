@@ -57,8 +57,12 @@ services:
         sync: false
       - key: AFROMESSAGE_IDENTIFIER_ID
         sync: false
+        # Beta accounts: leave unset. AfroMessage uses their default shortcode.
+        # Paid accounts: set to your assigned short-code (NOT the account UUID).
       - key: AFROMESSAGE_SENDER
-        value: ApexWork
+        sync: false
+        # Beta accounts: leave unset. Paid accounts: set to your approved
+        # sender name (e.g. 'ApexWork'). Sender registration takes 1-2 days.
       - key: CHAPA_SECRET_KEY
         sync: false
       - key: CHAPA_PUBLIC_KEY

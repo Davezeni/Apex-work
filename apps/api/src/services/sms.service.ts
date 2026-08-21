@@ -32,10 +32,10 @@ class AfroMessageProvider implements SmsProvider {
   readonly name = 'afromessage';
   private readonly base = 'https://api.afromessage.com/api/send';
   /**
-   * Once we detect the account has no valid short-code, we stop sending `from`
+   * Once we detect the account can't use custom `from`/`sender`, we skip them
    * on subsequent calls. Avoids a wasted retry per SMS forever.
    */
-  private skipFrom = false;
+  private skipCustomSender = false;
 
   async send(to: string, message: string) {
     if (!env.AFROMESSAGE_API_KEY) {
@@ -43,26 +43,26 @@ class AfroMessageProvider implements SmsProvider {
       return { ok: false, error: 'no_api_key' };
     }
 
-    // First attempt: with `from` if configured
-    const first = await this.attempt(to, message, /* omitFrom */ this.skipFrom);
+    // First attempt: with configured from/sender (unless we already learned they're bad)
+    const first = await this.attempt(to, message, /* stripped */ this.skipCustomSender);
     if (first.ok) return first;
 
-    // Auto-recover: if failure is because of invalid identifier / sender,
-    // retry once WITHOUT `from` and remember it for future calls.
+    // Auto-recover: if failure is about invalid identifier / sender / short code,
+    // retry once WITHOUT `from`/`sender` and remember it for future calls.
+    // This survives misconfigured env vars from users who don't have a paid plan.
     if (
-      !this.skipFrom &&
+      !this.skipCustomSender &&
       first.error &&
-      /invalid|short code|sender/i.test(first.error)
+      /invalid|short\s*code|sender/i.test(first.error)
     ) {
       logger.warn(
         { to, error: first.error },
-        'AfroMessage rejected identifier; retrying without `from` (default shortcode)',
+        'AfroMessage rejected identifier/sender; retrying with defaults',
       );
-      this.skipFrom = true;
+      this.skipCustomSender = true;
       const retry = await this.attempt(to, message, true);
       if (retry.ok) {
-        logger.info({ to }, 'AfroMessage SMS sent via default shortcode fallback');
-        return retry;
+        logger.info({ to }, 'AfroMessage SMS sent via default shortcode/sender fallback');
       }
       return retry;
     }
@@ -73,18 +73,18 @@ class AfroMessageProvider implements SmsProvider {
   private async attempt(
     to: string,
     message: string,
-    omitFrom: boolean,
+    stripped: boolean,
   ): Promise<{ ok: boolean; providerRef?: string; error?: string }> {
     const url = new URL(this.base);
-    // NOTE: AfroMessage has two easily-confused concepts:
-    //   - `from` (short code) — must be one AfroMessage assigned to your account.
-    //     The UUID shown on the Profile page is NOT this — it's an account id.
-    //     Beta / trial accounts typically don't have a short code.
-    //   - `sender` — optional pre-registered brand name (requires paid plan).
-    if (!omitFrom && env.AFROMESSAGE_IDENTIFIER_ID?.trim()) {
+    // NOTE: AfroMessage has two easily-confused concepts, and BOTH require an
+    // approved paid subscription to use custom values:
+    //   - `from` (short code) — assigned to your account. UUID on Profile ≠ this.
+    //   - `sender` — pre-registered brand name (e.g. 'ApexWork').
+    // Beta / trial accounts get a default shortcode automatically when you omit both.
+    if (!stripped && env.AFROMESSAGE_IDENTIFIER_ID?.trim()) {
       url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID.trim());
     }
-    if (env.AFROMESSAGE_SENDER?.trim()) {
+    if (!stripped && env.AFROMESSAGE_SENDER?.trim()) {
       url.searchParams.set('sender', env.AFROMESSAGE_SENDER.trim());
     }
     url.searchParams.set('to', to);
