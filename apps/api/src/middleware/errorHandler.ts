@@ -45,11 +45,21 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   }
 
   // Fallback — unexpected
-  logger.error({ err, path: req.path, method: req.method }, 'Unhandled error');
+  logger.error(
+    {
+      err,
+      errName: (err as Error)?.name,
+      errMessage: (err as Error)?.message,
+      errStack: (err as Error)?.stack?.split('\n').slice(0, 5),
+      path: req.path,
+      method: req.method,
+    },
+    'Unhandled error',
+  );
   return failure(
     res,
     'INTERNAL_ERROR',
-    isProd ? 'Something went wrong' : (err as Error)?.message ?? 'Unknown error',
+    isProd ? 'Something went wrong' : ((err as Error)?.message ?? 'Unknown error'),
     500,
   );
 };
