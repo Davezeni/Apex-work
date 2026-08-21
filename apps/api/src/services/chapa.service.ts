@@ -60,14 +60,21 @@ class ChapaService {
   }
 
   /**
-   * Chapa in test mode rejects `.et` domain emails and requires a valid-looking
-   * mailbox. For OTP-only accounts we may not have an email — synthesize a
-   * safe placeholder tied to the user id so Chapa doesn't reject the request.
+   * Chapa rejects some placeholder email TLDs (.example.com is blocked; .et
+   * is blocked entirely). For OTP-only accounts we may not have an email —
+   * synthesize a safe placeholder on a domain that passes Chapa's validation.
+   *
+   * We deliberately use `apex-work.com` (a real-sounding domain that passes
+   * Chapa's DNS-lookup check). Chapa doesn't actually send mail to this
+   * address; it's only stored on the receipt.
+   *
+   * Exposed as a static helper so both this service and callers building the
+   * payload share ONE source of truth for the "what email do we send to Chapa"
+   * rule.
    */
-  private safeEmail(email: string | null | undefined, userId: string): string {
+  static safeEmail(email: string | null | undefined, userId: string): string {
     if (email && !email.endsWith('.et')) return email;
-    // Use a real-looking domain; Chapa won't send anything to this address.
-    return `user-${userId}@apexwork.example.com`;
+    return `user-${userId}@apex-work.com`;
   }
 
   async initialize(input: InitializeInput): Promise<InitializeResult> {
@@ -108,9 +115,23 @@ class ChapaService {
       };
       if (data.status !== 'success' || !data.data?.checkout_url) {
         logger.warn({ status: res.status, message: data.message }, 'Chapa initialize failed');
+        // Chapa returns validation errors as { message: { field: ['rule'] } }.
+        // Flatten to something human-readable so users see "Invalid email"
+        // instead of a generic "initialize_failed".
+        let readableError = 'initialize_failed';
+        if (typeof data.message === 'string') {
+          readableError = data.message;
+        } else if (data.message && typeof data.message === 'object') {
+          const parts: string[] = [];
+          for (const [field, rules] of Object.entries(data.message as Record<string, unknown>)) {
+            const ruleList = Array.isArray(rules) ? rules.join(', ') : String(rules);
+            parts.push(`${field}: ${ruleList}`);
+          }
+          readableError = parts.join('; ') || 'initialize_failed';
+        }
         return {
           ok: false,
-          error: typeof data.message === 'string' ? data.message : 'initialize_failed',
+          error: readableError,
           rawErrors: data.message,
         };
       }
@@ -197,3 +218,4 @@ class ChapaService {
 }
 
 export const chapa = new ChapaService();
+export { ChapaService };

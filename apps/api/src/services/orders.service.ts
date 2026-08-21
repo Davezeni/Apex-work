@@ -28,7 +28,7 @@ import {
   NotFoundError,
 } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
-import { chapa } from './chapa.service.js';
+import { chapa, ChapaService } from './chapa.service.js';
 import { env } from '../config/env.js';
 
 const APP_URL = () => env.WEB_URL;
@@ -100,7 +100,7 @@ export async function createOrderAndInitiatePayment(
     callbackUrl: `${env.API_URL}/v1/payments/webhook`,
     returnUrl: `${APP_URL()}/orders/${order.id}?paid=1`,
     customer: {
-      email: chapaEmailFor(actor),
+      email: ChapaService.safeEmail(actor.email, actor.id),
       firstName: actor.fullName.split(' ')[0] ?? 'Customer',
       lastName: actor.fullName.split(' ').slice(1).join(' ') || 'Apex',
       phone: actor.phone,
@@ -131,13 +131,6 @@ export async function createOrderAndInitiatePayment(
   });
 
   return { order, checkoutUrl: init.checkoutUrl, devSkipped: false };
-}
-
-function chapaEmailFor(actor: Actor): string {
-  // Chapa rejects .et and requires an email. Provide a safe placeholder if
-  // the user hasn't set one (OTP-only accounts).
-  if (actor.email && !actor.email.endsWith('.et')) return actor.email;
-  return `user-${actor.id}@apexwork.example.com`;
 }
 
 /**
