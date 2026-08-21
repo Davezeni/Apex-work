@@ -1,22 +1,52 @@
 'use client';
 
+import Link from 'next/link';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, CreditCard, Calendar, Settings, LogOut, ChevronRight } from 'lucide-react';
-import { useAuthStore } from '@/stores/auth-store';
-import { useRouter } from 'next/navigation';
+import {
+  CheckCircle2,
+  CreditCard,
+  Calendar,
+  Settings,
+  LogOut,
+  ChevronRight,
+  Loader2,
+  LogIn,
+  Sparkles,
+} from 'lucide-react';
+import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
 
-const SKILLS = ['Figma', 'UI/UX', 'Design Systems', 'Webflow', 'Branding'];
-
 export default function ProfilePage() {
-  const clear = useAuthStore((s) => s.clear);
-  const router = useRouter();
+  const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
+  const logout = useLogout();
 
-  const logout = () => {
-    clear();
-    router.push('/');
-  };
+  // Not signed in → show sign-in CTA
+  if (!isAuthed) {
+    return (
+      <MobileShell activeTab="profile">
+        <SignedOutView />
+      </MobileShell>
+    );
+  }
+
+  // Signed in but data still loading
+  if (isLoading || !me) {
+    return (
+      <MobileShell activeTab="profile">
+        <div className="grid h-[60dvh] place-items-center text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      </MobileShell>
+    );
+  }
+
+  const initials = me.fullName
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   return (
     <MobileShell activeTab="profile">
@@ -25,61 +55,109 @@ export default function ProfilePage() {
         <div className="grad-hero absolute inset-x-0 top-0 h-32 opacity-50" />
         <div className="relative">
           <div className="grad-hero mx-auto grid h-20 w-20 place-items-center rounded-full text-3xl font-bold text-white ring-4 ring-background">
-            S
+            {initials || '?'}
           </div>
           <h2 className="mt-3 flex items-center justify-center gap-1.5 text-xl font-extrabold">
-            Selamawit Kebede
-            <CheckCircle2 className="h-4 w-4 text-cyan-400" />
+            {me.fullName}
+            {me.isVerified && <CheckCircle2 className="h-4 w-4 text-cyan-400" />}
           </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">Product Designer · Freelancer</p>
-          <p className="text-[11px] text-muted-foreground">📍 Addis Ababa, Ethiopia</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {me.title ?? (me.role === 'FREELANCER' ? 'Freelancer' : 'Client')} · @{me.username}
+          </p>
+          {me.city && <p className="text-[11px] text-muted-foreground">📍 {me.city}</p>}
         </div>
       </div>
 
       {/* Stats */}
       <div className="mx-5 grid grid-cols-3 rounded-2xl border border-border bg-card p-4">
-        <Stat n="4.9" l="Rating" />
-        <Stat n="128" l="Orders" borderLeft />
-        <Stat n="98%" l="On-time" borderLeft />
+        <Stat n={me.rating > 0 ? me.rating.toFixed(1) : '—'} l="Rating" />
+        <Stat n={String(me.completedOrders)} l="Orders" borderLeft />
+        <Stat n={me.isVerified ? '✓' : '—'} l="Verified" borderLeft />
       </div>
 
       {/* Actions */}
       <div className="mx-5 mt-4 flex gap-2">
-        <Button variant="brand" className="flex-1">Edit profile</Button>
-        <Button variant="secondary" className="flex-1">Share</Button>
+        <Button variant="brand" className="flex-1">
+          Edit profile
+        </Button>
+        <Button variant="secondary" className="flex-1">
+          Share
+        </Button>
       </div>
 
-      {/* Wallet */}
-      <div className="grad-hero mx-5 mt-4 rounded-2xl p-5 text-white shadow-xl shadow-primary/40">
-        <div className="text-xs opacity-90">Available balance</div>
-        <div className="mt-1 text-3xl font-extrabold tracking-tight">
-          {formatEtb(48320)}
+      {/* Wallet — only for freelancers */}
+      {me.role === 'FREELANCER' && (
+        <div className="grad-hero mx-5 mt-4 rounded-2xl p-5 text-white shadow-xl shadow-primary/40">
+          <div className="text-xs opacity-90">Available balance</div>
+          <div className="mt-1 text-3xl font-extrabold tracking-tight">{formatEtb(0)}</div>
+          <div className="mt-4 flex gap-2">
+            <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">
+              💸 Withdraw
+            </button>
+            <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">
+              📊 History
+            </button>
+          </div>
         </div>
-        <div className="mt-4 flex gap-2">
-          <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">💸 Withdraw</button>
-          <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">📊 History</button>
-        </div>
-      </div>
-
-      {/* Skills */}
-      <div className="mt-6 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Skills</div>
-      <div className="flex flex-wrap gap-1.5 px-5 pb-4">
-        {SKILLS.map((s) => (
-          <span key={s} className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-            {s}
-          </span>
-        ))}
-      </div>
+      )}
 
       {/* Menu */}
-      <div className="mt-2 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Account</div>
+      <div className="mt-6 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        Account
+      </div>
       <div className="px-3 pb-8">
-        <MenuItem icon={<CreditCard className="h-4 w-4" />} title="Payment methods" subtitle="Telebirr, CBE Birr" />
-        <MenuItem icon={<Calendar className="h-4 w-4" />} title="Availability" subtitle="Mon–Fri · 9AM–6PM" />
-        <MenuItem icon={<Settings className="h-4 w-4" />} title="Settings" subtitle="Language, notifications" />
-        <MenuItem icon={<LogOut className="h-4 w-4" />} title="Sign out" onClick={logout} destructive />
+        <MenuItem
+          icon={<CreditCard className="h-4 w-4" />}
+          title="Payment methods"
+          subtitle="Telebirr, CBE Birr"
+        />
+        <MenuItem
+          icon={<Calendar className="h-4 w-4" />}
+          title="Availability"
+          subtitle="Mon–Fri · 9AM–6PM"
+        />
+        <MenuItem
+          icon={<Settings className="h-4 w-4" />}
+          title="Settings"
+          subtitle="Language, notifications"
+        />
+        <MenuItem
+          icon={
+            logout.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />
+          }
+          title={logout.isPending ? 'Signing out…' : 'Sign out'}
+          onClick={() => !logout.isPending && logout.mutate()}
+          destructive
+          disabled={logout.isPending}
+        />
       </div>
     </MobileShell>
+  );
+}
+
+function SignedOutView() {
+  return (
+    <div className="flex min-h-[80dvh] flex-col items-center justify-center px-6 text-center">
+      <div className="grad-hero grid h-16 w-16 place-items-center rounded-2xl text-2xl font-extrabold text-white shadow-lg shadow-primary/40">
+        <Sparkles className="h-8 w-8" />
+      </div>
+      <h2 className="mt-6 text-2xl font-extrabold tracking-tight">Join Apex-Work</h2>
+      <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+        Sign in to see your profile, wallet, and manage your gigs.
+      </p>
+      <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
+        <Button asChild variant="brand" size="lg">
+          <Link href="/signup">
+            <Sparkles className="h-4 w-4" /> Create an account
+          </Link>
+        </Button>
+        <Button asChild variant="outline" size="lg">
+          <Link href="/login">
+            <LogIn className="h-4 w-4" /> I already have an account
+          </Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -98,23 +176,32 @@ function MenuItem({
   subtitle,
   onClick,
   destructive,
+  disabled,
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle?: string;
   onClick?: () => void;
   destructive?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-card"
+      disabled={disabled}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-card disabled:opacity-60"
     >
-      <div className={`grid h-10 w-10 place-items-center rounded-xl bg-card ${destructive ? 'text-destructive' : 'text-primary'}`}>
+      <div
+        className={`grid h-10 w-10 place-items-center rounded-xl bg-card ${
+          destructive ? 'text-destructive' : 'text-primary'
+        }`}
+      >
         {icon}
       </div>
       <div className="flex-1">
-        <div className={`text-sm font-semibold ${destructive ? 'text-destructive' : ''}`}>{title}</div>
+        <div className={`text-sm font-semibold ${destructive ? 'text-destructive' : ''}`}>
+          {title}
+        </div>
         {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
