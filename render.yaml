@@ -67,5 +67,9 @@ services:
         sync: false
       - key: CHAPA_PUBLIC_KEY
         sync: false
+      - key: CHAPA_ENCRYPTION_KEY
+        sync: false
       - key: CHAPA_WEBHOOK_SECRET
-        generateValue: true
+        # Set to the value shown in Chapa dashboard when you configure the
+        # webhook URL. Leave empty in test mode; production should always have one.
+        sync: false

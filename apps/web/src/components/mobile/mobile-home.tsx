@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Bell, Mic, Bookmark, Star, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
+import { Search, Mic, Bookmark, Star, MapPin, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
+import { NotificationsBell } from '@/components/notifications-bell';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -51,13 +53,7 @@ export function MobileHome() {
           <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
         <div className="flex gap-2">
-          <Link
-            href="/messages"
-            aria-label="Messages"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card active:scale-95"
-          >
-            <Bell className="h-5 w-5" />
-          </Link>
+          <NotificationsBell />
           <Link
             href="/profile"
             className={cn(
@@ -121,9 +117,11 @@ export function MobileHome() {
 
       <div className="flex flex-col gap-4 px-5 pb-8">
         {isLoading && (
-          <div className="grid h-40 place-items-center text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-          </div>
+          <>
+            <GigSkeleton />
+            <GigSkeleton />
+            <GigSkeleton />
+          </>
         )}
         {!isLoading && gigs.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
@@ -236,5 +234,33 @@ function GigCard({ g }: { g: GigListItem }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+/**
+ * Skeleton placeholder that mirrors the shape of GigCard so the layout
+ * doesn't jump when real data arrives. Uses fixed heights matching the
+ * actual card so CLS stays at zero.
+ */
+function GigSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <Skeleton className="h-32 w-full rounded-none" />
+      <div className="p-4">
+        <div className="-mt-10 flex items-end gap-3">
+          <Skeleton className="h-14 w-14 rounded-full ring-4 ring-card" />
+          <div className="flex-1 pb-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="mt-1 h-3 w-24" />
+          </div>
+        </div>
+        <Skeleton className="mt-3 h-4 w-full" />
+        <Skeleton className="mt-1.5 h-4 w-3/4" />
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-7 w-16 rounded-full" />
+        </div>
+      </div>
+    </div>
   );
 }

@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Drawer } from 'vaul';
 import { cn } from '@/lib/utils';
 import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
+import { useNotificationSocket } from '@/hooks/use-notifications';
+import { PwaInstall } from '@/components/pwa-install';
 
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
@@ -32,6 +34,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
 
   // Auto-redirect freelancers who haven't finished onboarding.
   useOnboardingGuard();
+  // Subscribe to the user's realtime notification stream (silent when signed out).
+  useNotificationSocket();
 
   const currentTab: MobileTab | undefined =
     activeTab ??
@@ -54,6 +58,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <main className={cn('min-h-dvh', showTabBar && 'safe-b-nav')}>{children}</main>
+      <PwaInstall />
 
       {showTabBar && (
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/85 backdrop-blur-xl backdrop-saturate-150">

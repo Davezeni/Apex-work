@@ -13,6 +13,8 @@ import {
   Loader2,
   LogIn,
   Sparkles,
+  Package,
+  Bell,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -118,6 +120,18 @@ export default function ProfilePage() {
       </div>
       <div className="px-3 pb-8">
         <MenuItem
+          icon={<Package className="h-4 w-4" />}
+          title="Orders"
+          subtitle="Your purchases and sales"
+          href="/orders"
+        />
+        <MenuItem
+          icon={<Bell className="h-4 w-4" />}
+          title="Notifications"
+          subtitle="Alerts & activity"
+          href="/notifications"
+        />
+        <MenuItem
           icon={<CreditCard className="h-4 w-4" />}
           title={t('profile.paymentMethods')}
           subtitle="Telebirr, CBE Birr"
@@ -190,6 +204,7 @@ function MenuItem({
   title,
   subtitle,
   onClick,
+  href,
   destructive,
   disabled,
 }: {
@@ -197,15 +212,12 @@ function MenuItem({
   title: string;
   subtitle?: string;
   onClick?: () => void;
+  href?: string;
   destructive?: boolean;
   disabled?: boolean;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-card disabled:opacity-60"
-    >
+  const inner = (
+    <>
       <div
         className={`grid h-10 w-10 place-items-center rounded-xl bg-card ${
           destructive ? 'text-destructive' : 'text-primary'
@@ -220,6 +232,20 @@ function MenuItem({
         {subtitle && <div className="text-[11px] text-muted-foreground">{subtitle}</div>}
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </>
+  );
+  const cls =
+    'flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-card disabled:opacity-60';
+  if (href) {
+    return (
+      <Link href={href} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <button onClick={onClick} disabled={disabled} className={cls}>
+      {inner}
     </button>
   );
 }

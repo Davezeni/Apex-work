@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { useGig } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
+import { useCreateOrder } from '@/hooks/use-orders';
 import { cn, formatEtb } from '@/lib/utils';
 
 const AVATAR_GRADIENTS = [
@@ -46,6 +47,7 @@ export default function GigDetailPage() {
   const { data: gig, isLoading, error } = useGig(slug);
   const { data: me } = useMe();
   const startConversation = useStartConversation();
+  const createOrder = useCreateOrder();
   const [tier, setTier] = useState<Tier>('BASIC');
 
   if (isLoading) {
@@ -89,8 +91,8 @@ export default function GigDetailPage() {
     }
   };
 
-  const handleContinue = () => {
-    if (!selected) return;
+  const handleContinue = async () => {
+    if (!selected || !gig) return;
     if (!me) {
       router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
       return;
@@ -99,10 +101,25 @@ export default function GigDetailPage() {
       toast.info("This is your own gig — you can't hire yourself.");
       return;
     }
-    // Payments not wired yet: for now, start a conversation with the freelancer
-    // pre-filling context, so they can send a custom offer.
-    toast.success(`Contacting ${gig.owner.fullName.split(' ')[0]} about the ${selected.title}...`);
-    handleMessageFreelancer();
+    try {
+      const result = await createOrder.mutateAsync({
+        gigId: gig.id,
+        packageTier: selected.tier,
+      });
+      if (result.checkoutUrl) {
+        // Redirect the browser to Chapa's hosted checkout page.
+        toast.success('Redirecting to secure checkout…');
+        window.location.href = result.checkoutUrl;
+      } else if (result.devSkipped) {
+        toast.success('Order created (dev mode — payment skipped)');
+        router.push(`/orders/${result.order.id}`);
+      } else {
+        toast.error('Could not start checkout. Try again.');
+      }
+    } catch (err) {
+      const e = err as { message?: string };
+      toast.error(e.message ?? 'Something went wrong. Try again.');
+    }
   };
 
   return (
@@ -296,13 +313,17 @@ export default function GigDetailPage() {
             size="lg"
             className="flex-1"
             onClick={handleContinue}
-            disabled={!selected}
+            disabled={!selected || createOrder.isPending}
           >
-            {isOwnGig
-              ? 'Preview'
-              : selected
-                ? `Continue · ${formatEtb(selected.priceEtb)}`
-                : 'Continue'}
+            {createOrder.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isOwnGig ? (
+              'Preview'
+            ) : selected ? (
+              `Continue · ${formatEtb(selected.priceEtb)}`
+            ) : (
+              'Continue'
+            )}
           </Button>
         </div>
       </div>

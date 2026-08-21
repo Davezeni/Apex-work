@@ -31,6 +31,7 @@ const envSchema = z.object({
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_PUBLIC_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
+  CHAPA_ENCRYPTION_KEY: z.string().optional(),
 
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),

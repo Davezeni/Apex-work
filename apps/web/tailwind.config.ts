@@ -87,6 +87,10 @@ const config: Config = {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(34,197,94,.6)' },
           '70%': { boxShadow: '0 0 0 10px rgba(34,197,94,0)' },
         },
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',

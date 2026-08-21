@@ -5,6 +5,7 @@
 import type { Message } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { notify } from './notifications.service.js';
 
 /**
  * Get-or-create a 1-to-1 conversation between two users.
@@ -150,6 +151,24 @@ export async function sendMessage(input: {
     });
     return m;
   });
+
+  // Notify every OTHER member of the conversation (fire-and-forget).
+  // Kept outside the transaction: notifications are side effects, not core writes.
+  const others = await prisma.conversationMember.findMany({
+    where: { conversationId: input.conversationId, userId: { not: input.senderId } },
+    select: { userId: true },
+  });
+  await Promise.all(
+    others.map((m) =>
+      notify({
+        userId: m.userId,
+        type: 'NEW_MESSAGE',
+        title: `New message from ${message.sender.fullName}`,
+        body: (input.body ?? '').slice(0, 140) || '📎 Attachment',
+        payload: { conversationId: input.conversationId, messageId: message.id },
+      }),
+    ),
+  );
 
   return message;
 }
