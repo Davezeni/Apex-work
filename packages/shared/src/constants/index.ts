@@ -69,9 +69,9 @@ export const MAX_GIG_PRICE_ETB = 500_000;
 
 /** Rate limits */
 export const RATE_LIMITS = {
-  auth: { window: 15 * 60 * 1000, max: 10 }, // 10 attempts / 15 min
-  otp: { window: 60 * 60 * 1000, max: 5 }, // 5 OTPs / hour
-  api: { window: 15 * 60 * 1000, max: 200 }, // general API
+  auth: { window: 15 * 60 * 1000, max: 20 }, // 20 attempts / 15 min
+  otp: { window: 60 * 60 * 1000, max: 15 }, // 15 OTPs / hour (raised from 5 for beta testing)
+  api: { window: 15 * 60 * 1000, max: 300 }, // general API
   messages: { window: 60 * 1000, max: 60 }, // 60 msgs / min
 } as const;
 
