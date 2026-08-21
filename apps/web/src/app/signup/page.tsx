@@ -96,7 +96,9 @@ function SignupInner() {
       });
       setSession(result.tokens);
       toast.success(`Welcome to Apex-Work, ${fullName.split(' ')[0]}!`);
-      router.push('/');
+      // Freelancers finish setting up their profile before landing on Home.
+      // Clients skip straight to the feed — they can browse right away.
+      router.push(role === 'FREELANCER' ? '/onboarding' : '/');
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Signup failed');
     } finally {

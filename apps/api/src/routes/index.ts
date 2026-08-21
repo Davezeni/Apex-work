@@ -2,6 +2,9 @@ import { Router } from 'express';
 import authRoutes from './auth.routes.js';
 import meRoutes from './me.routes.js';
 import gigsRoutes from './gigs.routes.js';
+import skillsRoutes from './skills.routes.js';
+import onboardingRoutes from './onboarding.routes.js';
+import chatRoutes from './chat.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -42,5 +45,8 @@ router.get('/ready', async (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/me', meRoutes);
 router.use('/gigs', gigsRoutes);
+router.use('/skills', skillsRoutes);
+router.use('/onboarding', onboardingRoutes);
+router.use('/conversations', chatRoutes);
 
 export default router;

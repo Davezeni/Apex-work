@@ -1,71 +1,70 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Bell, Mic, Bookmark, Star, MapPin, CheckCircle2, Flame } from 'lucide-react';
+import { Search, Bell, Mic, Bookmark, Star, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
+import { useGigs, type GigListItem } from '@/hooks/use-gigs';
+import { useMe } from '@/hooks/use-me';
 
-const stories = [
-  { id: 'you', name: 'Your story', initials: '+', add: true },
-  { id: 'dt', name: 'Dawit', initials: 'DT', gradient: 'from-violet-500 to-emerald-500' },
-  { id: 'hw', name: 'Hanna', initials: 'HW', gradient: 'from-cyan-500 to-violet-500' },
-  { id: 'mb', name: 'Meron', initials: 'MB', gradient: 'from-amber-500 to-red-500' },
-  { id: 'ak', name: 'Abel', initials: 'AK', gradient: 'from-emerald-500 to-amber-500' },
-  { id: 'tg', name: 'Tsion', initials: 'TG', gradient: 'from-red-500 to-violet-500' },
+const AVATAR_GRADIENTS = [
+  'from-violet-500 to-emerald-500',
+  'from-amber-500 to-red-500',
+  'from-cyan-500 to-violet-500',
+  'from-emerald-500 to-amber-500',
+  'from-red-500 to-violet-500',
 ];
 
-const feed = [
-  {
-    id: 'g1',
-    slug: 'modern-saas-landing-page-design',
-    badge: { icon: Flame, label: 'Top Rated', color: 'text-orange-400' },
-    coverGradient: 'from-violet-500 via-emerald-500 to-amber-400',
-    owner: { name: 'Selam Assefa', title: 'Senior UI/UX Designer', initials: 'SA', gradient: 'from-violet-500 to-emerald-500' },
-    title: 'I will design a modern SaaS landing page in 48h',
-    rating: 4.98,
-    reviews: 312,
-    city: 'Addis Ababa',
-    online: true,
-    price: 2500,
-  },
-  {
-    id: 'g2',
-    slug: 'nextjs-mvp-full-stack',
-    badge: { icon: Flame, label: 'Fast delivery', color: 'text-amber-400' },
-    coverGradient: 'from-amber-500 via-red-500 to-violet-500',
-    owner: { name: 'Dawit Tesfaye', title: 'Full-Stack Developer', initials: 'DT', gradient: 'from-amber-500 to-red-500' },
-    title: 'I will build your MVP with Next.js and PostgreSQL',
-    rating: 5.0,
-    reviews: 198,
-    city: 'Bahir Dar',
-    online: false,
-    price: 4800,
-  },
-];
+/** Deterministic pick so a user's avatar color stays stable across renders. */
+function gradientFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]!;
+}
+
+function initialsOf(name: string): string {
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+}
 
 export function MobileHome() {
   const [activeCategory, setActiveCategory] = useState<string>('for-you');
+  const { data: me } = useMe();
+  const { data: gigsData, isLoading } = useGigs({
+    category: activeCategory !== 'for-you' ? activeCategory : undefined,
+    limit: 20,
+  });
+
+  const gigs = gigsData?.items ?? [];
+  const firstName = me?.fullName.split(' ')[0] ?? 'Welcome';
 
   return (
     <div className="min-h-dvh">
       {/* Sticky header */}
       <header className="safe-top sticky top-0 z-30 flex items-center justify-between bg-background/85 px-5 pb-3 pt-4 backdrop-blur-xl">
         <div>
-          <div className="text-xs text-muted-foreground">ጤና ይስጥልኝ 👋</div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Selamawit</h1>
+          <div className="text-xs text-muted-foreground">
+            {me ? 'ጤና ይስጥልኝ 👋' : 'Discover talent'}
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
         <div className="flex gap-2">
-          <button
-            aria-label="Notifications"
-            className="relative grid h-10 w-10 place-items-center rounded-full border border-border bg-card active:scale-95"
+          <Link
+            href="/messages"
+            aria-label="Messages"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card active:scale-95"
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-background bg-destructive" />
-          </button>
-          <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
-            S
-          </div>
+          </Link>
+          <Link
+            href="/profile"
+            className={cn(
+              'grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white',
+              me ? `bg-gradient-to-br ${gradientFor(me.id)}` : 'grad-hero',
+            )}
+          >
+            {me ? initialsOf(me.fullName)[0] : 'A'}
+          </Link>
         </div>
       </header>
 
@@ -85,33 +84,6 @@ export function MobileHome() {
             <Mic className="h-4 w-4" />
           </button>
         </Link>
-      </div>
-
-      {/* Stories */}
-      <div className="flex gap-3 overflow-x-auto px-5 pb-5 no-scrollbar">
-        {stories.map((s) => (
-          <button key={s.id} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
-            <div
-              className={cn(
-                'grad-hero grid h-16 w-16 place-items-center rounded-full p-[3px]',
-                s.add && 'bg-none border-2 border-dashed border-border',
-              )}
-            >
-              <div className="grid h-full w-full place-items-center rounded-full bg-background p-0.5">
-                <div
-                  className={cn(
-                    'grid h-full w-full place-items-center rounded-full text-sm font-bold text-white bg-gradient-to-br',
-                    s.gradient ?? 'from-primary to-accent',
-                    s.add && 'bg-card bg-none text-primary text-2xl font-light',
-                  )}
-                >
-                  {s.initials}
-                </div>
-              </div>
-            </div>
-            <span className="w-16 truncate text-center text-[11px] text-muted-foreground">{s.name}</span>
-          </button>
-        ))}
       </div>
 
       {/* Category chips */}
@@ -144,8 +116,23 @@ export function MobileHome() {
           View all
         </Link>
       </div>
+
       <div className="flex flex-col gap-4 px-5 pb-8">
-        {feed.map((g) => (
+        {isLoading && (
+          <div className="grid h-40 place-items-center text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        )}
+        {!isLoading && gigs.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+            <div className="text-2xl">🌱</div>
+            <p className="mt-2 text-sm font-semibold">No gigs in this category yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Be the first — post one to get noticed.
+            </p>
+          </div>
+        )}
+        {gigs.map((g) => (
           <GigCard key={g.id} g={g} />
         ))}
       </div>
@@ -153,7 +140,15 @@ export function MobileHome() {
   );
 }
 
-function CategoryChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function CategoryChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -169,24 +164,22 @@ function CategoryChip({ label, active, onClick }: { label: string; active: boole
   );
 }
 
-function GigCard({ g }: { g: (typeof feed)[number] }) {
-  const BadgeIcon = g.badge.icon;
+function GigCard({ g }: { g: GigListItem }) {
   return (
     <Link
       href={`/gigs/${g.slug}`}
       className="overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
-      <div className={cn('relative h-32 bg-gradient-to-br', g.coverGradient)}>
-        <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
-          <BadgeIcon className={cn('h-3 w-3', g.badge.color)} />
-          {g.badge.label}
-        </span>
+      <div className={cn('relative h-32 bg-gradient-to-br', gradientFor(g.id))}>
+        {g.rating >= 4.8 && g.ratingCount >= 10 && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+            🔥 Top Rated
+          </span>
+        )}
         <button
           aria-label="Save"
           className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-          onClick={(e) => {
-            e.preventDefault();
-          }}
+          onClick={(e) => e.preventDefault()}
         >
           <Bookmark className="h-4 w-4" />
         </button>
@@ -196,42 +189,50 @@ function GigCard({ g }: { g: (typeof feed)[number] }) {
           <div
             className={cn(
               'grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br text-base font-bold text-white ring-4 ring-card',
-              g.owner.gradient,
+              gradientFor(g.owner.id),
             )}
           >
-            {g.owner.initials}
+            {initialsOf(g.owner.fullName)}
           </div>
           <div className="pb-1">
             <h3 className="flex items-center gap-1.5 text-sm font-bold">
-              {g.owner.name}
+              {g.owner.fullName}
               <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
             </h3>
-            <p className="text-[11px] text-muted-foreground">{g.owner.title}</p>
+            <p className="text-[11px] text-muted-foreground">@{g.owner.username}</p>
           </div>
         </div>
         <div className="mt-3 text-sm font-semibold leading-snug">{g.title}</div>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            <span className="font-semibold text-foreground">{g.rating}</span> ({g.reviews})
-          </span>
-          <span>·</span>
-          <span className="flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {g.city}
-          </span>
-          {g.online && (
+          {g.ratingCount > 0 ? (
             <>
-              <span>·</span>
-              <span className="text-emerald-400">🟢 Online</span>
+              <span className="flex items-center gap-1">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                <span className="font-semibold text-foreground">{g.rating.toFixed(2)}</span> (
+                {g.ratingCount})
+              </span>
+              {g.owner.city && <span>·</span>}
             </>
+          ) : (
+            <span className="text-muted-foreground/60">New freelancer</span>
+          )}
+          {g.owner.city && (
+            <span className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              {g.owner.city}
+            </span>
           )}
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
           <div className="text-[11px] text-muted-foreground">
-            From <span className="text-base font-extrabold text-foreground">{formatEtb(g.price)}</span>
+            From{' '}
+            <span className="text-base font-extrabold text-foreground">
+              {formatEtb(g.startingPriceEtb)}
+            </span>
           </div>
-          <span className="grad-hero rounded-full px-4 py-1.5 text-xs font-bold text-white">Hire now</span>
+          <span className="grad-hero rounded-full px-4 py-1.5 text-xs font-bold text-white">
+            View
+          </span>
         </div>
       </div>
     </Link>

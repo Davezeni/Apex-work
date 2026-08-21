@@ -2,63 +2,141 @@
 
 import Link from 'next/link';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-import { Search, Edit3 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Search, Edit3, Loader2, MessageCircleOff } from 'lucide-react';
+import { cn, timeAgo } from '@/lib/utils';
+import { useConversations, type ChatSummary } from '@/hooks/use-chat';
+import { useMe } from '@/hooks/use-me';
+import { Button } from '@/components/ui/button';
 
-const CHATS = [
-  { id: 'selam', name: 'Selam Assefa', preview: 'typing…', time: 'now', unread: 3, online: true, typing: true, initials: 'SA', gradient: 'from-violet-500 to-emerald-500' },
-  { id: 'dawit', name: 'Dawit Tesfaye', preview: '🎤 Voice message · 0:24', time: '12m', unread: 1, initials: 'DT', gradient: 'from-amber-500 to-red-500' },
-  { id: 'hanna', name: 'Hanna Wolde', preview: "Great, I'll send the draft tonight 🌙", time: '1h', initials: 'HW', gradient: 'from-cyan-500 to-violet-500' },
-  { id: 'team', name: 'Team · Habesha Design', preview: 'Meron: Uploaded new brief', time: '3h', unread: 7, online: true, initials: 'TP', gradient: 'from-emerald-500 to-amber-500' },
-  { id: 'tsion', name: 'Tsion G.', preview: '✓✓ Payment received — thank you!', time: 'Yesterday', initials: 'TG', gradient: 'from-red-500 to-violet-500' },
-  { id: 'ai', name: 'Apex-Work AI', preview: '💡 3 new matching jobs for you', time: 'Mon', initials: '🤖', gradient: 'from-primary to-accent' },
+const AVATAR_GRADIENTS = [
+  'from-violet-500 to-emerald-500',
+  'from-amber-500 to-red-500',
+  'from-cyan-500 to-violet-500',
+  'from-emerald-500 to-amber-500',
+  'from-red-500 to-violet-500',
 ];
+function gradientFor(id: string): string {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
+}
+function initialsOf(name: string): string {
+  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+}
 
 export default function MessagesPage() {
+  const { data: me, isAuthed } = useMe();
+  const { data, isLoading, error } = useConversations();
+
+  if (!isAuthed) {
+    return (
+      <MobileShell activeTab="chat">
+        <div className="flex min-h-[80dvh] flex-col items-center justify-center px-6 text-center">
+          <MessageCircleOff className="h-12 w-12 text-muted-foreground" />
+          <h2 className="mt-4 text-xl font-extrabold">Sign in to see messages</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Chat with freelancers and clients in real time.
+          </p>
+          <Button asChild variant="brand" size="lg" className="mt-6">
+            <Link href="/login">Sign in</Link>
+          </Button>
+        </div>
+      </MobileShell>
+    );
+  }
+
   return (
     <MobileShell activeTab="chat">
       <header className="safe-top flex items-center justify-between px-5 pb-3 pt-4">
         <h1 className="text-2xl font-extrabold tracking-tight">Messages</h1>
         <div className="flex gap-2">
-          <button aria-label="Search" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card">
+          <button
+            aria-label="Search"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
+          >
             <Search className="h-4 w-4" />
           </button>
-          <button aria-label="New" className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card">
+          <button
+            aria-label="New"
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
+          >
             <Edit3 className="h-4 w-4" />
           </button>
         </div>
       </header>
 
-      <div className="px-2">
-        {CHATS.map((c) => (
-          <Link key={c.id} href={`/messages/${c.id}`} className="flex items-center gap-3 rounded-2xl p-3 active:bg-card">
-            <div className="relative">
-              <div className={cn('grid h-13 w-13 h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-lg font-bold text-white', c.gradient)}>
-                {c.initials}
-              </div>
-              {c.online && (
-                <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-[3px] border-background bg-emerald-500" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="truncate text-[15px] font-semibold">{c.name}</h4>
-                <span className="shrink-0 text-[11px] text-muted-foreground">{c.time}</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <p className={cn('truncate text-[13px] text-muted-foreground', c.typing && 'italic text-emerald-500')}>
-                  {c.preview}
-                </p>
-                {c.unread && (
-                  <span className="grid h-[22px] min-w-[22px] shrink-0 place-items-center rounded-full bg-primary px-2 text-[11px] font-bold text-primary-foreground">
-                    {c.unread}
-                  </span>
-                )}
-              </div>
-            </div>
-          </Link>
-        ))}
+      {isLoading && (
+        <div className="grid h-40 place-items-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {error && !isLoading && (
+        <div className="mx-5 mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          Could not load messages. Pull down to retry.
+        </div>
+      )}
+
+      {!isLoading && (data?.items.length ?? 0) === 0 && (
+        <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
+          <div className="text-4xl">💬</div>
+          <p className="mt-3 text-sm font-semibold">No conversations yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Message a freelancer from their gig page to get started.
+          </p>
+          <Button asChild variant="brand" size="sm" className="mt-5">
+            <Link href="/">Explore gigs</Link>
+          </Button>
+        </div>
+      )}
+
+      <div className="px-2 pb-4">
+        {data?.items.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} />)}
       </div>
     </MobileShell>
+  );
+}
+
+function ConvRow({ c, selfId: _selfId }: { c: ChatSummary; selfId: string }) {
+  const peer = c.peer;
+  const name = peer?.fullName ?? c.title ?? 'Conversation';
+  const preview = c.lastMessage?.body
+    ? c.lastMessage.body
+    : c.lastMessage?.attachmentType
+      ? `📎 ${c.lastMessage.attachmentType}`
+      : 'Say hi 👋';
+  const when = c.lastMessageAt ? timeAgo(c.lastMessageAt) : '';
+  const gradient = peer ? gradientFor(peer.id) : gradientFor(c.id);
+
+  return (
+    <Link
+      href={`/messages/${c.id}`}
+      className="flex items-center gap-3 rounded-2xl p-3 active:bg-card"
+    >
+      <div className="relative">
+        <div
+          className={cn(
+            'grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-lg font-bold text-white',
+            gradient,
+          )}
+        >
+          {initialsOf(name)}
+        </div>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="truncate text-[15px] font-semibold">{name}</h4>
+          <span className="shrink-0 text-[11px] text-muted-foreground">{when}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="truncate text-[13px] text-muted-foreground">{preview}</p>
+          {c.unread > 0 && (
+            <span className="grid h-[22px] min-w-[22px] shrink-0 place-items-center rounded-full bg-primary px-2 text-[11px] font-bold text-primary-foreground">
+              {c.unread}
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
