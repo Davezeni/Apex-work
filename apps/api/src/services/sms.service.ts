@@ -39,9 +39,18 @@ class AfroMessageProvider implements SmsProvider {
     }
 
     const url = new URL(this.base);
-    // `from` = identifier ID (which team/account to send from)
-    if (env.AFROMESSAGE_IDENTIFIER_ID) {
-      url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID);
+    // NOTE: AfroMessage uses two different concepts often confused in their UI:
+    //   - `from` (short code / sender ID) — must be a code AfroMessage assigned
+    //     to your account for sending. Beta accounts typically don't have one.
+    //   - `sender` — optional pre-registered brand name (requires paid plan).
+    //
+    // If you don't have a short code, DON'T send `from` — AfroMessage will use
+    // their default shortcode automatically. That's the case on beta / trial.
+    //
+    // Only set `from` if you have a real, verified short code (not the account
+    // UUID shown in the Profile page).
+    if (env.AFROMESSAGE_IDENTIFIER_ID && env.AFROMESSAGE_IDENTIFIER_ID.trim().length > 0) {
+      url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID.trim());
     }
     // `sender` = optional registered sender name; only set if non-empty
     if (env.AFROMESSAGE_SENDER && env.AFROMESSAGE_SENDER.trim().length > 0) {
