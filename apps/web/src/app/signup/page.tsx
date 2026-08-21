@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
+import { OtpInput } from '@/components/auth/otp-input';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, type UserRole } from '@apex-work/shared';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
@@ -33,39 +34,43 @@ function SignupInner() {
   const [otpToken, setOtpToken] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
 
   const chooseRole = () => setStep('phone');
 
-  const sendOtp = async () => {
+  const sendOtp = async (isResend = false) => {
     if (!ETHIOPIAN_PHONE_REGEX.test(phone)) {
       toast.error('Enter a valid Ethiopian mobile number');
       return;
     }
-    setLoading(true);
+    if (isResend) setResending(true);
+    else setLoading(true);
     try {
       await apiFetch('/auth/otp/request', { method: 'POST', body: { phone, purpose: 'SIGNUP' } });
-      setStep('otp');
-      toast.success('Code sent');
+      if (!isResend) setStep('otp');
+      toast.success(isResend ? 'New code sent' : 'Code sent');
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Failed to send code');
     } finally {
       setLoading(false);
+      setResending(false);
     }
   };
 
-  const verifyOtp = async () => {
-    if (code.length !== OTP_LENGTH) {
+  const verifyOtp = async (submittedCode?: string) => {
+    const c = submittedCode ?? code;
+    if (c.length !== OTP_LENGTH) {
       toast.error(`Enter the ${OTP_LENGTH}-digit code`);
       return;
     }
     setLoading(true);
     try {
-      const { verifiedToken } = await apiFetch<{ verifiedToken: string }>(
-        '/auth/otp/verify',
-        { method: 'POST', body: { phone, code } },
-      );
+      const { verifiedToken } = await apiFetch<{ verifiedToken: string }>('/auth/otp/verify', {
+        method: 'POST',
+        body: { phone, code: c },
+      });
       setOtpToken(verifiedToken);
       setStep('name');
     } catch (err) {
@@ -174,7 +179,7 @@ function SignupInner() {
                 placeholder="+251 9XX XXX XXX"
                 className="mt-8 h-14 w-full rounded-2xl border border-border bg-card px-4 text-lg font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
-              <Button variant="brand" size="lg" className="mt-6 w-full" onClick={sendOtp} disabled={loading}>
+              <Button variant="brand" size="lg" className="mt-6 w-full" onClick={() => sendOtp()} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send code <ArrowRight className="h-4 w-4" /></>}
               </Button>
             </StepBox>
@@ -183,20 +188,23 @@ function SignupInner() {
           {step === 'otp' && (
             <StepBox key="otp">
               <h1 className="text-3xl font-extrabold tracking-tight">Enter your code</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Sent to <span className="font-semibold text-foreground">{phone}</span>
-              </p>
-              <input
-                autoFocus
-                inputMode="numeric"
-                pattern="\d*"
-                maxLength={OTP_LENGTH}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="●●●●●●"
-                className="mt-8 h-16 w-full rounded-2xl border border-border bg-card text-center text-3xl font-extrabold tracking-[0.5em] outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+              <OtpInput
+                phone={phone}
+                code={code}
+                onChange={(c) => {
+                  setCode(c);
+                  if (c.length === OTP_LENGTH) void verifyOtp(c);
+                }}
+                onResend={() => sendOtp(true)}
+                resending={resending}
               />
-              <Button variant="brand" size="lg" className="mt-6 w-full" onClick={verifyOtp} disabled={loading}>
+              <Button
+                variant="brand"
+                size="lg"
+                className="mt-6 w-full"
+                onClick={() => verifyOtp()}
+                disabled={loading}
+              >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
               </Button>
             </StepBox>

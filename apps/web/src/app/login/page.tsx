@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { OtpInput } from '@/components/auth/otp-input';
 import { apiFetch, ApiError } from '@/lib/api';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
 import { useAuthStore } from '@/stores/auth-store';
@@ -18,19 +19,21 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('+251');
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
 
-  const sendOtp = async () => {
+  const sendOtp = async (isResend = false) => {
     if (!ETHIOPIAN_PHONE_REGEX.test(phone)) {
       toast.error('Enter a valid Ethiopian mobile number');
       return;
     }
-    setLoading(true);
+    if (isResend) setResending(true);
+    else setLoading(true);
     try {
       await apiFetch('/auth/otp/request', { method: 'POST', body: { phone, purpose: 'LOGIN' } });
-      setStep('otp');
-      toast.success('Code sent to your phone');
+      if (!isResend) setStep('otp');
+      toast.success(isResend ? 'New code sent' : 'Code sent to your phone');
     } catch (err) {
       const e = err as ApiError;
       // Special case: phone not registered → show sign-up CTA instead of raw error toast
@@ -41,11 +44,13 @@ export default function LoginPage() {
       }
     } finally {
       setLoading(false);
+      setResending(false);
     }
   };
 
-  const verifyAndLogin = async () => {
-    if (code.length !== OTP_LENGTH) {
+  const verifyAndLogin = async (submittedCode?: string) => {
+    const c = submittedCode ?? code;
+    if (c.length !== OTP_LENGTH) {
       toast.error(`Enter the ${OTP_LENGTH}-digit code`);
       return;
     }
@@ -53,7 +58,7 @@ export default function LoginPage() {
     try {
       const { verifiedToken } = await apiFetch<{ verifiedToken: string; userId: string | null }>(
         '/auth/otp/verify',
-        { method: 'POST', body: { phone, code } },
+        { method: 'POST', body: { phone, code: c } },
       );
       const result = await apiFetch<{
         user: { id: string; role: string };
@@ -118,7 +123,7 @@ export default function LoginPage() {
                 variant="brand"
                 size="lg"
                 className="mt-6 w-full"
-                onClick={sendOtp}
+                onClick={() => sendOtp()}
                 disabled={loading}
               >
                 {loading ? (
@@ -177,27 +182,23 @@ export default function LoginPage() {
               transition={{ duration: 0.25 }}
             >
               <h1 className="text-3xl font-extrabold tracking-tight">Enter your code</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We sent a {OTP_LENGTH}-digit code to <span className="font-semibold text-foreground">{phone}</span>
-              </p>
-
-              <input
-                autoFocus
-                type="text"
-                inputMode="numeric"
-                pattern="\d*"
-                maxLength={OTP_LENGTH}
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="●●●●●●"
-                className="mt-8 h-16 w-full rounded-2xl border border-border bg-card text-center text-3xl font-extrabold tracking-[0.5em] outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+              <OtpInput
+                phone={phone}
+                code={code}
+                onChange={(c) => {
+                  setCode(c);
+                  // Auto-submit when the full code is entered — no button press needed
+                  if (c.length === OTP_LENGTH) void verifyAndLogin(c);
+                }}
+                onResend={() => sendOtp(true)}
+                resending={resending}
               />
 
               <Button
                 variant="brand"
                 size="lg"
                 className="mt-6 w-full"
-                onClick={verifyAndLogin}
+                onClick={() => verifyAndLogin()}
                 disabled={loading}
               >
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify & sign in'}

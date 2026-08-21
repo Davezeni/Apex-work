@@ -31,6 +31,11 @@ class ConsoleSmsProvider implements SmsProvider {
 class AfroMessageProvider implements SmsProvider {
   readonly name = 'afromessage';
   private readonly base = 'https://api.afromessage.com/api/send';
+  /**
+   * Once we detect the account has no valid short-code, we stop sending `from`
+   * on subsequent calls. Avoids a wasted retry per SMS forever.
+   */
+  private skipFrom = false;
 
   async send(to: string, message: string) {
     if (!env.AFROMESSAGE_API_KEY) {
@@ -38,22 +43,48 @@ class AfroMessageProvider implements SmsProvider {
       return { ok: false, error: 'no_api_key' };
     }
 
+    // First attempt: with `from` if configured
+    const first = await this.attempt(to, message, /* omitFrom */ this.skipFrom);
+    if (first.ok) return first;
+
+    // Auto-recover: if failure is because of invalid identifier / sender,
+    // retry once WITHOUT `from` and remember it for future calls.
+    if (
+      !this.skipFrom &&
+      first.error &&
+      /invalid|short code|sender/i.test(first.error)
+    ) {
+      logger.warn(
+        { to, error: first.error },
+        'AfroMessage rejected identifier; retrying without `from` (default shortcode)',
+      );
+      this.skipFrom = true;
+      const retry = await this.attempt(to, message, true);
+      if (retry.ok) {
+        logger.info({ to }, 'AfroMessage SMS sent via default shortcode fallback');
+        return retry;
+      }
+      return retry;
+    }
+
+    return first;
+  }
+
+  private async attempt(
+    to: string,
+    message: string,
+    omitFrom: boolean,
+  ): Promise<{ ok: boolean; providerRef?: string; error?: string }> {
     const url = new URL(this.base);
-    // NOTE: AfroMessage uses two different concepts often confused in their UI:
-    //   - `from` (short code / sender ID) — must be a code AfroMessage assigned
-    //     to your account for sending. Beta accounts typically don't have one.
+    // NOTE: AfroMessage has two easily-confused concepts:
+    //   - `from` (short code) — must be one AfroMessage assigned to your account.
+    //     The UUID shown on the Profile page is NOT this — it's an account id.
+    //     Beta / trial accounts typically don't have a short code.
     //   - `sender` — optional pre-registered brand name (requires paid plan).
-    //
-    // If you don't have a short code, DON'T send `from` — AfroMessage will use
-    // their default shortcode automatically. That's the case on beta / trial.
-    //
-    // Only set `from` if you have a real, verified short code (not the account
-    // UUID shown in the Profile page).
-    if (env.AFROMESSAGE_IDENTIFIER_ID && env.AFROMESSAGE_IDENTIFIER_ID.trim().length > 0) {
+    if (!omitFrom && env.AFROMESSAGE_IDENTIFIER_ID?.trim()) {
       url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID.trim());
     }
-    // `sender` = optional registered sender name; only set if non-empty
-    if (env.AFROMESSAGE_SENDER && env.AFROMESSAGE_SENDER.trim().length > 0) {
+    if (env.AFROMESSAGE_SENDER?.trim()) {
       url.searchParams.set('sender', env.AFROMESSAGE_SENDER.trim());
     }
     url.searchParams.set('to', to);
@@ -61,7 +92,7 @@ class AfroMessageProvider implements SmsProvider {
 
     try {
       const res = await fetch(url, {
-        method: 'GET', // AfroMessage's simple API is a GET with query params
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${env.AFROMESSAGE_API_KEY}`,
           Accept: 'application/json',
@@ -79,12 +110,15 @@ class AfroMessageProvider implements SmsProvider {
 
       const payload = data as {
         acknowledge?: string;
-        response?: { message_id?: string; status?: string; errors?: unknown };
+        response?: { message_id?: string; status?: string; errors?: string[] };
         error?: string;
       };
 
       if (payload.acknowledge !== 'success') {
-        // Log everything so we can debug — this is important for onboarding.
+        // Pull the first error string if present — it's the most actionable value.
+        const firstErr = Array.isArray(payload.response?.errors)
+          ? payload.response?.errors?.[0]
+          : undefined;
         logger.error(
           {
             status: res.status,
@@ -98,13 +132,14 @@ class AfroMessageProvider implements SmsProvider {
         );
         return {
           ok: false,
-          error: payload.error ?? payload.response?.status ?? 'send_failed',
+          error: firstErr ?? payload.error ?? payload.response?.status ?? 'send_failed',
         };
       }
 
+      // acknowledge === 'success' covers both "sent" and "Send is in progress..."
       logger.info(
-        { to, messageId: payload.response?.message_id },
-        'AfroMessage SMS sent successfully',
+        { to, messageId: payload.response?.message_id, status: payload.response?.status },
+        'AfroMessage SMS accepted',
       );
       return { ok: true, providerRef: payload.response?.message_id };
     } catch (err) {
