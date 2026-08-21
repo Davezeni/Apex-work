@@ -12,12 +12,15 @@ import {
   MapPin,
   Wallet,
   Wrench,
+  Plus,
+  X,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
-import { useSkills, type Skill } from '@/hooks/use-skills';
+import { useSkills, useCreateSkill, type Skill } from '@/hooks/use-skills';
 import { cn, formatEtb } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -270,6 +273,19 @@ function StepBlurb({ children }: { children: React.ReactNode }) {
   return <p className="mt-2 text-sm text-muted-foreground">{children}</p>;
 }
 
+/**
+ * Max skills a freelancer can pick. Mirrors the API schema (freelancerOnboardingSchema).
+ */
+const MAX_SKILLS = 15;
+
+/**
+ * Client-side dedupe check — same rule as server slugify().
+ * Used to decide whether "Add 'X' as new skill" should appear.
+ */
+function normalizeForCompare(s: string): string {
+  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
 function SkillsPicker({
   selected,
   onChange,
@@ -277,56 +293,191 @@ function SkillsPicker({
   selected: Set<string>;
   onChange: (s: Set<string>) => void;
 }) {
+  // Live search input, debounced for the API query key.
   const [q, setQ] = useState('');
-  const { data, isLoading } = useSkills(q);
+  const [debouncedQ, setDebouncedQ] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 200);
+    return () => clearTimeout(t);
+  }, [q]);
 
-  const toggle = (id: string) => {
+  // Skills we've already resolved (via search or creation) — used to render
+  // the selected-chip row even when the search query changes.
+  const [known, setKnown] = useState<Map<string, Skill>>(new Map());
+  const { data, isLoading } = useSkills(debouncedQ);
+  const createSkill = useCreateSkill();
+
+  // As results come in, remember them so selected chips can render forever
+  // (search results narrow to nothing if the user changes q, but the chips
+  // above still need names).
+  useEffect(() => {
+    if (!data?.items) return;
+    setKnown((prev) => {
+      const next = new Map(prev);
+      for (const s of data.items) next.set(s.id, s);
+      return next;
+    });
+  }, [data]);
+
+  const selectedSkills = Array.from(selected)
+    .map((id) => known.get(id))
+    .filter((s): s is Skill => !!s);
+
+  const toggle = (id: string, skill?: Skill) => {
+    if (skill) {
+      // Remember it so we can render the chip when it's selected but not in current results
+      setKnown((prev) => {
+        if (prev.has(id)) return prev;
+        const next = new Map(prev);
+        next.set(id, skill);
+        return next;
+      });
+    }
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
-    else if (next.size < 15) next.add(id);
+    else if (next.size < MAX_SKILLS) next.add(id);
     onChange(next);
+  };
+
+  const trimmedQ = q.trim();
+  const qKey = normalizeForCompare(trimmedQ);
+  const results = data?.items ?? [];
+  const hasExactMatch = results.some((s) => normalizeForCompare(s.name) === qKey);
+  // Show "Add as new" when the user typed something meaningful that isn't in results.
+  const canCreate =
+    trimmedQ.length >= 2 &&
+    qKey.length >= 2 &&
+    !hasExactMatch &&
+    !createSkill.isPending;
+
+  const handleCreate = async () => {
+    if (!canCreate) return;
+    if (selected.size >= MAX_SKILLS) {
+      toast.error(`You can pick up to ${MAX_SKILLS} skills`);
+      return;
+    }
+    try {
+      const { skill, created } = await createSkill.mutateAsync(trimmedQ);
+      toggle(skill.id, skill);
+      setQ('');
+      if (created) toast.success(`Added "${skill.name}"`);
+    } catch (err) {
+      toast.error((err as ApiError).message ?? 'Could not add that skill');
+    }
   };
 
   return (
     <>
       <StepIcon icon={<Wrench className="h-6 w-6" />} />
       <StepTitle>What are your skills?</StepTitle>
-      <StepBlurb>Pick up to 15 that best describe your work.</StepBlurb>
+      <StepBlurb>
+        Search for a skill or type your own to add it — pick up to {MAX_SKILLS}.
+      </StepBlurb>
 
-      <input
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Search skills…"
-        className="mt-6 h-12 w-full rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
-      />
+      {/* Selected chips — always visible so users see their picks */}
+      {selectedSkills.length > 0 && (
+        <div className="mt-6 flex flex-wrap gap-2 rounded-2xl border border-primary/40 bg-primary/5 p-3">
+          {selectedSkills.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => toggle(s.id, s)}
+              className="grad-hero inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-primary/40 transition-transform active:scale-95"
+              aria-label={`Remove ${s.name}`}
+            >
+              {s.name}
+              <X className="h-3 w-3 opacity-80" strokeWidth={3} />
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      {/* Search input with inline Enter-to-create */}
+      <div className="mt-4 flex gap-2">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && canCreate) {
+              e.preventDefault();
+              void handleCreate();
+            }
+          }}
+          placeholder="Search or type a new skill…"
+          maxLength={40}
+          className="h-12 flex-1 rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+        />
+        {canCreate && (
+          <button
+            onClick={handleCreate}
+            disabled={createSkill.isPending}
+            aria-label="Add new skill"
+            className="grad-hero grid h-12 w-12 shrink-0 place-items-center rounded-xl text-white shadow-md shadow-primary/40 transition-transform active:scale-95 disabled:opacity-60"
+          >
+            {createSkill.isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Plus className="h-5 w-5" strokeWidth={3} />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* "Add 'foo' as new skill" hint row when there's no exact match */}
+      {canCreate && (
+        <button
+          onClick={handleCreate}
+          disabled={createSkill.isPending}
+          className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-primary/40 bg-primary/5 px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-primary/10 disabled:opacity-60"
+        >
+          <div className="grad-hero grid h-8 w-8 shrink-0 place-items-center rounded-full text-white">
+            <Plus className="h-4 w-4" strokeWidth={3} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-semibold">
+              Add <span className="text-primary">&ldquo;{trimmedQ}&rdquo;</span> as new skill
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Can&apos;t find your skill? Create it — others will see it too.
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* Results grid */}
+      <div className="mt-3 flex flex-wrap gap-2 min-h-[60px]">
         {isLoading && (
-          <div className="grid h-24 w-full place-items-center text-muted-foreground">
+          <div className="grid h-16 w-full place-items-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
           </div>
         )}
-        {data?.items.map((s: Skill) => {
-          const active = selected.has(s.id);
-          return (
-            <button
-              key={s.id}
-              onClick={() => toggle(s.id)}
-              className={cn(
-                'rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-95',
-                active
-                  ? 'grad-hero border-transparent text-white shadow-md shadow-primary/40'
-                  : 'border-border bg-card text-muted-foreground',
-              )}
-            >
-              {s.name}
-            </button>
-          );
-        })}
+        {!isLoading &&
+          results.map((s) => {
+            const active = selected.has(s.id);
+            return (
+              <button
+                key={s.id}
+                onClick={() => toggle(s.id, s)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-all active:scale-95',
+                  active
+                    ? 'grad-hero border-transparent text-white shadow-md shadow-primary/40'
+                    : 'border-border bg-card text-muted-foreground hover:border-primary/40',
+                )}
+              >
+                {active && <Check className="h-3 w-3" strokeWidth={3} />}
+                {s.name}
+              </button>
+            );
+          })}
+        {!isLoading && !canCreate && results.length === 0 && trimmedQ.length === 0 && (
+          <p className="text-center text-xs text-muted-foreground w-full py-4">
+            Start typing to search skills…
+          </p>
+        )}
       </div>
 
       <p className="mt-4 text-center text-[11px] text-muted-foreground">
-        {selected.size}/15 selected
+        {selected.size}/{MAX_SKILLS} selected
       </p>
     </>
   );

@@ -8,3 +8,4 @@ export * from './gig.js';
 export * from './common.js';
 export * from './onboarding.js';
 export * from './chat.js';
+export * from './skill.js';
