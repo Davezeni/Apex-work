@@ -73,7 +73,17 @@ export const requestOtp = async (phone: string, purpose: OtpPurpose): Promise<vo
   const message = `Your Apex-Work code is ${code}. Valid for ${OTP_TTL_SECONDS / 60} minutes. Do not share.`;
   const result = await sms.send(phone, message);
   if (!result.ok) {
-    logger.warn({ phone }, 'SMS send failed, but OTP stored');
+    // In production with a real SMS provider, this is a hard fail — the user
+    // will never receive the code. Surface it as a service unavailability.
+    // In dev (console provider) result.ok is always true.
+    logger.error({ phone, provider: sms.name, error: result.error }, 'SMS delivery failed');
+    // Still store the OTP so an operator can retrieve it from logs / DB if needed
+    // But tell the client so they don't wait forever.
+    throw new (await import('../lib/errors.js')).AppError(
+      'We could not send an SMS to that number. Please try again in a moment.',
+      503,
+      'SMS_DELIVERY_FAILED',
+    );
   }
 };
 

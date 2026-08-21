@@ -4,46 +4,111 @@ import { logger } from '../config/logger.js';
 /**
  * SMS abstraction. Uses AfroMessage in prod; console in dev.
  * Docs: https://afromessage.com/api-doc
+ *
+ * The service is chosen at module load based on env:
+ * - If AFROMESSAGE_API_KEY is set → real SMS via AfroMessage.
+ * - Otherwise → console provider (logs the OTP so devs can grab it from stdout).
  */
 export interface SmsProvider {
-  send(to: string, message: string): Promise<{ ok: boolean; providerRef?: string }>;
+  readonly name: string;
+  send(to: string, message: string): Promise<{ ok: boolean; providerRef?: string; error?: string }>;
 }
 
 class ConsoleSmsProvider implements SmsProvider {
+  readonly name = 'console';
   async send(to: string, message: string) {
     logger.info({ to, message }, '[DEV] SMS');
     return { ok: true, providerRef: `dev-${Date.now()}` };
   }
 }
 
+/**
+ * AfroMessage sender.
+ * `from` = your identifier ID (required, from dashboard).
+ * `sender` = registered sender name (optional; requires paid subscription).
+ * If sender isn't provided, AfroMessage uses a default shortcode.
+ */
 class AfroMessageProvider implements SmsProvider {
+  readonly name = 'afromessage';
+  private readonly base = 'https://api.afromessage.com/api/send';
+
   async send(to: string, message: string) {
     if (!env.AFROMESSAGE_API_KEY) {
       logger.warn('AFROMESSAGE_API_KEY not set — SMS not sent');
-      return { ok: false };
+      return { ok: false, error: 'no_api_key' };
     }
-    try {
-      const url = new URL('https://api.afromessage.com/api/send');
-      url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID ?? '');
-      url.searchParams.set('sender', env.AFROMESSAGE_SENDER);
-      url.searchParams.set('to', to);
-      url.searchParams.set('message', message);
 
+    const url = new URL(this.base);
+    // `from` = identifier ID (which team/account to send from)
+    if (env.AFROMESSAGE_IDENTIFIER_ID) {
+      url.searchParams.set('from', env.AFROMESSAGE_IDENTIFIER_ID);
+    }
+    // `sender` = optional registered sender name; only set if non-empty
+    if (env.AFROMESSAGE_SENDER && env.AFROMESSAGE_SENDER.trim().length > 0) {
+      url.searchParams.set('sender', env.AFROMESSAGE_SENDER.trim());
+    }
+    url.searchParams.set('to', to);
+    url.searchParams.set('message', message);
+
+    try {
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${env.AFROMESSAGE_API_KEY}` },
+        method: 'GET', // AfroMessage's simple API is a GET with query params
+        headers: {
+          Authorization: `Bearer ${env.AFROMESSAGE_API_KEY}`,
+          Accept: 'application/json',
+        },
       });
-      const data = (await res.json()) as { acknowledge?: string; response?: { message_id?: string } };
-      if (data.acknowledge !== 'success') {
-        logger.error({ data }, 'AfroMessage send failed');
-        return { ok: false };
+
+      const raw = await res.text();
+      let data: unknown;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        logger.error({ status: res.status, raw: raw.slice(0, 500), to }, 'AfroMessage returned non-JSON');
+        return { ok: false, error: `non_json_${res.status}` };
       }
-      return { ok: true, providerRef: data.response?.message_id };
+
+      const payload = data as {
+        acknowledge?: string;
+        response?: { message_id?: string; status?: string; errors?: unknown };
+        error?: string;
+      };
+
+      if (payload.acknowledge !== 'success') {
+        // Log everything so we can debug — this is important for onboarding.
+        logger.error(
+          {
+            status: res.status,
+            to,
+            acknowledge: payload.acknowledge,
+            responseStatus: payload.response?.status,
+            responseErrors: payload.response?.errors,
+            error: payload.error,
+          },
+          'AfroMessage send failed',
+        );
+        return {
+          ok: false,
+          error: payload.error ?? payload.response?.status ?? 'send_failed',
+        };
+      }
+
+      logger.info(
+        { to, messageId: payload.response?.message_id },
+        'AfroMessage SMS sent successfully',
+      );
+      return { ok: true, providerRef: payload.response?.message_id };
     } catch (err) {
-      logger.error({ err }, 'AfroMessage error');
-      return { ok: false };
+      logger.error({ err, to }, 'AfroMessage network error');
+      return { ok: false, error: 'network_error' };
     }
   }
 }
 
-export const sms: SmsProvider =
-  isDev || !env.AFROMESSAGE_API_KEY ? new ConsoleSmsProvider() : new AfroMessageProvider();
+// Provider selection: real SMS when configured, console otherwise.
+// Note: even in prod, if AFROMESSAGE_API_KEY isn't set we fall back to console
+// (never blocks the app; devs/admins see the OTP in logs).
+const useAfroMessage = !!env.AFROMESSAGE_API_KEY;
+export const sms: SmsProvider = useAfroMessage ? new AfroMessageProvider() : new ConsoleSmsProvider();
+
+logger.info({ provider: sms.name, useAfroMessage }, 'SMS provider initialized');
