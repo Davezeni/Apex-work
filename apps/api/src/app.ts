@@ -62,7 +62,19 @@ export const createApp = (): Express => {
   // Response compression
   app.use(compression());
 
-  // Global rate limit
+  // Health check — mounted BEFORE the rate limiter so it never depends on Redis.
+  // Load balancers and uptime monitors must be able to check /v1/health unimpeded.
+  app.get('/v1/health', (_req, res) => {
+    res.json({
+      ok: true,
+      service: 'apex-work-api',
+      version: process.env.npm_package_version ?? '0.1.0',
+      uptime: Math.round(process.uptime()),
+      ts: new Date().toISOString(),
+    });
+  });
+
+  // Global rate limit for all other endpoints
   app.use('/v1', apiLimiter);
 
   // Routes

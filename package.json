@@ -15,7 +15,7 @@
     "build:shared": "npm --workspace @apex-work/shared run build",
     "build:web": "npm --workspace @apex-work/web run build",
     "build:api": "npm --workspace @apex-work/api run build",
-    "postinstall": "npm --workspace @apex-work/shared run build && (npm --workspace @apex-work/api run db:generate || true)",
+    "postinstall": "npm --workspace @apex-work/shared run build --if-present && (npm --workspace @apex-work/api run db:generate --if-present || true)",
     "lint": "npm-run-all --parallel lint:*",
     "lint:web": "npm --workspace @apex-work/web run lint",
     "lint:api": "npm --workspace @apex-work/api run lint",
