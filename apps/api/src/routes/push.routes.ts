@@ -14,6 +14,12 @@ router.get('/vapid-key', (_req, res) => {
   return success(res, { publicKey: push.getVapidPublicKey(), configured: push.isPushConfigured() });
 });
 
+/** GET /push/ice-servers — public. Server never leaks TURN API key. */
+router.get('/ice-servers', asyncHandler(async (_req, res) => {
+  const { getIceServers } = await import('../services/turn.service.js');
+  return success(res, { servers: await getIceServers() });
+}));
+
 router.use(requireAuth);
 
 router.post(
@@ -56,11 +62,5 @@ router.post(
     return success(res, result);
   }),
 );
-
-/** GET /push/ice-servers — returns STUN + short-lived TURN creds for WebRTC. */
-router.get('/ice-servers', asyncHandler(async (_req, res) => {
-  const { getIceServers } = await import('../services/turn.service.js');
-  return success(res, { servers: await getIceServers() });
-}));
 
 export default router;
