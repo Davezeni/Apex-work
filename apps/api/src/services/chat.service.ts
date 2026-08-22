@@ -118,14 +118,34 @@ export async function listMessages(
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     include: {
       sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      replyTo: {
+        select: {
+          id: true, body: true, attachmentType: true, senderId: true,
+          sender: { select: { fullName: true } },
+        },
+      },
+      reactions: { select: { emoji: true, userId: true } },
     },
   });
   const hasMore = items.length > opts.limit;
   const trimmed = hasMore ? items.slice(0, opts.limit) : items;
+
+  // Compact reactions into { emoji, count, mine } per message so the client
+  // renders a chip row without extra plumbing.
+  const enriched = trimmed.map((m) => {
+    const buckets: Record<string, { emoji: string; count: number; mine: boolean }> = {};
+    for (const r of m.reactions) {
+      const b = buckets[r.emoji] ?? (buckets[r.emoji] = { emoji: r.emoji, count: 0, mine: false });
+      b.count++;
+      if (r.userId === userId) b.mine = true;
+    }
+    return { ...m, reactions: Object.values(buckets) };
+  });
+
   return {
     // Return in reverse so client can append naturally (oldest → newest).
-    items: trimmed.reverse(),
-    nextCursor: hasMore ? (trimmed[0]?.id ?? null) : null,
+    items: enriched.reverse(),
+    nextCursor: hasMore ? (enriched[0]?.id ?? null) : null,
     hasMore,
   };
 }
@@ -136,6 +156,7 @@ export async function sendMessage(input: {
   body?: string;
   attachmentUrl?: string;
   attachmentType?: string;
+  attachmentMeta?: Record<string, unknown>;
   replyToId?: string;
 }): Promise<Message> {
   await assertMember(input.conversationId, input.senderId);
@@ -148,6 +169,7 @@ export async function sendMessage(input: {
         body: input.body,
         attachmentUrl: input.attachmentUrl,
         attachmentType: input.attachmentType,
+        attachmentMeta: input.attachmentMeta as never,
         replyToId: input.replyToId,
       },
       include: {
@@ -167,16 +189,33 @@ export async function sendMessage(input: {
     where: { conversationId: input.conversationId, userId: { not: input.senderId } },
     select: { userId: true },
   });
+
+  // Lazy import to avoid a circular dep with push.service.
+  const { sendPush } = await import('./push.service.js');
+  const previewBody =
+    (input.body ?? '').slice(0, 140) ||
+    (input.attachmentType === 'audio' ? '🎤 Voice message'
+      : input.attachmentType === 'image' ? '📷 Photo'
+      : input.attachmentType === 'video' ? '🎬 Video'
+      : '📎 Attachment');
+
   await Promise.all(
-    others.map((m) =>
-      notify({
+    others.map(async (m) => {
+      await notify({
         userId: m.userId,
         type: 'NEW_MESSAGE',
         title: `New message from ${message.sender.fullName}`,
-        body: (input.body ?? '').slice(0, 140) || '📎 Attachment',
+        body: previewBody,
         payload: { conversationId: input.conversationId, messageId: message.id },
-      }),
-    ),
+      });
+      // Fire the browser push in the background — never block.
+      void sendPush(m.userId, {
+        title: message.sender.fullName,
+        body: previewBody,
+        url: `/messages/${input.conversationId}`,
+        tag: `conv-${input.conversationId}`,
+      });
+    }),
   );
 
   return message;

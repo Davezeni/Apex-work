@@ -142,6 +142,10 @@ model User {
   offersReceived CustomOffer[]        @relation("OffersReceived")
   conversations  ConversationMember[]
   messages       Message[]
+  reactions      MessageReaction[]
+  drafts         MessageDraft[]
+  pushSubs       PushSubscription[]
+  resume         Resume?
   wallet         Wallet?
   transactions   Transaction[]
   notifications  Notification[]
@@ -442,6 +446,7 @@ model Conversation {
   members     ConversationMember[]
   messages    Message[]
   customOffers CustomOffer[]
+  drafts       MessageDraft[]
 
   @@index([lastMessageAt(sort: Desc)])
 }
@@ -467,7 +472,7 @@ model Message {
   body            String?      @db.Text
   attachmentUrl   String?
   attachmentType  String?      // image, audio, video, file
-  attachmentMeta  Json?        // {size, duration, name...}
+  attachmentMeta  Json?        // {size, duration, name, transcript, waveform...}
   replyToId       String?
   editedAt        DateTime?
   deletedAt       DateTime?
@@ -477,9 +482,27 @@ model Message {
   sender          User         @relation(fields: [senderId], references: [id])
   replyTo         Message?     @relation("MessageReply", fields: [replyToId], references: [id])
   replies         Message[]    @relation("MessageReply")
+  reactions       MessageReaction[]
 
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([senderId])
+}
+
+/// One reaction per (message, user, emoji). Unique constraint enforces
+/// that a user can hold each specific emoji on a message at most once, but
+/// they can stack different emojis (❤️ + 👍) if they want.
+model MessageReaction {
+  id         String   @id @default(cuid())
+  messageId  String
+  userId     String
+  emoji      String   // one grapheme cluster; validated in the service layer
+  createdAt  DateTime @default(now())
+
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
 }
 
 // ================= NOTIFICATIONS =================
@@ -681,4 +704,117 @@ model CustomOffer {
 
   @@index([conversationId, createdAt(sort: Desc)])
   @@index([recipientId, status])
+}
+
+// ================= RESUME / CV =================
+// Structured resume/CV that freelancers build once and export as PDF.
+// Kept separate from User to avoid bloating the row on every read.
+model Resume {
+  id            String            @id @default(cuid())
+  userId        String            @unique
+  headline      String?           // Big banner one-liner ("Senior React Developer · 5+ yrs")
+  summary       String?           @db.Text
+  phone         String?
+  email         String?
+  city          String?
+  website       String?
+  linkedin      String?
+  github        String?
+  languages     String[]          @default([])   // ["English (Fluent)", "አማርኛ (Native)"]
+  theme         String            @default("classic") // classic | modern | minimal
+  updatedAt     DateTime          @updatedAt
+  createdAt     DateTime          @default(now())
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences   WorkExperience[]
+  education     Education[]
+  certifications Certification[]
+}
+
+model WorkExperience {
+  id          String   @id @default(cuid())
+  resumeId    String
+  company     String
+  role        String
+  location    String?
+  startYear   Int
+  startMonth  Int      // 1-12
+  endYear     Int?     // null = current
+  endMonth    Int?
+  description String?  @db.Text
+  position    Int      @default(0) // display order
+
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, position])
+}
+
+model Education {
+  id          String   @id @default(cuid())
+  resumeId    String
+  school      String
+  degree      String?
+  fieldOfStudy String?
+  startYear   Int
+  endYear     Int?
+  description String?  @db.Text
+  position    Int      @default(0)
+
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, position])
+}
+
+model Certification {
+  id          String   @id @default(cuid())
+  resumeId    String
+  name        String
+  issuer      String
+  issueYear   Int
+  issueMonth  Int?
+  credentialUrl String?
+  position    Int      @default(0)
+
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, position])
+}
+
+// ================= OFFLINE DRAFTS =================
+// One draft per (user, conversation). Client persists a message locally while
+// offline, then upserts the row when back online so the server has a durable
+// backup. Also used to sync drafts across devices.
+model MessageDraft {
+  id             String       @id @default(cuid())
+  userId         String
+  conversationId String
+  body           String       @db.Text
+  attachmentUrl  String?
+  attachmentType String?
+  updatedAt      DateTime     @updatedAt
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+// ================= WEB PUSH =================
+// VAPID subscription rows — one per (user, endpoint). Endpoint is unique
+// across the entire push service, so it's safe as the natural key.
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  endpoint    String   @unique
+  p256dh      String   // subscription.keys.p256dh
+  authKey     String   // subscription.keys.auth
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

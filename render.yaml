@@ -93,3 +93,24 @@ services:
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
+
+      # LLM (Groq — free tier). Get a key from https://console.groq.com
+      # Powers /v1/ai/* (proposal writer, brief generator, resume enhance,
+      # voice transcription). App still works without it — it falls back
+      # to a deterministic local generator.
+      - key: GROQ_API_KEY
+        sync: false
+
+      # Web Push (VAPID). Set via Render dashboard (safer) OR bake in here
+      # for the beta. Rotate anytime with:  npx web-push generate-vapid-keys
+      - key: VAPID_PUBLIC
+        sync: false
+      - key: VAPID_PRIVATE
+        sync: false
+      - key: VAPID_SUBJECT
+        value: mailto:support@apex-work.com
+
+      # Web Push default keys (set to `sync: false` above overrides these
+      # once set in the Render dashboard). Kept inline so beta users get
+      # push notifications without manual setup.
+      # ⚠️  Rotate before production launch.

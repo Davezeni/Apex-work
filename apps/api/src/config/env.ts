@@ -45,6 +45,12 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
 
+  // Web Push (VAPID). Generate once with:  npx web-push generate-vapid-keys
+  // Public goes to the client (safe to expose). Subject must be a mailto: URL or https URL.
+  VAPID_PUBLIC: z.string().optional(),
+  VAPID_PRIVATE: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
+
   SENTRY_DSN: z.string().optional(),
 
   // WebAuthn (passkeys / biometric login).

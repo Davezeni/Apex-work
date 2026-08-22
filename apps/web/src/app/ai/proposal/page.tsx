@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Sparkles, Copy, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Copy, RefreshCw, Loader2, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
+import { useAIProposal } from '@/hooks/use-ai';
 
 /**
  * AI Proposal Writer. Backend LLM integration is stubbed for now — we
@@ -21,22 +22,29 @@ export default function AIProposalPage() {
   const [skills, setSkills] = useState('');
   const [tone, setTone] = useState<'friendly' | 'professional' | 'confident'>('friendly');
   const [output, setOutput] = useState('');
-  const [generating, setGenerating] = useState(false);
+  const [source, setSource] = useState<'ai' | 'fallback' | null>(null);
+  const ai = useAIProposal();
 
   const generate = async () => {
     if (jobDesc.trim().length < 30) {
       toast.error('Paste the job description first (30+ chars)');
       return;
     }
-    setGenerating(true);
     setOutput('');
-    // Simulate stream so the UX feels alive.
-    const template = buildProposal({ jobDesc, name: name || 'there', skills, tone });
-    for (let i = 0; i < template.length; i += 8) {
-      await new Promise((r) => setTimeout(r, 12));
-      setOutput(template.slice(0, i + 8));
+    setSource(null);
+    try {
+      const r = await ai.mutateAsync({ jobDescription: jobDesc, name, skills, tone });
+      setSource(r.source);
+      // Progressive reveal so the UI feels alive without a real stream.
+      for (let i = 0; i < r.text.length; i += 8) {
+        await new Promise((res) => setTimeout(res, 8));
+        setOutput(r.text.slice(0, i + 8));
+      }
+      setOutput(r.text);
+    } catch (err) {
+      const e = err as { message?: string };
+      toast.error(e.message ?? 'Generation failed');
     }
-    setGenerating(false);
   };
 
   const copy = async () => {
@@ -93,8 +101,8 @@ export default function AIProposalPage() {
           </div>
         </Field>
 
-        <Button variant="brand" size="lg" className="w-full" onClick={generate} disabled={generating}>
-          {generating ? (
+        <Button variant="brand" size="lg" className="w-full" onClick={generate} disabled={ai.isPending}>
+          {ai.isPending ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
           ) : (
             <><Sparkles className="h-4 w-4" /> Generate proposal</>
@@ -105,10 +113,20 @@ export default function AIProposalPage() {
       {output && (
         <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your proposal</div>
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your proposal</div>
+              {source === 'ai' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                  <Cpu className="h-2.5 w-2.5" /> AI
+                </span>
+              )}
+              {source === 'fallback' && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">TEMPLATE</span>
+              )}
+            </div>
             <div className="flex gap-1">
-              <button onClick={generate} disabled={generating} aria-label="Regenerate" className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground active:bg-muted">
-                <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
+              <button onClick={generate} disabled={ai.isPending} aria-label="Regenerate" className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground active:bg-muted">
+                <RefreshCw className={`h-4 w-4 ${ai.isPending ? 'animate-spin' : ''}`} />
               </button>
               <button onClick={copy} aria-label="Copy" className="grid h-8 w-8 place-items-center rounded-lg text-primary active:bg-primary/10">
                 <Copy className="h-4 w-4" />
@@ -129,43 +147,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </div>
   );
-}
-
-function buildProposal({
-  jobDesc, name, skills, tone,
-}: { jobDesc: string; name: string; skills: string; tone: 'friendly' | 'professional' | 'confident' }) {
-  const opener = tone === 'friendly'
-    ? `Hi ${name === 'there' ? 'there' : name}! 👋 Excited to help with this — here's how I'd approach it.`
-    : tone === 'professional'
-      ? `Hello, thank you for the detailed brief. Below is my proposed approach and timeline.`
-      : `Hey ${name}, I've delivered exactly this kind of project multiple times — here's my plan.`;
-
-  const focus = jobDesc
-    .split(/[.\n]/)
-    .filter((s) => s.trim().length > 15)
-    .slice(0, 3)
-    .map((s, i) => `  ${i + 1}. ${s.trim().replace(/^[-•]/, '').trim()}`)
-    .join('\n');
-
-  const skillLine = skills.trim()
-    ? `I'll rely on my strengths in ${skills.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ')}.`
-    : `I'll bring the right tools and experience to nail this project.`;
-
-  return `${opener}
-
-Understanding of your needs:
-${focus || '  1. Deliver high-quality work within your budget and timeline.'}
-
-My approach:
-  • Discovery — 30-min call to lock scope and success criteria
-  • Milestone 1 — first deliverable within 3 days for early feedback
-  • Milestone 2 — refinements + final polish
-  • Handover — everything documented, no loose ends
-
-${skillLine}
-
-I'd love a quick chat to align on details. If you want to start today, I can begin within 2 hours.
-
-Best,
-${name === 'there' ? '—' : name}`;
 }

@@ -5,7 +5,11 @@ export const sendMessageSchema = z.object({
   body: z.string().trim().min(1, 'Message cannot be empty').max(4000).optional(),
   attachmentUrl: z.string().url().max(1000).optional(),
   attachmentType: z.enum(['image', 'audio', 'video', 'file']).optional(),
+  /** Optional structured metadata: { size, name, duration, transcript, waveform }. */
+  attachmentMeta: z.record(z.unknown()).optional(),
   replyToId: z.string().min(1).max(40).optional(),
+  /** Client-generated id — used for optimistic UI + offline draft-flush idempotency. */
+  clientId: z.string().min(1).max(64).optional(),
 }).refine((v) => !!v.body || !!v.attachmentUrl, {
   message: 'Message must have text or an attachment',
 });

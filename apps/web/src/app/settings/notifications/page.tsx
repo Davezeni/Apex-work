@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Package, Star, Wallet, Bell, Sparkles } from 'lucide-react';
-import { toast } from 'sonner';
+import { ArrowLeft, MessageCircle, Package, Star, Wallet, Bell, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
+import { usePush } from '@/hooks/use-push';
 
 /**
  * Notification preferences. Persisted in localStorage until we ship a
@@ -39,36 +39,21 @@ export default function NotifSettingsPage() {
     messages: true, orders: true, reviews: true,
     payments: true, promotions: false, system: true,
   });
-  const [pushGranted, setPushGranted] = useState<boolean | null>(null);
+  const push = usePush();
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setPrefs({ ...prefs, ...JSON.parse(raw) });
+      if (raw) setPrefs((prev) => ({ ...prev, ...JSON.parse(raw) }));
     } catch { /* ignore */ }
-    if (typeof Notification !== 'undefined') {
-      setPushGranted(Notification.permission === 'granted');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggle = (k: PrefKey, v: boolean) => {
-    const next = { ...prefs, [k]: v };
-    setPrefs(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch { /* ignore */ }
-  };
-
-  const enablePush = async () => {
-    if (typeof Notification === 'undefined') {
-      toast.error('Your browser does not support push notifications');
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    setPushGranted(perm === 'granted');
-    if (perm === 'granted') toast.success('Push notifications enabled');
-    else toast.error('Push notifications blocked');
+    setPrefs((prev) => {
+      const next = { ...prev, [k]: v };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
   };
 
   return (
@@ -96,13 +81,15 @@ export default function NotifSettingsPage() {
               Get notified even when Apex-Work is in the background.
             </p>
           </div>
-          {pushGranted ? (
-            <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-500">
-              ON
-            </span>
+          {push.state === 'unsupported' ? (
+            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">N/A</span>
+          ) : push.subscribed ? (
+            <Button size="sm" variant="outline" onClick={push.disable} disabled={push.busy}>
+              {push.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Disable'}
+            </Button>
           ) : (
-            <Button size="sm" variant="brand" onClick={enablePush}>
-              Enable
+            <Button size="sm" variant="brand" onClick={push.enable} disabled={push.busy}>
+              {push.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Enable'}
             </Button>
           )}
         </div>

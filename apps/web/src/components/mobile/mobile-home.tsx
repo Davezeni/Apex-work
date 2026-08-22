@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Mic, Bookmark, Star, MapPin, CheckCircle2 } from 'lucide-react';
+import { Search, Bookmark, Star, MapPin, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
@@ -10,6 +11,7 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Skeleton } from '@/components/ui/skeleton';
+import { VoiceSearch } from '@/components/chat/voice-search';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -34,6 +36,7 @@ export function MobileHome() {
   const [activeCategory, setActiveCategory] = useState<string>('for-you');
   const { data: me } = useMe();
   const { t } = useI18n();
+  const router = useRouter();
   const { data: gigsData, isLoading } = useGigs({
     category: activeCategory !== 'for-you' ? activeCategory : undefined,
     limit: 20,
@@ -68,20 +71,11 @@ export function MobileHome() {
 
       {/* Search */}
       <div className="px-5 pb-4">
-        <Link
-          href="/search"
-          className="flex h-12 items-center gap-3 rounded-2xl border border-border bg-card px-4 text-sm text-muted-foreground"
-        >
+        <div className="flex h-12 items-center gap-2 rounded-2xl border border-border bg-card px-2 pl-4 text-sm text-muted-foreground">
           <Search className="h-4 w-4 shrink-0" />
-          <span className="flex-1">{t('home.searchPlaceholder')}</span>
-          <button
-            aria-label="Voice search"
-            className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-white"
-            onClick={(e) => e.preventDefault()}
-          >
-            <Mic className="h-4 w-4" />
-          </button>
-        </Link>
+          <Link href="/search" className="flex-1 truncate">{t('home.searchPlaceholder')}</Link>
+          <VoiceSearch size="sm" onResult={(txt) => router.push(`/search?q=${encodeURIComponent(txt)}`)} />
+        </div>
       </div>
 
       {/* Jobs shortcut */}

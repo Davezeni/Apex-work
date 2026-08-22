@@ -85,4 +85,32 @@ router.get(
   }),
 );
 
+/** GET /users/:username/resume — public read of the built CV. */
+router.get(
+  '/:username/resume',
+  asyncHandler(async (req, res) => {
+    const { username } = req.params as { username: string };
+    const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) throw new NotFoundError('User');
+    const { getPublicResume } = await import('../services/resume.service.js');
+    const r = await getPublicResume(user.id);
+    return success(res, r);
+  }),
+);
+
+/** GET /users/:username/portfolio/:id — a single portfolio item (for /work/[id] page). */
+router.get(
+  '/:username/portfolio/:id',
+  asyncHandler(async (req, res) => {
+    const { username, id } = req.params as { username: string; id: string };
+    const user = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, fullName: true, avatarUrl: true, title: true } });
+    if (!user) throw new NotFoundError('User');
+    const item = await prisma.portfolioItem.findFirst({
+      where: { id, userId: user.id },
+    });
+    if (!item) throw new NotFoundError('Portfolio item');
+    return success(res, { ...item, owner: user });
+  }),
+);
+
 export default router;

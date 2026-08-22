@@ -18,6 +18,13 @@ import walletRoutes from './wallet.routes.js';
 import jobsRoutes from './jobs.routes.js';
 import moderationRoutes from './moderation.routes.js';
 import offersRoutes from './offers.routes.js';
+import aiRoutes from './ai.routes.js';
+import pushRoutes from './push.routes.js';
+import resumeRoutes from './resume.routes.js';
+import draftsRoutes from './drafts.routes.js';
+import searchRoutes from './search.routes.js';
+import adminRoutes from './admin.routes.js';
+import reactionsRoutes from './reactions.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -74,5 +81,12 @@ router.use('/notifications', notificationsRoutes);
 router.use('/reviews', reviewsRoutes);
 router.use('/offers', offersRoutes);
 router.use('/moderation', moderationRoutes);
+router.use('/ai', aiRoutes);
+router.use('/push', pushRoutes);
+router.use('/me/resume', resumeRoutes);
+router.use('/me/drafts', draftsRoutes);
+router.use('/search', searchRoutes);
+router.use('/admin', adminRoutes);
+router.use('/messages', reactionsRoutes);
 
 export default router;

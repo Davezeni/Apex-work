@@ -39,6 +39,22 @@ export interface ChatMessage {
   body: string | null;
   attachmentUrl: string | null;
   attachmentType: string | null;
+  attachmentMeta?: {
+    name?: string;
+    size?: number;
+    duration?: number;
+    transcript?: string;
+    waveform?: number[];
+  } | null;
+  replyToId?: string | null;
+  replyTo?: {
+    id: string;
+    body: string | null;
+    attachmentType: string | null;
+    senderId: string;
+    sender: { fullName: string };
+  } | null;
+  reactions?: { emoji: string; count: number; mine: boolean }[];
   createdAt: string;
   sender: ChatPeer;
 }
@@ -70,20 +86,53 @@ export interface SendMessagePayload {
   body?: string;
   attachmentUrl?: string;
   attachmentType?: 'image' | 'audio' | 'video' | 'file';
+  attachmentMeta?: Record<string, unknown>;
+  replyToId?: string;
+  clientId?: string;
 }
 
 export function useSendMessage(conversationId: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: string | SendMessagePayload) => {
+    mutationFn: async (payload: string | SendMessagePayload) => {
       const body: SendMessagePayload =
         typeof payload === 'string' ? { body: payload } : payload;
-      return apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        body,
-        token,
-      });
+      const clientId = body.clientId ?? `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      try {
+        return await apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          body: { ...body, clientId },
+          token,
+        });
+      } catch (err) {
+        // If offline, queue for later flush by useOutboxSync.
+        if (typeof navigator !== 'undefined' && !navigator.onLine && conversationId) {
+          const { enqueue } = await import('@/lib/outbox');
+          await enqueue({
+            clientId,
+            conversationId,
+            body: body.body,
+            attachmentUrl: body.attachmentUrl,
+            attachmentType: body.attachmentType,
+            attachmentMeta: body.attachmentMeta,
+            replyToId: body.replyToId,
+          });
+          // Return an optimistic ghost message so the UI updates instantly.
+          const ghost: ChatMessage = {
+            id: clientId,
+            conversationId,
+            senderId: 'me',
+            body: body.body ?? null,
+            attachmentUrl: body.attachmentUrl ?? null,
+            attachmentType: body.attachmentType ?? null,
+            createdAt: new Date().toISOString(),
+            sender: { id: 'me', username: 'me', fullName: 'You', avatarUrl: null },
+          };
+          return ghost;
+        }
+        throw err;
+      }
     },
     onSuccess: (msg) => {
       // Optimistically append to the list; server also broadcasts via socket

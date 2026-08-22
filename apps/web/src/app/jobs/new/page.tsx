@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, X, Plus } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useCreateJob } from '@/hooks/use-jobs';
@@ -19,6 +20,7 @@ export default function NewJobPage() {
   const { t } = useI18n();
   const { data: me, isLoading, isAuthed } = useMe();
   const create = useCreateJob();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>('step1');
   const [title, setTitle] = useState('');
@@ -33,6 +35,21 @@ export default function NewJobPage() {
   useEffect(() => {
     if (!isLoading && !isAuthed) router.replace('/login?next=/jobs/new');
   }, [isLoading, isAuthed, router]);
+
+  // Prefill from AI Brief Generator (?title=…&description=…&skills=…&budgetMin=…&budgetMax=…)
+  useEffect(() => {
+    const t2 = searchParams.get('title');
+    const d = searchParams.get('description');
+    const s = searchParams.get('skills');
+    const bmin = searchParams.get('budgetMin');
+    const bmax = searchParams.get('budgetMax');
+    if (t2) setTitle(t2);
+    if (d) setDescription(d);
+    if (s) setSkills(s.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 15));
+    if (bmin) setBudgetMin(bmin);
+    if (bmax) setBudgetMax(bmax);
+    if (t2 || d) toast.success('Filled from your AI brief ✨');
+  }, [searchParams]);
 
   const stepIdx = STEPS.indexOf(step);
 
@@ -110,7 +127,14 @@ export default function NewJobPage() {
       </header>
 
       <main className="mx-auto w-full max-w-md px-5 pt-6">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t(`jobs.${step}`)}</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-extrabold tracking-tight">{t(`jobs.${step}`)}</h1>
+          {step === 'step1' && (
+            <Link href="/ai/brief" className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary active:scale-95">
+              <Sparkles className="h-3 w-3" /> AI Brief
+            </Link>
+          )}
+        </div>
 
         {step === 'step1' && (
           <div className="mt-6 space-y-4">

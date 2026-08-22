@@ -65,6 +65,7 @@ router.post(
       body: body.body,
       attachmentUrl: body.attachmentUrl,
       attachmentType: body.attachmentType,
+      attachmentMeta: body.attachmentMeta,
       replyToId: body.replyToId,
     });
 

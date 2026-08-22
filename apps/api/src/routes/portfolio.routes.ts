@@ -55,6 +55,51 @@ router.post(
   }),
 );
 
+/** PATCH /me/portfolio/:id — edit title/description/externalUrl. */
+router.patch(
+  '/:id',
+  validate(addPortfolioItemSchema.partial()),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const item = await prisma.portfolioItem.findUnique({ where: { id }, select: { userId: true } });
+    if (!item) throw new NotFoundError('Portfolio item');
+    if (item.userId !== req.user!.sub) throw new ForbiddenError();
+    const body = req.body as Partial<import('@apex-work/shared').AddPortfolioItemInput>;
+    const updated = await prisma.portfolioItem.update({
+      where: { id },
+      data: {
+        ...(body.title !== undefined ? { title: body.title } : {}),
+        ...(body.description !== undefined ? { description: body.description ?? null } : {}),
+        ...(body.externalUrl !== undefined ? { externalUrl: body.externalUrl ?? null } : {}),
+        ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
+      },
+    });
+    return success(res, updated);
+  }),
+);
+
+/** POST /me/portfolio/reorder — accept an ordered array of ids. */
+import { z } from 'zod';
+const reorderSchema = z.object({ ids: z.array(z.string()).min(1).max(50) });
+router.post(
+  '/reorder',
+  validate(reorderSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof reorderSchema>;
+    const userId = req.user!.sub;
+    // Verify every id belongs to this user in one query.
+    const owned = await prisma.portfolioItem.findMany({
+      where: { id: { in: body.ids }, userId },
+      select: { id: true },
+    });
+    if (owned.length !== body.ids.length) throw new ForbiddenError();
+    await prisma.$transaction(
+      body.ids.map((id, i) => prisma.portfolioItem.update({ where: { id }, data: { position: i } })),
+    );
+    return success(res, { ok: true });
+  }),
+);
+
 /** DELETE /me/portfolio/:id */
 router.delete(
   '/:id',

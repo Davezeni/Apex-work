@@ -16,7 +16,7 @@
  * scope over the entire site — required by the browser SW spec.
  */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL_CACHE = `apex-shell-${VERSION}`;
 const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
 const IMAGE_CACHE = `apex-img-${VERSION}`;
@@ -194,4 +194,36 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// ---- Web Push ----
+// Server sends { title, body, url?, tag?, icon?, badge? }. We fall back to
+// safe defaults if anything is missing so a bad payload never breaks the SW.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch { /* ignore */ }
+  const title = data.title || 'Apex-Work';
+  const options = {
+    body: data.body || '',
+    tag: data.tag || 'apex-generic',
+    renotify: true,
+    icon: data.icon || '/icons/icon-192.png',
+    badge: data.badge || '/icons/icon-192.png',
+    data: { url: data.url || '/' },
+    vibrate: [80, 40, 80],
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || '/';
+  event.waitUntil((async () => {
+    // Focus an existing tab if we can; otherwise open a new one.
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of list) {
+      if (c.url.includes(new URL(target, self.location.origin).pathname) && 'focus' in c) return c.focus();
+    }
+    return self.clients.openWindow(target);
+  })());
 });

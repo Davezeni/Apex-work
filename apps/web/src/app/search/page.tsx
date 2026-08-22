@@ -1,294 +1,217 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
-import { MobileShell } from '@/components/mobile/mobile-shell';
-import { Search, Mic, X, Loader2, Star, MapPin } from 'lucide-react';
-import { cn, formatEtb } from '@/lib/utils';
-import { useGigs, type GigListItem } from '@/hooks/use-gigs';
-import { CATEGORIES } from '@apex-work/shared';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import { ArrowLeft, Search as SearchIcon, Star, Loader2, Briefcase, User as UserIcon, Package as PackageIcon } from 'lucide-react';
+import { useGlobalSearch, useSuggest } from '@/hooks/use-search';
 import { useI18n } from '@/i18n';
+import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { VoiceSearch } from '@/components/chat/voice-search';
+import { MobileShell } from '@/components/mobile/mobile-shell';
 
-const RECENT_KEY = 'apex-work-recent-searches';
-const TRENDING = [
-  'Amharic translator',
-  'Logo design',
-  'React developer',
-  'Wedding video',
-  'TikTok editor',
-  'Shopify setup',
-  'CV writing',
-  'Voice over',
-];
-
-function getRecent(): string[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(RECENT_KEY) ?? '[]') as string[];
-  } catch {
-    return [];
-  }
-}
-function saveRecent(q: string) {
-  if (typeof window === 'undefined') return;
-  const cleaned = q.trim();
-  if (!cleaned) return;
-  const cur = getRecent().filter((r) => r.toLowerCase() !== cleaned.toLowerCase());
-  const next = [cleaned, ...cur].slice(0, 8);
-  window.localStorage.setItem(RECENT_KEY, JSON.stringify(next));
-}
-
-/**
- * Debounced value hook — returns `value` after `delay` ms of stability.
- * Used for the search input so we don't fire an API call on every keystroke.
- */
-function useDebounced<T>(value: T, delay = 250): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
-function gradientFor(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
-}
+type Tab = 'all' | 'gigs' | 'jobs' | 'users';
 
 export default function SearchPage() {
+  const router = useRouter();
+  const params = useSearchParams();
   const { t } = useI18n();
-  const [q, setQ] = useState('');
-  const debouncedQ = useDebounced(q, 250);
-  const [recent, setRecent] = useState<string[]>([]);
+  const initialQ = params.get('q') ?? '';
+  const [q, setQ] = useState(initialQ);
+  const debouncedQ = useDeferredValue(q);
+  const [tab, setTab] = useState<Tab>('all');
+  const [suggestOpen, setSuggestOpen] = useState(false);
+
+  const { data, isLoading, isFetching } = useGlobalSearch(debouncedQ, 15);
+  const { data: sug } = useSuggest(q);
 
   useEffect(() => {
-    setRecent(getRecent());
-  }, []);
+    if (initialQ) setQ(initialQ);
+  }, [initialQ]);
 
-  const { data, isFetching } = useGigs({ q: debouncedQ || undefined, limit: 30 });
-  const results = data?.items ?? [];
-  const hasQuery = debouncedQ.trim().length > 0;
-
-  const runQuery = (query: string) => {
-    setQ(query);
-    saveRecent(query);
-    setRecent(getRecent());
-  };
-
-  const clearRecent = () => {
-    if (typeof window !== 'undefined') window.localStorage.removeItem(RECENT_KEY);
-    setRecent([]);
-  };
+  const anyResults = !!data && (data.gigs.length + data.jobs.length + data.users.length > 0);
 
   return (
-    <MobileShell activeTab="search">
-      <header className="safe-top px-5 pb-3 pt-4">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('common.search')}</h1>
-      </header>
-
-      <div className="px-5 pb-4">
-        <div className="flex h-12 items-center gap-3 rounded-2xl border border-border bg-card px-4 focus-within:border-primary">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveRecent(q);
-            }}
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            placeholder={t('search.searchAnything')}
-          />
-          {q && (
-            <button
-              onClick={() => setQ('')}
-              aria-label="Clear"
-              className="grid h-6 w-6 place-items-center rounded-full bg-muted text-muted-foreground"
-            >
-              <X className="h-3 w-3" />
+    <MobileShell>
+      <div className="min-h-dvh bg-background pb-24">
+        <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+              <ArrowLeft className="h-5 w-5" />
             </button>
-          )}
-          <button aria-label="Voice" className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-white">
-            <Mic className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                autoFocus
+                value={q}
+                onChange={(e) => { setQ(e.target.value); setSuggestOpen(true); }}
+                onFocus={() => setSuggestOpen(true)}
+                onBlur={() => setTimeout(() => setSuggestOpen(false), 150)}
+                placeholder="Search gigs, jobs, people…"
+                className="w-full rounded-full border border-border bg-card py-2 pl-9 pr-10 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+              />
+              {q && (
+                <button
+                  onClick={() => setQ('')}
+                  aria-label="Clear"
+                  className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-muted text-xs"
+                >×</button>
+              )}
+            </div>
+            <VoiceSearch size="sm" onResult={(txt) => setQ(txt)} />
+          </div>
 
-      {/* Results OR discovery */}
-      {hasQuery ? (
-        <SearchResults q={debouncedQ} results={results} loading={isFetching} />
-      ) : (
-        <Discovery
-          recent={recent}
-          onClearRecent={clearRecent}
-          onQuery={runQuery}
-        />
-      )}
+          {/* Suggestions dropdown */}
+          {suggestOpen && (sug?.items?.length ?? 0) > 0 && (
+            <div className="absolute inset-x-3 top-16 z-30 max-h-72 overflow-y-auto rounded-2xl border border-border bg-card shadow-xl">
+              {sug!.items.map((s, i) => {
+                const href =
+                  s.type === 'gig' ? `/gigs/${s.ref}` :
+                  s.type === 'user' ? `/u/${s.ref}` :
+                  `/search?q=${encodeURIComponent(s.text)}`;
+                return (
+                  <Link key={i} href={href} onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => { setSuggestOpen(false); setQ(s.text); }}
+                    className="flex items-center gap-2 border-b border-border px-3 py-2.5 text-sm active:bg-muted"
+                  >
+                    <span className="text-muted-foreground">
+                      {s.type === 'gig' ? <PackageIcon className="h-4 w-4" /> :
+                        s.type === 'user' ? <UserIcon className="h-4 w-4" /> :
+                          s.type === 'job' ? <Briefcase className="h-4 w-4" /> :
+                            <SearchIcon className="h-4 w-4" />}
+                    </span>
+                    <span className="flex-1 truncate">{s.text}</span>
+                    <span className="text-[10px] uppercase text-muted-foreground">{s.type}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="mt-2 flex gap-1 overflow-x-auto pb-1">
+            {(['all', 'gigs', 'jobs', 'users'] as Tab[]).map((tb) => (
+              <button
+                key={tb}
+                onClick={() => setTab(tb)}
+                className={cn(
+                  'shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold capitalize',
+                  tab === tb ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground',
+                )}
+              >
+                {tb}
+                {tb !== 'all' && data && (
+                  <span className="ml-1 text-[10px] opacity-60">
+                    {tb === 'gigs' ? data.gigs.length : tb === 'jobs' ? data.jobs.length : data.users.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        {q.trim().length < 2 && (
+          <div className="mx-4 mt-12 text-center">
+            <div className="grad-hero mx-auto grid h-16 w-16 place-items-center rounded-2xl text-white shadow-lg shadow-primary/40">
+              <SearchIcon className="h-8 w-8" />
+            </div>
+            <p className="mt-4 text-sm font-semibold">Search the whole marketplace</p>
+            <p className="mt-1 text-xs text-muted-foreground">Type at least 2 letters — try &ldquo;react&rdquo;, &ldquo;amharic&rdquo;, &ldquo;logo&rdquo;.</p>
+          </div>
+        )}
+
+        {q.trim().length >= 2 && (isLoading || (isFetching && !data)) && (
+          <div className="grid h-40 place-items-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {q.trim().length >= 2 && data && !anyResults && (
+          <div className="mx-4 mt-8 rounded-2xl border border-dashed border-border p-8 text-center">
+            <p className="text-sm font-semibold">No matches</p>
+            <p className="mt-1 text-xs text-muted-foreground">Try a different spelling or fewer words.</p>
+          </div>
+        )}
+
+        {data && anyResults && (
+          <div className="mx-3 mt-4 space-y-6">
+            {(tab === 'all' || tab === 'gigs') && data.gigs.length > 0 && (
+              <ResultGroup title="Gigs" icon={<PackageIcon className="h-3 w-3" />}>
+                <div className="grid grid-cols-2 gap-2">
+                  {data.gigs.map((g) => (
+                    <Link key={g.id} href={`/gigs/${g.slug}`} className="rounded-2xl border border-border bg-card p-2">
+                      <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+                        {g.coverImageUrl && <Image src={g.coverImageUrl} alt={g.title} fill unoptimized className="object-cover" />}
+                      </div>
+                      <div className="mt-2 line-clamp-2 text-xs font-semibold">{g.title}</div>
+                      <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" /> {g.rating.toFixed(1)} · {formatEtb(g.startingPriceEtb)}+
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </ResultGroup>
+            )}
+
+            {(tab === 'all' || tab === 'jobs') && data.jobs.length > 0 && (
+              <ResultGroup title="Jobs" icon={<Briefcase className="h-3 w-3" />}>
+                <div className="space-y-2">
+                  {data.jobs.map((j) => (
+                    <Link key={j.id} href={`/jobs/${j.id}`} className="block rounded-2xl border border-border bg-card p-3">
+                      <div className="text-xs font-semibold text-muted-foreground">{j.client.fullName} · {timeAgo(j.createdAt)}</div>
+                      <div className="mt-1 line-clamp-2 text-sm font-bold">{j.title}</div>
+                      <div className="mt-1 text-[10px] text-primary font-bold">
+                        {j.budgetMinEtb && j.budgetMaxEtb ? `${formatEtb(j.budgetMinEtb)} – ${formatEtb(j.budgetMaxEtb)}` : 'Open budget'}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </ResultGroup>
+            )}
+
+            {(tab === 'all' || tab === 'users') && data.users.length > 0 && (
+              <ResultGroup title="People" icon={<UserIcon className="h-3 w-3" />}>
+                <div className="space-y-2">
+                  {data.users.map((u) => (
+                    <Link key={u.id} href={`/u/${u.username}`} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                      {u.avatarUrl ? (
+                        <Image src={u.avatarUrl} alt={u.fullName} width={40} height={40} unoptimized className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
+                          {(u.fullName[0] ?? '?').toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-bold">{u.fullName}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">
+                          {u.title ?? '@' + u.username}{u.city ? ` · ${u.city}` : ''}
+                        </div>
+                      </div>
+                      {u.ratingCount > 0 && (
+                        <div className="text-[11px] font-bold text-primary">
+                          <Star className="mr-0.5 inline h-3 w-3 fill-amber-400 text-amber-400" />{u.rating.toFixed(1)}
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </ResultGroup>
+            )}
+          </div>
+        )}
+      </div>
     </MobileShell>
   );
 }
 
-function SearchResults({
-  q,
-  results,
-  loading,
-}: {
-  q: string;
-  results: GigListItem[];
-  loading: boolean;
-}) {
-  const { t } = useI18n();
+function ResultGroup({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="px-5 pb-8">
-      <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          {loading ? (
-            <Loader2 className="inline h-3 w-3 animate-spin" />
-          ) : (
-            `${results.length} ${results.length === 1 ? 'gig' : 'gigs'} for "${q}"`
-          )}
-        </span>
-      </div>
-
-      {!loading && results.length === 0 && (
-        <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
-          <div className="text-3xl">🔎</div>
-          <p className="mt-2 text-sm font-semibold">{t('search.noResults')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('search.noResultsBody')}</p>
-        </div>
-      )}
-
-      <div className="mt-3 flex flex-col gap-3">
-        {results.map((g) => (
-          <ResultRow key={g.id} g={g} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ResultRow({ g }: { g: GigListItem }) {
-  return (
-    <Link
-      href={`/gigs/${g.slug}`}
-      className="flex gap-3 rounded-2xl border border-border bg-card p-3 active:scale-[.99]"
-    >
-      <div
-        className={cn(
-          'h-16 w-16 shrink-0 rounded-xl bg-gradient-to-br',
-          gradientFor(g.id),
-        )}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="line-clamp-2 text-sm font-semibold leading-tight">{g.title}</div>
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-          {g.ratingCount > 0 && (
-            <span className="flex items-center gap-0.5">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {g.rating.toFixed(1)} ({g.ratingCount})
-            </span>
-          )}
-          {g.owner.city && (
-            <>
-              {g.ratingCount > 0 && <span>·</span>}
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {g.owner.city}
-              </span>
-            </>
-          )}
-        </div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
-          By <span className="font-semibold text-foreground">{g.owner.fullName}</span> · From{' '}
-          <span className="font-extrabold text-foreground">{formatEtb(g.startingPriceEtb)}</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function Discovery({
-  recent,
-  onClearRecent,
-  onQuery,
-}: {
-  recent: string[];
-  onClearRecent: () => void;
-  onQuery: (q: string) => void;
-}) {
-  const { t } = useI18n();
-  return (
-    <>
-      {recent.length > 0 && (
-        <div className="px-5 pb-6">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {t('search.recent')}
-            </h2>
-            <button
-              onClick={onClearRecent}
-              className="text-[11px] font-semibold text-muted-foreground hover:text-foreground"
-            >
-              Clear
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {recent.map((r) => (
-              <button
-                key={r}
-                onClick={() => onQuery(r)}
-                className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted-foreground"
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="px-5 pb-6">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          {t('search.trending')}
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {TRENDING.map((r) => (
-            <button
-              key={r}
-              onClick={() => onQuery(r)}
-              className="rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-muted-foreground"
-            >
-              🔥 {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-5 pb-10">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          {t('home.explore')}
-        </h2>
-        <div className="grid grid-cols-2 gap-2">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c.id}
-              href={`/browse?category=${c.id}`}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 active:scale-[.99]"
-            >
-              <div className="text-2xl">{c.icon}</div>
-              <div className="text-sm font-semibold">{c.label}</div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </>
+    <section>
+      <h2 className="mb-2 flex items-center gap-1 px-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+        {icon} {title}
+      </h2>
+      {children}
+    </section>
   );
 }

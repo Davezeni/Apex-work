@@ -16,3 +16,8 @@ export * from './review.js';
 export * from './withdrawal.js';
 export * from './job.js';
 export * from './moderation.js';
+export * from './resume.js';
+export * from './ai.js';
+export * from './reactions.js';
+export * from './push.js';
+export * from './draft.js';

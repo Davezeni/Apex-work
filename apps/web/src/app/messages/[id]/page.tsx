@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
+import { ReactionPicker } from '@/components/chat/reaction-picker';
 import {
   LazyCustomOfferSheet as CustomOfferSheet,
   LazyOfferCard as OfferCard,
@@ -17,8 +18,12 @@ import {
   LazyImageViewer as ImageViewer,
 } from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
+import { useToggleReaction } from '@/hooks/use-reactions';
+import { useMessageDraft } from '@/hooks/use-drafts';
+import { useOutboxSync } from '@/hooks/use-outbox';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
+import type { ReactionEmoji } from '@apex-work/shared';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -44,13 +49,20 @@ export default function ConversationPage() {
   const send = useSendMessage(id);
   const socket = useChatSocket(id);
   const { t } = useI18n();
-  const [text, setText] = useState('');
+  const draft = useMessageDraft(id);
+  const text = draft.text;
+  const setText = draft.setText;
   const [composerMode, setComposerMode] = useState<'text' | 'voice'>('text');
   const [offerSheetOpen, setOfferSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [reactingId, setReactingId] = useState<string | null>(null);
   const blockUser = useBlockUser();
+  const toggleReaction = useToggleReaction(id);
+  useOutboxSync(); // flush queued messages when we come back online
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,14 +88,22 @@ export default function ConversationPage() {
     const body = text.trim();
     if (!body || send.isPending) return;
     setText('');
+    draft.clear();
     socket.typingStop();
+    const replyId = replyTo?.id;
+    setReplyTo(null);
     try {
-      await send.mutateAsync(body);
+      await send.mutateAsync({ body, replyToId: replyId });
     } catch {
       // restore text on failure so user doesn't lose their draft
       setText(body);
     }
   };
+
+  // Collect all image URLs so we can drive a media-gallery lightbox.
+  const imageUrls: string[] = messages
+    .filter((m) => m.attachmentType === 'image' && m.attachmentUrl)
+    .map((m) => m.attachmentUrl!);
 
   const handleTextChange = (v: string) => {
     setText(v);
@@ -126,6 +146,15 @@ export default function ConversationPage() {
           <h4 className="truncate text-sm font-semibold">{peer?.fullName ?? 'Conversation'}</h4>
           {peer && <p className="text-[11px] text-muted-foreground">@{peer.username}</p>}
         </div>
+        {imageUrls.length > 0 && (
+          <button
+            onClick={() => setGalleryOpen(true)}
+            aria-label="Media gallery"
+            className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
+          >
+            <Images className="h-5 w-5" />
+          </button>
+        )}
         <button
           aria-label="Call"
           className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
@@ -214,12 +243,38 @@ export default function ConversationPage() {
               (i === 0 || messages[i - 1]?.senderId !== m.senderId)
             }
             onImageClick={setViewerUrl}
+            onReply={() => setReplyTo(m)}
+            onReactOpen={() => setReactingId(m.id)}
+            reactingOpen={reactingId === m.id}
+            onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
+            onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
+            onReactClose={() => setReactingId(null)}
           />
         ))}
       </div>
 
       {/* Composer */}
       <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 py-2 backdrop-blur-xl">
+        {replyTo && (
+          <div className="mx-auto mb-1.5 flex max-w-md items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/60 px-3 py-1.5">
+            <Reply className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-bold uppercase text-primary">
+                Replying to {replyTo.senderId === me?.id ? 'yourself' : replyTo.sender.fullName}
+              </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {replyTo.body ?? (replyTo.attachmentType === 'audio' ? '🎤 Voice' : '📎 Attachment')}
+              </div>
+            </div>
+            <button
+              onClick={() => setReplyTo(null)}
+              aria-label="Cancel reply"
+              className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground active:bg-muted"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         <div className="mx-auto flex max-w-md items-end gap-2">
           {composerMode === 'voice' ? (
             <VoiceRecorder
@@ -227,7 +282,10 @@ export default function ConversationPage() {
                 await send.mutateAsync({
                   attachmentUrl: att.url,
                   attachmentType: 'audio',
+                  attachmentMeta: { duration: att.durationSec, size: att.sizeBytes },
+                  replyToId: replyTo?.id,
                 });
+                setReplyTo(null);
                 setComposerMode('text');
               }}
             />
@@ -239,7 +297,10 @@ export default function ConversationPage() {
                   await send.mutateAsync({
                     attachmentUrl: att.url,
                     attachmentType: att.type === 'image' ? 'image' : 'file',
+                    attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType },
+                    replyToId: replyTo?.id,
                   });
+                  setReplyTo(null);
                 }}
               />
               {me?.role === 'FREELANCER' && (
@@ -302,6 +363,34 @@ export default function ConversationPage() {
         />
       )}
       <ImageViewer open={!!viewerUrl} onOpenChange={(v) => !v && setViewerUrl(null)} url={viewerUrl} />
+
+      {/* Media gallery */}
+      {galleryOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-lg">
+          <button
+            onClick={() => setGalleryOpen(false)}
+            aria-label="Close gallery"
+            className="safe-top absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white active:scale-90"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div className="safe-top absolute inset-0 overflow-y-auto p-4 pt-16">
+            <h2 className="mb-3 text-white/80 text-sm font-bold">Media in this chat</h2>
+            <div className="grid grid-cols-3 gap-1">
+              {imageUrls.slice().reverse().map((url) => (
+                <button
+                  key={url}
+                  onClick={() => { setGalleryOpen(false); setViewerUrl(url); }}
+                  className="relative aspect-square overflow-hidden rounded-lg bg-black/40"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -311,17 +400,40 @@ function MessageBubble({
   isMine,
   showAvatar,
   onImageClick,
+  onReply,
+  onReactOpen,
+  reactingOpen,
+  onReactPick,
+  onReactionTap,
+  onReactClose,
 }: {
   m: ChatMessage;
   isMine: boolean;
   showAvatar: boolean;
   onImageClick?: (url: string) => void;
+  onReply?: () => void;
+  onReactOpen?: () => void;
+  reactingOpen?: boolean;
+  onReactPick?: (e: ReactionEmoji) => void;
+  onReactionTap?: (emoji: string) => void;
+  onReactClose?: () => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
   const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
   const hasAttachment = !!m.attachmentUrl;
   const offerMatch = m.attachmentUrl?.match(/^apex:\/\/offer\/([a-zA-Z0-9_-]+)$/);
+
+  // Long-press to open the reaction picker on mobile.
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => onReactOpen?.(), 400);
+  };
+  const cancelPress = () => {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+  };
+
   if (offerMatch) {
     return (
       <div className={cn('flex items-end gap-2', isMine ? 'justify-end' : 'justify-start')}>
@@ -347,9 +459,30 @@ function MessageBubble({
           )}
         </div>
       )}
+      <div className={cn('group relative flex items-end gap-1', isMine ? 'flex-row-reverse' : '')}>
+        {/* Hover / focus quick actions — react + reply */}
+        <div className={cn('flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100', isMine && 'items-end')}>
+          <button
+            onClick={onReactOpen}
+            aria-label="React"
+            className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
+          >
+            <SmilePlus className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onReply}
+            aria-label="Reply"
+            className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
+          >
+            <Reply className="h-3.5 w-3.5" />
+          </button>
+        </div>
       <div
+        onTouchStart={startPress}
+        onTouchEnd={cancelPress}
+        onTouchMove={cancelPress}
         className={cn(
-          'max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
+          'relative max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
           // Image bubbles are edge-to-edge; text/file bubbles keep padding.
           isImage ? 'p-0' : 'px-3.5 py-2',
           isMine
@@ -357,6 +490,18 @@ function MessageBubble({
             : 'rounded-bl-md bg-card text-foreground',
         )}
       >
+        <ReactionPicker open={!!reactingOpen} onSelect={(e) => onReactPick?.(e)} onClose={() => onReactClose?.()} />
+        {m.replyTo && (
+          <div className={cn(
+            'mb-1 rounded-md border-l-2 px-2 py-1 text-[11px] leading-tight',
+            isMine ? 'border-white/70 bg-white/10' : 'border-primary bg-muted/70',
+          )}>
+            <div className="font-bold opacity-80">↳ {m.replyTo.sender?.fullName ?? 'Reply'}</div>
+            <div className="truncate opacity-90">
+              {m.replyTo.body ?? (m.replyTo.attachmentType === 'audio' ? '🎤 Voice' : '📎 Attachment')}
+            </div>
+          </div>
+        )}
         {isImage && m.attachmentUrl && (
           <button
             type="button"
@@ -420,6 +565,29 @@ function MessageBubble({
         >
           {timeAgo(m.createdAt)}
         </div>
+        {m.attachmentMeta?.transcript && (
+          <div className={cn('mt-1 border-t px-1 pt-1 text-[11px] italic', isMine ? 'border-white/20 text-white/70' : 'border-border text-muted-foreground')}>
+            &ldquo;{m.attachmentMeta.transcript}&rdquo;
+          </div>
+        )}
+      </div>
+      {m.reactions && m.reactions.length > 0 && (
+        <div className={cn('mt-1 flex flex-wrap gap-1', isMine ? 'justify-end' : 'justify-start')}>
+          {m.reactions.map((r) => (
+            <button
+              key={r.emoji}
+              onClick={() => onReactionTap?.(r.emoji)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition-transform active:scale-90',
+                r.mine ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-card text-muted-foreground',
+              )}
+            >
+              <span>{r.emoji}</span>
+              <span className="font-bold">{r.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
       </div>
     </div>
   );
