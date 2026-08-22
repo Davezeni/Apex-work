@@ -81,6 +81,14 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Browsers only expose mediaDevices on a secure context (HTTPS or
+      // localhost). Give a friendly, actionable message instead of a raw
+      // stack trace when we're on plain HTTP or an old browser.
+      if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        setError('Your browser does not support live calls, or this page is not being served over HTTPS.');
+        setPhase('error');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true, video: mode === 'video',
@@ -89,7 +97,19 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
         setLocalStream(stream);
         setPhase('connecting');
       } catch (err) {
-        setError((err as Error).message || 'Microphone / camera access denied');
+        const name = (err as { name?: string }).name || '';
+        const msg = (err as Error).message || '';
+        let friendly = msg || 'Microphone / camera access denied';
+        if (name === 'NotAllowedError' || /permission/i.test(msg)) {
+          friendly = mode === 'video'
+            ? 'Camera & microphone permission denied. Tap the 🔒 lock icon in the address bar → Site settings → allow Camera and Microphone, then rejoin.'
+            : 'Microphone permission denied. Tap the 🔒 lock icon in the address bar → Site settings → allow Microphone, then rejoin.';
+        } else if (name === 'NotFoundError') {
+          friendly = 'No microphone or camera detected on this device.';
+        } else if (name === 'NotReadableError') {
+          friendly = 'Your camera or microphone is being used by another app. Close it and try again.';
+        }
+        setError(friendly);
         setPhase('error');
       }
     })();
@@ -259,17 +279,35 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
           <RemoteTile key={userId} userId={userId} stream={stream} />
         ))}
         {remoteEntries.length === 0 && (
-          <div className="grid place-items-center">
-            <div className="text-center">
-              <Loader2 className="mx-auto h-8 w-8 animate-spin opacity-60" />
-              <div className="mt-3 text-sm opacity-80">
-                {phase === 'starting' ? 'Starting camera / mic…' :
-                  phase === 'connecting' ? 'Waiting for others to join…' :
-                  phase === 'error' ? `Error: ${error}` : 'Connecting…'}
-              </div>
-              <div className="mt-1 text-[11px] opacity-60">
-                <Users className="mr-1 inline h-3 w-3" /> Everyone in this chat can join
-              </div>
+          <div className="grid place-items-center px-6">
+            <div className="max-w-sm text-center">
+              {phase === 'error' ? (
+                <>
+                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-red-500/20 text-2xl">
+                    ⚠️
+                  </div>
+                  <div className="mt-3 text-base font-semibold">Can&rsquo;t start call</div>
+                  <div className="mt-2 text-sm leading-relaxed opacity-90">{error}</div>
+                  <button
+                    onClick={onEnd}
+                    className="mt-5 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black"
+                  >
+                    Close
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="mx-auto h-8 w-8 animate-spin opacity-60" />
+                  <div className="mt-3 text-sm opacity-80">
+                    {phase === 'starting' ? 'Starting camera / mic…' :
+                      phase === 'connecting' ? 'Waiting for others to join…' :
+                      'Connecting…'}
+                  </div>
+                  <div className="mt-1 text-[11px] opacity-60">
+                    <Users className="mr-1 inline h-3 w-3" /> Everyone in this chat can join
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

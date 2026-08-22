@@ -620,11 +620,13 @@ interface Diagnostics {
     vapidPush: boolean;
     turn: {
       hasKey: boolean;
+      keyPreview: string | null;
       appName: string;
       cachedAt: string | null;
       cachedServerCount: number;
       lastError: { at: string; message: string; url: string } | null;
       lastSuccessUrl: string | null;
+      lastAttempts: { url: string; ok: boolean; message: string }[];
     };
     cronToken: boolean;
     afromessage: boolean;
@@ -663,10 +665,7 @@ function DiagnosticsTab() {
     onError: (e) => toast.error((e as Error).message ?? 'Failed'),
   });
 
-  const sendTestEmail = () => {
-    const to = window.prompt('Send test to which email? (blank = your admin email)') ?? undefined;
-    testEmail.mutate(to || undefined);
-  };
+  const [emailTo, setEmailTo] = useState('');
 
   if (isLoading || !data) return <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />;
   const s = data.services;
@@ -678,13 +677,33 @@ function DiagnosticsTab() {
       <StatusRow label="AfroMessage SMS" ok={s.afromessage} note="OTPs" />
       <StatusRow label="Groq LLM"        ok={s.groq} note="AI assistant, proposals, translation" />
       <StatusRow label="Web Push (VAPID)" ok={s.vapidPush} note="browser notifications" />
-      <StatusRow label="Resend email"    ok={s.resend} note={`from: ${s.email.from}`}>
-        {s.resend && (
-          <Button size="sm" variant="brand" onClick={sendTestEmail} disabled={testEmail.isPending}>
-            {testEmail.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test'}
-          </Button>
-        )}
-      </StatusRow>
+      <StatusRow label="Resend email"    ok={s.resend} note={`from: ${s.email.from}`} />
+      {s.resend && (
+        <div className="rounded-2xl border border-border bg-card p-3">
+          <label className="text-xs font-semibold text-muted-foreground">Send test email to</label>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              type="email"
+              inputMode="email"
+              value={emailTo}
+              onChange={(e) => setEmailTo(e.target.value)}
+              placeholder="you@example.com (blank = your admin email)"
+              className="min-w-0 flex-1 rounded-full border border-input bg-background px-3 py-1.5 text-xs"
+            />
+            <Button
+              size="sm"
+              variant="brand"
+              onClick={() => testEmail.mutate(emailTo.trim() || undefined)}
+              disabled={testEmail.isPending}
+            >
+              {testEmail.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test'}
+            </Button>
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            Uses Resend sandbox <code>onboarding@resend.dev</code> (unverified domains only send to the account owner&rsquo;s email).
+          </p>
+        </div>
+      )}
 
       {s.resend && (s.email.lastError || s.email.lastSuccess) && (
         <details className="rounded-2xl border border-border bg-card p-3 text-xs" open={!!s.email.lastError}>
@@ -727,9 +746,21 @@ function DiagnosticsTab() {
           <summary className="cursor-pointer font-semibold">TURN debug details</summary>
           <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
             <div className="text-muted-foreground">app name</div><div>{s.turn.appName}</div>
+            <div className="text-muted-foreground">api key</div><div className="break-all">{s.turn.keyPreview ?? '—'}</div>
             <div className="text-muted-foreground">cached at</div><div>{s.turn.cachedAt ?? '—'}</div>
             <div className="text-muted-foreground">servers</div><div>{s.turn.cachedServerCount}</div>
             <div className="text-muted-foreground">last ok url</div><div className="break-all">{s.turn.lastSuccessUrl ?? '—'}</div>
+            {s.turn.lastAttempts?.length > 0 && (
+              <>
+                <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-muted-foreground">Attempts (most recent probe)</div>
+                {s.turn.lastAttempts.map((a, i) => (
+                  <div key={i} className="col-span-2 rounded bg-muted/50 p-1.5">
+                    <div className={a.ok ? 'text-emerald-500' : 'text-red-500'}>{a.ok ? '✓' : '✗'} {a.message}</div>
+                    <div className="break-all text-muted-foreground">{a.url}</div>
+                  </div>
+                ))}
+              </>
+            )}
             {s.turn.lastError && (
               <>
                 <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">Last error</div>
@@ -739,6 +770,9 @@ function DiagnosticsTab() {
               </>
             )}
           </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Metered key rejected? Check <a className="underline" href="https://dashboard.metered.ca/" target="_blank" rel="noopener noreferrer">dashboard.metered.ca</a> → sidebar → Developers → API Keys — copy the value shown as <b>&quot;Secret Key&quot;</b> (NOT the SDK / App Password), then update <code>METERED_API_KEY</code> on Render.
+          </p>
         </details>
       )}
 

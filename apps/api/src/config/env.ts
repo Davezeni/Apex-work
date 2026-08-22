@@ -63,7 +63,7 @@ const envSchema = z.object({
   // long-lived TURN password never reaches the client. Without this,
   // group calls fall back to STUN-only and may fail on CGNAT networks.
   METERED_API_KEY: z.string().optional(),
-  METERED_APP_NAME: z.string().default('apex-work'),
+  METERED_APP_NAME: z.string().default('apex_work'),
 
   SENTRY_DSN: z.string().optional(),
 

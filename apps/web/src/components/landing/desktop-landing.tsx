@@ -70,13 +70,18 @@ export function DesktopLanding() {
             </span>
           </Link>
           <div className="ml-auto hidden md:flex gap-1">
-            {['Browse', 'How it works', 'AI Tools', 'Pricing'].map((l) => (
+            {[
+              { label: 'Browse', href: '/browse' },
+              { label: 'How it works', href: '/#how' },
+              { label: 'AI Tools', href: '/ai' },
+              { label: 'Pricing', href: '/#pricing' },
+            ].map((l) => (
               <Link
-                key={l}
-                href="#"
+                key={l.label}
+                href={l.href}
                 className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                {l}
+                {l.label}
               </Link>
             ))}
           </div>
@@ -106,9 +111,14 @@ export function DesktopLanding() {
         {menuOpen && (
           <div className="md:hidden mt-2 rounded-2xl border border-border bg-background/90 p-4 backdrop-blur-xl">
             <div className="flex flex-col gap-1">
-              {['Browse', 'How it works', 'AI Tools', 'Pricing'].map((l) => (
-                <Link key={l} href="#" className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-secondary">
-                  {l}
+              {[
+                { label: 'Browse', href: '/browse' },
+                { label: 'How it works', href: '/#how' },
+                { label: 'AI Tools', href: '/ai' },
+                { label: 'Pricing', href: '/#pricing' },
+              ].map((l) => (
+                <Link key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-secondary">
+                  {l.label}
                 </Link>
               ))}
               <Button asChild variant="brand" className="mt-2">
@@ -237,7 +247,7 @@ export function DesktopLanding() {
       </section>
 
       {/* How it works */}
-      <section className="container py-20">
+      <section id="how" className="container py-20 scroll-mt-24">
         <SectionHeader eyebrow="Simple process" title="Hire in 3 steps" />
         <div className="grid gap-8 md:grid-cols-3">
           {[
@@ -251,6 +261,28 @@ export function DesktopLanding() {
               </div>
               <h3 className="mt-5 text-xl font-bold">{s.t}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{s.d}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="container py-20 scroll-mt-24">
+        <SectionHeader
+          eyebrow="Transparent pricing"
+          title="Simple, fair fees"
+          description="No monthly subscription. You only pay when you earn."
+        />
+        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
+          {[
+            { name: 'Clients', price: 'Free', desc: 'Post jobs, chat freelancers, hire. Zero platform fee.', highlight: false },
+            { name: 'Freelancers', price: '10%', desc: 'Flat service fee on delivered orders. No hidden costs.', highlight: true },
+            { name: 'Withdrawals', price: '1%', desc: 'Payout via Telebirr, CBE, Awash, Chapa — settled in ETB.', highlight: false },
+          ].map((p) => (
+            <div key={p.name} className={`rounded-3xl border p-8 text-center ${p.highlight ? 'border-primary bg-primary/5 shadow-lg shadow-primary/20' : 'border-border bg-card'}`}>
+              <div className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{p.name}</div>
+              <div className="mt-3 text-5xl font-extrabold tracking-tight">{p.price}</div>
+              <p className="mt-3 text-sm text-muted-foreground">{p.desc}</p>
             </div>
           ))}
         </div>

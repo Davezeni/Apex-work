@@ -34,34 +34,43 @@ interface RTCIceServer {
 let cache: { fetchedAt: number; servers: RTCIceServer[] } | null = null;
 let lastError: { at: string; url: string; message: string } | null = null;
 let lastSuccessUrl: string | null = null;
+let lastAttempts: { url: string; ok: boolean; message: string }[] = [];
 const TTL_MS = 30 * 60 * 1000;
 
 export function turnDebug() {
   return {
     hasKey: !!env.METERED_API_KEY,
+    keyPreview: env.METERED_API_KEY
+      ? `${env.METERED_API_KEY.slice(0, 4)}…${env.METERED_API_KEY.slice(-4)} (len ${env.METERED_API_KEY.length})`
+      : null,
     appName: env.METERED_APP_NAME,
     cachedAt: cache ? new Date(cache.fetchedAt).toISOString() : null,
     cachedServerCount: cache?.servers.length ?? 0,
     lastError,
     lastSuccessUrl,
+    lastAttempts,
   };
 }
 
 export function invalidateTurnCache() {
   cache = null;
   lastError = null;
+  lastAttempts = [];
+}
+
+function redact(url: string): string {
+  return env.METERED_API_KEY ? url.replace(env.METERED_API_KEY, 'REDACTED') : url;
 }
 
 async function tryFetch(url: string): Promise<RTCIceServer[] | null> {
+  const safeUrl = redact(url);
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(6_000) });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      lastError = {
-        at: new Date().toISOString(),
-        url: url.replace(env.METERED_API_KEY ?? '', 'REDACTED'),
-        message: `HTTP ${res.status}: ${body.slice(0, 200)}`,
-      };
+      const message = `HTTP ${res.status}: ${body.slice(0, 200)}`;
+      lastError = { at: new Date().toISOString(), url: safeUrl, message };
+      lastAttempts.push({ url: safeUrl, ok: false, message });
       return null;
     }
     const parsed = (await res.json()) as unknown;
@@ -72,21 +81,18 @@ async function tryFetch(url: string): Promise<RTCIceServer[] | null> {
         ? (parsed as { iceServers: RTCIceServer[] }).iceServers
         : [];
     if (list.length === 0) {
-      lastError = {
-        at: new Date().toISOString(),
-        url: url.replace(env.METERED_API_KEY ?? '', 'REDACTED'),
-        message: 'empty server list',
-      };
+      const message = 'empty server list';
+      lastError = { at: new Date().toISOString(), url: safeUrl, message };
+      lastAttempts.push({ url: safeUrl, ok: false, message });
       return null;
     }
-    lastSuccessUrl = url.replace(env.METERED_API_KEY ?? '', 'REDACTED');
+    lastSuccessUrl = safeUrl;
+    lastAttempts.push({ url: safeUrl, ok: true, message: `${list.length} servers` });
     return list;
   } catch (err) {
-    lastError = {
-      at: new Date().toISOString(),
-      url: url.replace(env.METERED_API_KEY ?? '', 'REDACTED'),
-      message: (err as Error).message || 'unknown',
-    };
+    const message = (err as Error).message || 'unknown';
+    lastError = { at: new Date().toISOString(), url: safeUrl, message };
+    lastAttempts.push({ url: safeUrl, ok: false, message });
     return null;
   }
 }
@@ -96,18 +102,34 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
   if (cache && Date.now() - cache.fetchedAt < TTL_MS && cache.servers.length > STUN_ONLY.length) {
     return cache.servers;
   }
+  // Reset per-refresh attempt log so the diagnostics panel only shows the
+  // most recent probe cycle, not accumulated history.
+  lastAttempts = [];
 
   const key = env.METERED_API_KEY;
-  // Order matters: try the app-specific endpoint first (paid tier), then
-  // fall back to the global endpoint (free Open Relay tier).
-  const candidates = [
+  // Build candidate endpoint list. Metered accepts both:
+  //   - global endpoint (Open Relay free tier)
+  //   - per-app subdomain (Managed TURN or custom named apps)
+  // We also try both hyphen AND underscore variants of the configured app
+  // name — Metered's dashboard normalises names differently in different
+  // places and users routinely trip on it (e.g. `apex-work` vs `apex_work`).
+  const appNames = new Set<string>();
+  if (env.METERED_APP_NAME) {
+    const n = env.METERED_APP_NAME.trim();
+    appNames.add(n);
+    if (n.includes('-')) appNames.add(n.replace(/-/g, '_'));
+    if (n.includes('_')) appNames.add(n.replace(/_/g, '-'));
+  }
+  const candidates: string[] = [
+    // App-specific endpoint(s) first — these serve the account's provisioned
+    // credentials directly. If the app name doesn't match, we fall through
+    // to the global endpoint which works with the raw API key alone.
+    ...Array.from(appNames).map(
+      (name) => `https://${name}.metered.live/api/v1/turn/credentials?apiKey=${key}`,
+    ),
     // Global / Open Relay — works with any Metered account by default.
     `https://global.metered.live/api/v1/turn/credentials?apiKey=${key}`,
-    // App-specific endpoint (for paid tier or custom named apps).
-    env.METERED_APP_NAME
-      ? `https://${env.METERED_APP_NAME}.metered.live/api/v1/turn/credentials?apiKey=${key}`
-      : null,
-  ].filter((u): u is string => u !== null);
+  ];
 
   for (const url of candidates) {
     const list = await tryFetch(url);

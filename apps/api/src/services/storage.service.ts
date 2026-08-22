@@ -66,7 +66,11 @@ export class StorageService {
     if (req.sizeBytes <= 0 || req.sizeBytes > maxBytes) {
       return { ok: false, error: `File too large. Max ${MAX_MB_PER_BUCKET[req.bucket]}MB.` };
     }
-    if (!MIME_ALLOWLIST[req.bucket].test(req.contentType)) {
+    // Strip codec/charset parameters (e.g. `audio/webm;codecs=opus` -> `audio/webm`)
+    // because MediaRecorder / browser file pickers routinely emit them and the bare
+    // media-type is what our allowlist matches against.
+    const bare = (req.contentType.split(';')[0] ?? '').trim().toLowerCase();
+    if (!MIME_ALLOWLIST[req.bucket].test(bare)) {
       return { ok: false, error: `File type "${req.contentType}" not allowed here.` };
     }
     return { ok: true };
