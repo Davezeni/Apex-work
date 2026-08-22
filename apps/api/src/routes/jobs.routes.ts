@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.js';
 import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import * as jobs from '../services/jobs.service.js';
+import { cache, bust } from '../middleware/cache.js';
 
 const router: Router = Router();
 
@@ -12,6 +13,7 @@ const router: Router = Router();
 router.get(
   '/',
   optionalAuth,
+  cache({ ttlSeconds: 45, swrAfterSeconds: 15 }),
   validate(jobListQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
     const q = req.query as unknown as import('@apex-work/shared').JobListQuery;
@@ -20,10 +22,16 @@ router.get(
   }),
 );
 
-/** GET /jobs/:id — public detail. Bid details are hidden unless viewer is client. */
+/**
+ * GET /jobs/:id — public detail. Bid details are hidden unless viewer is client.
+ *
+ * `perUser` caches separately for the owning client (who sees bids) vs
+ * anonymous viewers (who don't) so we never leak private bids.
+ */
 router.get(
   '/:id',
   optionalAuth,
+  cache({ ttlSeconds: 30, swrAfterSeconds: 10, perUser: true }),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
     const job = await jobs.getJob(id, req.user?.sub);
@@ -39,6 +47,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').CreateJobInput;
     const job = await jobs.createJob(req.user!.sub, body);
+    void bust('/v1/jobs');
     return success(res, job, 201);
   }),
 );
@@ -50,6 +59,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
     const job = await jobs.closeJob(id, req.user!.sub);
+    void bust(`/v1/jobs`);
     return success(res, job);
   }),
 );
@@ -65,6 +75,7 @@ router.post(
     const { id } = req.params as { id: string };
     const body = req.body as import('@apex-work/shared').CreateBidInput;
     const bid = await jobs.createBid(req.user!.sub, id, body);
+    void bust(`/v1/jobs/${id}`);
     return success(res, bid, 201);
   }),
 );

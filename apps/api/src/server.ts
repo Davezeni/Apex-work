@@ -5,6 +5,7 @@ import { logger } from './config/logger.js';
 import { prisma } from './lib/prisma.js';
 import { redis } from './lib/redis.js';
 import { initSocket } from './realtime/socket.js';
+import { startRedisHeartbeat, startSelfPing } from './lib/keepalive.js';
 
 const app = createApp();
 const httpServer = createServer(app);
@@ -51,6 +52,9 @@ const start = async (): Promise<void> => {
     const port = env.PORT ?? env.API_PORT;
     httpServer.listen(port, '0.0.0.0', () => {
       logger.info(`🚀 API listening on http://0.0.0.0:${port} (${env.NODE_ENV})`);
+      // Fire off both keepalives — cheap timers, unref'd, prod-only self-ping.
+      startRedisHeartbeat();
+      startSelfPing(port);
     });
   } catch (err) {
     logger.fatal({ err }, 'Failed to start');

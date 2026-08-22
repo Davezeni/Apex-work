@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import type { CreateJobInput, CreateBidInput } from '@apex-work/shared';
@@ -52,6 +52,8 @@ export function useJobs(params: { category?: string; q?: string; limit?: number 
     queryKey: ['jobs', params],
     queryFn: () => apiFetch(`/jobs${s ? `?${s}` : ''}`),
     staleTime: 30_000,
+    // Keep old page visible while a new filter/search fetches → no skeleton flash.
+    placeholderData: keepPreviousData,
   });
 }
 

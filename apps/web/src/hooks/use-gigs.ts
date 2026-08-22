@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
 export interface GigListItem {
@@ -56,7 +56,9 @@ export function useGigs(params: { category?: string; q?: string; limit?: number 
   return useQuery<{ items: GigListItem[]; nextCursor: string | null; hasMore: boolean }>({
     queryKey: ['gigs', params],
     queryFn: () => apiFetch(`/gigs${qs ? `?${qs}` : ''}`),
-    staleTime: 30 * 1000,
+    staleTime: 60 * 1000, // Matches API cache TTL — no wasted refetches.
+    gcTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }
 

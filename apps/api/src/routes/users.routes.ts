@@ -4,6 +4,7 @@ import { optionalAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
+import { cache } from '../middleware/cache.js';
 
 const router: Router = Router();
 
@@ -16,6 +17,7 @@ const router: Router = Router();
 router.get(
   '/:username',
   optionalAuth,
+  cache({ ttlSeconds: 90, swrAfterSeconds: 30 }),
   asyncHandler(async (req, res) => {
     const { username } = req.params as { username: string };
 

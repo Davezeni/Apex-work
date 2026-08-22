@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
+import { cache } from '../middleware/cache.js';
 
 const router: Router = Router();
 
@@ -46,6 +47,8 @@ function canonicalizeName(input: string): string {
  */
 router.get(
   '/',
+  // Skills change rarely; cache aggressively for 5min.
+  cache({ ttlSeconds: 300, swrAfterSeconds: 60 }),
   asyncHandler(async (req, res) => {
     const query = req.query as { q?: string; limit?: string };
     const q = (query.q ?? '').trim().slice(0, 60);

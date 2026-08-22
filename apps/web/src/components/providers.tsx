@@ -12,8 +12,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            // Match the API's response-cache TTL so we don't refetch fresh data.
             staleTime: 60 * 1000,
-            gcTime: 5 * 60 * 1000,
+            gcTime: 10 * 60 * 1000,
             retry: (failureCount, error) => {
               // Don't retry 4xx errors
               const status = (error as { status?: number })?.status;
@@ -21,6 +22,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
               return failureCount < 2;
             },
             refetchOnWindowFocus: false,
+            // Reconnect-refetch is fine (recovers from flaky mobile networks)
+            refetchOnReconnect: true,
+            // Never block navigation waiting for a refetch — always serve the cache.
+            refetchOnMount: false,
+          },
+          mutations: {
+            retry: false,
+            networkMode: 'online',
           },
         },
       }),

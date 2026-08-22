@@ -7,6 +7,7 @@ import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import * as reviews from '../services/reviews.service.js';
+import { cache, bust } from '../middleware/cache.js';
 
 const router: Router = Router();
 
@@ -18,6 +19,8 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').CreateReviewInput;
     const review = await reviews.createReview({ ...body, authorId: req.user!.sub });
+    void bust('/v1/reviews');
+    void bust('/v1/users');
     return success(res, review, 201);
   }),
 );
@@ -26,6 +29,7 @@ router.post(
 router.get(
   '/',
   optionalAuth,
+  cache({ ttlSeconds: 120, swrAfterSeconds: 40 }),
   asyncHandler(async (req, res) => {
     const q = req.query as { userId?: string; cursor?: string; limit?: string };
     if (!q.userId) throw new NotFoundError('User');

@@ -1,0 +1,35 @@
+name: Warmup
+
+# Pings the API + web every 5 minutes from GitHub-hosted runners to defeat
+# Render's free-tier cold-start (idle after ~15 min) and Vercel's serverless
+# cold path. Cost: zero. Reliability: ~99.5% (GitHub cron isn't guaranteed
+# to fire on the exact minute but always within a few minutes).
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # every 5 minutes
+  workflow_dispatch: {}
+
+concurrency:
+  group: warmup
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping API
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 https://apex-work-api.onrender.com/v1/ping || echo "000")
+            echo "API attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 5
+          done
+          echo "API cold-start took too long — will retry next cycle"
+      - name: Ping Web
+        if: always()
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 https://apex-work-gold.vercel.app/ || echo "000")
+          echo "Web: HTTP $code"

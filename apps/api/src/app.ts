@@ -74,6 +74,17 @@ export const createApp = (): Express => {
     });
   });
 
+  // Ultra-cheap keepalive endpoint — 20 bytes, no JSON, no rate limit.
+  // GitHub Actions + in-process self-ping hit this every ~5min to keep
+  // Render's free-tier dyno hot (no more 30-60s cold starts).
+  app.get('/v1/ping', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('text/plain').send('pong');
+  });
+
+  // Enable strong ETag + conditional GET so browsers can use 304 Not Modified.
+  app.set('etag', 'strong');
+
   // Global rate limit for all other endpoints
   app.use('/v1', apiLimiter);
 

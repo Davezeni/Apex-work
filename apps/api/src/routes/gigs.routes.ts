@@ -7,6 +7,7 @@ import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import type { Prisma } from '@prisma/client';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { cache, bust } from '../middleware/cache.js';
 
 const router: Router = Router();
 
@@ -43,6 +44,8 @@ async function ensureUniqueSlug(base: string): Promise<string> {
 router.get(
   '/',
   optionalAuth,
+  // Public feed: cache 60s, SWR after 20s. Massive win for popular categories.
+  cache({ ttlSeconds: 60, swrAfterSeconds: 20 }),
   validate(gigListQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
     const q = req.query as unknown as import('@apex-work/shared').GigListQuery;
@@ -109,6 +112,7 @@ router.get(
 router.get(
   '/:slug',
   optionalAuth,
+  cache({ ttlSeconds: 120, swrAfterSeconds: 30 }),
   asyncHandler(async (req, res) => {
     const { slug } = req.params as { slug: string };
     const gig = await prisma.gig.findUnique({
