@@ -28,6 +28,20 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
     transports: ['websocket', 'polling'],
     pingInterval: 25_000,
     pingTimeout: 20_000,
+    // WebSocket permessage-deflate: shrinks chat/notification payloads by
+    // ~60-80% (they're mostly JSON text). Threshold=1024 skips tiny frames
+    // where compression overhead > wire savings.
+    perMessageDeflate: {
+      threshold: 1024,
+      zlibDeflateOptions: { level: 6, memLevel: 7 },
+      zlibInflateOptions: { chunkSize: 16 * 1024 },
+      clientNoContextTakeover: true,
+      serverNoContextTakeover: true,
+      concurrencyLimit: 10,
+    },
+    // Bigger long-poll batches when websocket isn't available. Saves round-trips.
+    maxHttpBufferSize: 2e6, // 2 MB
+    httpCompression: { threshold: 1024 },
   });
 
   // Optionally attach Redis adapter for horizontal scale (best-effort).

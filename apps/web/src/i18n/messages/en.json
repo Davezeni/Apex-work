@@ -209,7 +209,8 @@
     "skipNow": "Skip for now",
     "saved": "PIN saved. Next time, sign in with just your PIN.",
     "saveFailed": "Could not save PIN.",
-    "explain": "Your PIN is scrambled before storage and paired with this device. It never leaves Apex-Work and can't be used from another browser."
+    "explain": "Your PIN is scrambled before storage and paired with this device. It never leaves Apex-Work and can't be used from another browser.",
+    "set": "Set a 6-digit PIN"
   },
   "loginSmart": {
     "welcomeBack": "Welcome back",
@@ -575,5 +576,22 @@
     "close": "Close",
     "download": "Download",
     "of": "{i} of {n}"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "securityGroup": "Security",
+    "privacy": "Privacy",
+    "preferences": "Preferences",
+    "about": "About",
+    "notifications": "Notifications",
+    "language": "Language",
+    "appearance": "Appearance",
+    "dataStorage": "Data & storage",
+    "connectedApps": "Connected apps",
+    "help": "Help & support",
+    "legal": "Legal & privacy",
+    "deleteAccount": "Delete account",
+    "devices": "Trusted devices"
   }
 }

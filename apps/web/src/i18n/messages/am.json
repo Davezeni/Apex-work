@@ -209,7 +209,8 @@
     "skipNow": "አሁን ክብትል",
     "saved": "PIN ተቀምጧል። በመቀጠል PINዎን ብቻ ባስገቡ ይሠንታላሉ።",
     "saveFailed": "PINዎን ማስቀመጥ አልተቻለም።",
-    "explain": "PINዎ ከመኬስቴኑ በፊት ይመሰሓብና ከዚህ መሳሪያ ၃ር ይያያል። ከApex-Work አይወጣም፣ ከሌላ ብራውኰር አይወጣም።"
+    "explain": "PINዎ ከመኬስቴኑ በፊት ይመሰሓብና ከዚህ መሳሪያ ၃ር ይያያል። ከApex-Work አይወጣም፣ ከሌላ ብራውኰር አይወጣም።",
+    "set": "የ6-አኃዝ PIN አዘጋጅ"
   },
   "loginSmart": {
     "welcomeBack": "እንባኩኬ ደህና መታርህ",
@@ -575,5 +576,22 @@
     "close": "ዝጋ",
     "download": "አውርድ",
     "of": "{i} ከ {n}"
+  },
+  "settings": {
+    "title": "ቅንብሮች",
+    "account": "አካውንት",
+    "securityGroup": "ደህንነት",
+    "privacy": "የግላዊነት",
+    "preferences": "ምርጫዎች",
+    "about": "ስለ",
+    "notifications": "ማሳወቂያዎች",
+    "language": "ቋንቋ",
+    "appearance": "መልክ",
+    "dataStorage": "ውሂብ እና ማከማቻ",
+    "connectedApps": "የተገናኙ መተግበሪያዎች",
+    "help": "እርዳታ እና ድጋፍ",
+    "legal": "ህግ እና ግላዊነት",
+    "deleteAccount": "አካውንት ሰርዝ",
+    "devices": "የታመኑ መሳሪያዎች"
   }
 }

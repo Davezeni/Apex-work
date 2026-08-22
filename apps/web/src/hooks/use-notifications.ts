@@ -76,8 +76,11 @@ export function useNotificationSocket() {
     const socket = io(API_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
+      upgrade: true,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10_000,
+      reconnectionAttempts: Infinity,
+      timeout: 20_000,
     });
     socketRef.current = socket;
 

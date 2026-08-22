@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { I18nProvider } from '@/i18n';
+import { ServiceWorkerRegister } from './sw-register';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -41,6 +42,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <I18nProvider>
           {children}
           <Toaster richColors position="top-center" />
+          <ServiceWorkerRegister />
         </I18nProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -21,7 +21,7 @@ import {
   useCancelWithdrawal,
   type WalletData,
 } from '@/hooks/use-wallet';
-import { WithdrawSheet } from '@/components/wallet/withdraw-sheet';
+import { LazyWithdrawSheet as WithdrawSheet } from '@/components/lazy';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 

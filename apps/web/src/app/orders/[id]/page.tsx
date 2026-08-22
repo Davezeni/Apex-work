@@ -19,7 +19,7 @@ import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
-import { RateReviewSheet } from '@/components/orders/rate-review-sheet';
+import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useState } from 'react';
 import { Star } from 'lucide-react';

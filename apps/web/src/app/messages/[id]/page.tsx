@@ -10,10 +10,12 @@ import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
-import { CustomOfferSheet } from '@/components/chat/custom-offer-sheet';
-import { OfferCard } from '@/components/chat/offer-card';
-import { ReportUserSheet } from '@/components/moderation/report-user-sheet';
-import { ImageViewer } from '@/components/ui/image-viewer';
+import {
+  LazyCustomOfferSheet as CustomOfferSheet,
+  LazyOfferCard as OfferCard,
+  LazyReportUserSheet as ReportUserSheet,
+  LazyImageViewer as ImageViewer,
+} from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';

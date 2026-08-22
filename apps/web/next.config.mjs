@@ -61,6 +61,36 @@ const nextConfig = {
         source: '/manifest.webmanifest',
         headers: [{ key: 'Content-Type', value: 'application/manifest+json' }],
       },
+      {
+        // Service worker: never cache — must always fetch fresh so we can
+        // ship SW updates instantly. Scope is /, so the file lives at root.
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        // Static assets emitted by Next are hashed → safe to cache forever.
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        // Public marketing/landing routes — safe to cache at Vercel edge with SWR.
+        // Auth-gated routes below override this.
+        source: '/((?!api|login|signup|onboarding|settings|profile|wallet|messages|notifications|orders).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
+          { key: 'Vary', value: 'Accept-Encoding, Accept-Language' },
+        ],
+      },
+      {
+        // Authed routes: never cache at the CDN — they're per-user.
+        source: '/(login|signup|onboarding|settings/:path*|profile|wallet|messages/:path*|notifications|orders/:path*)',
+        headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
+      },
     ];
   },
 

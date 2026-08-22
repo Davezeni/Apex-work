@@ -17,6 +17,9 @@ import {
   Bell,
   ShieldCheck,
   ImageIcon,
+  BarChart3,
+  Trophy,
+  Gift,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -140,11 +143,35 @@ export default function ProfilePage() {
           icon={<CreditCard className="h-4 w-4" />}
           title={t('profile.paymentMethods')}
           subtitle="Telebirr, CBE Birr"
+          href="/settings/payment-methods"
         />
+        {me.role === 'FREELANCER' && (
+          <>
+            <MenuItem
+              icon={<Calendar className="h-4 w-4" />}
+              title={t('profile.availability')}
+              subtitle="Working hours & vacation"
+              href="/settings/availability"
+            />
+            <MenuItem
+              icon={<BarChart3 className="h-4 w-4" />}
+              title="Statistics"
+              subtitle="Views, earnings, response rate"
+              href="/stats"
+            />
+            <MenuItem
+              icon={<Trophy className="h-4 w-4" />}
+              title="Achievements"
+              subtitle="Badges & milestones"
+              href="/achievements"
+            />
+          </>
+        )}
         <MenuItem
-          icon={<Calendar className="h-4 w-4" />}
-          title={t('profile.availability')}
-          subtitle="Mon–Fri · 9AM–6PM"
+          icon={<Gift className="h-4 w-4" />}
+          title="Refer friends"
+          subtitle="Earn 100 ETB per invite"
+          href="/referrals"
         />
         {me.role === 'FREELANCER' && (
           <MenuItem
@@ -170,6 +197,7 @@ export default function ProfilePage() {
           icon={<Settings className="h-4 w-4" />}
           title={t('profile.settings')}
           subtitle={t('language.label')}
+          href="/settings"
         />
         <MenuItem
           icon={

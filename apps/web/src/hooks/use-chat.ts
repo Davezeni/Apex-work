@@ -128,9 +128,15 @@ export function useChatSocket(conversationId: string | undefined) {
 
     const socket = io(API_URL, {
       auth: { token },
+      // Prefer websocket; fall back to long-poll on hostile networks. When
+      // both peers speak permessage-deflate the server compresses frames.
       transports: ['websocket', 'polling'],
+      upgrade: true,
       reconnectionDelay: 1500,
       reconnectionDelayMax: 10_000,
+      // Reduce reconnection storm on flaky Ethiopian mobile connections.
+      reconnectionAttempts: Infinity,
+      timeout: 20_000,
     });
     socketRef.current = socket;
 

@@ -19,7 +19,7 @@ import {
   Flag,
   ShieldOff,
 } from 'lucide-react';
-import { ReportUserSheet } from '@/components/moderation/report-user-sheet';
+import { LazyReportUserSheet as ReportUserSheet } from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';

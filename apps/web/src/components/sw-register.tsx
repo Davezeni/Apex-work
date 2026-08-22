@@ -1,0 +1,46 @@
+'use client';
+
+import { useEffect } from 'react';
+
+/**
+ * Register the /sw.js service worker after the page has settled.
+ * Skips localhost (avoids stale caches during dev) and browsers without
+ * SW support. Uses `updateViaCache: 'none'` so the SW file itself is
+ * always fetched fresh — otherwise a bad SW can trap users on old code.
+ */
+export function ServiceWorkerRegister() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('serviceWorker' in navigator)) return;
+    if (process.env.NODE_ENV !== 'production') return;
+
+    // Register after `load` so it never contends with LCP.
+    const register = () => {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/', updateViaCache: 'none' })
+        .then((reg) => {
+          // Poll for updates every hour so long-lived tabs get new versions.
+          setInterval(() => reg.update().catch(() => undefined), 60 * 60 * 1000);
+
+          // If a new SW takes over, tell it to skip waiting so the next
+          // navigation gets the fresh assets.
+          reg.addEventListener('updatefound', () => {
+            const sw = reg.installing;
+            sw?.addEventListener('statechange', () => {
+              if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                sw.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
+        })
+        .catch(() => {
+          // A registration failure is never worth interrupting the user.
+        });
+    };
+
+    if (document.readyState === 'complete') register();
+    else window.addEventListener('load', register, { once: true });
+  }, []);
+
+  return null;
+}
