@@ -79,8 +79,8 @@ const nextConfig = {
       },
       {
         // Public marketing/landing routes — safe to cache at Vercel edge with SWR.
-        // Auth-gated routes below override this.
-        source: '/((?!api|login|signup|onboarding|settings|profile|wallet|messages|notifications|orders).*)',
+        // Auth-gated routes + sw.js/manifest below override this.
+        source: '/((?!api|sw\\.js|manifest\\.webmanifest|login|signup|onboarding|settings|profile|wallet|messages|notifications|orders).*)',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
           { key: 'Vary', value: 'Accept-Encoding, Accept-Language' },
