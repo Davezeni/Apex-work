@@ -40,7 +40,11 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default('noreply@apex-work.et'),
+  // Resend requires the FROM address to be on a verified domain OR to use
+  // their sandbox address `onboarding@resend.dev` which works for any
+  // account without setup. We default to the sandbox so email works out
+  // of the box; swap to `noreply@yourdomain.com` after verifying a domain.
+  EMAIL_FROM: z.string().default('Apex-Work <onboarding@resend.dev>'),
 
   GROQ_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),

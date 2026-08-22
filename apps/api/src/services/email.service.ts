@@ -4,8 +4,11 @@
  *
  * Every send goes into the EmailQueue first (durable) so a Resend outage
  * never loses an alert. A cron worker (`/v1/cron/emails`) flushes QUEUED
- * rows. Callers can also `send()` inline which enqueues + immediately
- * flushes.
+ * rows. Callers can also `enqueue()` which enqueues + immediately flushes.
+ *
+ * The last delivery error is kept in-memory (`lastError`) and surfaced
+ * via the admin Diagnostics panel — makes debugging domain/verification
+ * issues trivial.
  */
 import { prisma } from '../lib/prisma.js';
 import { env } from '../config/env.js';
@@ -13,8 +16,20 @@ import { logger } from '../config/logger.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 
+let lastError: { at: string; message: string; to: string } | null = null;
+let lastSuccess: { at: string; to: string; providerId?: string } | null = null;
+
 export function isEmailConfigured(): boolean {
   return !!env.RESEND_API_KEY;
+}
+
+export function emailDebug() {
+  return {
+    configured: isEmailConfigured(),
+    from: env.EMAIL_FROM,
+    lastError,
+    lastSuccess,
+  };
 }
 
 export interface EmailInput {
@@ -23,7 +38,12 @@ export interface EmailInput {
   html: string;
 }
 
-export async function enqueue(input: EmailInput): Promise<{ id: string }> {
+/**
+ * Enqueue + attempt immediately. Returns { id, delivered, error } so
+ * callers can surface a real result to the UI (previously we always
+ * returned success, hiding failures).
+ */
+export async function enqueue(input: EmailInput): Promise<{ id: string; delivered: boolean; error?: string }> {
   const row = await prisma.emailQueue.create({
     data: {
       to: input.to,
@@ -32,20 +52,12 @@ export async function enqueue(input: EmailInput): Promise<{ id: string }> {
       status: 'QUEUED',
     },
   });
-  // Fire-and-forget flush attempt so latency-sensitive notifications
-  // don't wait for the next cron tick.
-  void flushOne(row.id).catch(() => undefined);
-  return { id: row.id };
+  const result = await tryDeliver(row);
+  return { id: row.id, delivered: result.ok, error: result.error };
 }
 
-async function flushOne(id: string): Promise<void> {
-  if (!isEmailConfigured()) return;
-  const row = await prisma.emailQueue.findUnique({ where: { id } });
-  if (!row || row.status !== 'QUEUED') return;
-  await tryDeliver(row);
-}
-
-async function tryDeliver(row: { id: string; to: string; subject: string; html: string; attempts: number }): Promise<void> {
+async function tryDeliver(row: { id: string; to: string; subject: string; html: string; attempts: number }): Promise<{ ok: boolean; error?: string }> {
+  if (!isEmailConfigured()) return { ok: false, error: 'RESEND_API_KEY not set' };
   try {
     const res = await fetch(RESEND_URL, {
       method: 'POST',
@@ -54,8 +66,8 @@ async function tryDeliver(row: { id: string; to: string; subject: string; html: 
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: env.EMAIL_FROM ?? 'Apex-Work <noreply@apex-work.com>',
-        to: row.to,
+        from: env.EMAIL_FROM,
+        to: [row.to],
         subject: row.subject,
         html: row.html,
       }),
@@ -63,14 +75,20 @@ async function tryDeliver(row: { id: string; to: string; subject: string; html: 
     });
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`HTTP ${res.status}: ${text.slice(0, 300)}`);
+      throw new Error(`HTTP ${res.status}: ${text.slice(0, 400)}`);
     }
+    const body = (await res.json().catch(() => ({}))) as { id?: string };
     await prisma.emailQueue.update({
       where: { id: row.id },
       data: { status: 'SENT', sentAt: new Date() },
     });
+    lastSuccess = { at: new Date().toISOString(), to: row.to, providerId: body.id };
+    lastError = null;
+    logger.info({ id: row.id, providerId: body.id, to: row.to }, 'email sent');
+    return { ok: true };
   } catch (err) {
     const message = (err as Error).message || 'unknown';
+    lastError = { at: new Date().toISOString(), to: row.to, message: message.slice(0, 500) };
     logger.warn({ id: row.id, message }, 'email send failed');
     await prisma.emailQueue.update({
       where: { id: row.id },
@@ -80,6 +98,7 @@ async function tryDeliver(row: { id: string; to: string; subject: string; html: 
         status: row.attempts + 1 >= 5 ? 'FAILED' : 'QUEUED',
       },
     });
+    return { ok: false, error: message };
   }
 }
 
@@ -93,10 +112,8 @@ export async function flushPending(limit = 50): Promise<{ scanned: number; sent:
   });
   let sent = 0;
   for (const row of rows) {
-    const before = row.status;
-    await tryDeliver(row);
-    const after = await prisma.emailQueue.findUnique({ where: { id: row.id }, select: { status: true } });
-    if (before !== after?.status && after?.status === 'SENT') sent++;
+    const r = await tryDeliver(row);
+    if (r.ok) sent++;
   }
   return { scanned: rows.length, sent };
 }

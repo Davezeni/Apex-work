@@ -111,7 +111,7 @@ router.post('/certifications/:id/verify', validate(verifySchema),
 
 router.get('/diagnostics', asyncHandler(async (_req, res) => {
   const { turnDebug } = await import('../services/turn.service.js');
-  const { isEmailConfigured } = await import('../services/email.service.js');
+  const { isEmailConfigured, emailDebug } = await import('../services/email.service.js');
   const { isPushConfigured } = await import('../services/push.service.js');
   const { env } = await import('../config/env.js');
   return success(res, {
@@ -120,6 +120,7 @@ router.get('/diagnostics', asyncHandler(async (_req, res) => {
       chapa: !!env.CHAPA_SECRET_KEY,
       groq: !!env.GROQ_API_KEY,
       resend: isEmailConfigured(),
+      email: emailDebug(),
       vapidPush: isPushConfigured(),
       turn: turnDebug(),
       cronToken: !!env.CRON_TOKEN,
@@ -153,11 +154,11 @@ router.post('/email/test', validate(testEmailSchema), asyncHandler(async (req, r
       <div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:520px;margin:0 auto;padding:24px">
         <h2 style="margin:0 0 8px">✅ Email is working</h2>
         <p style="color:#555;margin:0 0 16px">This is a test email from Apex-Work sent to <b>${to}</b> at ${new Date().toISOString()}.</p>
-        <p style="color:#888;font-size:12px">If you see this, Resend + VAPID + your admin panel are wired correctly.</p>
+        <p style="color:#888;font-size:12px">If you see this, Resend is wired correctly.</p>
       </div>
     `,
   });
-  return success(res, { queued: row.id, to });
+  return success(res, { id: row.id, to, delivered: row.delivered, error: row.error ?? null });
 }));
 
 // ---------------- disputes ----------------

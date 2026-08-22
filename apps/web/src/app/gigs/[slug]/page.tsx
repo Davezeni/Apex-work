@@ -148,45 +148,20 @@ export default function GigDetailPage() {
 
   return (
     <div className="min-h-dvh pb-32">
-      {/* Hero cover — shorter when no cover image, so the overlay card
-          doesn't get eaten by the browser chrome. Also add a soft mesh
-          pattern so an empty gradient doesn't look barren. */}
-      <div className={cn(
-        'relative bg-gradient-to-br',
-        gig.coverImageUrl ? 'h-56 sm:h-72' : 'h-36 sm:h-44',
-        gradientFor(gig.id),
-      )}>
-        {!gig.coverImageUrl && (
-          <div className="pointer-events-none absolute inset-0 opacity-20"
-               style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, white 0%, transparent 40%), radial-gradient(circle at 80% 70%, white 0%, transparent 40%)' }} />
-        )}
-        <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => router.back()}
-            aria-label="Back"
-            className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex gap-2">
-            <button
-              aria-label="Save"
-              className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-            >
-              <Heart className="h-5 w-5" />
-            </button>
-            <button
-              aria-label="Share"
-              className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
+      {/*
+        Header/hero. Two shapes:
+          A) With cover image → tall visual hero + floating card that lifts.
+          B) Without cover image → tight sticky header with no gradient,
+             then the card renders inline. Prevents the 'half covered' look.
+      */}
+      {gig.coverImageUrl ? (
+        <>
+          <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={gig.coverImageUrl} alt={gig.title} className="absolute inset-0 h-full w-full object-cover" />
+            <HeaderActions router={router} onTop />
           </div>
-        </div>
-      </div>
-
-      {/* Card overlay */}
-      <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
+          <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
         <div className="flex items-start gap-3">
           <div
             className={cn(
@@ -245,6 +220,92 @@ export default function GigDetailPage() {
           </div>
         )}
       </div>
+        </>
+      ) : (
+        <>
+          {/* No cover image — compact sticky header, no gradient hero */}
+          <header className="safe-top sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+            <button
+              onClick={() => router.back()}
+              aria-label="Back"
+              className="grid h-9 w-9 place-items-center rounded-full text-foreground active:scale-90"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Gig</div>
+              <div className="truncate text-sm font-bold">{translation.data?.title ?? gig.title}</div>
+            </div>
+            <button aria-label="Save" className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground">
+              <Heart className="h-5 w-5" />
+            </button>
+            <button aria-label="Share" className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground">
+              <Share2 className="h-5 w-5" />
+            </button>
+          </header>
+
+          {/* Freelancer card + title inline */}
+          <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-start gap-3">
+              <div
+                className={cn(
+                  'grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base font-bold text-white',
+                  gradientFor(gig.owner.id),
+                )}
+              >
+                {initialsOf(gig.owner.fullName)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/u/${gig.owner.username}`}
+                  className="flex items-center gap-1.5 text-sm font-bold"
+                >
+                  {gig.owner.fullName}
+                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
+                </Link>
+                <p className="text-[11px] text-muted-foreground">@{gig.owner.username}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                  {gig.owner.ratingCount > 0 && (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="font-semibold text-foreground">
+                          {gig.owner.rating.toFixed(1)}
+                        </span>{' '}
+                        ({gig.owner.ratingCount})
+                      </span>
+                      <span>·</span>
+                    </>
+                  )}
+                  {gig.owner.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {gig.owner.city}
+                    </span>
+                  )}
+                  <span>·</span>
+                  <span>{gig.owner.completedOrders} orders</span>
+                </div>
+              </div>
+            </div>
+            <h1 className="mt-4 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl">
+              {translation.data?.title ?? gig.title}
+            </h1>
+            {isOwnGig && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="brand" onClick={() => setBoostOpen(true)}>
+                  <Zap className="h-3.5 w-3.5" /> Boost
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/gigs/${slug}/analytics`}>
+                    <BarChart3 className="h-3.5 w-3.5" /> Analytics
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Description */}
       <div className="mx-4 mt-6">
@@ -426,6 +487,37 @@ function SimilarGigsSection({ slug }: { slug: string }) {
             </div>
           </Link>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Floating action row that overlays on top of the hero image (when the
+ * gig has one). Uses black semi-transparent bubbles so it works on any
+ * background. Pulled out as its own component so both variants of the
+ * page header stay readable.
+ */
+function HeaderActions({ router, onTop = false }: { router: ReturnType<typeof useRouter>; onTop?: boolean }) {
+  return (
+    <div className={cn(
+      'flex items-center justify-between px-4 py-3',
+      onTop && 'safe-top absolute inset-x-0 top-0 z-10',
+    )}>
+      <button
+        onClick={() => router.back()}
+        aria-label="Back"
+        className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </button>
+      <div className="flex gap-2">
+        <button aria-label="Save" className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+          <Heart className="h-5 w-5" />
+        </button>
+        <button aria-label="Share" className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+          <Share2 className="h-5 w-5" />
+        </button>
       </div>
     </div>
   );

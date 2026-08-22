@@ -178,90 +178,128 @@ function CategoryChip({
 }
 
 function GigCard({ g }: { g: GigListItem }) {
+  // Two layouts:
+  //   - IMAGE cover  → traditional hero (200px image, avatar row below)
+  //   - NO cover     → compact card, no giant gradient block. Avatar +
+  //     freelancer info sit on the top row, title + price below.
+  if (!g.coverImageUrl) return <NoCoverGigCard g={g} />;
+  return <ImageGigCard g={g} />;
+}
+
+/** Card variant used when the gig has a real image. */
+function ImageGigCard({ g }: { g: GigListItem }) {
   return (
     <Link
       href={`/gigs/${g.slug}`}
-      className="overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
+      className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
-      {/* Compact hero — 88px keeps the ratio pleasant when no cover image. */}
-      <div className={cn('relative h-24 bg-gradient-to-br', gradientFor(g.id))}>
-        {g.coverImageUrl && (
-          <Image src={g.coverImageUrl} alt={g.title} fill unoptimized sizes="400px" className="object-cover" />
-        )}
-        {!g.coverImageUrl && (
-          <div className="pointer-events-none absolute inset-0 opacity-25"
-               style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, white 0%, transparent 40%), radial-gradient(circle at 80% 70%, white 0%, transparent 40%)' }} />
-        )}
-        {g.isFeatured && (
+      <div className="relative aspect-[16/9] w-full bg-muted">
+        <Image src={g.coverImageUrl!} alt={g.title} fill unoptimized sizes="400px" className="object-cover" />
+        {g.isFeatured ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
             ⚡ Featured
           </span>
-        )}
-        {!g.isFeatured && g.rating >= 4.8 && g.ratingCount >= 10 && (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+        ) : g.rating >= 4.8 && g.ratingCount >= 10 ? (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
             🔥 Top Rated
           </span>
-        )}
+        ) : null}
         <button
           aria-label="Save"
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
+          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur"
           onClick={(e) => e.preventDefault()}
         >
           <Bookmark className="h-4 w-4" />
         </button>
       </div>
-      <div className="p-4">
-        <div className="-mt-8 flex items-end gap-3">
-          <div
-            className={cn(
-              'grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br text-sm font-bold text-white ring-4 ring-card',
-              gradientFor(g.owner.id),
-            )}
-          >
-            {initialsOf(g.owner.fullName)}
-          </div>
-          <div className="min-w-0 pb-1">
-            <h3 className="flex items-center gap-1.5 text-sm font-bold">
-              <span className="truncate">{g.owner.fullName}</span>
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
-            </h3>
-            <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
-          </div>
-        </div>
-        <div className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">{g.title}</div>
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
-          {g.ratingCount > 0 ? (
-            <>
-              <span className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="font-semibold text-foreground">{g.rating.toFixed(2)}</span> (
-                {g.ratingCount})
-              </span>
-              {g.owner.city && <span>·</span>}
-            </>
-          ) : (
-            <span className="text-muted-foreground/60">New freelancer</span>
+      <CardBody g={g} />
+    </Link>
+  );
+}
+
+/** Compact card variant used when the gig has no cover image. No hero. */
+function NoCoverGigCard({ g }: { g: GigListItem }) {
+  return (
+    <Link
+      href={`/gigs/${g.slug}`}
+      className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
+    >
+      <div className="flex items-start gap-3 p-3">
+        <div
+          className={cn(
+            'grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-base font-bold text-white',
+            gradientFor(g.owner.id),
           )}
-          {g.owner.city && (
+        >
+          {initialsOf(g.owner.fullName)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="truncate text-sm font-bold">{g.owner.fullName}</h3>
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+            {g.isFeatured && (
+              <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
+                ⚡ Featured
+              </span>
+            )}
+            {!g.isFeatured && g.rating >= 4.8 && g.ratingCount >= 10 && (
+              <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
+                🔥 Top Rated
+              </span>
+            )}
+          </div>
+          <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
+        </div>
+        <button
+          aria-label="Save"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+          onClick={(e) => { e.preventDefault(); }}
+        >
+          <Bookmark className="h-4 w-4" />
+        </button>
+      </div>
+      <CardBody g={g} noTopPadding />
+    </Link>
+  );
+}
+
+/** Shared bottom half of both card variants. */
+function CardBody({ g, noTopPadding = false }: { g: GigListItem; noTopPadding?: boolean }) {
+  return (
+    <div className={cn('px-4 pb-4', noTopPadding ? 'pt-0' : 'pt-3')}>
+      <div className="line-clamp-2 text-sm font-semibold leading-snug">{g.title}</div>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
+        {g.ratingCount > 0 ? (
+          <span className="flex items-center gap-1">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span className="font-semibold text-foreground">{g.rating.toFixed(2)}</span>
+            <span>({g.ratingCount})</span>
+          </span>
+        ) : (
+          <span className="text-muted-foreground/60">New</span>
+        )}
+        {g.owner.city && (
+          <>
+            <span>·</span>
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
               {g.owner.city}
             </span>
-          )}
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-          <div className="text-[11px] text-muted-foreground">
-            From{' '}
-            <span className="text-base font-extrabold text-foreground">
-              {formatEtb(g.startingPriceEtb)}
-            </span>
-          </div>
-          <span className="grad-hero rounded-full px-4 py-1.5 text-xs font-bold text-white">
-            View
+          </>
+        )}
+      </div>
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+        <div className="text-[11px] text-muted-foreground">
+          From{' '}
+          <span className="text-base font-extrabold text-foreground">
+            {formatEtb(g.startingPriceEtb)}
           </span>
         </div>
+        <span className="grad-hero rounded-full px-4 py-1.5 text-xs font-bold text-white">
+          View
+        </span>
       </div>
-    </Link>
+    </div>
   );
 }
 

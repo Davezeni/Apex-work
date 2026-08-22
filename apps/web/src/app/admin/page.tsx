@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Users, ShoppingBag, Briefcase, Package, Wallet as WalletIcon, Flag,
   ShieldOff, ShieldCheck, Loader2, CheckCircle, XCircle, TrendingUp,
+  BarChart3, AlertTriangle as AlertTri, Award as AwardIcon, Cpu, Menu, X as CloseIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -65,31 +66,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background pb-24">
-      <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-3 py-3">
-          <button onClick={() => router.back()} aria-label="Back" className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-lg font-extrabold tracking-tight">Admin</h1>
-          <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
-        </div>
-        <div className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {(['summary', 'reports', 'disputes', 'withdrawals', 'users', 'certs', 'diagnostics'] as Tab[]).map((t2) => (
-            <button
-              key={t2}
-              onClick={() => setTab(t2)}
-              className={cn(
-                'shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold capitalize',
-                tab === t2 ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground',
-              )}
-            >
-              {t2}
-            </button>
-          ))}
-        </div>
-      </header>
-
+    <AdminShell tab={tab} onChange={setTab} onBack={() => router.back()}>
       {tab === 'summary' && <SummaryTab />}
       {tab === 'reports' && <ReportsTab />}
       {tab === 'disputes' && <DisputesTab />}
@@ -97,6 +74,153 @@ export default function AdminPage() {
       {tab === 'users' && <UsersTab />}
       {tab === 'certs' && <CertsTab />}
       {tab === 'diagnostics' && <DiagnosticsTab />}
+    </AdminShell>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// ADMIN SHELL — collapsible sidebar on desktop, drawer on mobile
+// -----------------------------------------------------------------------------
+const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'summary',     label: 'Summary',      icon: <BarChart3 className="h-4 w-4" /> },
+  { id: 'reports',     label: 'Reports',      icon: <Flag className="h-4 w-4" /> },
+  { id: 'disputes',    label: 'Disputes',     icon: <AlertTri className="h-4 w-4" /> },
+  { id: 'withdrawals', label: 'Withdrawals',  icon: <WalletIcon className="h-4 w-4" /> },
+  { id: 'users',       label: 'Users',        icon: <Users className="h-4 w-4" /> },
+  { id: 'certs',       label: 'Certifications', icon: <AwardIcon className="h-4 w-4" /> },
+  { id: 'diagnostics', label: 'Diagnostics',  icon: <Cpu className="h-4 w-4" /> },
+];
+
+const SIDEBAR_KEY = 'apex-admin-sidebar-collapsed';
+
+function AdminShell({
+  tab, onChange, onBack, children,
+}: { tab: Tab; onChange: (t: Tab) => void; onBack: () => void; children: React.ReactNode }) {
+  // Persisted collapsed state so pros keep their layout across sessions.
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem(SIDEBAR_KEY) === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((v) => {
+      const next = !v;
+      try { localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const active = NAV_ITEMS.find((n) => n.id === tab)!;
+
+  return (
+    <div className="flex min-h-dvh bg-background">
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          'hidden shrink-0 flex-col border-r border-border bg-card md:flex',
+          collapsed ? 'w-16' : 'w-60',
+          'transition-[width] duration-200 ease-out',
+        )}
+        aria-label="Admin navigation"
+      >
+        <div className="flex items-center gap-2 border-b border-border px-3 py-4">
+          <div className="grad-hero grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-extrabold text-white">A</div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-sm font-extrabold">Admin</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Staff</div>
+            </div>
+          )}
+        </div>
+        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+          {NAV_ITEMS.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => onChange(n.id)}
+              title={collapsed ? n.label : undefined}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                tab === n.id
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                collapsed && 'justify-center px-0',
+              )}
+            >
+              {n.icon}
+              {!collapsed && <span className="truncate">{n.label}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="border-t border-border p-2">
+          <button
+            onClick={toggleCollapsed}
+            className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <Menu className="h-4 w-4" /> : <><ArrowLeft className="h-4 w-4" /> Collapse</>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="safe-top relative flex h-full w-64 flex-col border-r border-border bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-4">
+              <div className="grad-hero grid h-8 w-8 place-items-center rounded-lg text-sm font-extrabold text-white">A</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-extrabold">Admin</div>
+                <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Staff</div>
+              </div>
+              <button onClick={() => setMobileOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground">
+                <CloseIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
+              {NAV_ITEMS.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => { onChange(n.id); setMobileOpen(false); }}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold transition-colors',
+                    tab === n.id
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                  )}
+                >
+                  {n.icon}<span>{n.label}</span>
+                </button>
+              ))}
+            </nav>
+          </aside>
+        </div>
+      )}
+
+      {/* Main pane */}
+      <main className="min-w-0 flex-1">
+        <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+          <button
+            onClick={onBack}
+            aria-label="Back"
+            className="grid h-9 w-9 place-items-center rounded-full active:scale-90 md:hidden"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open menu"
+            className="grid h-9 w-9 place-items-center rounded-full active:scale-90 md:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Admin</div>
+            <h1 className="truncate text-lg font-extrabold tracking-tight">{active.label}</h1>
+          </div>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
+        </header>
+        <div className="pb-24">{children}</div>
+      </main>
     </div>
   );
 }
@@ -487,6 +611,12 @@ interface Diagnostics {
     chapa: boolean;
     groq: boolean;
     resend: boolean;
+    email: {
+      configured: boolean;
+      from: string;
+      lastError: { at: string; to: string; message: string } | null;
+      lastSuccess: { at: string; to: string; providerId?: string } | null;
+    };
     vapidPush: boolean;
     turn: {
       hasKey: boolean;
@@ -494,6 +624,7 @@ interface Diagnostics {
       cachedAt: string | null;
       cachedServerCount: number;
       lastError: { at: string; message: string; url: string } | null;
+      lastSuccessUrl: string | null;
     };
     cronToken: boolean;
     afromessage: boolean;
@@ -518,10 +649,17 @@ function DiagnosticsTab() {
     onError: (e) => toast.error((e as Error).message ?? 'Failed'),
   });
   const testEmail = useMutation({
-    mutationFn: (to?: string) => apiFetch<{ queued: string; to: string }>('/admin/email/test', {
+    mutationFn: (to?: string) => apiFetch<{ id: string; to: string; delivered: boolean; error: string | null }>('/admin/email/test', {
       method: 'POST', token, body: to ? { to } : {},
     }),
-    onSuccess: (r) => toast.success(`Test email queued to ${r.to} — check inbox in ~10s`),
+    onSuccess: (r) => {
+      if (r.delivered) {
+        toast.success(`Test email sent to ${r.to} — check your inbox`);
+      } else {
+        toast.error(`Delivery failed: ${r.error ?? 'unknown'}`);
+      }
+      qc.invalidateQueries({ queryKey: ['admin', 'diagnostics'] });
+    },
     onError: (e) => toast.error((e as Error).message ?? 'Failed'),
   });
 
@@ -540,13 +678,38 @@ function DiagnosticsTab() {
       <StatusRow label="AfroMessage SMS" ok={s.afromessage} note="OTPs" />
       <StatusRow label="Groq LLM"        ok={s.groq} note="AI assistant, proposals, translation" />
       <StatusRow label="Web Push (VAPID)" ok={s.vapidPush} note="browser notifications" />
-      <StatusRow label="Resend email"    ok={s.resend} note="saved-search alerts">
+      <StatusRow label="Resend email"    ok={s.resend} note={`from: ${s.email.from}`}>
         {s.resend && (
           <Button size="sm" variant="brand" onClick={sendTestEmail} disabled={testEmail.isPending}>
-            {testEmail.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test email'}
+            {testEmail.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test'}
           </Button>
         )}
       </StatusRow>
+
+      {s.resend && (s.email.lastError || s.email.lastSuccess) && (
+        <details className="rounded-2xl border border-border bg-card p-3 text-xs" open={!!s.email.lastError}>
+          <summary className="cursor-pointer font-semibold">Email debug details</summary>
+          <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
+            <div className="text-muted-foreground">from</div><div>{s.email.from}</div>
+            {s.email.lastSuccess && (
+              <>
+                <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-emerald-500">Last success</div>
+                <div className="text-muted-foreground">at</div><div>{s.email.lastSuccess.at}</div>
+                <div className="text-muted-foreground">to</div><div className="break-all">{s.email.lastSuccess.to}</div>
+                <div className="text-muted-foreground">provider id</div><div className="break-all">{s.email.lastSuccess.providerId ?? '—'}</div>
+              </>
+            )}
+            {s.email.lastError && (
+              <>
+                <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">Last error</div>
+                <div className="text-muted-foreground">at</div><div>{s.email.lastError.at}</div>
+                <div className="text-muted-foreground">to</div><div className="break-all">{s.email.lastError.to}</div>
+                <div className="text-muted-foreground">message</div><div className="break-all">{s.email.lastError.message}</div>
+              </>
+            )}
+          </div>
+        </details>
+      )}
       <StatusRow
         label="Metered TURN"
         ok={s.turn.hasKey && s.turn.cachedServerCount > 3}
@@ -560,12 +723,13 @@ function DiagnosticsTab() {
       </StatusRow>
 
       {s.turn.hasKey && (
-        <details className="rounded-2xl border border-border bg-card p-3 text-xs">
+        <details className="rounded-2xl border border-border bg-card p-3 text-xs" open={!!s.turn.lastError}>
           <summary className="cursor-pointer font-semibold">TURN debug details</summary>
-          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
+          <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
             <div className="text-muted-foreground">app name</div><div>{s.turn.appName}</div>
             <div className="text-muted-foreground">cached at</div><div>{s.turn.cachedAt ?? '—'}</div>
             <div className="text-muted-foreground">servers</div><div>{s.turn.cachedServerCount}</div>
+            <div className="text-muted-foreground">last ok url</div><div className="break-all">{s.turn.lastSuccessUrl ?? '—'}</div>
             {s.turn.lastError && (
               <>
                 <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">Last error</div>
