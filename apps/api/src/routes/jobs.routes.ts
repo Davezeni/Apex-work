@@ -1,0 +1,94 @@
+import { Router } from 'express';
+import { createBidSchema, createJobSchema, jobListQuerySchema } from '@apex-work/shared';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { validate } from '../middleware/validate.js';
+import { optionalAuth, requireAuth } from '../middleware/auth.js';
+import { success } from '../lib/response.js';
+import * as jobs from '../services/jobs.service.js';
+
+const router: Router = Router();
+
+/** GET /jobs — public list. Only shows open jobs by default. */
+router.get(
+  '/',
+  optionalAuth,
+  validate(jobListQuerySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const q = req.query as unknown as import('@apex-work/shared').JobListQuery;
+    const result = await jobs.listJobs({ ...q, onlyOpen: true });
+    return success(res, result);
+  }),
+);
+
+/** GET /jobs/:id — public detail. Bid details are hidden unless viewer is client. */
+router.get(
+  '/:id',
+  optionalAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const job = await jobs.getJob(id, req.user?.sub);
+    return success(res, job);
+  }),
+);
+
+/** POST /jobs — clients create a job. */
+router.post(
+  '/',
+  requireAuth,
+  validate(createJobSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').CreateJobInput;
+    const job = await jobs.createJob(req.user!.sub, body);
+    return success(res, job, 201);
+  }),
+);
+
+/** POST /jobs/:id/close — client closes a job (no more bids). */
+router.post(
+  '/:id/close',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const job = await jobs.closeJob(id, req.user!.sub);
+    return success(res, job);
+  }),
+);
+
+// ---------------- Bids ----------------
+
+/** POST /jobs/:id/bids — freelancer bids. Upserts existing bid. */
+router.post(
+  '/:id/bids',
+  requireAuth,
+  validate(createBidSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').CreateBidInput;
+    const bid = await jobs.createBid(req.user!.sub, id, body);
+    return success(res, bid, 201);
+  }),
+);
+
+/** DELETE /jobs/:jobId/bids/:bidId — freelancer withdraws own bid. */
+router.delete(
+  '/:jobId/bids/:bidId',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { bidId } = req.params as { bidId: string };
+    const bid = await jobs.withdrawBid(bidId, req.user!.sub);
+    return success(res, bid);
+  }),
+);
+
+/** POST /jobs/:jobId/bids/:bidId/accept — client accepts → creates order + checkout. */
+router.post(
+  '/:jobId/bids/:bidId/accept',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { bidId } = req.params as { bidId: string };
+    const result = await jobs.acceptBid(bidId, req.user!.sub);
+    return success(res, result);
+  }),
+);
+
+export default router;

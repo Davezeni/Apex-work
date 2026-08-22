@@ -84,6 +84,23 @@ export function MobileHome() {
         </Link>
       </div>
 
+      {/* Jobs shortcut */}
+      <div className="mb-5 px-5">
+        <Link
+          href="/jobs"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 to-primary/10 p-4 transition-transform active:scale-[0.98]"
+        >
+          <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500/20 text-2xl">
+            📢
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-extrabold">{t('jobs.title')}</div>
+            <div className="text-[11px] text-muted-foreground">{t('jobs.subtitle')}</div>
+          </div>
+          <span className="text-xs font-bold text-primary">→</span>
+        </Link>
+      </div>
+
       {/* Category chips */}
       <div className="mb-4 flex items-center justify-between px-5">
         <h2 className="text-base font-bold tracking-tight">{t('home.explore')}</h2>

@@ -53,20 +53,39 @@ router.patch(
   validate(updateProfileSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').UpdateProfileInput;
-    const updated = await prisma.user.update({
-      where: { id: req.user!.sub },
-      data: body,
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        bio: true,
-        city: true,
-        title: true,
-        hourlyRateEtb: true,
-      },
-    });
-    return success(res, updated);
+    // Split out fields that may be null (avatar removal, email removal)
+    // — Prisma treats undefined as "don't touch" and null as "set to null",
+    // exactly what we want. Emit only the fields the caller sent.
+    const data: Record<string, unknown> = {};
+    for (const k of Object.keys(body) as (keyof typeof body)[]) {
+      if (body[k] !== undefined) data[k] = body[k];
+    }
+    try {
+      const updated = await prisma.user.update({
+        where: { id: req.user!.sub },
+        data,
+        select: {
+          id: true,
+          username: true,
+          fullName: true,
+          bio: true,
+          city: true,
+          title: true,
+          hourlyRateEtb: true,
+          avatarUrl: true,
+          email: true,
+        },
+      });
+      return success(res, updated);
+    } catch (err) {
+      // Unique email collision — surface a friendly message.
+      const e = err as { code?: string; meta?: { target?: string[] } };
+      if (e.code === 'P2002' && e.meta?.target?.includes('email')) {
+        const { ConflictError } = await import('../lib/errors.js');
+        throw new ConflictError('That email is already in use');
+      }
+      throw err;
+    }
   }),
 );
 

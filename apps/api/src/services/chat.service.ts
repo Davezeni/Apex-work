@@ -22,6 +22,15 @@ export async function getOrCreateDirectConversation(selfId: string, peerId: stri
   });
   if (!peer || !peer.isActive) throw new NotFoundError('User');
 
+  // If either party has blocked the other, refuse to open a new conversation.
+  // Existing conversations remain visible; this only blocks *starting* new ones.
+  const { isBlocked } = await import('./moderation.service.js');
+  if (await isBlocked(selfId, peerId)) {
+    throw new (await import('../lib/errors.js')).ForbiddenError(
+      'You cannot start a conversation with this user',
+    );
+  }
+
   // Find a non-group conversation containing both members.
   // We use a compact intersection query: the conversation IDs where BOTH users are members.
   const rows = await prisma.$queryRaw<{ id: string }[]>`

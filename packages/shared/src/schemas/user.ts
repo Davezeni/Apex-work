@@ -28,5 +28,7 @@ export const updateProfileSchema = z.object({
   city: z.string().trim().max(80).optional(),
   hourlyRateEtb: z.number().int().min(0).max(1_000_000).optional(),
   title: z.string().trim().max(120).optional(),
+  avatarUrl: z.string().url().max(500).nullable().optional(),
+  email: z.string().trim().toLowerCase().email().max(160).nullable().optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

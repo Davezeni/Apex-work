@@ -84,28 +84,31 @@ export default function ProfilePage() {
 
       {/* Actions */}
       <div className="mx-5 mt-4 flex gap-2">
-        <Button variant="brand" className="flex-1">
-          Edit profile
+        <Button asChild variant="brand" className="flex-1">
+          <Link href="/settings/profile">Edit profile</Link>
         </Button>
-        <Button variant="secondary" className="flex-1">
-          Share
+        <Button asChild variant="secondary" className="flex-1">
+          <Link href={`/u/${me.username}`}>Share</Link>
         </Button>
       </div>
 
       {/* Wallet — only for freelancers */}
       {me.role === 'FREELANCER' && (
-        <div className="grad-hero mx-5 mt-4 rounded-2xl p-5 text-white shadow-xl shadow-primary/40">
-          <div className="text-xs opacity-90">Available balance</div>
+        <Link
+          href="/wallet"
+          className="grad-hero mx-5 mt-4 block rounded-2xl p-5 text-white shadow-xl shadow-primary/40 transition-transform active:scale-[0.98]"
+        >
+          <div className="text-xs opacity-90">{t('wallet.balance')}</div>
           <div className="mt-1 text-3xl font-extrabold tracking-tight">{formatEtb(0)}</div>
           <div className="mt-4 flex gap-2">
-            <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">
-              💸 Withdraw
-            </button>
-            <button className="flex-1 rounded-xl bg-white/20 py-2.5 text-xs font-bold backdrop-blur">
-              📊 History
-            </button>
+            <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
+              💸 {t('wallet.withdraw')}
+            </div>
+            <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
+              📊 {t('wallet.history')}
+            </div>
           </div>
-        </div>
+        </Link>
       )}
 
       {/* Language switcher */}
@@ -156,6 +159,12 @@ export default function ProfilePage() {
           title={t('profile.security')}
           subtitle={t('profile.securitySubtitle')}
           href="/settings/security"
+        />
+        <MenuItem
+          icon={<ShieldCheck className="h-4 w-4" />}
+          title={t('block.listTitle')}
+          subtitle={t('block.menuSubtitle')}
+          href="/settings/blocks"
         />
         <MenuItem
           icon={<Settings className="h-4 w-4" />}

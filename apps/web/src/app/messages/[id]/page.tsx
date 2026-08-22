@@ -4,12 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
+import { CustomOfferSheet } from '@/components/chat/custom-offer-sheet';
+import { OfferCard } from '@/components/chat/offer-card';
+import { ReportUserSheet } from '@/components/moderation/report-user-sheet';
+import { ImageViewer } from '@/components/ui/image-viewer';
+import { useBlockUser } from '@/hooks/use-moderation';
+import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
@@ -38,6 +44,11 @@ export default function ConversationPage() {
   const { t } = useI18n();
   const [text, setText] = useState('');
   const [composerMode, setComposerMode] = useState<'text' | 'voice'>('text');
+  const [offerSheetOpen, setOfferSheetOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const blockUser = useBlockUser();
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -119,6 +130,52 @@ export default function ConversationPage() {
         >
           <Phone className="h-5 w-5" />
         </button>
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="More"
+            className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
+          >
+            <MoreVertical className="h-5 w-5" />
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-10 z-40 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setReportOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                  disabled={!peer}
+                >
+                  <Flag className="h-4 w-4" /> {t('report.title')}
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (!peer) return;
+                    if (!window.confirm(t('block.body'))) return;
+                    blockUser.mutate(
+                      { userId: peer.id },
+                      {
+                        onSuccess: () => {
+                          toast.success(t('block.blocked'));
+                          router.push('/messages');
+                        },
+                      },
+                    );
+                  }}
+                  className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-sm text-red-500 active:bg-muted"
+                  disabled={!peer}
+                >
+                  <ShieldOff className="h-4 w-4" /> {t('block.confirm')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Message list */}
@@ -154,6 +211,7 @@ export default function ConversationPage() {
               m.senderId !== me?.id &&
               (i === 0 || messages[i - 1]?.senderId !== m.senderId)
             }
+            onImageClick={setViewerUrl}
           />
         ))}
       </div>
@@ -182,6 +240,15 @@ export default function ConversationPage() {
                   });
                 }}
               />
+              {me?.role === 'FREELANCER' && (
+                <button
+                  onClick={() => setOfferSheetOpen(true)}
+                  aria-label={t('offer.title')}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-primary transition-transform active:scale-90 hover:bg-primary/10"
+                >
+                  <Package className="h-5 w-5" />
+                </button>
+              )}
               <textarea
                 value={text}
                 onChange={(e) => handleTextChange(e.target.value)}
@@ -222,6 +289,17 @@ export default function ConversationPage() {
           )}
         </div>
       </div>
+
+      <CustomOfferSheet open={offerSheetOpen} onOpenChange={setOfferSheetOpen} conversationId={id} />
+      {peer && (
+        <ReportUserSheet
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          targetType="USER"
+          targetId={peer.id}
+        />
+      )}
+      <ImageViewer open={!!viewerUrl} onOpenChange={(v) => !v && setViewerUrl(null)} url={viewerUrl} />
     </div>
   );
 }
@@ -230,15 +308,26 @@ function MessageBubble({
   m,
   isMine,
   showAvatar,
+  onImageClick,
 }: {
   m: ChatMessage;
   isMine: boolean;
   showAvatar: boolean;
+  onImageClick?: (url: string) => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
   const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
   const hasAttachment = !!m.attachmentUrl;
+  const offerMatch = m.attachmentUrl?.match(/^apex:\/\/offer\/([a-zA-Z0-9_-]+)$/);
+  if (offerMatch) {
+    return (
+      <div className={cn('flex items-end gap-2', isMine ? 'justify-end' : 'justify-start')}>
+        {!isMine && <div className="w-8 shrink-0" />}
+        <OfferCard offerId={offerMatch[1]!} isMine={isMine} />
+      </div>
+    );
+  }
 
   return (
     <div className={cn('flex items-end gap-2', isMine ? 'justify-end' : 'justify-start')}>
@@ -267,7 +356,11 @@ function MessageBubble({
         )}
       >
         {isImage && m.attachmentUrl && (
-          <a href={m.attachmentUrl} target="_blank" rel="noreferrer" className="block">
+          <button
+            type="button"
+            onClick={() => onImageClick?.(m.attachmentUrl!)}
+            className="block"
+          >
             <div className="relative aspect-[4/3] w-64 max-w-full bg-black/20">
               <Image
                 src={m.attachmentUrl}
@@ -278,7 +371,7 @@ function MessageBubble({
                 unoptimized
               />
             </div>
-          </a>
+          </button>
         )}
 
         {isAudio && m.attachmentUrl && (

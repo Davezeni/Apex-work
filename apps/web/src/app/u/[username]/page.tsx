@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 import {
   ArrowLeft,
   Share2,
@@ -14,7 +15,12 @@ import {
   Wallet,
   Package,
   UserX,
+  MoreVertical,
+  Flag,
+  ShieldOff,
 } from 'lucide-react';
+import { ReportUserSheet } from '@/components/moderation/report-user-sheet';
+import { useBlockUser } from '@/hooks/use-moderation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
@@ -45,6 +51,9 @@ export default function PublicProfilePage() {
   const { data: user, isLoading, error } = usePublicUser(username);
   const { data: me } = useMe();
   const startConversation = useStartConversation();
+  const blockUser = useBlockUser();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const { t } = useI18n();
 
   if (isLoading) {
@@ -114,15 +123,69 @@ export default function PublicProfilePage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <button
-            onClick={handleShare}
-            aria-label="Share"
-            className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShare}
+              aria-label="Share"
+              className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+            {me && me.id !== user.id && (
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="More"
+                  className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </button>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
+                    <div className="absolute right-0 top-12 z-40 w-48 overflow-hidden rounded-xl border border-border bg-card text-foreground shadow-xl">
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setReportOpen(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                      >
+                        <Flag className="h-4 w-4" /> {t('report.title')}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          if (!window.confirm(t('block.body'))) return;
+                          blockUser.mutate(
+                            { userId: user.id },
+                            {
+                              onSuccess: () => {
+                                toast.success(t('block.blocked'));
+                                router.push('/');
+                              },
+                            },
+                          );
+                        }}
+                        className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-sm text-red-500 active:bg-muted"
+                      >
+                        <ShieldOff className="h-4 w-4" /> {t('block.confirm')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <ReportUserSheet
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="USER"
+        targetId={user.id}
+      />
 
       {/* Profile card */}
       <div className="mx-4 -mt-12 rounded-2xl border border-border bg-card p-5 shadow-lg">

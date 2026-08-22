@@ -18,7 +18,11 @@ import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
+import { useMyReviewForOrder } from '@/hooks/use-reviews';
+import { RateReviewSheet } from '@/components/orders/rate-review-sheet';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { useState } from 'react';
+import { Star } from 'lucide-react';
 
 const STATUS_STYLE: Record<
   OrderStatus,
@@ -42,6 +46,8 @@ export default function OrderDetailPage() {
   const action = useOrderAction(id);
   const verify = useVerifyPayment();
   const startConv = useStartConversation();
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const myReview = useMyReviewForOrder(order?.status === 'COMPLETED' ? id : undefined);
 
   // If we just came back from Chapa's return URL (?paid=1), force a verify
   // in case the webhook is still queued.
@@ -252,6 +258,64 @@ export default function OrderDetailPage() {
           </div>
         </Section>
       )}
+
+      {/* Review — only shown after completion, only to the client */}
+      {order.status === 'COMPLETED' && !isSeller && (
+        <Section title="Review">
+          {myReview.data?.review ? (
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    className={cn(
+                      'h-5 w-5',
+                      (myReview.data?.review?.rating ?? 0) >= n
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'text-muted-foreground/30',
+                    )}
+                  />
+                ))}
+                <span className="ml-1 text-sm font-semibold">
+                  {myReview.data.review.rating}/5
+                </span>
+              </div>
+              {myReview.data.review.comment && (
+                <p className="mt-2 whitespace-pre-line text-sm text-foreground/90">
+                  {myReview.data.review.comment}
+                </p>
+              )}
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                Reviewed {timeAgo(myReview.data.review.createdAt)}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-4 text-center">
+              <Star className="mx-auto h-8 w-8 text-amber-400" />
+              <p className="mt-2 text-sm font-semibold">How was your experience?</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Your review helps {order.seller.fullName.split(' ')[0]} and other clients.
+              </p>
+              <Button
+                variant="brand"
+                size="sm"
+                className="mt-3"
+                onClick={() => setReviewOpen(true)}
+              >
+                Leave a review
+              </Button>
+            </div>
+          )}
+        </Section>
+      )}
+
+      <RateReviewSheet
+        open={reviewOpen}
+        onOpenChange={setReviewOpen}
+        orderId={order.id}
+        sellerName={order.seller.fullName}
+        onDone={() => myReview.refetch()}
+      />
 
       {/* Sticky action bar */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">
