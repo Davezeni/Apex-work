@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
 
-type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs' | 'disputes';
+type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs' | 'disputes' | 'diagnostics';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function AdminPage() {
           <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
         </div>
         <div className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {(['summary', 'reports', 'disputes', 'withdrawals', 'users', 'certs'] as Tab[]).map((t2) => (
+          {(['summary', 'reports', 'disputes', 'withdrawals', 'users', 'certs', 'diagnostics'] as Tab[]).map((t2) => (
             <button
               key={t2}
               onClick={() => setTab(t2)}
@@ -62,6 +62,7 @@ export default function AdminPage() {
       {tab === 'withdrawals' && <WithdrawalsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'certs' && <CertsTab />}
+      {tab === 'diagnostics' && <DiagnosticsTab />}
     </div>
   );
 }
@@ -441,6 +442,127 @@ function DisputesTab() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------- DIAGNOSTICS ----------
+interface Diagnostics {
+  services: {
+    supabase: boolean;
+    chapa: boolean;
+    groq: boolean;
+    resend: boolean;
+    vapidPush: boolean;
+    turn: {
+      hasKey: boolean;
+      appName: string;
+      cachedAt: string | null;
+      cachedServerCount: number;
+      lastError: { at: string; message: string; url: string } | null;
+    };
+    cronToken: boolean;
+    afromessage: boolean;
+  };
+  ts: string;
+}
+function DiagnosticsTab() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  const { data, isLoading, refetch } = useQuery<Diagnostics>({
+    queryKey: ['admin', 'diagnostics'],
+    queryFn: () => apiFetch('/admin/diagnostics', { token }),
+    enabled: !!token,
+    refetchInterval: 5000,
+  });
+  const refreshTurn = useMutation({
+    mutationFn: () => apiFetch<{ servers: unknown[]; debug: unknown }>('/admin/turn/refresh', { method: 'POST', token }),
+    onSuccess: () => {
+      toast.success('TURN cache cleared + re-fetched');
+      qc.invalidateQueries({ queryKey: ['admin', 'diagnostics'] });
+    },
+    onError: (e) => toast.error((e as Error).message ?? 'Failed'),
+  });
+  const testEmail = useMutation({
+    mutationFn: (to?: string) => apiFetch<{ queued: string; to: string }>('/admin/email/test', {
+      method: 'POST', token, body: to ? { to } : {},
+    }),
+    onSuccess: (r) => toast.success(`Test email queued to ${r.to} — check inbox in ~10s`),
+    onError: (e) => toast.error((e as Error).message ?? 'Failed'),
+  });
+
+  const sendTestEmail = () => {
+    const to = window.prompt('Send test to which email? (blank = your admin email)') ?? undefined;
+    testEmail.mutate(to || undefined);
+  };
+
+  if (isLoading || !data) return <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />;
+  const s = data.services;
+
+  return (
+    <div className="mx-3 mt-4 space-y-2">
+      <StatusRow label="Supabase Storage" ok={s.supabase} note="uploads, avatars, chat attachments" />
+      <StatusRow label="Chapa payments"  ok={s.chapa} note="checkout + webhooks" />
+      <StatusRow label="AfroMessage SMS" ok={s.afromessage} note="OTPs" />
+      <StatusRow label="Groq LLM"        ok={s.groq} note="AI assistant, proposals, translation" />
+      <StatusRow label="Web Push (VAPID)" ok={s.vapidPush} note="browser notifications" />
+      <StatusRow label="Resend email"    ok={s.resend} note="saved-search alerts">
+        {s.resend && (
+          <Button size="sm" variant="brand" onClick={sendTestEmail} disabled={testEmail.isPending}>
+            {testEmail.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test email'}
+          </Button>
+        )}
+      </StatusRow>
+      <StatusRow
+        label="Metered TURN"
+        ok={s.turn.hasKey && s.turn.cachedServerCount > 3}
+        note={s.turn.hasKey ? `app: ${s.turn.appName}` : 'no API key'}
+      >
+        {s.turn.hasKey && (
+          <Button size="sm" variant="brand" onClick={() => refreshTurn.mutate()} disabled={refreshTurn.isPending}>
+            {refreshTurn.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Refresh TURN'}
+          </Button>
+        )}
+      </StatusRow>
+
+      {s.turn.hasKey && (
+        <details className="rounded-2xl border border-border bg-card p-3 text-xs">
+          <summary className="cursor-pointer font-semibold">TURN debug details</summary>
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 font-mono text-[11px]">
+            <div className="text-muted-foreground">app name</div><div>{s.turn.appName}</div>
+            <div className="text-muted-foreground">cached at</div><div>{s.turn.cachedAt ?? '—'}</div>
+            <div className="text-muted-foreground">servers</div><div>{s.turn.cachedServerCount}</div>
+            {s.turn.lastError && (
+              <>
+                <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">Last error</div>
+                <div className="text-muted-foreground">at</div><div>{s.turn.lastError.at}</div>
+                <div className="text-muted-foreground">url</div><div className="break-all">{s.turn.lastError.url}</div>
+                <div className="text-muted-foreground">message</div><div className="break-all">{s.turn.lastError.message}</div>
+              </>
+            )}
+          </div>
+        </details>
+      )}
+
+      <p className="mt-3 text-center text-[10px] text-muted-foreground">
+        Auto-refreshes every 5s · last check {new Date(data.ts).toLocaleTimeString()}
+      </p>
+    </div>
+  );
+}
+
+function StatusRow({ label, ok, note, children }: { label: string; ok: boolean; note?: string; children?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+      <span className={cn('grid h-8 w-8 place-items-center rounded-full',
+        ok ? 'bg-emerald-500/15 text-emerald-500' : 'bg-red-500/15 text-red-500')}>
+        {ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-bold">{label}</div>
+        {note && <div className="text-[11px] text-muted-foreground">{note}</div>}
+      </div>
+      {children}
     </div>
   );
 }
