@@ -62,22 +62,22 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
 
       {showTabBar && (
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/85 backdrop-blur-xl backdrop-saturate-150">
-          <div className="mx-auto grid max-w-md grid-cols-5 items-center px-4 pt-2 pb-3">
+          <div className="mx-auto grid max-w-md grid-cols-5 items-center px-4 pt-1 pb-1.5">
             {TABS.slice(0, 2).map((t) => (
               <TabButton key={t.id} tab={t} active={currentTab === t.id} onClick={haptic} />
             ))}
 
-            {/* Center FAB */}
-            <div className="-mt-6 flex justify-center">
+            {/* Center FAB — smaller & lifts less so the whole bar can be shorter */}
+            <div className="-mt-4 flex justify-center">
               <button
                 onClick={() => {
                   haptic();
                   setSheetOpen(true);
                 }}
                 aria-label="Create"
-                className="grad-hero grid h-14 w-14 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
+                className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-lg shadow-primary/50 transition-transform active:scale-90"
               >
-                <Plus className="h-6 w-6" strokeWidth={2.5} />
+                <Plus className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </div>
 
@@ -172,12 +172,12 @@ function TabButton({
       href={tab.href}
       onClick={onClick}
       className={cn(
-        'relative flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-semibold transition-colors',
+        'relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-semibold transition-colors',
         active ? 'text-primary' : 'text-muted-foreground',
       )}
     >
       <motion.div animate={{ scale: active ? 1.1 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
-        <Icon className="h-6 w-6" strokeWidth={active ? 2.5 : 2} />
+        <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
       </motion.div>
       <span>{tab.label}</span>
       <AnimatePresence>

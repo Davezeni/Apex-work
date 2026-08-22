@@ -26,6 +26,17 @@ interface SignResponse {
  *   2) PUT the raw bytes directly to Supabase — bypasses our server entirely
  *      so we never proxy large files (Render's disk is tiny and CPU-bound).
  *
+ * IMPORTANT — matches the Supabase JS SDK's `uploadToSignedUrl` wire format
+ * exactly, because the naive "PUT the raw file with Content-Type header"
+ * approach fails on Supabase's storage backend. Specifically:
+ *   - Body must be `multipart/form-data` with the Blob appended under the
+ *     EMPTY key (`body.append('', file)`), plus a `cacheControl` field.
+ *   - The auth token goes in the URL as `?token=...` (already baked into
+ *     `signed.uploadUrl` by the server), NOT in an Authorization header.
+ *   - `x-upsert` header controls whether existing files are replaced.
+ *
+ * We use XHR (not fetch) purely for the upload progress events.
+ *
  * Returns the public URL to persist alongside the domain object
  * (portfolio item, message attachment, avatar).
  */
@@ -50,16 +61,22 @@ export function useUpload() {
         },
       });
 
-      // Step 2 — upload direct to Supabase Storage.
+      // Step 2 — the sign endpoint returns a URL that either already has
+      // ?token=... appended, or a bare URL plus a separate token we must
+      // append ourselves. Normalise to always have ?token=.
+      const uploadUrl = signed.uploadUrl.includes('token=')
+        ? signed.uploadUrl
+        : signed.uploadUrl + (signed.uploadUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(signed.token)}`;
+
+      // Step 3 — upload direct to Supabase Storage via multipart/form-data.
       // Uses XHR (not fetch) so we get real progress events for a nice UX.
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('PUT', signed.uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        // Supabase signed URLs accept either query-param OR header for token
-        // (we're using the URL variant that already includes it), but sending
-        // the header is harmless and covers both cases.
-        xhr.setRequestHeader('x-upsert', 'false');
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('x-upsert', 'true');
+        // NOTE: do NOT set Content-Type — the browser must set it to
+        // `multipart/form-data; boundary=...` automatically for FormData.
+
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable && onProgress) {
             onProgress(Math.round((e.loaded / e.total) * 100));
@@ -67,10 +84,15 @@ export function useUpload() {
         };
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText}`));
+          else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText.slice(0, 300)}`));
         };
-        xhr.onerror = () => reject(new Error('Network error during upload'));
-        xhr.send(file);
+        xhr.onerror = () => reject(new Error('Network error during upload — check your internet connection or CORS / firewall settings.'));
+        xhr.ontimeout = () => reject(new Error('Upload timed out.'));
+
+        const form = new FormData();
+        form.append('cacheControl', '3600');
+        form.append('', file, file.name);
+        xhr.send(form);
       });
 
       return {

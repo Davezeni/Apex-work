@@ -104,5 +104,5 @@
   /* Safe-area helpers (iOS) */
   .safe-top { padding-top: env(safe-area-inset-top, 0); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
-  .safe-b-nav { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0)); }
+  .safe-b-nav { padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0)); }
 }
