@@ -41,7 +41,11 @@ export function useMe() {
     queryKey: ['me', accessToken],
     queryFn: () => apiFetch<Me>('/me', { token: accessToken }),
     enabled,
-    staleTime: 60 * 1000,
+    // /me carries role + verification flags + wallet-relevant state — we
+    // need it fresh whenever a page mounts (e.g. after an admin promotes
+    // the user). Override the app-wide `refetchOnMount: false` here.
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
     retry: (failureCount, error) => {
       if (error.status === 401) return false;
       return failureCount < 1;

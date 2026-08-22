@@ -20,15 +20,49 @@ type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs' | 'disputes
 
 export default function AdminPage() {
   const router = useRouter();
-  const { data: me, isLoading } = useMe();
+  const { data: me, isLoading, isAuthed } = useMe();
   const [tab, setTab] = useState<Tab>('summary');
 
   useEffect(() => {
-    if (!isLoading && (!me || me.role !== 'ADMIN')) router.replace('/');
-  }, [isLoading, me, router]);
+    // Only redirect once we know for sure:
+    //   • user is signed OUT → send to login (preserving return path)
+    //   • user is signed in AND we've fetched their profile AND role isn't ADMIN → home
+    // Anything else (still loading) → wait.
+    if (isLoading) return;
+    if (!isAuthed) {
+      router.replace('/login?next=/admin');
+      return;
+    }
+    if (me && me.role !== 'ADMIN') {
+      router.replace('/');
+    }
+  }, [isLoading, isAuthed, me, router]);
 
-  if (isLoading || !me) return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  if (me.role !== 'ADMIN') return null;
+  if (isLoading || !me) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (me.role !== 'ADMIN') {
+    // Show a friendly explanation while the redirect happens — beats a blank screen.
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background p-6 text-center">
+        <div>
+          <ShieldCheck className="mx-auto h-8 w-8 text-muted-foreground" />
+          <h1 className="mt-3 text-lg font-extrabold">Admins only</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your account role is <b>{me.role}</b>. Sign out and back in if you
+            were just promoted — the role is cached in your session token.
+          </p>
+          <Button asChild variant="brand" size="sm" className="mt-4">
+            <Link href="/">Go home</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background pb-24">
