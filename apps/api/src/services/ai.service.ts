@@ -252,6 +252,37 @@ export async function chatAssistant(history: { role: 'user' | 'assistant'; conte
   }
 }
 
+// ---------------- GIG TRANSLATION ----------------
+
+export async function translateGig(sourceTitle: string, sourceDescription: string, targetLocale: 'en' | 'am'): Promise<{
+  title: string; description: string; source: 'ai' | 'fallback';
+}> {
+  const languageName = targetLocale === 'am' ? 'Amharic (አማርኛ)' : 'English';
+  const system = `You are a professional translator. Translate the JSON below into ${languageName}.
+Preserve any HTML tags in the description exactly (don't translate tag names).
+Preserve numbers, brand names, and prices. Keep the tone natural and marketing-friendly.
+Return ONLY a valid JSON object of shape { "title": string, "description": string }. No prose.`;
+
+  const user = JSON.stringify({ title: sourceTitle, description: sourceDescription });
+
+  try {
+    const raw = await callGroq(
+      [{ role: 'system', content: system }, { role: 'user', content: user }],
+      { temperature: 0.3, maxTokens: 2000 },
+    );
+    const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+    const parsed = JSON.parse(clean);
+    return {
+      title: String(parsed.title ?? sourceTitle).slice(0, 200),
+      description: String(parsed.description ?? sourceDescription).slice(0, 8000),
+      source: 'ai',
+    };
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, 'translate failed — fallback returns source');
+    return { title: sourceTitle, description: sourceDescription, source: 'fallback' };
+  }
+}
+
 // ---------------- TRANSCRIPTION ----------------
 
 export async function transcribeAudioUrl(audioUrl: string, language?: string): Promise<{ text: string; source: 'ai' | 'fallback' }> {

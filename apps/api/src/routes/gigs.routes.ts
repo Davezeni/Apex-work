@@ -71,7 +71,8 @@ router.get(
         : {}),
     };
 
-    const orderBy: Prisma.GigOrderByWithRelationInput =
+    // Featured gigs always float to the top of the feed within their sort.
+    const secondary: Prisma.GigOrderByWithRelationInput =
       q.sort === 'rating'
         ? { rating: 'desc' }
         : q.sort === 'price_asc'
@@ -79,6 +80,10 @@ router.get(
           : q.sort === 'price_desc'
             ? { startingPriceEtb: 'desc' }
             : { createdAt: 'desc' };
+    const orderBy: Prisma.GigOrderByWithRelationInput[] = [
+      { isFeatured: 'desc' },
+      secondary,
+    ];
 
     const items = await prisma.gig.findMany({
       where,
@@ -232,6 +237,91 @@ router.get(
     const { similarGigs } = await import('../services/similar.service.js');
     const items = await similarGigs(slug, 6);
     return success(res, { items });
+  }),
+);
+
+/** POST /gigs/:slug/event — record a gig event (VIEW/CONTACT/ORDER_START). */
+import { z as zed } from 'zod';
+const eventSchema = zed.object({ type: zed.enum(['VIEW', 'IMPRESSION', 'CONTACT', 'ORDER_START']) });
+router.post(
+  '/:slug/event',
+  optionalAuth,
+  validate(eventSchema),
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const body = req.body as zed.infer<typeof eventSchema>;
+    const gig = await prisma.gig.findUnique({ where: { slug }, select: { id: true } });
+    if (!gig) throw new NotFoundError('Gig');
+    const { recordEvent } = await import('../services/gigAnalytics.service.js');
+    await recordEvent(gig.id, body.type, req.user?.sub);
+    return success(res, { ok: true });
+  }),
+);
+
+/** GET /gigs/:slug/analytics — owner-only dashboard. */
+router.get(
+  '/:slug/analytics',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const gig = await prisma.gig.findUnique({ where: { slug }, select: { id: true } });
+    if (!gig) throw new NotFoundError('Gig');
+    const { gigDashboard } = await import('../services/gigAnalytics.service.js');
+    return success(res, await gigDashboard(gig.id, req.user!.sub));
+  }),
+);
+
+/** POST /gigs/:slug/boost — pay from wallet to feature the gig. */
+import { boostGigSchema } from '@apex-work/shared';
+router.post(
+  '/:slug/boost',
+  requireAuth,
+  validate(boostGigSchema),
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const body = req.body as import('@apex-work/shared').BoostGigInput;
+    const { boostGig } = await import('../services/featured.service.js');
+    const updated = await boostGig(req.user!.sub, slug, body.days);
+    void bust('/v1/gigs');
+    return success(res, updated);
+  }),
+);
+
+/** GET /gigs/:slug/translation?locale=am — served straight from DB. */
+router.get(
+  '/:slug/translation',
+  cache({ ttlSeconds: 300, swrAfterSeconds: 60 }),
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const locale = String((req.query as { locale?: string }).locale ?? 'en');
+    if (!['en', 'am'].includes(locale)) return success(res, null);
+    const gig = await prisma.gig.findUnique({ where: { slug }, select: { id: true } });
+    if (!gig) throw new NotFoundError('Gig');
+    const row = await prisma.gigTranslation.findUnique({
+      where: { gigId_locale: { gigId: gig.id, locale } },
+    });
+    return success(res, row);
+  }),
+);
+
+/** POST /gigs/:slug/translate — kick off AI translation. Anyone auth'd can request. */
+router.post(
+  '/:slug/translate',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const body = req.body as { targetLocale?: string };
+    const target = body.targetLocale === 'am' ? 'am' : 'en';
+    const gig = await prisma.gig.findUnique({ where: { slug } });
+    if (!gig) throw new NotFoundError('Gig');
+    const { translateGig } = await import('../services/ai.service.js');
+    const { title, description, source } = await translateGig(gig.title, gig.description, target);
+    const row = await prisma.gigTranslation.upsert({
+      where: { gigId_locale: { gigId: gig.id, locale: target } },
+      create: { gigId: gig.id, locale: target, title, description },
+      update: { title, description },
+    });
+    return success(res, { ...row, source });
   }),
 );
 

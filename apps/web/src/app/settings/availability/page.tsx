@@ -7,8 +7,10 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
+import { Copy } from 'lucide-react';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = ['06', '08', '10', '12', '14', '16', '18', '20', '22'];
@@ -125,11 +127,45 @@ export default function AvailabilityPage() {
         </div>
       </section>
 
+      <IcsSubscribe />
+
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">
         <Button variant="brand" size="lg" className="w-full" onClick={save} disabled={saving}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save schedule'}
         </Button>
       </div>
     </div>
+  );
+}
+
+function IcsSubscribe() {
+  const { data: me } = useMe();
+  const api = process.env.NEXT_PUBLIC_API_URL ?? '';
+  const url = me ? `${api}/v1/users/${me.username}/availability.ics` : '';
+  const copy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('URL copied — paste into Google Calendar → Add via URL');
+    } catch { toast.error('Copy failed'); }
+  };
+  if (!me || me.role !== 'FREELANCER') return null;
+  return (
+    <section className="mx-3 mt-4">
+      <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Subscribe from calendar</h2>
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <p className="text-xs text-muted-foreground">
+          Paste this URL into Google Calendar → &ldquo;Other calendars → From URL&rdquo;
+          (or iCloud → Subscribe). Your working hours + vacation status will sync
+          automatically.
+        </p>
+        <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2">
+          <div className="min-w-0 flex-1 truncate text-xs">{url}</div>
+          <button onClick={copy} aria-label="Copy" className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary active:scale-90">
+            <Copy className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }

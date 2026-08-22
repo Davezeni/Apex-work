@@ -24,6 +24,7 @@ import {
   Award,
   Search as SearchIcon,
   MapPin,
+  LifeBuoy,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -188,6 +189,12 @@ export default function ProfilePage() {
           title="Nearby freelancers"
           subtitle="Discover local talent on a map"
           href="/nearby"
+        />
+        <MenuItem
+          icon={<LifeBuoy className="h-4 w-4" />}
+          title="Support tickets"
+          subtitle="Get help beyond the AI bot"
+          href="/support"
         />
         {me.role === 'FREELANCER' && (
           <>

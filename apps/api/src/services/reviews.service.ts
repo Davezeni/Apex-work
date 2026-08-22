@@ -22,6 +22,7 @@ export async function createReview(input: {
   orderId: string;
   rating: number;
   comment?: string;
+  photoUrls?: string[];
 }) {
   if (input.rating < 1 || input.rating > 5) {
     throw new BadRequestError('Rating must be between 1 and 5');
@@ -56,6 +57,7 @@ export async function createReview(input: {
         subjectId,
         rating: input.rating,
         comment: input.comment ?? null,
+        photoUrls: (input.photoUrls ?? []).slice(0, 4),
       },
     });
 
@@ -111,6 +113,6 @@ export async function listReviewsFor(subjectId: string, opts: { limit: number; c
 export async function getMyReviewForOrder(orderId: string, authorId: string) {
   return prisma.review.findFirst({
     where: { orderId, authorId },
-    select: { id: true, rating: true, comment: true, createdAt: true },
+    select: { id: true, rating: true, comment: true, photoUrls: true, createdAt: true },
   });
 }

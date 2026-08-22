@@ -87,12 +87,14 @@ services:
       # Supabase Storage (portfolio images, chat attachments, avatars).
       # Only SERVICE_ROLE key touches the API; ANON key is public and used
       # by the browser for direct-to-Supabase uploads via signed URLs.
+      # ⚠️ These are BETA keys for the shared project — rotate before
+      # production launch. Set `sync: false` above once you have your own.
       - key: SUPABASE_URL
-        sync: false
+        value: https://zjkeuwghphutnuyxwmaa.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY
-        sync: false
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpqa2V1d2docGh1dG51eXh3bWFhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzMzOTE3OCwiZXhwIjoyMTAyOTE1MTc4fQ.-vJkamK93X8aR0pfxcqDewZQPq9ik240nobl5QC-VZM
       - key: SUPABASE_ANON_KEY
-        sync: false
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpqa2V1d2docGh1dG51eXh3bWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMzkxNzgsImV4cCI6MjEwMjkxNTE3OH0.gLLOv_ju07R3x_JJmpFBBG0BCYn7JilMwGDRkXM3W8A
 
       # LLM (Groq — free tier). Get a key from https://console.groq.com
       # Powers /v1/ai/* (proposal writer, brief generator, resume enhance,

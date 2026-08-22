@@ -125,4 +125,30 @@ router.get(
   }),
 );
 
+/**
+ * GET /users/:username/availability.ics — public iCalendar feed.
+ * Users copy the URL into Google Calendar → Add via URL.
+ * We set text/calendar and a 1h cache so calendar clients don't hammer.
+ */
+router.get(
+  '/:username/availability.ics',
+  asyncHandler(async (req, res) => {
+    const { username } = req.params as { username: string };
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true, username: true, fullName: true, availabilityJson: true },
+    });
+    if (!user) throw new NotFoundError('User');
+    const { buildAvailabilityIcs } = await import('../services/calendar.service.js');
+    const ics = buildAvailabilityIcs(
+      { username: user.username, fullName: user.fullName },
+      user.availabilityJson as never,
+    );
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `inline; filename="${user.username}-availability.ics"`);
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=3600');
+    res.send(ics);
+  }),
+);
+
 export default router;

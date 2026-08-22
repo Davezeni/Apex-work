@@ -32,6 +32,7 @@ import disputesRoutes from './disputes.routes.js';
 import savedSearchesRoutes from './savedSearches.routes.js';
 import geoRoutes from './geo.routes.js';
 import cronRoutes from './cron.routes.js';
+import supportRoutes from './support.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -102,5 +103,6 @@ router.use('/disputes', disputesRoutes);
 router.use('/me/saved-searches', savedSearchesRoutes);
 router.use('/geo', geoRoutes);
 router.use('/cron', cronRoutes);
+router.use('/support', supportRoutes);
 
 export default router;

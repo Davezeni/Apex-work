@@ -426,3 +426,93 @@ export async function getOrder(orderId: string, userId: string) {
   }
   return order;
 }
+
+/**
+ * Escrow auto-release cron. Orders in DELIVERED state for 7+ days without
+ * client action are auto-completed and funds move to the seller wallet.
+ * Also fires a reminder to the client 5 days in to nudge action before
+ * the auto-release triggers.
+ */
+export async function autoReleaseEscrow(): Promise<{ released: number; reminded: number }> {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+
+  // 1. Remind clients between day 5 and day 7 (one reminder per order —
+  //    check for absence of a 'ESCROW_REMINDED' transaction as a cheap marker).
+  const reminderCandidates = await prisma.order.findMany({
+    where: {
+      status: 'DELIVERED',
+      deliveredAt: { lte: new Date(now - 5 * day), gt: new Date(now - 7 * day) },
+    },
+    select: { id: true, clientId: true, title: true },
+  });
+  let reminded = 0;
+  for (const o of reminderCandidates) {
+    const already = await prisma.transaction.findFirst({
+      where: { relatedId: o.id, description: { startsWith: 'Escrow reminder' } },
+      select: { id: true },
+    });
+    if (already) continue;
+    await notify({
+      userId: o.clientId,
+      type: 'ORDER_UPDATE',
+      title: 'Review your delivery',
+      body: `"${o.title}" auto-releases in 2 days if you don't accept or dispute.`,
+      payload: { orderId: o.id, autoReleaseIn: '2 days' },
+    });
+    // Zero-amount marker transaction so we don't double-remind.
+    await prisma.transaction.create({
+      data: {
+        userId: o.clientId, type: 'ORDER_PAYMENT', amountEtb: 0,
+        description: `Escrow reminder for ${o.title}`, relatedId: o.id,
+      },
+    });
+    reminded++;
+  }
+
+  // 2. Auto-release when past 7 days.
+  const released = await prisma.order.findMany({
+    where: { status: 'DELIVERED', deliveredAt: { lte: new Date(now - 7 * day) } },
+    select: { id: true, clientId: true, sellerId: true, title: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true, deliveredAt: true },
+  });
+  let releasedCount = 0;
+  for (const o of released) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        await tx.wallet.upsert({
+          where: { userId: o.sellerId },
+          create: { userId: o.sellerId, balanceEtb: o.sellerNetEtb, lifetimeEarnedEtb: o.sellerNetEtb },
+          update: {
+            pendingEtb: { decrement: o.sellerNetEtb },
+            balanceEtb: { increment: o.sellerNetEtb },
+            lifetimeEarnedEtb: { increment: o.sellerNetEtb },
+          },
+        });
+        await tx.user.update({
+          where: { id: o.sellerId },
+          data: { completedOrders: { increment: 1 } },
+        });
+        await tx.transaction.create({
+          data: {
+            userId: o.sellerId, type: 'ORDER_PAYOUT', amountEtb: o.sellerNetEtb,
+            description: `Auto-released: ${o.title}`, relatedId: o.id,
+          },
+        });
+        await tx.order.update({
+          where: { id: o.id },
+          data: { status: 'COMPLETED', completedAt: new Date() },
+        });
+      });
+      await notify({
+        userId: o.sellerId, type: 'PAYMENT',
+        title: 'Auto-released 💰',
+        body: `${o.title} — funds moved to your balance`,
+        payload: { orderId: o.id, autoRelease: true },
+      });
+      releasedCount++;
+    } catch {
+      // Individual failure shouldn't stop the batch.
+    }
+  }
+  return { released: releasedCount, reminded };
+}

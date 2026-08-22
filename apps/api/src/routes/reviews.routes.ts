@@ -18,7 +18,13 @@ router.post(
   validate(createReviewSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').CreateReviewInput;
-    const review = await reviews.createReview({ ...body, authorId: req.user!.sub });
+    const review = await reviews.createReview({
+      authorId: req.user!.sub,
+      orderId: body.orderId,
+      rating: body.rating,
+      comment: body.comment,
+      photoUrls: body.photoUrls,
+    });
     void bust('/v1/reviews');
     void bust('/v1/users');
     return success(res, review, 201);

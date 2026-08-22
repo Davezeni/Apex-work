@@ -109,6 +109,15 @@ export default function AllReviewsPage() {
               </div>
             </div>
             {r.comment && <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed">{r.comment}</p>}
+            {r.photoUrls && r.photoUrls.length > 0 && (
+              <div className="mt-2 flex gap-1.5">
+                {r.photoUrls.map((url) => (
+                  <a key={url} href={url} target="_blank" rel="noreferrer" className="relative h-16 w-16 overflow-hidden rounded-lg bg-black/20">
+                    <Image src={url} alt="" fill unoptimized sizes="64px" className="object-cover" />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>

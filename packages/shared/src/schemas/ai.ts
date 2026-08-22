@@ -35,3 +35,10 @@ export const aiChatSchema = z.object({
   })).min(1).max(20),
 });
 export type AIChatInput = z.infer<typeof aiChatSchema>;
+
+/** AI translate gig — server calls Groq and upserts GigTranslation row. */
+export const aiTranslateGigSchema = z.object({
+  gigSlug: z.string().min(1).max(120),
+  targetLocale: z.enum(['en', 'am']),
+});
+export type AITranslateGigInput = z.infer<typeof aiTranslateGigSchema>;

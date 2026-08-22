@@ -12,6 +12,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError, ForbiddenError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
 import { sendPush } from './push.service.js';
+import { enqueue as enqueueEmail, isEmailConfigured } from './email.service.js';
 
 export async function create(userId: string, input: {
   name: string; type: SavedSearchType; query: string;
@@ -142,6 +143,38 @@ export async function checkAllSavedSearches(): Promise<{ scanned: number; hits: 
           tag: `saved-${s.id}`,
         });
       }
+      if (s.emailEnabled && isEmailConfigured()) {
+        // Fetch the user's email lazily (we didn't include it in the initial query).
+        const u = await prisma.user.findUnique({
+          where: { id: s.userId },
+          select: { email: true, fullName: true },
+        });
+        if (u?.email) {
+          void enqueueEmail({
+            to: u.email,
+            subject: `${count} new match${count === 1 ? '' : 'es'} for "${s.name}"`,
+            html: `
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px">
+                <h2 style="margin:0 0 12px">${count} new match${count === 1 ? '' : 'es'}</h2>
+                <p style="color:#555;margin:0 0 16px">
+                  Fresh results for your saved search <b>${escapeHtml(s.name)}</b>:
+                </p>
+                <blockquote style="border-left:3px solid #7c3aed;margin:0 0 20px;padding:8px 12px;color:#333">
+                  ${escapeHtml(recentSample)}
+                </blockquote>
+                <a href="https://apex-work-gold.vercel.app${url}"
+                   style="display:inline-block;background:#7c3aed;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700">
+                  View all matches →
+                </a>
+                <p style="color:#888;font-size:12px;margin:24px 0 0">
+                  You're getting this because you saved this search on Apex-Work.
+                  Manage or delete it in your <a href="https://apex-work-gold.vercel.app/settings/saved-searches" style="color:#7c3aed">saved searches</a>.
+                </p>
+              </div>
+            `,
+          });
+        }
+      }
     }
 
     await prisma.savedSearch.update({
@@ -150,4 +183,13 @@ export async function checkAllSavedSearches(): Promise<{ scanned: number; hits: 
     });
   }
   return { scanned: rows.length, hits };
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

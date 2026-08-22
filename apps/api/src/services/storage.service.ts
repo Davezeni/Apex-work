@@ -133,3 +133,11 @@ export class StorageService {
 }
 
 export const storage = new StorageService();
+
+// Log status once at boot so a broken config is visible in Render logs
+// without having to hit an upload endpoint first.
+if (storage.isConfigured()) {
+  logger.info('Storage: Supabase configured');
+} else {
+  logger.warn('Storage: Supabase NOT configured — /uploads/sign will 409');
+}

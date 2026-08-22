@@ -160,6 +160,7 @@ model User {
   notifications  Notification[]
   disputesOpened Dispute[]           @relation("DisputeOpener")
   savedSearches  SavedSearch[]
+  supportTickets SupportTicket[]
 
   @@index([role, isActive])
   @@index([createdAt])
@@ -270,14 +271,21 @@ model Gig {
   viewsCount     Int          @default(0)
   startingPriceEtb Int        @default(0)
 
+  /// Boosted placement — non-null featuredUntil pins the gig to the top of
+  /// its category feed. Freelancer pays a small ETB fee to activate.
+  isFeatured     Boolean      @default(false)
+  featuredUntil  DateTime?
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
   owner          User         @relation("GigOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   packages       GigPackage[]
   orders         Order[]
+  events         GigEvent[]
 
   @@index([ownerId])
+  @@index([featuredUntil])
   @@index([categoryId, status])
   @@index([status, rating(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
@@ -482,6 +490,8 @@ model Review {
   subjectId   String
   rating      Int      // 1-5
   comment     String?  @db.Text
+  /// Optional photo URLs uploaded to Supabase (max 4, enforced in service).
+  photoUrls   String[] @default([])
   createdAt   DateTime @default(now())
 
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -950,4 +960,109 @@ model SavedSearch {
 
   @@index([userId])
   @@index([lastCheckedAt])
+}
+
+// ================= SUPPORT TICKETS =================
+enum SupportTicketStatus {
+  OPEN
+  WAITING_USER
+  WAITING_STAFF
+  RESOLVED
+  CLOSED
+}
+
+/// Full ticket system on top of the AI bot. User opens → staff replies via
+/// SupportMessage → resolve/close.
+model SupportTicket {
+  id         String              @id @default(cuid())
+  userId     String
+  subject    String
+  category   String              @default("general") // billing, dispute, tech, general
+  status     SupportTicketStatus @default(OPEN)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  resolvedAt DateTime?
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   SupportMessage[]
+
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model SupportMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  senderId   String        // may be a user OR an admin
+  body       String        @db.Text
+  isStaff    Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+// ================= GIG ANALYTICS =================
+enum GigEventType {
+  VIEW
+  IMPRESSION
+  CONTACT     // opened messages from the gig
+  ORDER_START // clicked continue → checkout
+}
+
+/// Fine-grained event log for the gig-owner analytics dashboard. Stored
+/// as append-only rows; queries aggregate on the fly. Cheap to write, and
+/// the (gigId, createdAt DESC) index makes range queries fast.
+model GigEvent {
+  id        String        @id @default(cuid())
+  gigId     String
+  type      GigEventType
+  userId    String?
+  createdAt DateTime      @default(now())
+
+  gig       Gig           @relation(fields: [gigId], references: [id], onDelete: Cascade)
+
+  @@index([gigId, createdAt(sort: Desc)])
+  @@index([type, createdAt(sort: Desc)])
+}
+
+// ================= GIG TRANSLATIONS =================
+/// Auto-translated version of a gig into another language. Generated on
+/// demand via /v1/ai/translate. One row per (gigId, locale).
+model GigTranslation {
+  gigId     String
+  locale    String   // 'am' or 'en' — extend as needed
+  title     String
+  description String @db.Text
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@id([gigId, locale])
+  @@index([locale])
+}
+
+// ================= EMAIL QUEUE =================
+enum EmailStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+/// Outbound email queue. A cron worker (/v1/cron/emails) flushes QUEUED
+/// rows via Resend and marks them SENT/FAILED. Cheap durability so we
+/// never lose a saved-search alert or dispute notification even if
+/// Resend is temporarily down.
+model EmailQueue {
+  id         String      @id @default(cuid())
+  to         String
+  subject    String
+  html       String      @db.Text
+  status     EmailStatus @default(QUEUED)
+  attempts   Int         @default(0)
+  lastError  String?     @db.Text
+  createdAt  DateTime    @default(now())
+  sentAt     DateTime?
+
+  @@index([status, createdAt])
 }

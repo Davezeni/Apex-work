@@ -29,11 +29,22 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
  * a peer connection fails to gather relays. A future upgrade is a free
  * TURN via Metered / Twilio / Cloudflare Calls.
  */
-const ICE_SERVERS: RTCIceServer[] = [
+const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:global.stun.twilio.com:3478' },
 ];
+
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  try {
+    const res = await fetch(`${API_URL}/v1/push/ice-servers`);
+    if (!res.ok) return DEFAULT_ICE_SERVERS;
+    const j = (await res.json()) as { data?: { servers?: RTCIceServer[] } };
+    return j.data?.servers?.length ? j.data.servers : DEFAULT_ICE_SERVERS;
+  } catch {
+    return DEFAULT_ICE_SERVERS;
+  }
+}
 
 interface Props {
   conversationId: string;
@@ -55,6 +66,14 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   const socketRef = useRef<Socket | null>(null);
   const pcsRef = useRef<Record<string, RTCPeerConnection>>({});
   const localRef = useRef<HTMLVideoElement | null>(null);
+  const iceRef = useRef<RTCIceServer[]>(DEFAULT_ICE_SERVERS);
+
+  // Fetch fresh ICE servers (may include TURN) once on mount.
+  useEffect(() => {
+    let cancelled = false;
+    fetchIceServers().then((s) => { if (!cancelled) iceRef.current = s; });
+    return () => { cancelled = true; };
+  }, []);
 
   const localVideoOk = mode === 'video' && !cameraOff;
 
@@ -89,7 +108,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   // ---- Socket + signaling -----
   const buildPeer = useCallback((targetUserId: string, sendOffer: boolean) => {
     if (pcsRef.current[targetUserId]) return pcsRef.current[targetUserId];
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+    const pc = new RTCPeerConnection({ iceServers: iceRef.current });
 
     // Push our local tracks.
     localStream?.getTracks().forEach((t) => pc.addTrack(t, localStream));

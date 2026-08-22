@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { useSimilarGigs } from '@/hooks/use-similar';
 import { RichViewer } from '@/components/ui/rich-viewer';
+import { recordGigEvent } from '@/hooks/use-gig-analytics';
+import { BoostSheet } from '@/components/gigs/boost-sheet';
+import { useAuthStore } from '@/stores/auth-store';
+import { useI18n as useI18nRoot } from '@/i18n';
+import { useGigTranslation, useTranslateGig } from '@/hooks/use-translate';
+import { Zap, BarChart3, Languages, Sparkles as SparklesIcon } from 'lucide-react';
 import {
   ArrowLeft,
   Share2,
@@ -53,7 +59,19 @@ export default function GigDetailPage() {
   const startConversation = useStartConversation();
   const createOrder = useCreateOrder();
   const { t } = useI18n();
+  const { locale } = useI18nRoot();
+  const token = useAuthStore((s) => s.accessToken);
   const [tier, setTier] = useState<Tier>('BASIC');
+  const [boostOpen, setBoostOpen] = useState(false);
+  const translation = useGigTranslation(slug, locale === 'am' ? 'am' : undefined);
+  const translate = useTranslateGig(slug);
+
+  // Fire a VIEW event on mount (idempotent enough — a spammy user's stats
+  // are still bounded by our per-key rate limiter).
+  useEffect(() => {
+    if (!slug) return;
+    void recordGigEvent(slug, 'VIEW', token);
+  }, [slug, token]);
 
   if (isLoading) {
     return (
@@ -89,6 +107,7 @@ export default function GigDetailPage() {
       return;
     }
     try {
+      void recordGigEvent(slug, 'CONTACT', token);
       const conv = await startConversation.mutateAsync(gig.owner.id);
       router.push(`/messages/${conv.id}`);
     } catch (err) {
@@ -106,6 +125,7 @@ export default function GigDetailPage() {
       toast.info(t('gig.cantHireSelf'));
       return;
     }
+    void recordGigEvent(slug, 'ORDER_START', token);
     try {
       const result = await createOrder.mutateAsync({
         gigId: gig.id,
@@ -128,8 +148,18 @@ export default function GigDetailPage() {
 
   return (
     <div className="min-h-dvh pb-32">
-      {/* Hero cover */}
-      <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
+      {/* Hero cover — shorter when no cover image, so the overlay card
+          doesn't get eaten by the browser chrome. Also add a soft mesh
+          pattern so an empty gradient doesn't look barren. */}
+      <div className={cn(
+        'relative bg-gradient-to-br',
+        gig.coverImageUrl ? 'h-56 sm:h-72' : 'h-36 sm:h-44',
+        gradientFor(gig.id),
+      )}>
+        {!gig.coverImageUrl && (
+          <div className="pointer-events-none absolute inset-0 opacity-20"
+               style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, white 0%, transparent 40%), radial-gradient(circle at 80% 70%, white 0%, transparent 40%)' }} />
+        )}
         <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
           <button
             onClick={() => router.back()}
@@ -200,16 +230,45 @@ export default function GigDetailPage() {
           </div>
         </div>
         <h1 className="mt-4 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl">
-          {gig.title}
+          {translation.data?.title ?? gig.title}
         </h1>
+        {isOwnGig && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" variant="brand" onClick={() => setBoostOpen(true)}>
+              <Zap className="h-3.5 w-3.5" /> Boost
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/gigs/${slug}/analytics`}>
+                <BarChart3 className="h-3.5 w-3.5" /> Analytics
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Description */}
       <div className="mx-4 mt-6">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          {t('gig.aboutGig')}
-        </h2>
-        <RichViewer html={gig.description} className="text-sm text-foreground/90" />
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {t('gig.aboutGig')}
+          </h2>
+          {locale === 'am' && !translation.data && (
+            <button
+              onClick={() => translate.mutate('am')}
+              disabled={translate.isPending}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"
+            >
+              {translate.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+              Translate to አማ
+            </button>
+          )}
+          {translation.data && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+              <SparklesIcon className="h-3 w-3" /> AI translated
+            </span>
+          )}
+        </div>
+        <RichViewer html={translation.data?.description ?? gig.description} className="text-sm text-foreground/90" />
 
         {gig.tags?.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -293,6 +352,8 @@ export default function GigDetailPage() {
 
       {/* Similar gigs */}
       <SimilarGigsSection slug={slug} />
+
+      <BoostSheet slug={slug} open={boostOpen} onOpenChange={setBoostOpen} />
 
       <div className="h-24" />
 

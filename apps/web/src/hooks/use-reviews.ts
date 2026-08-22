@@ -8,6 +8,7 @@ export interface Review {
   id: string;
   rating: number;
   comment: string | null;
+  photoUrls?: string[];
   createdAt: string;
   author: { id: string; username: string; fullName: string; avatarUrl: string | null };
   order?: { id: string; title: string };
@@ -35,7 +36,7 @@ export function useCreateReview() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { orderId: string; rating: number; comment?: string }) =>
+    mutationFn: (input: { orderId: string; rating: number; comment?: string; photoUrls?: string[] }) =>
       apiFetch<Review>('/reviews', { method: 'POST', token, body: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reviews'] });

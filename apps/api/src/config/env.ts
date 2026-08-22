@@ -54,6 +54,13 @@ const envSchema = z.object({
   // Shared secret protecting /v1/cron/* — set to any 32+ char random string.
   CRON_TOKEN: z.string().optional(),
 
+  // TURN relay for WebRTC. Free tier: sign up at metered.ca and paste the
+  // API key here. Server fetches short-lived credentials on demand so the
+  // long-lived TURN password never reaches the client. Without this,
+  // group calls fall back to STUN-only and may fail on CGNAT networks.
+  METERED_API_KEY: z.string().optional(),
+  METERED_APP_NAME: z.string().default('apex-work'),
+
   SENTRY_DSN: z.string().optional(),
 
   // WebAuthn (passkeys / biometric login).

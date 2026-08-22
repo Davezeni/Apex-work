@@ -57,4 +57,10 @@ router.post(
   }),
 );
 
+/** GET /push/ice-servers — returns STUN + short-lived TURN creds for WebRTC. */
+router.get('/ice-servers', asyncHandler(async (_req, res) => {
+  const { getIceServers } = await import('../services/turn.service.js');
+  return success(res, { servers: await getIceServers() });
+}));
+
 export default router;

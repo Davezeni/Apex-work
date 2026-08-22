@@ -12,6 +12,7 @@ export interface GigListItem {
   rating: number;
   ratingCount: number;
   startingPriceEtb: number;
+  isFeatured?: boolean;
   owner: {
     id: string;
     username: string;

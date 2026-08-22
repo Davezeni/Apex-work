@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Bookmark, Star, MapPin, CheckCircle2 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@apex-work/shared';
@@ -182,8 +183,21 @@ function GigCard({ g }: { g: GigListItem }) {
       href={`/gigs/${g.slug}`}
       className="overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
-      <div className={cn('relative h-32 bg-gradient-to-br', gradientFor(g.id))}>
-        {g.rating >= 4.8 && g.ratingCount >= 10 && (
+      {/* Compact hero — 88px keeps the ratio pleasant when no cover image. */}
+      <div className={cn('relative h-24 bg-gradient-to-br', gradientFor(g.id))}>
+        {g.coverImageUrl && (
+          <Image src={g.coverImageUrl} alt={g.title} fill unoptimized sizes="400px" className="object-cover" />
+        )}
+        {!g.coverImageUrl && (
+          <div className="pointer-events-none absolute inset-0 opacity-25"
+               style={{ backgroundImage: 'radial-gradient(circle at 30% 20%, white 0%, transparent 40%), radial-gradient(circle at 80% 70%, white 0%, transparent 40%)' }} />
+        )}
+        {g.isFeatured && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
+            ⚡ Featured
+          </span>
+        )}
+        {!g.isFeatured && g.rating >= 4.8 && g.ratingCount >= 10 && (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
             🔥 Top Rated
           </span>
@@ -197,24 +211,24 @@ function GigCard({ g }: { g: GigListItem }) {
         </button>
       </div>
       <div className="p-4">
-        <div className="-mt-10 flex items-end gap-3">
+        <div className="-mt-8 flex items-end gap-3">
           <div
             className={cn(
-              'grid h-14 w-14 place-items-center rounded-full bg-gradient-to-br text-base font-bold text-white ring-4 ring-card',
+              'grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gradient-to-br text-sm font-bold text-white ring-4 ring-card',
               gradientFor(g.owner.id),
             )}
           >
             {initialsOf(g.owner.fullName)}
           </div>
-          <div className="pb-1">
+          <div className="min-w-0 pb-1">
             <h3 className="flex items-center gap-1.5 text-sm font-bold">
-              {g.owner.fullName}
-              <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
+              <span className="truncate">{g.owner.fullName}</span>
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
             </h3>
-            <p className="text-[11px] text-muted-foreground">@{g.owner.username}</p>
+            <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
           </div>
         </div>
-        <div className="mt-3 text-sm font-semibold leading-snug">{g.title}</div>
+        <div className="mt-3 line-clamp-2 text-sm font-semibold leading-snug">{g.title}</div>
         <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
           {g.ratingCount > 0 ? (
             <>
