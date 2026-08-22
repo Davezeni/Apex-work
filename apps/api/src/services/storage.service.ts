@@ -99,8 +99,12 @@ export class StorageService {
     if (!this.isConfigured()) throw new Error('Storage is not configured');
 
     const path = this.buildPath(req.ownerId, req.filename);
+    // NOTE: do NOT wrap `path` in encodeURIComponent — the path is a
+    // structured Supabase Storage object key (userId/year/month/random-name)
+    // and Supabase expects the '/' separators to be literal. Our buildPath()
+    // sanitizes each segment already, so this is safe.
     const endpoint =
-      `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${encodeURIComponent(path)}`;
+      `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
 
     const res = await fetch(endpoint, {
       method: 'POST',
