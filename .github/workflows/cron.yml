@@ -1,0 +1,35 @@
+name: Cron jobs
+
+# Run the saved-search scanner every 15 minutes. Cheap, idempotent — worst
+# case a scan is skipped and the next tick catches up.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: cron
+  cancel-in-progress: false
+
+jobs:
+  saved-searches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger saved-search scanner
+        env:
+          TOKEN: 8370bdb5437a94e3cd07aa756621b608406af5c181d3bd6db7b3f3ee2c103384
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/out -w "%{http_code}" --max-time 120 \
+              -H "Authorization: Bearer $TOKEN" \
+              https://apex-work-api.onrender.com/v1/cron/saved-searches || echo "000")
+            echo "attempt $i → HTTP $code"
+            if [ "$code" = "200" ]; then
+              cat /tmp/out || true
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "All attempts failed — will retry next tick"

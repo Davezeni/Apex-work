@@ -105,4 +105,23 @@ router.post('/certifications/:id/verify', validate(verifySchema),
   }),
 );
 
+// ---------------- disputes ----------------
+import { resolveDisputeSchema } from '@apex-work/shared';
+import * as disputes from '../services/disputes.service.js';
+
+router.get('/disputes', asyncHandler(async (req, res) => {
+  const status = String((req.query as { status?: string }).status ?? '').toUpperCase();
+  const valid = ['OPEN', 'REVIEWING', 'RESOLVED_CLIENT', 'RESOLVED_SELLER', 'RESOLVED_SPLIT', 'WITHDRAWN'];
+  const s = valid.includes(status) ? (status as 'OPEN') : undefined;
+  return success(res, { items: await disputes.adminList(s) });
+}));
+
+router.post('/disputes/:id/resolve', validate(resolveDisputeSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').ResolveDisputeInput;
+    return success(res, await disputes.adminResolve(id, body));
+  }),
+);
+
 export default router;

@@ -22,6 +22,8 @@ import {
   Gift,
   FileText,
   Award,
+  Search as SearchIcon,
+  MapPin,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -174,6 +176,18 @@ export default function ProfilePage() {
           title="Refer friends"
           subtitle="Earn 100 ETB per invite"
           href="/referrals"
+        />
+        <MenuItem
+          icon={<SearchIcon className="h-4 w-4" />}
+          title="Saved searches"
+          subtitle="Get pinged when new matches appear"
+          href="/settings/saved-searches"
+        />
+        <MenuItem
+          icon={<MapPin className="h-4 w-4" />}
+          title="Nearby freelancers"
+          subtitle="Discover local talent on a map"
+          href="/nearby"
         />
         {me.role === 'FREELANCER' && (
           <>

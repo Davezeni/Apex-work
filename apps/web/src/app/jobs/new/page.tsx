@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { ArrowLeft, Loader2, X, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
 import { useCreateJob } from '@/hooks/use-jobs';
 import { useI18n } from '@/i18n';
@@ -54,9 +55,10 @@ export default function NewJobPage() {
 
   const stepIdx = STEPS.indexOf(step);
 
+  const descPlainLen = description.replace(/<[^>]+>/g, '').trim().length;
   const canNext =
     (step === 'step1' && title.trim().length >= 10 && !!categoryId) ||
-    (step === 'step2' && description.trim().length >= 30) ||
+    (step === 'step2' && descPlainLen >= 30) ||
     step === 'step3';
 
   const submit = async () => {
@@ -187,18 +189,13 @@ export default function NewJobPage() {
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t('jobs.description')}
             </label>
-            <textarea
-              autoFocus
+            <RichEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={12}
-              maxLength={6000}
+              onChange={setDescription}
               placeholder={t('jobs.descPlaceholder')}
-              className="w-full resize-none rounded-2xl border border-border bg-card p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+              minRows={12}
+              maxChars={6000}
             />
-            <p className="mt-1 text-right text-[11px] text-muted-foreground">
-              {description.length}/6000
-            </p>
           </div>
         )}
 

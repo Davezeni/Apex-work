@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
 
-type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs';
+type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs' | 'disputes';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function AdminPage() {
           <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
         </div>
         <div className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {(['summary', 'reports', 'withdrawals', 'users', 'certs'] as Tab[]).map((t2) => (
+          {(['summary', 'reports', 'disputes', 'withdrawals', 'users', 'certs'] as Tab[]).map((t2) => (
             <button
               key={t2}
               onClick={() => setTab(t2)}
@@ -58,6 +58,7 @@ export default function AdminPage() {
 
       {tab === 'summary' && <SummaryTab />}
       {tab === 'reports' && <ReportsTab />}
+      {tab === 'disputes' && <DisputesTab />}
       {tab === 'withdrawals' && <WithdrawalsTab />}
       {tab === 'users' && <UsersTab />}
       {tab === 'certs' && <CertsTab />}
@@ -358,6 +359,85 @@ function CertsTab() {
                 </Button>
               )}
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- DISPUTES ----------
+import { useAdminDisputes, useResolveDispute, type Dispute } from '@/hooks/use-disputes';
+import { AlertTriangle } from 'lucide-react';
+
+function DisputesTab() {
+  const [status, setStatus] = useState<string>('OPEN');
+  const { data, isLoading } = useAdminDisputes(status);
+  const resolve = useResolveDispute();
+
+  const decide = (d: Dispute, ruling: 'RESOLVED_CLIENT' | 'RESOLVED_SELLER' | 'RESOLVED_SPLIT' | 'WITHDRAWN') => {
+    let clientPayoutEtb: number | undefined;
+    let sellerPayoutEtb: number | undefined;
+    let adminNotes = '';
+    if (ruling === 'RESOLVED_SPLIT') {
+      const c = Number(window.prompt('Client refund (ETB)', String(Math.floor((d.order?.amountEtb ?? 0) / 2))));
+      if (Number.isNaN(c)) return;
+      clientPayoutEtb = c;
+      sellerPayoutEtb = (d.order?.amountEtb ?? 0) - c;
+    }
+    adminNotes = window.prompt('Optional notes for the ruling') ?? '';
+    if (!window.confirm(`Confirm ${ruling}?`)) return;
+    resolve.mutate({ id: d.id, ruling, clientPayoutEtb, sellerPayoutEtb, adminNotes: adminNotes || undefined }, {
+      onSuccess: () => toast.success('Dispute resolved'),
+      onError: (e) => toast.error(e.message ?? 'Failed'),
+    });
+  };
+
+  return (
+    <div className="mx-3 mt-4">
+      <div className="mb-2 flex gap-1 overflow-x-auto">
+        {['OPEN', 'REVIEWING', 'RESOLVED_CLIENT', 'RESOLVED_SELLER', 'RESOLVED_SPLIT', 'WITHDRAWN'].map((s) => (
+          <button key={s} onClick={() => setStatus(s)} className={cn('shrink-0 rounded-full px-3 py-1 text-[11px] font-bold', status === s ? 'bg-primary text-white' : 'bg-card text-muted-foreground border border-border')}>{s}</button>
+        ))}
+      </div>
+      {isLoading && <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />}
+      <div className="space-y-2">
+        {(data?.items ?? []).map((d) => (
+          <div key={d.id} className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-3">
+              <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-500/10 text-red-500"><AlertTriangle className="h-4 w-4" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold">{d.order?.title ?? 'Order'} · {formatEtb(d.order?.amountEtb ?? 0)}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  opened by {d.openedBy?.fullName} · {timeAgo(d.createdAt)}
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-xs">{d.reason}</p>
+                {d.order && (
+                  <div className="mt-2 flex gap-4 text-[11px] text-muted-foreground">
+                    <Link className="hover:underline" href={`/u/${d.order.client.username}`}>client @{d.order.client.username}</Link>
+                    <Link className="hover:underline" href={`/u/${d.order.seller.username}`}>seller @{d.order.seller.username}</Link>
+                    <Link className="hover:underline text-primary" href={`/orders/${d.order.id}`}>view order →</Link>
+                  </div>
+                )}
+              </div>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{d.status}</span>
+            </div>
+            {(d.status === 'OPEN' || d.status === 'REVIEWING') && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" variant="destructive" onClick={() => decide(d, 'RESOLVED_CLIENT')} disabled={resolve.isPending}>Refund client</Button>
+                <Button size="sm" variant="brand" onClick={() => decide(d, 'RESOLVED_SELLER')} disabled={resolve.isPending}>Release to seller</Button>
+                <Button size="sm" variant="outline" onClick={() => decide(d, 'RESOLVED_SPLIT')} disabled={resolve.isPending}>Split…</Button>
+                <Button size="sm" variant="outline" onClick={() => decide(d, 'WITHDRAWN')} disabled={resolve.isPending}>Withdrawn</Button>
+              </div>
+            )}
+            {d.status.startsWith('RESOLVED_') && d.clientPayoutEtb != null && (
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                Split: client {formatEtb(d.clientPayoutEtb)} / seller {formatEtb(d.sellerPayoutEtb ?? 0)}
+              </div>
+            )}
+            {d.adminNotes && (
+              <p className="mt-1 whitespace-pre-wrap text-[11px] italic text-muted-foreground">Notes: {d.adminNotes}</p>
+            )}
           </div>
         ))}
       </div>

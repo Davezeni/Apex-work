@@ -24,6 +24,7 @@ import { useBlockUser } from '@/hooks/use-moderation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
+import { usePublicUserStats } from '@/hooks/use-public-stats';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
@@ -49,6 +50,7 @@ export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
   const { data: user, isLoading, error } = usePublicUser(username);
+  const { data: stats } = usePublicUserStats(username);
   const { data: me } = useMe();
   const startConversation = useStartConversation();
   const blockUser = useBlockUser();
@@ -280,6 +282,33 @@ export default function PublicProfilePage() {
         </Section>
       )}
 
+      {/* Track record / hire history */}
+      {stats && user.role === 'CLIENT' && (
+        <Section title="Client track record">
+          <div className="grid grid-cols-3 gap-2">
+            <MiniKpi label="Hires" value={String(stats.asClient.hires)} />
+            <MiniKpi label="Total spent" value={formatEtb(stats.asClient.totalSpentEtb)} />
+            <MiniKpi label="Member since" value={new Date(user.createdAt).getFullYear().toString()} />
+          </div>
+        </Section>
+      )}
+      {stats && user.role === 'FREELANCER' && (
+        <Section title="Freelancer stats">
+          <div className="grid grid-cols-3 gap-2">
+            <MiniKpi label="Orders done" value={String(stats.asFreelancer.completedOrders)} />
+            <MiniKpi label="Lifetime earned" value={formatEtb(stats.asFreelancer.lifetimeEarnedEtb)} />
+            <MiniKpi label="Reviews" value={String(stats.ratingCount)} />
+          </div>
+        </Section>
+      )}
+
+      {/* Availability */}
+      {user.role === 'FREELANCER' && stats?.availability?.hours && (
+        <Section title="Availability">
+          <AvailabilityGrid data={stats.availability} />
+        </Section>
+      )}
+
       {/* Portfolio */}
       {user.portfolio && user.portfolio.length > 0 && (
         <Section title={`${t('portfolio.title')} · ${user.portfolio.length}`}>
@@ -377,6 +406,62 @@ function Stat({ n, l, borderLeft }: { n: string; l: string; borderLeft?: boolean
     <div className={cn('text-center', borderLeft && 'border-l border-border')}>
       <div className="text-base font-extrabold tracking-tight">{n}</div>
       <div className="text-[10px] text-muted-foreground">{l}</div>
+    </div>
+  );
+}
+
+function MiniKpi({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-3 text-center">
+      <div className="text-sm font-extrabold tracking-tight text-primary">{value}</div>
+      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+/**
+ * Read-only weekly availability strip. Same 7×9 grid the freelancer edits
+ * in /settings/availability. Compact — one column per day, one row per
+ * 2-hour block.
+ */
+function AvailabilityGrid({ data }: { data: { hours?: Record<string, boolean[]>; timezone?: string; vacation?: boolean } }) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const hours = ['06', '08', '10', '12', '14', '16', '18', '20', '22'];
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      {data.vacation && (
+        <div className="mb-2 rounded-lg bg-amber-500/10 px-2 py-1 text-center text-[11px] font-bold text-amber-500">
+          🏖 On vacation
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border-collapse text-center text-[10px]">
+          <thead>
+            <tr>
+              <th className="w-8" />
+              {days.map((d) => <th key={d} className="pb-1 font-semibold text-muted-foreground">{d}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {hours.map((h, hi) => (
+              <tr key={h}>
+                <td className="pr-1 text-right text-muted-foreground">{h}</td>
+                {days.map((d) => (
+                  <td key={d}>
+                    <div className={cn(
+                      'my-0.5 h-4 w-full rounded',
+                      data.hours?.[d]?.[hi] ? 'bg-primary/70' : 'bg-muted',
+                    )} />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-2 text-center text-[10px] text-muted-foreground">
+        {data.timezone ?? 'Africa/Addis_Ababa'}
+      </div>
     </div>
   );
 }

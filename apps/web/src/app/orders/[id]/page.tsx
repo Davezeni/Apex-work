@@ -232,6 +232,13 @@ export default function OrderDetailPage() {
         </Section>
       )}
 
+      {/* Dispute */}
+      {['ACTIVE', 'IN_REVIEW', 'DELIVERED', 'DISPUTED'].includes(order.status) && (
+        <Section title="Trouble with this order?">
+          <DisputeBox orderId={order.id} status={order.status} />
+        </Section>
+      )}
+
       {/* Requirements */}
       {order.requirements && (
         <Section title="Requirements from client">
@@ -457,5 +464,71 @@ function OrderActions({
     <Button variant="outline" size="lg" className="flex-1" disabled>
       No actions available
     </Button>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// DISPUTE BOX
+// -----------------------------------------------------------------------------
+import { AlertTriangle, Loader2 as SpinnerIcon } from 'lucide-react';
+import { useOpenDispute } from '@/hooks/use-disputes';
+
+function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const openDispute = useOpenDispute();
+
+  const submit = async () => {
+    if (reason.trim().length < 20) return toast.error('Explain the issue (20+ chars)');
+    try {
+      await openDispute.mutateAsync({ orderId, reason: reason.trim() });
+      toast.success('Dispute opened — an admin will review within 48h');
+      setOpen(false);
+      setReason('');
+    } catch (err) {
+      toast.error((err as { message?: string }).message ?? 'Could not open dispute');
+    }
+  };
+
+  if (status === 'DISPUTED') {
+    return (
+      <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4 text-sm">
+        <div className="flex items-center gap-2 font-bold text-red-500">
+          <AlertTriangle className="h-4 w-4" /> Dispute is open
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          An admin will review and rule within 48h. You&rsquo;ll be notified with the outcome.
+        </p>
+      </div>
+    );
+  }
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs font-bold text-red-500 underline">
+        Open a dispute →
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
+      <div className="flex items-center gap-2 text-sm font-bold text-red-500">
+        <AlertTriangle className="h-4 w-4" /> Open a dispute
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Only use this if you can&rsquo;t resolve it in chat. Escrow stays frozen until an admin rules.
+      </p>
+      <textarea
+        value={reason} onChange={(e) => setReason(e.target.value)}
+        rows={4} maxLength={4000}
+        placeholder="Describe what went wrong — dates, deliverables, screenshots links…"
+        className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/20"
+      />
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
+        <Button size="sm" variant="destructive" className="flex-1" onClick={submit} disabled={openDispute.isPending}>
+          {openDispute.isPending ? <SpinnerIcon className="h-3.5 w-3.5 animate-spin" /> : 'Open dispute'}
+        </Button>
+      </div>
+    </div>
   );
 }

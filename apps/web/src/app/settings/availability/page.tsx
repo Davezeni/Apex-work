@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { apiFetch } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth-store';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +26,7 @@ export default function AvailabilityPage() {
   const [grid, setGrid] = useState<WeekMap>(DEFAULT);
   const [vacation, setVacation] = useState(false);
   const [saving, setSaving] = useState(false);
+  const token = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
     try {
@@ -47,6 +50,11 @@ export default function AvailabilityPage() {
     setSaving(true);
     try {
       localStorage.setItem(STORAGE, JSON.stringify({ grid, vacation }));
+      // Also persist server-side so it appears on the public profile.
+      await apiFetch('/me/availability', {
+        method: 'PATCH', token,
+        body: { hours: grid, vacation, timezone: 'Africa/Addis_Ababa' },
+      }).catch(() => undefined);
       toast.success('Availability saved');
     } finally {
       setSaving(false);

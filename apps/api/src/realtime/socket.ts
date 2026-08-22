@@ -128,6 +128,60 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       });
     });
 
+    // ------- WebRTC group call signaling -------
+    //
+    // We don't run a media server (SFU/MCU) — instead we relay signaling
+    // messages between conversation members and let the browsers connect
+    // peer-to-peer via WebRTC data + media tracks. This is free and works
+    // fine up to ~4-5 participants per call, which covers the vast
+    // majority of freelance client-freelancer conversations.
+    //
+    // Client protocol (all payloads carry conversationId):
+    //   call:start   → server broadcasts to room so members see the incoming ring
+    //   call:end     → server broadcasts to room
+    //   call:signal  → { conversationId, targetUserId, payload } — server
+    //                  forwards `payload` to the target's user room
+    //   call:join    → tells the room this user is joining
+    //   call:leave   → tells the room this user left
+    socket.on('call:start', async (conversationId: string, mode: 'audio' | 'video' = 'video') => {
+      if (typeof conversationId !== 'string') return;
+      try {
+        await assertMember(conversationId, socket.userId!);
+        socket.to(`conv:${conversationId}`).emit('call:start', {
+          conversationId, mode, from: socket.userId, at: new Date().toISOString(),
+        });
+      } catch {
+        // silent — non-member; nothing to do
+      }
+    });
+
+    socket.on('call:end', (conversationId: string) => {
+      if (typeof conversationId !== 'string') return;
+      socket.to(`conv:${conversationId}`).emit('call:end', { conversationId, from: socket.userId });
+    });
+
+    socket.on('call:join', (conversationId: string) => {
+      if (typeof conversationId !== 'string') return;
+      socket.to(`conv:${conversationId}`).emit('call:join', { conversationId, from: socket.userId });
+    });
+
+    socket.on('call:leave', (conversationId: string) => {
+      if (typeof conversationId !== 'string') return;
+      socket.to(`conv:${conversationId}`).emit('call:leave', { conversationId, from: socket.userId });
+    });
+
+    // Forward SDP offers/answers + ICE candidates to a specific peer.
+    // The payload can be a large SDP blob; Socket.io compresses it via
+    // perMessageDeflate that we enabled last turn.
+    socket.on('call:signal', (input: { conversationId: string; targetUserId: string; payload: unknown }) => {
+      if (!input || typeof input.conversationId !== 'string' || typeof input.targetUserId !== 'string') return;
+      io.to(`user:${input.targetUserId}`).emit('call:signal', {
+        conversationId: input.conversationId,
+        from: socket.userId,
+        payload: input.payload,
+      });
+    });
+
     socket.on('disconnect', (reason) => {
       logger.debug({ userId: socket.userId, reason }, 'Socket disconnected');
     });

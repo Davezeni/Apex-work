@@ -166,7 +166,10 @@ export function useStartConversation() {
  * Auto-reconnects, joins the given conversation room, and updates React Query
  * caches on incoming messages / typing events.
  */
-export function useChatSocket(conversationId: string | undefined) {
+export function useChatSocket(
+  conversationId: string | undefined,
+  handlers: { onIncomingCall?: (from: string, mode: 'audio' | 'video') => void } = {},
+) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
@@ -204,6 +207,11 @@ export function useChatSocket(conversationId: string | undefined) {
         },
       );
       qc.invalidateQueries({ queryKey: ['conversations'] });
+    });
+
+    socket.on('call:start', (data: { conversationId: string; from: string; mode: 'audio' | 'video' }) => {
+      if (data.conversationId !== conversationId) return;
+      handlers.onIncomingCall?.(data.from, data.mode);
     });
 
     return () => {

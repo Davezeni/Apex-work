@@ -23,3 +23,5 @@ export * from './push.js';
 export * from './draft.js';
 export * from './milestone.js';
 export * from './group.js';
+export * from './dispute.js';
+export * from './saved-search.js';

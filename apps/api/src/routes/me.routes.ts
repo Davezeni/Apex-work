@@ -89,4 +89,20 @@ router.patch(
   }),
 );
 
+/** PATCH /me/availability — save the weekly schedule + timezone + vacation flag. */
+import { availabilitySchema } from '@apex-work/shared';
+router.patch(
+  '/availability',
+  validate(availabilitySchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AvailabilityInput;
+    const updated = await prisma.user.update({
+      where: { id: req.user!.sub },
+      data: { availabilityJson: body as never },
+      select: { availabilityJson: true },
+    });
+    return success(res, updated);
+  }),
+);
+
 export default router;

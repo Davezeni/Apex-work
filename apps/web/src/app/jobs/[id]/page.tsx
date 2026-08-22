@@ -21,6 +21,7 @@ import { useStartConversation } from '@/hooks/use-chat';
 import { useI18n } from '@/i18n';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
 import { Sheet } from '@/components/ui/sheet';
+import { RichViewer } from '@/components/ui/rich-viewer';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -187,7 +188,7 @@ export default function JobDetailPage() {
         <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           {t('jobs.description')}
         </h3>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{job.description}</p>
+        <RichViewer html={job.description} className="mt-2 text-sm" />
 
         {'attachments' in job && Array.isArray((job as { attachments?: unknown }).attachments) && (job as { attachments: { url: string; name: string; sizeBytes: number; contentType: string }[] }).attachments.length > 0 && (
           <>

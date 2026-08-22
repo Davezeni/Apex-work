@@ -110,6 +110,15 @@ model User {
   ratingCount    Int      @default(0)
   completedOrders Int     @default(0)
 
+  // Optional geo — freelancer opts in via /settings/profile to appear on
+  // the map. Also enables 'Nearby' filter on browse. NULL = opted out.
+  latitude       Float?
+  longitude      Float?
+  /// Human city string is kept for display; lat/lon powers the map.
+  /// Availability is a compact JSON grid { day: [bool ×9 hour slots] } so
+  /// we don't need a separate row-per-slot table for this feature.
+  availabilityJson Json?
+
   // Referrals
   referralCode   String   @unique @default(cuid())
   referredById   String?
@@ -149,6 +158,8 @@ model User {
   wallet         Wallet?
   transactions   Transaction[]
   notifications  Notification[]
+  disputesOpened Dispute[]           @relation("DisputeOpener")
+  savedSearches  SavedSearch[]
 
   @@index([role, isActive])
   @@index([createdAt])
@@ -380,6 +391,7 @@ model Order {
   conversation    Conversation?
   customOffer     CustomOffer?
   milestones      Milestone[]
+  disputes        Dispute[]
 
   @@index([clientId, status])
   @@index([sellerId, status])
@@ -877,4 +889,65 @@ model PushSubscription {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// ================= DISPUTES =================
+enum DisputeStatus {
+  OPEN
+  REVIEWING
+  RESOLVED_CLIENT   // Admin ruled in favour of client → refund
+  RESOLVED_SELLER   // Admin ruled in favour of seller → release funds
+  RESOLVED_SPLIT    // Custom split ruling
+  WITHDRAWN         // Parties resolved it themselves
+}
+
+/// Formal escalation of a stuck order. Created by the client or freelancer
+/// after a milestone dispute or a broken order flow. Admin resolves via
+/// /v1/admin/disputes with a ruling and optional custom payout split.
+model Dispute {
+  id           String        @id @default(cuid())
+  orderId      String
+  openedById   String
+  reason       String        @db.Text
+  status       DisputeStatus @default(OPEN)
+  /// When RESOLVED_SPLIT: how much (in ETB) goes to the client vs seller.
+  clientPayoutEtb Int?
+  sellerPayoutEtb Int?
+  adminNotes   String?       @db.Text
+  createdAt    DateTime      @default(now())
+  resolvedAt   DateTime?
+
+  order        Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  openedBy     User          @relation("DisputeOpener", fields: [openedById], references: [id])
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+// ================= SAVED SEARCHES =================
+enum SavedSearchType {
+  GIGS
+  JOBS
+  USERS
+}
+
+/// User can save a search (query + optional category filter) and get
+/// notified when new matches appear. Cron job scans hourly.
+model SavedSearch {
+  id           String          @id @default(cuid())
+  userId       String
+  name         String          // Friendly label, e.g. "React jobs in Addis"
+  type         SavedSearchType
+  query        String
+  category     String?
+  emailEnabled Boolean         @default(true)
+  pushEnabled  Boolean         @default(true)
+  /// Timestamp of the last run — only rows newer than this are counted as "new".
+  lastCheckedAt DateTime       @default(now())
+  createdAt    DateTime        @default(now())
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lastCheckedAt])
 }

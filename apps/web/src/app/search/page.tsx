@@ -4,8 +4,11 @@ import { useEffect, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Search as SearchIcon, Star, Loader2, Briefcase, User as UserIcon, Package as PackageIcon } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Star, Loader2, Briefcase, User as UserIcon, Package as PackageIcon, BellPlus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useGlobalSearch, useSuggest } from '@/hooks/use-search';
+import { useCreateSavedSearch } from '@/hooks/use-saved-searches';
+import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { VoiceSearch } from '@/components/chat/voice-search';
@@ -25,6 +28,23 @@ export default function SearchPage() {
 
   const { data, isLoading, isFetching } = useGlobalSearch(debouncedQ, 15);
   const { data: sug } = useSuggest(q);
+  const { isAuthed } = useMe();
+  const saveSearch = useCreateSavedSearch();
+
+  const doSaveSearch = async () => {
+    const type = tab === 'gigs' ? 'GIGS' : tab === 'jobs' ? 'JOBS' : 'USERS';
+    const name = window.prompt('Name for this saved search', q.slice(0, 40)) ?? '';
+    if (!name.trim()) return;
+    try {
+      await saveSearch.mutateAsync({
+        name: name.trim(), type, query: q.trim(),
+        emailEnabled: true, pushEnabled: true,
+      });
+      toast.success(`Saved · we'll ping you when new ${type.toLowerCase()} match`);
+    } catch (err) {
+      toast.error((err as { message?: string }).message ?? 'Save failed');
+    }
+  };
 
   useEffect(() => {
     if (initialQ) setQ(initialQ);
@@ -108,6 +128,15 @@ export default function SearchPage() {
                 )}
               </button>
             ))}
+            {isAuthed && q.trim().length >= 2 && tab !== 'all' && (
+              <button
+                onClick={doSaveSearch}
+                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary active:scale-95"
+                disabled={saveSearch.isPending}
+              >
+                <BellPlus className="h-3 w-3" /> Save + alert
+              </button>
+            )}
           </div>
         </header>
 

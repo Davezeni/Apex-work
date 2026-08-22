@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images } from 'lucide-react';
+import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
@@ -47,7 +48,9 @@ export default function ConversationPage() {
   const { data: me } = useMe();
   const { data, isLoading, error } = useMessages(id);
   const send = useSendMessage(id);
-  const socket = useChatSocket(id);
+  const socket = useChatSocket(id, {
+    onIncomingCall: (from, mode) => setIncoming({ from, mode }),
+  });
   const { t } = useI18n();
   const draft = useMessageDraft(id);
   const text = draft.text;
@@ -60,6 +63,8 @@ export default function ConversationPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [reactingId, setReactingId] = useState<string | null>(null);
+  const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
+  const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   const blockUser = useBlockUser();
   const toggleReaction = useToggleReaction(id);
   useOutboxSync(); // flush queued messages when we come back online
@@ -156,10 +161,18 @@ export default function ConversationPage() {
           </button>
         )}
         <button
-          aria-label="Call"
+          aria-label="Voice call"
+          onClick={() => setCallMode('audio')}
           className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
         >
           <Phone className="h-5 w-5" />
+        </button>
+        <button
+          aria-label="Video call"
+          onClick={() => setCallMode('video')}
+          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
+        >
+          <VideoIcon className="h-5 w-5" />
         </button>
         <div className="relative">
           <button
@@ -363,6 +376,44 @@ export default function ConversationPage() {
         />
       )}
       <ImageViewer open={!!viewerUrl} onOpenChange={(v) => !v && setViewerUrl(null)} url={viewerUrl} />
+
+      {/* Incoming call ring */}
+      {incoming && !callMode && (
+        <div className="fixed inset-x-4 top-16 z-[100] mx-auto max-w-sm rounded-2xl border border-primary/40 bg-card p-4 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <div className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white">
+              <PhoneIncoming className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-bold">Incoming {incoming.mode} call</div>
+              <div className="text-[11px] text-muted-foreground">{peer?.fullName ?? 'Someone'} is calling</div>
+            </div>
+            <button
+              onClick={() => setIncoming(null)}
+              className="grid h-10 w-10 place-items-center rounded-full bg-red-600 text-white active:scale-90"
+              aria-label="Decline"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => { setCallMode(incoming.mode); setIncoming(null); }}
+              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white active:scale-90"
+              aria-label="Accept"
+            >
+              <Phone className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Active call */}
+      {callMode && (
+        <CallPanel
+          conversationId={id}
+          mode={callMode}
+          onEnd={() => setCallMode(null)}
+        />
+      )}
 
       {/* Media gallery */}
       {galleryOpen && (

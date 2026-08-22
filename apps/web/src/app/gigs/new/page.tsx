@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
 import { useCreateGig } from '@/hooks/use-gig-mutations';
 import { CATEGORIES, MIN_GIG_PRICE_ETB, MAX_GIG_PRICE_ETB } from '@apex-work/shared';
@@ -78,10 +79,13 @@ export default function PostGigPage() {
     [tagsInput],
   );
 
+  // Count PLAIN text length so an empty <p></p> from the rich editor doesn't
+  // accidentally satisfy the min-length check.
+  const descPlainLen = description.replace(/<[^>]+>/g, '').trim().length;
   const canGoNext =
     (step === 'title' && title.trim().length >= 15) ||
     (step === 'category' && !!categoryId) ||
-    (step === 'description' && description.trim().length >= 50) ||
+    (step === 'description' && descPlainLen >= 50) ||
     (step === 'pricing' &&
       packages.length >= 1 &&
       packages.every(
@@ -274,18 +278,14 @@ export default function PostGigPage() {
                 <StepIcon icon={<FileText className="h-6 w-6" />} />
                 <h1 className="text-3xl font-extrabold tracking-tight">{t('postGig.step3')}</h1>
                 <p className="mt-2 text-sm text-muted-foreground">{t('postGig.step3Blurb')}</p>
-                <textarea
-                  autoFocus
+                <RichEditor
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={10}
-                  maxLength={5000}
+                  onChange={setDescription}
                   placeholder={t('postGig.descPlaceholder')}
-                  className="mt-6 min-h-[240px] w-full resize-none rounded-2xl border border-border bg-card p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+                  className="mt-6"
+                  minRows={10}
+                  maxChars={5000}
                 />
-                <p className="mt-2 text-right text-[11px] text-muted-foreground">
-                  {t('postGig.descMax', { count: description.length })}
-                </p>
               </>
             )}
 

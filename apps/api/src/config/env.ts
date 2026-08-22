@@ -51,6 +51,9 @@ const envSchema = z.object({
   VAPID_PRIVATE: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
 
+  // Shared secret protecting /v1/cron/* — set to any 32+ char random string.
+  CRON_TOKEN: z.string().optional(),
+
   SENTRY_DSN: z.string().optional(),
 
   // WebAuthn (passkeys / biometric login).

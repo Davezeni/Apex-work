@@ -113,4 +113,16 @@ router.get(
   }),
 );
 
+/** GET /users/:username/stats — public hire/spend/earn stats + availability. */
+router.get(
+  '/:username/stats',
+  asyncHandler(async (req, res) => {
+    const { username } = req.params as { username: string };
+    const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) throw new NotFoundError('User');
+    const { publicUserStats } = await import('../services/publicStats.service.js');
+    return success(res, await publicUserStats(user.id));
+  }),
+);
+
 export default router;

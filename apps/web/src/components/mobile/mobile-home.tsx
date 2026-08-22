@@ -78,20 +78,23 @@ export function MobileHome() {
         </div>
       </div>
 
-      {/* Jobs shortcut */}
-      <div className="mb-5 px-5">
+      {/* Jobs + Nearby shortcuts */}
+      <div className="mb-5 grid grid-cols-2 gap-2 px-5">
         <Link
           href="/jobs"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 to-primary/10 p-4 transition-transform active:scale-[0.98]"
+          className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 to-primary/10 p-3 transition-transform active:scale-[0.98]"
         >
-          <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-500/20 text-2xl">
-            📢
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-extrabold">{t('jobs.title')}</div>
-            <div className="text-[11px] text-muted-foreground">{t('jobs.subtitle')}</div>
-          </div>
-          <span className="text-xs font-bold text-primary">→</span>
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-xl">📢</div>
+          <div className="text-xs font-extrabold">{t('jobs.title')}</div>
+          <div className="text-[10px] text-muted-foreground line-clamp-1">{t('jobs.subtitle')}</div>
+        </Link>
+        <Link
+          href="/nearby"
+          className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-violet-500/10 p-3 transition-transform active:scale-[0.98]"
+        >
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">🗺</div>
+          <div className="text-xs font-extrabold">Nearby</div>
+          <div className="text-[10px] text-muted-foreground line-clamp-1">Freelancers near you</div>
         </Link>
       </div>
 

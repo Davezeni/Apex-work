@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { useSimilarGigs } from '@/hooks/use-similar';
+import { RichViewer } from '@/components/ui/rich-viewer';
 import {
   ArrowLeft,
   Share2,
@@ -208,9 +209,7 @@ export default function GigDetailPage() {
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
           {t('gig.aboutGig')}
         </h2>
-        <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
-          {gig.description}
-        </p>
+        <RichViewer html={gig.description} className="text-sm text-foreground/90" />
 
         {gig.tags?.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
