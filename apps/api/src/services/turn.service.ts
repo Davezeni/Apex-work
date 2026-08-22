@@ -25,6 +25,38 @@ const STUN_ONLY: RTCIceServer[] = [
   { urls: 'stun:global.stun.twilio.com:3478' },
 ];
 
+/**
+ * Publicly documented static-auth TURN from Metered's Open Relay project.
+ * Anyone can use these — no key needed — so we ship them as a hard fallback
+ * whenever our own Metered credentials fetch fails. Ethiopian ISPs are
+ * heavily CGNAT'd and pure STUN often can't punch through, so having
+ * *some* relay is dramatically better than having none.
+ * See https://www.metered.ca/tools/openrelay/
+ */
+const OPEN_RELAY_FALLBACK: RTCIceServer[] = [
+  { urls: 'stun:stun.relay.metered.ca:80' },
+  {
+    urls: 'turn:global.relay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
+
 interface RTCIceServer {
   urls: string | string[];
   username?: string;
@@ -97,8 +129,11 @@ async function tryFetch(url: string): Promise<RTCIceServer[] | null> {
   }
 }
 
+/** STUN + free Open Relay TURN — used whenever we don't have valid Metered creds. */
+const STUN_PLUS_FALLBACK: RTCIceServer[] = [...STUN_ONLY, ...OPEN_RELAY_FALLBACK];
+
 export async function getIceServers(): Promise<RTCIceServer[]> {
-  if (!env.METERED_API_KEY) return STUN_ONLY;
+  if (!env.METERED_API_KEY) return STUN_PLUS_FALLBACK;
   if (cache && Date.now() - cache.fetchedAt < TTL_MS && cache.servers.length > STUN_ONLY.length) {
     return cache.servers;
   }
@@ -140,6 +175,6 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
     }
   }
 
-  logger.warn({ lastError }, 'All Metered endpoints failed — falling back to STUN');
-  return STUN_ONLY;
+  logger.warn({ lastError }, 'All Metered endpoints failed — falling back to Open Relay TURN');
+  return STUN_PLUS_FALLBACK;
 }

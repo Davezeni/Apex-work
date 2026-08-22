@@ -45,7 +45,14 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(self), geolocation=()' },
+          // Allow same-origin usage of camera, mic, geolocation, and
+          // display-capture (screen-share) so WebRTC calls, voice notes,
+          // "Nearby" location search, and Fullscreen mode all work.
+          // Empty parens `camera=()` DISABLE the feature entirely — the
+          // browser then won't even prompt the user for permission, and
+          // there's no way to grant it from device settings. We want
+          // `camera=(self)` which allows same-origin scripts to request it.
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self), display-capture=(self), fullscreen=(self)' },
         ],
       },
       // Permissive CORS for Next.js chunks so proxied hosts (Codespaces) can load them.
