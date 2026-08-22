@@ -20,6 +20,7 @@ import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
 import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
+import { MilestonePanel } from '@/components/orders/milestone-panel';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useState } from 'react';
 import { Star } from 'lucide-react';
@@ -217,6 +218,19 @@ export default function OrderDetailPage() {
           )}
         </div>
       </Section>
+
+      {/* Milestones — only meaningful once escrow has funded (ACTIVE+). */}
+      {order.status !== 'PENDING' && order.status !== 'CANCELLED' && (
+        <Section title="Milestones">
+          <MilestonePanel
+            orderId={order.id}
+            amountEtb={order.amountEtb}
+            isClient={!isSeller}
+            isSeller={isSeller}
+            orderStatus={order.status}
+          />
+        </Section>
+      )}
 
       {/* Requirements */}
       {order.requirements && (

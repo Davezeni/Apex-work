@@ -31,6 +31,7 @@ export default function NewJobPage() {
   const [skillInput, setSkillInput] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [isRemote, setIsRemote] = useState(true);
+  const [attachments, setAttachments] = useState<{ url: string; name: string; contentType: string; sizeBytes: number }[]>([]);
 
   useEffect(() => {
     if (!isLoading && !isAuthed) router.replace('/login?next=/jobs/new');
@@ -74,6 +75,7 @@ export default function NewJobPage() {
         budgetMinEtb: min,
         budgetMaxEtb: max,
         isRemote,
+        attachments,
       });
       toast.success(t('jobs.published'));
       router.replace(`/jobs/${job.id}`);
@@ -279,6 +281,11 @@ export default function NewJobPage() {
               />
               {t('jobs.remote')}
             </label>
+
+            <JobAttachmentsField
+              items={attachments}
+              onChange={setAttachments}
+            />
           </div>
         )}
       </main>
@@ -303,6 +310,71 @@ export default function NewJobPage() {
           )}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// JOB ATTACHMENTS FIELD
+// -----------------------------------------------------------------------------
+import { useUpload } from '@/hooks/use-upload';
+import { Paperclip, X as XClose } from 'lucide-react';
+
+function JobAttachmentsField({
+  items, onChange,
+}: {
+  items: { url: string; name: string; contentType: string; sizeBytes: number }[];
+  onChange: (next: { url: string; name: string; contentType: string; sizeBytes: number }[]) => void;
+}) {
+  const upload = useUpload();
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (items.length >= 5) return toast.error('Max 5 attachments');
+    if (file.size > 25 * 1024 * 1024) return toast.error('Max 25 MB per file');
+    try {
+      const uploaded = await upload.mutateAsync({ file, bucket: 'chat-attachments' });
+      onChange([...items, {
+        url: uploaded.publicUrl,
+        name: file.name.slice(0, 200),
+        contentType: uploaded.contentType,
+        sizeBytes: uploaded.sizeBytes,
+      }]);
+    } catch (err) {
+      toast.error((err as { message?: string }).message ?? 'Upload failed');
+    }
+  };
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Reference files (optional)
+      </label>
+      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-card px-3 py-4 text-sm text-muted-foreground hover:border-primary/40">
+        {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+        <span>{upload.isPending ? 'Uploading…' : 'Attach brief / mockups / spec (≤ 25MB × 5)'}</span>
+        <input type="file" className="hidden" onChange={onFile} disabled={upload.isPending || items.length >= 5} />
+      </label>
+      {items.length > 0 && (
+        <div className="mt-2 space-y-1.5">
+          {items.map((a, i) => (
+            <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 text-xs">
+              <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+              <span className="truncate">{a.name}</span>
+              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                {(a.sizeBytes / 1024).toFixed(0)} KB
+              </span>
+              <button
+                onClick={() => onChange(items.filter((_, j) => j !== i))}
+                aria-label="Remove"
+                className="grid h-6 w-6 place-items-center rounded-full text-red-500 active:bg-red-500/10"
+              >
+                <XClose className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

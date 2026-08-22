@@ -307,10 +307,27 @@ model Job {
 
   client        User      @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
   bids          Bid[]
+  attachments   JobAttachment[]
 
   @@index([clientId])
   @@index([isOpen, createdAt(sort: Desc)])
   @@index([categoryId, isOpen])
+}
+
+/// Reference files uploaded when posting a job — briefs, mockups, spec PDFs.
+/// Stored in Supabase and linked here so we can render them inline.
+model JobAttachment {
+  id          String   @id @default(cuid())
+  jobId       String
+  url         String
+  name        String
+  contentType String
+  sizeBytes   Int
+  createdAt   DateTime @default(now())
+
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
 }
 
 model Bid {
@@ -362,9 +379,41 @@ model Order {
   reviews         Review[]
   conversation    Conversation?
   customOffer     CustomOffer?
+  milestones      Milestone[]
 
   @@index([clientId, status])
   @@index([sellerId, status])
+  @@index([status])
+}
+
+enum MilestoneStatus {
+  PENDING       // Not yet delivered
+  DELIVERED     // Freelancer marked done
+  APPROVED      // Client approved → funds allocated
+  DISPUTED
+}
+
+/// Optional milestones for an order — Upwork-style checkpoints.
+/// Sum of milestone amounts must equal Order.amountEtb; the service layer
+/// enforces that on create/update. Approving a milestone releases its
+/// share of the escrow into the freelancer's wallet.
+model Milestone {
+  id          String          @id @default(cuid())
+  orderId     String
+  title       String
+  description String?         @db.Text
+  amountEtb   Int
+  dueDate     DateTime?
+  position    Int             @default(0)
+  status      MilestoneStatus @default(PENDING)
+  deliveredAt DateTime?
+  approvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, position])
   @@index([status])
 }
 
@@ -438,6 +487,8 @@ model Conversation {
   orderId     String?             @unique
   isGroup     Boolean             @default(false)
   title       String?             // groups
+  avatarUrl   String?             // group avatar
+  createdById String?             // set for groups; null for direct chats
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   lastMessageAt DateTime?
@@ -449,6 +500,7 @@ model Conversation {
   drafts       MessageDraft[]
 
   @@index([lastMessageAt(sort: Desc)])
+  @@index([createdById])
 }
 
 model ConversationMember {
@@ -457,6 +509,8 @@ model ConversationMember {
   joinedAt       DateTime @default(now())
   lastReadAt     DateTime?
   isMuted        Boolean  @default(false)
+  /// Only meaningful for groups. Direct chats: both members are "member".
+  isAdmin        Boolean  @default(false)
 
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -775,9 +829,15 @@ model Certification {
   credentialUrl String?
   position    Int      @default(0)
 
+  // Verification — set by admin after checking the credentialUrl. The
+  // freelancer's profile shows a ✓ badge when verifiedAt is not null.
+  verifiedAt  DateTime?
+  verifiedById String?
+
   resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
 
   @@index([resumeId, position])
+  @@index([verifiedAt])
 }
 
 // ================= OFFLINE DRAFTS =================

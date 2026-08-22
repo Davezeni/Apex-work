@@ -222,4 +222,17 @@ router.post(
   }),
 );
 
+/** GET /gigs/:slug/similar — up to N related gigs. Public + cached. */
+router.get(
+  '/:slug/similar',
+  optionalAuth,
+  cache({ ttlSeconds: 120, swrAfterSeconds: 30 }),
+  asyncHandler(async (req, res) => {
+    const { slug } = req.params as { slug: string };
+    const { similarGigs } = await import('../services/similar.service.js');
+    const items = await similarGigs(slug, 6);
+    return success(res, { items });
+  }),
+);
+
 export default router;

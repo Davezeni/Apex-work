@@ -6,6 +6,14 @@ const categoryIds = CATEGORIES.map((c) => c.id) as [string, ...string[]];
 /**
  * Client-posted job (Upwork model). Optional budget bounds; freelancers bid.
  */
+export const jobAttachmentInputSchema = z.object({
+  url: z.string().url().max(1000),
+  name: z.string().trim().min(1).max(200),
+  contentType: z.string().max(120),
+  sizeBytes: z.number().int().min(0),
+});
+export type JobAttachmentInput = z.infer<typeof jobAttachmentInputSchema>;
+
 export const createJobSchema = z
   .object({
     title: z.string().trim().min(10).max(140),
@@ -15,6 +23,8 @@ export const createJobSchema = z
     budgetMinEtb: z.number().int().min(MIN_GIG_PRICE_ETB).max(MAX_GIG_PRICE_ETB).optional(),
     budgetMaxEtb: z.number().int().min(MIN_GIG_PRICE_ETB).max(MAX_GIG_PRICE_ETB).optional(),
     isRemote: z.boolean().default(true),
+    /** Optional reference files uploaded to Supabase. Max 5, 25 MB each. */
+    attachments: z.array(jobAttachmentInputSchema).max(5).default([]),
   })
   .superRefine((v, ctx) => {
     if (v.budgetMinEtb && v.budgetMaxEtb && v.budgetMinEtb > v.budgetMaxEtb) {

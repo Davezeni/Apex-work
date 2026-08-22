@@ -56,12 +56,13 @@ export default function MessagesPage() {
           >
             <Search className="h-4 w-4" />
           </button>
-          <button
-            aria-label="New"
+          <Link
+            href="/messages/new-group"
+            aria-label="New group"
             className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
           >
             <Edit3 className="h-4 w-4" />
-          </button>
+          </Link>
         </div>
       </header>
 

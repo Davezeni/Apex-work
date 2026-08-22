@@ -47,3 +47,14 @@ export function useAITranscribe() {
     mutationFn: (body) => apiFetch('/ai/transcribe', { method: 'POST', token, body }),
   });
 }
+
+export function useAIChat() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { text: string; source: 'ai' | 'fallback' },
+    Error,
+    { messages: { role: 'user' | 'assistant'; content: string }[] }
+  >({
+    mutationFn: (body) => apiFetch('/ai/chat', { method: 'POST', token, body }),
+  });
+}

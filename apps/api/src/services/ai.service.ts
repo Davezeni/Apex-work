@@ -217,6 +217,41 @@ export async function enhanceResume(section: 'summary' | 'experience' | 'educati
   }
 }
 
+// ---------------- CHAT ASSISTANT ----------------
+
+const HELP_SYSTEM = `You are Apex, the in-app help assistant for Apex-Work — Ethiopia's freelance marketplace (Fiverr + Upwork + LinkedIn + Telegram in one).
+
+Product facts (ONLY answer with these):
+- 10% platform fee on completed orders (lower than Fiverr's 20%).
+- Payments via Chapa (Telebirr, CBE Birr, cards). Withdrawals go to Telebirr/CBE Birr/major Ethiopian banks. Minimum withdrawal 100 ETB.
+- Escrow: client's payment is held until they accept delivery, or auto-released 7 days after delivery.
+- Two sides: clients HIRE freelancers via Gigs (fixed price) or Jobs (bid-based). Freelancers can send custom offers in chat.
+- Fully bilingual English + አማርኛ; UI toggle in Settings → Language.
+- Voice messages, voice search, and voice-to-text via Whisper.
+- Passkeys (biometric) + 6-digit PIN + trusted devices for fast sign-in.
+- Verified badge = both phone and ID verified.
+- Report a user from their profile menu or the chat header.
+- Free to join. No monthly fees. No listing fees.
+
+Style: be warm, concise (under 120 words), and always answer in the SAME LANGUAGE as the user. Use "we" for Apex-Work.
+If the user asks something outside these facts, say briefly that you don't have that info and suggest they email support@apex-work.com or Telegram @apex_work_support.`;
+
+export async function chatAssistant(history: { role: 'user' | 'assistant'; content: string }[]): Promise<{ text: string; source: 'ai' | 'fallback' }> {
+  try {
+    const text = await callGroq(
+      [{ role: 'system', content: HELP_SYSTEM }, ...history],
+      { temperature: 0.4, maxTokens: 400 },
+    );
+    return { text, source: 'ai' };
+  } catch {
+    const last = history[history.length - 1]?.content ?? '';
+    return {
+      text: `I'm having trouble reaching my brain right now — please try again in a moment. Meanwhile you can email support@apex-work.com. (You asked: "${last.slice(0, 120)}")`,
+      source: 'fallback',
+    };
+  }
+}
+
 // ---------------- TRANSCRIPTION ----------------
 
 export async function transcribeAudioUrl(audioUrl: string, language?: string): Promise<{ text: string; source: 'ai' | 'fallback' }> {

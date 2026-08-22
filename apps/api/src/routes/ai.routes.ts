@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { aiProposalSchema, aiBriefSchema, aiTranscribeSchema, enhanceResumeSchema } from '@apex-work/shared';
+import { aiProposalSchema, aiBriefSchema, aiTranscribeSchema, enhanceResumeSchema, aiChatSchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -50,6 +50,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').AITranscribeInput;
     const result = await ai.transcribeAudioUrl(body.audioUrl, body.language);
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/chat',
+  validate(aiChatSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIChatInput;
+    const result = await ai.chatAssistant(body.messages);
     return success(res, result);
   }),
 );

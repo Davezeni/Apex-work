@@ -69,4 +69,40 @@ router.post('/users/:id/suspend', validate(suspendSchema),
   }),
 );
 
+// ---------------- certifications ----------------
+import { prisma } from '../lib/prisma.js';
+
+router.get('/certifications', asyncHandler(async (req, res) => {
+  const unverified = String((req.query as { unverified?: string }).unverified ?? '') === '1';
+  const items = await prisma.certification.findMany({
+    where: unverified ? { verifiedAt: null } : {},
+    orderBy: { position: 'asc' },
+    include: {
+      resume: {
+        select: {
+          user: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+        },
+      },
+    },
+    take: 100,
+  });
+  return success(res, { items });
+}));
+
+const verifySchema = z.object({ verify: z.boolean() });
+router.post('/certifications/:id/verify', validate(verifySchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof verifySchema>;
+    const updated = await prisma.certification.update({
+      where: { id },
+      data: {
+        verifiedAt: body.verify ? new Date() : null,
+        verifiedById: body.verify ? req.user!.sub : null,
+      },
+    });
+    return success(res, updated);
+  }),
+);
+
 export default router;

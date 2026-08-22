@@ -46,7 +46,10 @@ router.post(
   validate(createJobSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').CreateJobInput;
-    const job = await jobs.createJob(req.user!.sub, body);
+    const job = await jobs.createJob(req.user!.sub, {
+      ...body,
+      attachments: body.attachments,
+    });
     void bust('/v1/jobs');
     return success(res, job, 201);
   }),

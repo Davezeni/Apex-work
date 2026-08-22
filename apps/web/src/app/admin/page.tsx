@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
 
-type Tab = 'summary' | 'reports' | 'withdrawals' | 'users';
+type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -41,7 +41,7 @@ export default function AdminPage() {
           <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
         </div>
         <div className="flex gap-1 overflow-x-auto px-3 pb-2">
-          {(['summary', 'reports', 'withdrawals', 'users'] as Tab[]).map((t2) => (
+          {(['summary', 'reports', 'withdrawals', 'users', 'certs'] as Tab[]).map((t2) => (
             <button
               key={t2}
               onClick={() => setTab(t2)}
@@ -60,6 +60,7 @@ export default function AdminPage() {
       {tab === 'reports' && <ReportsTab />}
       {tab === 'withdrawals' && <WithdrawalsTab />}
       {tab === 'users' && <UsersTab />}
+      {tab === 'certs' && <CertsTab />}
     </div>
   );
 }
@@ -289,6 +290,74 @@ function UsersTab() {
             <Button size="sm" variant={u.isActive ? 'destructive' : 'brand'} onClick={() => suspend.mutate({ id: u.id, suspend: u.isActive })} disabled={suspend.isPending}>
               {u.isActive ? <ShieldOff className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
             </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------- CERTIFICATIONS ----------
+interface CertRow {
+  id: string; name: string; issuer: string; issueYear: number; issueMonth: number | null;
+  credentialUrl: string | null; verifiedAt: string | null;
+  resume: { user: { id: string; username: string; fullName: string; avatarUrl: string | null } };
+}
+function CertsTab() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  const [unverifiedOnly, setUnverifiedOnly] = useState(true);
+  const { data, isLoading } = useQuery<{ items: CertRow[] }>({
+    queryKey: ['admin', 'certs', unverifiedOnly],
+    queryFn: () => apiFetch(`/admin/certifications${unverifiedOnly ? '?unverified=1' : ''}`, { token }),
+    enabled: !!token,
+  });
+  const verify = useMutation({
+    mutationFn: (input: { id: string; verify: boolean }) =>
+      apiFetch(`/admin/certifications/${input.id}/verify`, { method: 'POST', token, body: { verify: input.verify } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'certs'] }),
+  });
+  return (
+    <div className="mx-3 mt-4">
+      <div className="mb-2 flex gap-1">
+        <button onClick={() => setUnverifiedOnly(true)} className={cn('rounded-full px-3 py-1 text-[11px] font-bold', unverifiedOnly ? 'bg-primary text-white' : 'bg-card text-muted-foreground border border-border')}>Unverified</button>
+        <button onClick={() => setUnverifiedOnly(false)} className={cn('rounded-full px-3 py-1 text-[11px] font-bold', !unverifiedOnly ? 'bg-primary text-white' : 'bg-card text-muted-foreground border border-border')}>All</button>
+      </div>
+      {isLoading && <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />}
+      <div className="space-y-2">
+        {(data?.items ?? []).map((c) => (
+          <div key={c.id} className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-start gap-3">
+              <Link href={`/u/${c.resume.user.username}`} className="grad-hero grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold text-white">
+                {(c.resume.user.fullName[0] ?? '?').toUpperCase()}
+              </Link>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold">{c.name}</div>
+                <div className="text-xs text-muted-foreground">{c.issuer} · {c.issueYear}</div>
+                <div className="text-[10px] text-muted-foreground">by <Link href={`/u/${c.resume.user.username}`} className="underline">{c.resume.user.fullName}</Link></div>
+                {c.credentialUrl && (
+                  <a href={c.credentialUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-[11px] font-bold text-primary underline">
+                    Open credential →
+                  </a>
+                )}
+              </div>
+              {c.verifiedAt ? (
+                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">VERIFIED</span>
+              ) : (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">UNVERIFIED</span>
+              )}
+            </div>
+            <div className="mt-2 flex gap-2">
+              {c.verifiedAt ? (
+                <Button size="sm" variant="outline" onClick={() => verify.mutate({ id: c.id, verify: false })} disabled={verify.isPending}>
+                  Un-verify
+                </Button>
+              ) : (
+                <Button size="sm" variant="brand" onClick={() => verify.mutate({ id: c.id, verify: true })} disabled={verify.isPending}>
+                  <CheckCircle className="h-3 w-3" /> Verify
+                </Button>
+              )}
+            </div>
           </div>
         ))}
       </div>

@@ -189,6 +189,28 @@ export default function JobDetailPage() {
         </h3>
         <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{job.description}</p>
 
+        {'attachments' in job && Array.isArray((job as { attachments?: unknown }).attachments) && (job as { attachments: { url: string; name: string; sizeBytes: number; contentType: string }[] }).attachments.length > 0 && (
+          <>
+            <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Attachments
+            </h3>
+            <div className="mt-2 space-y-1.5">
+              {(job as { attachments: { url: string; name: string; sizeBytes: number; contentType: string }[] }).attachments.map((a, i) => (
+                <a
+                  key={i} href={a.url} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm active:bg-muted"
+                >
+                  <span className="text-lg">
+                    {a.contentType.startsWith('image/') ? '🖼' : a.contentType.includes('pdf') ? '📄' : '📎'}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB</span>
+                </a>
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Bids */}
         {isOwner && job.bids.length > 0 && (
           <>

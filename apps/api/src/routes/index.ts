@@ -25,6 +25,9 @@ import draftsRoutes from './drafts.routes.js';
 import searchRoutes from './search.routes.js';
 import adminRoutes from './admin.routes.js';
 import reactionsRoutes from './reactions.routes.js';
+import milestonesRoutes from './milestones.routes.js';
+import groupsRoutes from './groups.routes.js';
+import userSkillsRoutes from './userSkills.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -88,5 +91,8 @@ router.use('/me/drafts', draftsRoutes);
 router.use('/search', searchRoutes);
 router.use('/admin', adminRoutes);
 router.use('/messages', reactionsRoutes);
+router.use('/', milestonesRoutes); // mounts /orders/:id/milestones + /milestones/:id/...
+router.use('/groups', groupsRoutes);
+router.use('/me/skills', userSkillsRoutes);
 
 export default router;

@@ -20,6 +20,8 @@ import {
   BarChart3,
   Trophy,
   Gift,
+  FileText,
+  Award,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { formatEtb } from '@/lib/utils';
@@ -174,12 +176,26 @@ export default function ProfilePage() {
           href="/referrals"
         />
         {me.role === 'FREELANCER' && (
-          <MenuItem
-            icon={<ImageIcon className="h-4 w-4" />}
-            title={t('portfolio.title')}
-            subtitle={t('portfolio.menuSubtitle')}
-            href="/settings/portfolio"
-          />
+          <>
+            <MenuItem
+              icon={<ImageIcon className="h-4 w-4" />}
+              title={t('portfolio.title')}
+              subtitle={t('portfolio.menuSubtitle')}
+              href="/settings/portfolio"
+            />
+            <MenuItem
+              icon={<FileText className="h-4 w-4" />}
+              title="Resume / CV"
+              subtitle="Build your professional CV"
+              href="/resume"
+            />
+            <MenuItem
+              icon={<Award className="h-4 w-4" />}
+              title="Skills"
+              subtitle="Add and rank your skills"
+              href="/settings/skills"
+            />
+          </>
         )}
         <MenuItem
           icon={<ShieldCheck className="h-4 w-4" />}
@@ -199,6 +215,14 @@ export default function ProfilePage() {
           subtitle={t('language.label')}
           href="/settings"
         />
+        {me.role === 'ADMIN' && (
+          <MenuItem
+            icon={<ShieldCheck className="h-4 w-4" />}
+            title="Admin panel"
+            subtitle="Reports, withdrawals, users"
+            href="/admin"
+          />
+        )}
         <MenuItem
           icon={
             logout.isPending ? (

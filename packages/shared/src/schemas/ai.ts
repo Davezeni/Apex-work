@@ -22,3 +22,16 @@ export const aiTranscribeSchema = z.object({
   language: z.string().trim().max(20).optional(),
 });
 export type AITranscribeInput = z.infer<typeof aiTranscribeSchema>;
+
+/**
+ * AI Chat Assistant — in-app help bot. Client sends the full recent history
+ * (small, capped) plus the latest user message. Server prepends a system
+ * prompt with Apex-Work product context and calls Groq.
+ */
+export const aiChatSchema = z.object({
+  messages: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string().min(1).max(4000),
+  })).min(1).max(20),
+});
+export type AIChatInput = z.infer<typeof aiChatSchema>;

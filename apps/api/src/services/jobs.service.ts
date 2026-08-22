@@ -25,6 +25,7 @@ export async function createJob(clientId: string, input: {
   budgetMinEtb?: number;
   budgetMaxEtb?: number;
   isRemote?: boolean;
+  attachments?: { url: string; name: string; contentType: string; sizeBytes: number }[];
 }) {
   const client = await prisma.user.findUnique({
     where: { id: clientId },
@@ -44,7 +45,11 @@ export async function createJob(clientId: string, input: {
       budgetMinEtb: input.budgetMinEtb ?? null,
       budgetMaxEtb: input.budgetMaxEtb ?? null,
       isRemote: input.isRemote ?? true,
+      ...(input.attachments && input.attachments.length > 0
+        ? { attachments: { createMany: { data: input.attachments } } }
+        : {}),
     },
+    include: { attachments: true },
   });
 }
 
@@ -91,6 +96,7 @@ export async function getJob(id: string, viewerId?: string) {
   const job = await prisma.job.findUnique({
     where: { id },
     include: {
+      attachments: { orderBy: { createdAt: 'asc' } },
       client: { select: { id: true, username: true, fullName: true, avatarUrl: true, city: true } },
       bids: {
         where: { withdrawnAt: null },
