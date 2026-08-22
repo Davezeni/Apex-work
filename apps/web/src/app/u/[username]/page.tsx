@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowLeft,
   Share2,
@@ -20,6 +21,7 @@ import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -43,6 +45,7 @@ export default function PublicProfilePage() {
   const { data: user, isLoading, error } = usePublicUser(username);
   const { data: me } = useMe();
   const startConversation = useStartConversation();
+  const { t } = useI18n();
 
   if (isLoading) {
     return (
@@ -57,12 +60,10 @@ export default function PublicProfilePage() {
       <div className="grid min-h-dvh place-items-center px-8 text-center">
         <div>
           <UserX className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h1 className="mt-4 text-xl font-bold">User not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This profile may not exist or has been removed.
-          </p>
+          <h1 className="mt-4 text-xl font-bold">{t('publicProfile.notFound')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('publicProfile.notFoundBody')}</p>
           <Button asChild variant="brand" className="mt-6">
-            <Link href="/">Back to home</Link>
+            <Link href="/">{t('gig.backHome')}</Link>
           </Button>
         </div>
       </div>
@@ -81,7 +82,7 @@ export default function PublicProfilePage() {
       const conv = await startConversation.mutateAsync(user.id);
       router.push(`/messages/${conv.id}`);
     } catch {
-      toast.error('Could not start the conversation. Try again.');
+      toast.error(t('gig.startFailed'));
     }
   };
 
@@ -97,7 +98,7 @@ export default function PublicProfilePage() {
     }
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied');
+      toast.success(t('publicProfile.linkCopied'));
     }
   };
 
@@ -149,16 +150,20 @@ export default function PublicProfilePage() {
                 </span>
               )}
               <span>·</span>
-              <span>joined {timeAgo(user.createdAt)}</span>
+              <span>{t('publicProfile.joined', { when: timeAgo(user.createdAt) })}</span>
             </div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="mt-4 grid grid-cols-3 gap-1 rounded-xl border border-border bg-background/50 p-3">
-          <Stat n={user.rating > 0 ? user.rating.toFixed(1) : '—'} l="Rating" />
-          <Stat n={String(user.completedOrders)} l="Orders" borderLeft />
-          <Stat n={user.ratingCount > 0 ? String(user.ratingCount) : '—'} l="Reviews" borderLeft />
+          <Stat n={user.rating > 0 ? user.rating.toFixed(1) : '—'} l={t('profile.rating')} />
+          <Stat n={String(user.completedOrders)} l={t('profile.orders')} borderLeft />
+          <Stat
+            n={user.ratingCount > 0 ? String(user.ratingCount) : '—'}
+            l={t('publicProfile.reviews')}
+            borderLeft
+          />
         </div>
 
         {!isSelf && (
@@ -173,14 +178,14 @@ export default function PublicProfilePage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <MessageCircle className="h-4 w-4" /> Message
+                  <MessageCircle className="h-4 w-4" /> {t('common.message')}
                 </>
               )}
             </Button>
             {user.hourlyRateEtb && (
               <div className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-semibold">
                 <Wallet className="h-3.5 w-3.5 text-primary" />
-                {formatEtb(user.hourlyRateEtb)}/hr
+                {formatEtb(user.hourlyRateEtb)}/{t('publicProfile.perHourShort')}
               </div>
             )}
           </div>
@@ -189,7 +194,7 @@ export default function PublicProfilePage() {
 
       {/* Bio */}
       {user.bio && (
-        <Section title="About">
+        <Section title={t('publicProfile.about')}>
           <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
             {user.bio}
           </p>
@@ -198,7 +203,7 @@ export default function PublicProfilePage() {
 
       {/* Skills */}
       {user.skills.length > 0 && (
-        <Section title={`Skills · ${user.skills.length}`}>
+        <Section title={`${t('profile.skills')} · ${user.skills.length}`}>
           <div className="flex flex-wrap gap-1.5">
             {user.skills.map((s) => (
               <span
@@ -212,9 +217,20 @@ export default function PublicProfilePage() {
         </Section>
       )}
 
+      {/* Portfolio */}
+      {user.portfolio && user.portfolio.length > 0 && (
+        <Section title={`${t('portfolio.title')} · ${user.portfolio.length}`}>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {user.portfolio.map((p) => (
+              <PortfolioTile key={p.id} p={p} />
+            ))}
+          </div>
+        </Section>
+      )}
+
       {/* Gigs */}
       {user.gigs.length > 0 && (
-        <Section title={`Gigs · ${user.gigs.length}`}>
+        <Section title={`${t('search.gigs')} · ${user.gigs.length}`}>
           <div className="flex flex-col gap-3">
             {user.gigs.map((g) => (
               <GigMiniCard key={g.id} g={g} owner={user} />
@@ -224,21 +240,61 @@ export default function PublicProfilePage() {
       )}
 
       {user.role === 'FREELANCER' && user.gigs.length === 0 && (
-        <Section title="Gigs">
+        <Section title={t('search.gigs')}>
           <div className="rounded-2xl border border-dashed border-border p-6 text-center">
             <Package className="mx-auto h-8 w-8 text-muted-foreground" />
             <p className="mt-2 text-sm text-muted-foreground">
-              {isSelf ? "You haven't posted any gigs yet." : 'No gigs yet.'}
+              {isSelf ? t('publicProfile.noGigsSelf') : t('publicProfile.noGigs')}
             </p>
             {isSelf && (
               <Button asChild variant="brand" size="sm" className="mt-3">
-                <Link href="/gigs/new">Post your first gig</Link>
+                <Link href="/gigs/new">{t('publicProfile.postFirstGig')}</Link>
               </Button>
             )}
           </div>
         </Section>
       )}
     </div>
+  );
+}
+
+/**
+ * Individual portfolio thumbnail. Tapping opens the image full-size in a new
+ * tab (poor-man's lightbox — future work: a proper Radix Dialog gallery).
+ * `unoptimized` on next/image because Supabase URLs aren't served through
+ * Next.js's image optimizer (avoids a re-encode roundtrip; the images are
+ * already reasonably sized from the mobile capture flow).
+ */
+function PortfolioTile({
+  p,
+}: {
+  p: { id: string; title: string; description: string | null; imageUrl: string };
+}) {
+  return (
+    <a
+      href={p.imageUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="group relative block overflow-hidden rounded-2xl border border-border bg-card"
+      aria-label={p.title}
+    >
+      <div className="relative aspect-square bg-muted">
+        <Image
+          src={p.imageUrl}
+          alt={p.title}
+          fill
+          sizes="(max-width: 640px) 50vw, 33vw"
+          className="object-cover transition-transform group-hover:scale-105"
+          unoptimized
+        />
+      </div>
+      <div className="p-2">
+        <div className="line-clamp-1 text-xs font-semibold">{p.title}</div>
+        {p.description && (
+          <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{p.description}</p>
+        )}
+      </div>
+    </a>
   );
 }
 

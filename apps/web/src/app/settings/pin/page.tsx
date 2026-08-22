@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { PinInput } from '@/components/auth/pin-input';
 import { useSetPin } from '@/hooks/use-security';
 import { useMe } from '@/hooks/use-me';
+import { useI18n } from '@/i18n';
 
 const WEAK_PINS = new Set([
   '000000', '111111', '222222', '333333', '444444', '555555',
@@ -37,6 +38,7 @@ function PinSetupInner() {
   const params = useSearchParams();
   const { data: me, isLoading } = useMe();
   const setPinMutation = useSetPin();
+  const { t } = useI18n();
 
   const [phase, setPhase] = useState<'enter' | 'confirm'>('enter');
   const [firstPin, setFirstPin] = useState('');
@@ -54,7 +56,7 @@ function PinSetupInner() {
 
     if (phase === 'enter') {
       if (WEAK_PINS.has(v)) {
-        toast.error('That PIN is too common. Try something less predictable.');
+        toast.error(t('pin.weak'));
         setPin('');
         return;
       }
@@ -63,7 +65,7 @@ function PinSetupInner() {
       setPhase('confirm');
     } else {
       if (v !== firstPin) {
-        toast.error("PINs don't match. Start over.");
+        toast.error(t('pin.mismatch'));
         setPin('');
         setFirstPin('');
         setPhase('enter');
@@ -76,11 +78,11 @@ function PinSetupInner() {
   const submit = async (finalPin: string) => {
     try {
       await setPinMutation.mutateAsync(finalPin);
-      toast.success('PIN saved. Next time, sign in with just your PIN.');
+      toast.success(t('pin.saved'));
       router.push(returnTo);
     } catch (err) {
       const e = err as { message?: string };
-      toast.error(e.message ?? 'Could not save PIN');
+      toast.error(e.message ?? t('pin.saveFailed'));
       setPin('');
       setFirstPin('');
       setPhase('enter');
@@ -93,7 +95,7 @@ function PinSetupInner() {
         <button
           onClick={() => router.back()}
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
-          aria-label="Back"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -101,7 +103,7 @@ function PinSetupInner() {
           href={returnTo}
           className="ml-auto text-xs font-semibold text-muted-foreground hover:text-foreground"
         >
-          Skip for now
+          {t('pin.skipNow')}
         </Link>
       </header>
 
@@ -119,12 +121,10 @@ function PinSetupInner() {
             transition={{ duration: 0.25 }}
           >
             <h1 className="text-3xl font-extrabold tracking-tight">
-              {phase === 'enter' ? 'Create a 6-digit PIN' : 'Confirm your PIN'}
+              {phase === 'enter' ? t('pin.createTitle') : t('pin.confirmTitle')}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {phase === 'enter'
-                ? 'Skip the SMS code every time. Use your PIN to sign in on this device.'
-                : 'Enter the same 6 digits again.'}
+              {phase === 'enter' ? t('pin.createBody') : t('pin.confirmBody')}
             </p>
 
             <div className="mt-8">
@@ -144,10 +144,7 @@ function PinSetupInner() {
 
             <div className="mt-6 flex items-start gap-2 rounded-2xl border border-border bg-card p-3 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-              <div>
-                Your PIN is scrambled before storage and paired with this device.
-                It never leaves Apex-Work and can&apos;t be used from another browser.
-              </div>
+              <div>{t('pin.explain')}</div>
             </div>
 
             {phase === 'confirm' && (
@@ -160,7 +157,7 @@ function PinSetupInner() {
                   setPhase('enter');
                 }}
               >
-                Start over
+                {t('pin.startOver')}
               </Button>
             )}
           </motion.div>

@@ -41,6 +41,9 @@ function BrowseInner() {
   const [category, setCategory] = useState<string | null>(categoryFromUrl);
   const [sort, setSort] = useState<SortKey>('recent');
 
+  // Localise the category label (name from constants stays English, but the
+  // 'All categories' pseudo-option needs to translate).
+
   const { data, isLoading } = useGigs({
     category: category ?? undefined,
     limit: 30,
@@ -96,7 +99,7 @@ function BrowseInner() {
       {/* Sort dropdown */}
       <div className="flex items-center justify-between px-5 pb-3">
         <span className="text-xs text-muted-foreground">
-          {isLoading ? '…' : `${sorted.length} results`}
+          {isLoading ? '…' : t('browse.resultsCount', { count: sorted.length })}
         </span>
         <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -161,6 +164,7 @@ function FilterChip({
 }
 
 function BrowseCard({ g }: { g: GigListItem }) {
+  const { t } = useI18n();
   return (
     <Link
       href={`/gigs/${g.slug}`}
@@ -187,10 +191,11 @@ function BrowseCard({ g }: { g: GigListItem }) {
           )}
         </div>
         <div className="mt-1 text-[11px] text-muted-foreground">
-          By <span className="font-semibold text-foreground">{g.owner.fullName}</span>
+          {t('browse.byShort')}{' '}
+          <span className="font-semibold text-foreground">{g.owner.fullName}</span>
         </div>
         <div className="mt-1 text-[11px] text-muted-foreground">
-          From{' '}
+          {t('gig.from')}{' '}
           <span className="text-sm font-extrabold text-foreground">
             {formatEtb(g.startingPriceEtb)}
           </span>

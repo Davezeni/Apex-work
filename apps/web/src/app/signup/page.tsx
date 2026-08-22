@@ -12,6 +12,7 @@ import { OtpInput } from '@/components/auth/otp-input';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, type UserRole } from '@apex-work/shared';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n';
 
 type Step = 'role' | 'phone' | 'otp' | 'name';
 
@@ -37,12 +38,13 @@ function SignupInner() {
   const [resending, setResending] = useState(false);
   const router = useRouter();
   const setSession = useAuthStore((s) => s.setSession);
+  const { t } = useI18n();
 
   const chooseRole = () => setStep('phone');
 
   const sendOtp = async (isResend = false) => {
     if (!ETHIOPIAN_PHONE_REGEX.test(phone)) {
-      toast.error('Enter a valid Ethiopian mobile number');
+      toast.error(t('auth.invalidPhone'));
       return;
     }
     if (isResend) setResending(true);
@@ -50,7 +52,7 @@ function SignupInner() {
     try {
       await apiFetch('/auth/otp/request', { method: 'POST', body: { phone, purpose: 'SIGNUP' } });
       if (!isResend) setStep('otp');
-      toast.success(isResend ? 'New code sent' : 'Code sent');
+      toast.success(isResend ? t('auth.codeResent') : t('auth.codeSent'));
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Failed to send code');
     } finally {
@@ -82,7 +84,7 @@ function SignupInner() {
 
   const complete = async () => {
     if (fullName.trim().length < 2) {
-      toast.error('Enter your full name');
+      toast.error(t('auth.yourNameDesc'));
       return;
     }
     setLoading(true);
@@ -95,7 +97,7 @@ function SignupInner() {
         body: { phone, otpToken, fullName: fullName.trim(), role },
       });
       setSession(result.tokens, phone);
-      toast.success(`Welcome to Apex-Work, ${fullName.split(' ')[0]}!`);
+      toast.success(t('auth.welcomeUser', { name: fullName.split(' ')[0] ?? '' }));
       // Offer to set a PIN so the next login skips the SMS step. It routes
       // onward to onboarding (freelancer) or home (client) via ?next=.
       const next = role === 'FREELANCER' ? '/onboarding' : '/';
@@ -135,33 +137,33 @@ function SignupInner() {
         <AnimatePresence mode="wait">
           {step === 'role' && (
             <StepBox key="role">
-              <h1 className="text-3xl font-extrabold tracking-tight">Join Apex-Work</h1>
-              <p className="mt-2 text-sm text-muted-foreground">What brings you here?</p>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.join')}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{t('create.subtitle')}</p>
 
               <div className="mt-6 flex flex-col gap-3">
                 <RoleCard
                   active={role === 'CLIENT'}
                   onClick={() => setRole('CLIENT')}
                   icon={<Briefcase className="h-6 w-6" />}
-                  title="I want to hire"
-                  subtitle="Find talent for your project"
+                  title={t('roles.clientAction')}
+                  subtitle={t('roles.clientDesc')}
                 />
                 <RoleCard
                   active={role === 'FREELANCER'}
                   onClick={() => setRole('FREELANCER')}
                   icon={<Sparkles className="h-6 w-6" />}
-                  title="I want to work"
-                  subtitle="Offer your skills and get paid"
+                  title={t('roles.freelancerAction')}
+                  subtitle={t('roles.freelancerDesc')}
                 />
               </div>
 
               <Button variant="brand" size="lg" className="mt-8 w-full" onClick={chooseRole}>
-                Continue <ArrowRight className="h-4 w-4" />
+                {t('common.continue')} <ArrowRight className="h-4 w-4" />
               </Button>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                Already have an account?{' '}
+                {t('auth.alreadyRegistered')}{' '}
                 <Link href="/login" className="font-semibold text-primary">
-                  Sign in
+                  {t('nav.signIn')}
                 </Link>
               </p>
             </StepBox>
@@ -169,28 +171,38 @@ function SignupInner() {
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">Your phone</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We&apos;ll send a code to verify it&apos;s you.
-              </p>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.yourPhone')}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{t('auth.weWillSendCode')}</p>
               <input
                 autoFocus
                 type="tel"
                 inputMode="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+251 9XX XXX XXX"
+                placeholder={t('auth.phonePlaceholder')}
                 className="mt-8 h-14 w-full rounded-2xl border border-border bg-card px-4 text-lg font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
-              <Button variant="brand" size="lg" className="mt-6 w-full" onClick={() => sendOtp()} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send code <ArrowRight className="h-4 w-4" /></>}
+              <Button
+                variant="brand"
+                size="lg"
+                className="mt-6 w-full"
+                onClick={() => sendOtp()}
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    {t('common.sendCode')} <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </Button>
             </StepBox>
           )}
 
           {step === 'otp' && (
             <StepBox key="otp">
-              <h1 className="text-3xl font-extrabold tracking-tight">Enter your code</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.enterCode')}</h1>
               <OtpInput
                 phone={phone}
                 code={code}
@@ -208,27 +220,33 @@ function SignupInner() {
                 onClick={() => verifyOtp()}
                 disabled={loading}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Verify'}
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('common.verify')}
               </Button>
             </StepBox>
           )}
 
           {step === 'name' && (
             <StepBox key="name">
-              <h1 className="text-3xl font-extrabold tracking-tight">Your name</h1>
-              <p className="mt-2 text-sm text-muted-foreground">This is how others will see you.</p>
+              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.yourName')}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{t('auth.yourNameDesc')}</p>
               <input
                 autoFocus
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Full name"
+                placeholder={t('auth.namePlaceholder')}
                 className="mt-8 h-14 w-full rounded-2xl border border-border bg-card px-4 text-lg font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
-              <Button variant="brand" size="lg" className="mt-6 w-full" onClick={complete} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create account'}
+              <Button
+                variant="brand"
+                size="lg"
+                className="mt-6 w-full"
+                onClick={complete}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('auth.createAccount')}
               </Button>
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                By continuing you agree to our Terms & Privacy Policy.
+                {t('auth.termsAgree')}
               </p>
             </StepBox>
           )}

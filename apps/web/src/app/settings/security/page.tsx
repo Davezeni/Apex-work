@@ -33,6 +33,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { startRegistration } from '@simplewebauthn/browser';
 import { timeAgo } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+import { useI18n } from '@/i18n';
 
 export default function SecuritySettingsPage() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function SecuritySettingsPage() {
   const devices = useMyDevices();
   const passkeys = useMyPasskeys();
   const revokeAllDevices = useRevokeAllDevices();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!isLoading && !me) router.replace('/login?next=/settings/security');
@@ -61,29 +63,29 @@ export default function SecuritySettingsPage() {
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">Security</h1>
+        <h1 className="text-lg font-extrabold tracking-tight">{t('security.title')}</h1>
       </header>
 
       {/* Sign-in methods */}
-      <Section title="Sign-in methods">
+      <Section title={t('security.signInMethods')}>
         <SettingRow
           icon={<LockKeyhole className="h-4 w-4" />}
           title="PIN"
-          subtitle={hasPin ? 'Change your 6-digit PIN' : 'Set a 6-digit PIN to skip SMS codes'}
+          subtitle={hasPin ? t('security.pinChange') : t('security.pinAdd')}
           href="/settings/pin?next=/settings/security"
-          cta={hasPin ? 'Change' : 'Set up'}
+          cta={hasPin ? t('security.change') : t('security.add')}
         />
         <PasskeyControl hasAny={hasPasskeys} />
       </Section>
 
       {/* Passkey list */}
       {passkeys.data && passkeys.data.items.length > 0 && (
-        <Section title={`Your passkeys · ${passkeys.data.items.length}`}>
+        <Section title={`${t('security.yourPasskeys')} · ${passkeys.data.items.length}`}>
           {passkeys.data.items.map((p) => (
             <PasskeyRow key={p.id} p={p} />
           ))}
@@ -92,21 +94,20 @@ export default function SecuritySettingsPage() {
 
       {/* Devices */}
       <Section
-        title={`Trusted devices · ${devices.data?.items.length ?? 0}`}
+        title={`${t('security.trustedDevices')} · ${devices.data?.items.length ?? 0}`}
         action={
           (devices.data?.items.length ?? 0) > 0 && (
             <button
               onClick={() => {
-                if (!window.confirm('Sign out from ALL devices? You will need to verify by SMS next time.'))
-                  return;
+                if (!window.confirm(t('security.signOutAllConfirm'))) return;
                 revokeAllDevices.mutate(undefined, {
-                  onSuccess: (r) => toast.success(`${r.revoked} device(s) signed out.`),
+                  onSuccess: () => toast.success(t('security.revoked')),
                 });
               }}
               disabled={revokeAllDevices.isPending}
               className="flex items-center gap-1 text-xs font-semibold text-destructive"
             >
-              <LogOut className="h-3.5 w-3.5" /> Sign out all
+              <LogOut className="h-3.5 w-3.5" /> {t('security.signOutAll')}
             </button>
           )
         }
@@ -118,33 +119,30 @@ export default function SecuritySettingsPage() {
         )}
         {devices.data?.items.length === 0 && (
           <p className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            No trusted devices yet.
+            {t('security.noDevices')}
           </p>
         )}
         {devices.data?.items.map((d) => <DeviceRow key={d.id} d={d} />)}
       </Section>
 
       {/* Danger zone */}
-      <Section title="Danger zone">
+      <Section title={t('security.dangerZone')}>
         <SettingRow
           icon={<ShieldAlert className="h-4 w-4 text-destructive" />}
-          title="Lost your phone?"
-          subtitle="Sign out everywhere and disable your PIN"
+          title={t('security.lostPhone')}
+          subtitle={t('security.lostPhoneSub')}
           onClick={async () => {
-            if (
-              !window.confirm(
-                'This will sign you out from every device AND remove your PIN. Continue?',
-              )
-            )
-              return;
+            if (!window.confirm(t('security.lostPhoneConfirm'))) return;
             await revokeAllDevices.mutateAsync();
             try {
               await apiFetch('/auth/pin', {
                 method: 'DELETE',
                 token: useAuthStore.getState().accessToken,
               });
-            } catch { /* ignore */ }
-            toast.success('All access revoked.');
+            } catch {
+              /* ignore */
+            }
+            toast.success(t('security.revokedAll'));
             useAuthStore.getState().clearAndForgetDevice();
             router.replace('/login');
           }}
@@ -236,12 +234,13 @@ function SettingRow({
 function PasskeyControl({ hasAny }: { hasAny: boolean }) {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
+  const { t } = useI18n();
 
   const addPasskey = async () => {
     try {
       // The @simplewebauthn browser API only works over HTTPS or localhost.
       if (typeof window !== 'undefined' && !window.isSecureContext) {
-        toast.error('Passkeys require a secure (https) connection.');
+        toast.error(t('security.biometricRequiresSecure'));
         return;
       }
       const options = await apiFetch<unknown>('/auth/passkey/register-options', { token });
@@ -254,25 +253,21 @@ function PasskeyControl({ hasAny }: { hasAny: boolean }) {
         body: { response: attestation, label: guessDeviceLabel() },
       });
       await qc.invalidateQueries({ queryKey: ['my-passkeys'] });
-      toast.success('Passkey added. You can now sign in with biometrics.');
+      toast.success(t('security.biometricHasAny'));
     } catch (err) {
       const e = err as { name?: string; message?: string };
       if (e.name === 'NotAllowedError') return; // user cancelled
-      toast.error(e.message ?? 'Could not add passkey');
+      toast.error(e.message ?? t('security.couldNotAddPasskey'));
     }
   };
 
   return (
     <SettingRow
       icon={<Fingerprint className="h-4 w-4" />}
-      title="Face ID / Fingerprint"
-      subtitle={
-        hasAny
-          ? 'Passkey registered — sign in instantly'
-          : 'Register a passkey for one-tap biometric sign-in'
-      }
+      title={t('security.biometric')}
+      subtitle={hasAny ? t('security.biometricHasAny') : t('security.biometricAddSub')}
       onClick={addPasskey}
-      cta={hasAny ? 'Add another' : 'Enable'}
+      cta={hasAny ? t('security.addAnother') : t('security.enable')}
     />
   );
 }
@@ -290,6 +285,7 @@ function DeviceRow({
   };
 }) {
   const revoke = useRevokeDevice();
+  const { t } = useI18n();
   const isMobile = (d.label ?? '').includes('Mobile') || (d.label ?? '').includes('iOS');
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
@@ -299,14 +295,16 @@ function DeviceRow({
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold">{d.label ?? 'Unknown device'}</div>
         <div className="text-[11px] text-muted-foreground">
-          Last active {timeAgo(d.lastUsedAt)}
+          {t('security.lastActive', { when: timeAgo(d.lastUsedAt) })}
           {d.ipAddress ? ` · ${d.ipAddress}` : ''}
         </div>
       </div>
       <button
-        onClick={() => revoke.mutate(d.id, { onSuccess: () => toast.success('Signed out.') })}
+        onClick={() =>
+          revoke.mutate(d.id, { onSuccess: () => toast.success(t('security.revoked')) })
+        }
         disabled={revoke.isPending}
-        aria-label="Revoke"
+        aria-label={t('common.delete')}
         className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive active:scale-90 disabled:opacity-50"
       >
         <Trash2 className="h-4 w-4" />
@@ -328,6 +326,7 @@ function PasskeyRow({
   };
 }) {
   const del = useDeletePasskey();
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
       <div className="grid h-9 w-9 place-items-center rounded-lg bg-background text-primary">
@@ -336,16 +335,17 @@ function PasskeyRow({
       <div className="min-w-0 flex-1">
         <div className="text-sm font-semibold">{p.label ?? 'Passkey'}</div>
         <div className="text-[11px] text-muted-foreground">
-          {p.backedUp ? 'Synced across devices' : 'This device only'} · added {timeAgo(p.createdAt)}
+          {p.backedUp ? t('security.syncedAcross') : t('security.thisDeviceOnly')} ·{' '}
+          {t('security.addedTimeAgo', { when: timeAgo(p.createdAt) })}
         </div>
       </div>
       <button
         onClick={() => {
-          if (!window.confirm('Remove this passkey?')) return;
-          del.mutate(p.id, { onSuccess: () => toast.success('Passkey removed.') });
+          if (!window.confirm(t('security.confirmDeletePasskey'))) return;
+          del.mutate(p.id, { onSuccess: () => toast.success(t('security.removed')) });
         }}
         disabled={del.isPending}
-        aria-label="Delete passkey"
+        aria-label={t('common.delete')}
         className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:text-destructive active:scale-90 disabled:opacity-50"
       >
         <Trash2 className="h-4 w-4" />

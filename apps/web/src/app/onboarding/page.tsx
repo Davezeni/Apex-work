@@ -23,6 +23,7 @@ import { useMe } from '@/hooks/use-me';
 import { useSkills, useCreateSkill, type Skill } from '@/hooks/use-skills';
 import { cn, formatEtb } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
+import { useI18n } from '@/i18n';
 
 type Step = 'title' | 'bio' | 'location' | 'rate' | 'skills';
 const STEPS: Step[] = ['title', 'bio', 'location', 'rate', 'skills'];
@@ -32,6 +33,7 @@ export default function OnboardingPage() {
   const qc = useQueryClient();
   const token = useAuthStore((s) => s.accessToken);
   const { data: me, isLoading } = useMe();
+  const { t } = useI18n();
   const [stepIdx, setStepIdx] = useState(0);
   const [title, setTitle] = useState('');
   const [bio, setBio] = useState('');
@@ -82,11 +84,11 @@ export default function OnboardingPage() {
       });
       // Invalidate the `me` query so the profile immediately reflects the update.
       await qc.invalidateQueries({ queryKey: ['me'] });
-      toast.success('Profile set up! Welcome to Apex-Work 🎉');
+      toast.success(t('onboarding.welcomeDone'));
       router.push('/profile');
     } catch (err) {
       const e = err as ApiError;
-      toast.error(e.message ?? 'Could not save. Try again.');
+      toast.error(e.message ?? t('onboarding.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -107,7 +109,7 @@ export default function OnboardingPage() {
         <button
           onClick={goBack}
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
-          aria-label="Back"
+          aria-label={t('common.back')}
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -140,13 +142,13 @@ export default function OnboardingPage() {
             {step === 'title' && (
               <>
                 <StepIcon icon={<Sparkles className="h-6 w-6" />} />
-                <StepTitle>What do you do?</StepTitle>
-                <StepBlurb>Your professional headline. Clients see this first.</StepBlurb>
+                <StepTitle>{t('onboarding.titleStep')}</StepTitle>
+                <StepBlurb>{t('onboarding.titleBlurb')}</StepBlurb>
                 <input
                   autoFocus
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Senior UI/UX Designer"
+                  placeholder={t('onboarding.titlePlaceholder')}
                   maxLength={120}
                   className="mt-8 h-14 w-full rounded-2xl border border-border bg-card px-4 text-base font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
@@ -159,21 +161,19 @@ export default function OnboardingPage() {
             {step === 'bio' && (
               <>
                 <StepIcon icon={<Wrench className="h-6 w-6" />} />
-                <StepTitle>Tell your story</StepTitle>
-                <StepBlurb>
-                  A short bio showing your experience and what makes you great.
-                </StepBlurb>
+                <StepTitle>{t('onboarding.bioStep')}</StepTitle>
+                <StepBlurb>{t('onboarding.bioBlurb')}</StepBlurb>
                 <textarea
                   autoFocus
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   rows={6}
                   maxLength={2000}
-                  placeholder="I'm a product designer with 5 years of experience helping startups turn ideas into beautiful, usable products..."
+                  placeholder={t('onboarding.bioPlaceholder')}
                   className="mt-8 min-h-[160px] w-full resize-none rounded-2xl border border-border bg-card p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
                 <p className="mt-2 text-right text-[11px] text-muted-foreground">
-                  {bio.length}/2000 · minimum 30
+                  {bio.length}/2000
                 </p>
               </>
             )}
@@ -181,13 +181,13 @@ export default function OnboardingPage() {
             {step === 'location' && (
               <>
                 <StepIcon icon={<MapPin className="h-6 w-6" />} />
-                <StepTitle>Where are you based?</StepTitle>
-                <StepBlurb>Clients love working with local talent.</StepBlurb>
+                <StepTitle>{t('onboarding.locationStep')}</StepTitle>
+                <StepBlurb>{t('onboarding.locationBlurb')}</StepBlurb>
                 <input
                   autoFocus
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. Addis Ababa"
+                  placeholder={t('onboarding.cityPlaceholder')}
                   className="mt-8 h-14 w-full rounded-2xl border border-border bg-card px-4 text-base font-medium outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -207,13 +207,13 @@ export default function OnboardingPage() {
             {step === 'rate' && (
               <>
                 <StepIcon icon={<Wallet className="h-6 w-6" />} />
-                <StepTitle>Set your hourly rate</StepTitle>
-                <StepBlurb>You can always change this later.</StepBlurb>
+                <StepTitle>{t('onboarding.rateStep')}</StepTitle>
+                <StepBlurb>{t('onboarding.rateBlurb')}</StepBlurb>
                 <div className="mt-8 rounded-2xl border border-border bg-card p-6 text-center">
                   <div className="grad-text text-5xl font-extrabold tracking-tight">
                     {formatEtb(rate)}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">per hour</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{t('onboarding.perHour')}</div>
                   <input
                     type="range"
                     min={50}
@@ -247,10 +247,10 @@ export default function OnboardingPage() {
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : stepIdx === STEPS.length - 1 ? (
-            'Finish setup'
+            t('onboarding.finishSetup')
           ) : (
             <>
-              Continue <ArrowRight className="h-4 w-4" />
+              {t('common.continue')} <ArrowRight className="h-4 w-4" />
             </>
           )}
         </Button>
@@ -293,12 +293,13 @@ function SkillsPicker({
   selected: Set<string>;
   onChange: (s: Set<string>) => void;
 }) {
+  const { t } = useI18n();
   // Live search input, debounced for the API query key.
   const [q, setQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQ(q), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedQ(q), 200);
+    return () => clearTimeout(timer);
   }, [q]);
 
   // Skills we've already resolved (via search or creation) — used to render
@@ -353,26 +354,24 @@ function SkillsPicker({
   const handleCreate = async () => {
     if (!canCreate) return;
     if (selected.size >= MAX_SKILLS) {
-      toast.error(`You can pick up to ${MAX_SKILLS} skills`);
+      toast.error(t('onboarding.selectedCount', { count: selected.size, max: MAX_SKILLS }));
       return;
     }
     try {
       const { skill, created } = await createSkill.mutateAsync(trimmedQ);
       toggle(skill.id, skill);
       setQ('');
-      if (created) toast.success(`Added "${skill.name}"`);
+      if (created) toast.success(t('onboarding.addAsNew', { name: skill.name }));
     } catch (err) {
-      toast.error((err as ApiError).message ?? 'Could not add that skill');
+      toast.error((err as ApiError).message ?? t('onboarding.saveFailed'));
     }
   };
 
   return (
     <>
       <StepIcon icon={<Wrench className="h-6 w-6" />} />
-      <StepTitle>What are your skills?</StepTitle>
-      <StepBlurb>
-        Search for a skill or type your own to add it — pick up to {MAX_SKILLS}.
-      </StepBlurb>
+      <StepTitle>{t('onboarding.skillsStep')}</StepTitle>
+      <StepBlurb>{t('onboarding.skillsBlurb', { max: MAX_SKILLS })}</StepBlurb>
 
       {/* Selected chips — always visible so users see their picks */}
       {selectedSkills.length > 0 && (
@@ -402,7 +401,7 @@ function SkillsPicker({
               void handleCreate();
             }
           }}
-          placeholder="Search or type a new skill…"
+          placeholder={t('onboarding.searchSkills')}
           maxLength={40}
           className="h-12 flex-1 rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
         />
@@ -410,7 +409,7 @@ function SkillsPicker({
           <button
             onClick={handleCreate}
             disabled={createSkill.isPending}
-            aria-label="Add new skill"
+            aria-label={t('onboarding.addAsNew', { name: trimmedQ })}
             className="grad-hero grid h-12 w-12 shrink-0 place-items-center rounded-xl text-white shadow-md shadow-primary/40 transition-transform active:scale-95 disabled:opacity-60"
           >
             {createSkill.isPending ? (
@@ -434,10 +433,10 @@ function SkillsPicker({
           </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold">
-              Add <span className="text-primary">&ldquo;{trimmedQ}&rdquo;</span> as new skill
+              {t('onboarding.addAsNew', { name: trimmedQ })}
             </div>
             <div className="text-[11px] text-muted-foreground">
-              Can&apos;t find your skill? Create it — others will see it too.
+              {t('onboarding.addAsNewSub')}
             </div>
           </div>
         </button>
@@ -471,13 +470,13 @@ function SkillsPicker({
           })}
         {!isLoading && !canCreate && results.length === 0 && trimmedQ.length === 0 && (
           <p className="text-center text-xs text-muted-foreground w-full py-4">
-            Start typing to search skills…
+            {t('onboarding.startTyping')}
           </p>
         )}
       </div>
 
       <p className="mt-4 text-center text-[11px] text-muted-foreground">
-        {selected.size}/{MAX_SKILLS} selected
+        {t('onboarding.selectedCount', { count: selected.size, max: MAX_SKILLS })}
       </p>
     </>
   );

@@ -22,6 +22,7 @@ import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useCreateOrder } from '@/hooks/use-orders';
 import { cn, formatEtb } from '@/lib/utils';
+import { useI18n } from '@/i18n';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -48,6 +49,7 @@ export default function GigDetailPage() {
   const { data: me } = useMe();
   const startConversation = useStartConversation();
   const createOrder = useCreateOrder();
+  const { t } = useI18n();
   const [tier, setTier] = useState<Tier>('BASIC');
 
   if (isLoading) {
@@ -63,10 +65,10 @@ export default function GigDetailPage() {
       <div className="min-h-dvh grid place-items-center px-8 text-center">
         <div>
           <div className="text-4xl">🤷</div>
-          <h1 className="mt-4 text-xl font-bold">Gig not found</h1>
-          <p className="mt-2 text-sm text-muted-foreground">This gig may have been removed.</p>
+          <h1 className="mt-4 text-xl font-bold">{t('gig.notFound')}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t('gig.notFoundBody')}</p>
           <Button asChild variant="brand" className="mt-6">
-            <Link href="/">Back to home</Link>
+            <Link href="/">{t('gig.backHome')}</Link>
           </Button>
         </div>
       </div>
@@ -87,7 +89,7 @@ export default function GigDetailPage() {
       const conv = await startConversation.mutateAsync(gig.owner.id);
       router.push(`/messages/${conv.id}`);
     } catch (err) {
-      toast.error('Could not start the conversation. Try again.');
+      toast.error(t('gig.startFailed'));
     }
   };
 
@@ -98,7 +100,7 @@ export default function GigDetailPage() {
       return;
     }
     if (isOwnGig) {
-      toast.info("This is your own gig — you can't hire yourself.");
+      toast.info(t('gig.cantHireSelf'));
       return;
     }
     try {
@@ -107,18 +109,17 @@ export default function GigDetailPage() {
         packageTier: selected.tier,
       });
       if (result.checkoutUrl) {
-        // Redirect the browser to Chapa's hosted checkout page.
-        toast.success('Redirecting to secure checkout…');
+        toast.success(t('gig.redirectingCheckout'));
         window.location.href = result.checkoutUrl;
       } else if (result.devSkipped) {
-        toast.success('Order created (dev mode — payment skipped)');
+        toast.success(t('gig.orderCreatedDev'));
         router.push(`/orders/${result.order.id}`);
       } else {
-        toast.error('Could not start checkout. Try again.');
+        toast.error(t('gig.checkoutFailed'));
       }
     } catch (err) {
       const e = err as { message?: string };
-      toast.error(e.message ?? 'Something went wrong. Try again.');
+      toast.error(e.message ?? t('gig.somethingWrong'));
     }
   };
 
@@ -203,7 +204,7 @@ export default function GigDetailPage() {
       {/* Description */}
       <div className="mx-4 mt-6">
         <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          About this gig
+          {t('gig.aboutGig')}
         </h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
           {gig.description}
@@ -227,7 +228,7 @@ export default function GigDetailPage() {
       {packages.length > 0 && (
         <div className="mx-4 mt-8">
           <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            Choose a package
+            {t('gig.choosePackage')}
           </h2>
 
           {packages.length > 1 ? (
@@ -262,14 +263,14 @@ export default function GigDetailPage() {
                 <span className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-primary" />
                   <span className="font-semibold">{selected.deliveryDays}</span>{' '}
-                  <span className="text-muted-foreground">day delivery</span>
+                  <span className="text-muted-foreground">{t('gig.delivery')}</span>
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Repeat className="h-4 w-4 text-primary" />
                   <span className="font-semibold">
-                    {selected.revisions === 0 ? 'No' : selected.revisions}
+                    {selected.revisions === 0 ? '0' : selected.revisions}
                   </span>{' '}
-                  <span className="text-muted-foreground">revisions</span>
+                  <span className="text-muted-foreground">{t('gig.revisions')}</span>
                 </span>
               </div>
             </div>
@@ -281,7 +282,7 @@ export default function GigDetailPage() {
       {gig.owner.bio && (
         <div className="mx-4 mt-8">
           <h2 className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            About the freelancer
+            {t('gig.aboutFreelancer')}
           </h2>
           <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">
             {gig.owner.bio}
@@ -318,11 +319,11 @@ export default function GigDetailPage() {
             {createOrder.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : isOwnGig ? (
-              'Preview'
+              t('gig.preview')
             ) : selected ? (
-              `Continue · ${formatEtb(selected.priceEtb)}`
+              `${t('common.continue')} · ${formatEtb(selected.priceEtb)}`
             ) : (
-              'Continue'
+              t('common.continue')
             )}
           </Button>
         </div>

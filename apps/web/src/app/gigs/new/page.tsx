@@ -57,7 +57,7 @@ export default function PostGigPage() {
     if (isLoading) return;
     if (!isSignedIn) router.replace('/login?next=/gigs/new');
     else if (me && me.role !== 'FREELANCER') {
-      toast.error('Only freelancers can post gigs.');
+      toast.error(t('postGig.onlyFreelancers'));
       router.replace('/');
     } else if (me && !me.isOnboarded) {
       router.replace('/onboarding');
@@ -216,7 +216,7 @@ export default function PostGigPage() {
                   className="mt-6 min-h-[92px] w-full resize-none rounded-2xl border border-border bg-card p-4 text-lg font-medium leading-snug outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
                 <p className="mt-2 text-right text-[11px] text-muted-foreground">
-                  {title.length}/120 · min 15
+                  {t('postGig.titleMax', { count: title.length })}
                 </p>
               </>
             )}
@@ -246,12 +246,12 @@ export default function PostGigPage() {
                 </div>
 
                 <label className="mt-6 block text-xs font-semibold text-muted-foreground">
-                  Tags (comma-separated, up to 8)
+                  {t('postGig.tagsLabel')}
                 </label>
                 <input
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
-                  placeholder="e.g. figma, saas, landing, ui"
+                  placeholder={t('postGig.tagsPlaceholder')}
                   className="mt-2 h-12 w-full rounded-xl border border-border bg-card px-4 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
                 {tags.length > 0 && (
@@ -280,11 +280,11 @@ export default function PostGigPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={10}
                   maxLength={5000}
-                  placeholder="I design conversion-focused landing pages for SaaS startups…"
+                  placeholder={t('postGig.descPlaceholder')}
                   className="mt-6 min-h-[240px] w-full resize-none rounded-2xl border border-border bg-card p-4 text-sm leading-relaxed outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
                 <p className="mt-2 text-right text-[11px] text-muted-foreground">
-                  {description.length}/5000 · min 50
+                  {t('postGig.descMax', { count: description.length })}
                 </p>
               </>
             )}
@@ -313,7 +313,7 @@ export default function PostGigPage() {
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
                   >
                     <Plus className="h-4 w-4" strokeWidth={3} />
-                    Add {packages.length === 1 ? 'Standard' : 'Premium'} package
+                    {packages.length === 1 ? t('postGig.addStandard') : t('postGig.addPremium')}
                   </button>
                 )}
               </>
@@ -379,7 +379,7 @@ function PackageCard({
         {onRemove && (
           <button
             onClick={onRemove}
-            aria-label="Remove package"
+            aria-label={t('postGig.removePackage')}
             className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:text-destructive active:scale-90"
           >
             <X className="h-4 w-4" />
@@ -429,7 +429,8 @@ function PackageCard({
       </div>
 
       <div className="mt-3 text-right text-xs text-muted-foreground">
-        Price: <span className="font-semibold text-foreground">{formatEtb(pkg.priceEtb)}</span>
+        {t('postGig.priceHint')}{' '}
+        <span className="font-semibold text-foreground">{formatEtb(pkg.priceEtb)}</span>
       </div>
     </div>
   );

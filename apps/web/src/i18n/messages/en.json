@@ -67,7 +67,9 @@
     "yourNameDesc": "This is how others will see you.",
     "namePlaceholder": "Full name",
     "termsAgree": "By continuing you agree to our Terms & Privacy Policy.",
-    "welcomeUser": "Welcome to Apex-Work, {name}!"
+    "welcomeUser": "Welcome to Apex-Work, {name}!",
+    "yourPhone": "Your phone",
+    "weWillSendCode": "We'll send a code to verify it's you."
   },
   "home": {
     "greeting": "\u1325\u1293 \u12ed\u1235\u1325\u120d\u129d \ud83d\udc4b",
@@ -97,7 +99,11 @@
     "newFreelancer": "New freelancer",
     "contactingAbout": "Contacting {name} about the {pkg}\u2026",
     "cantHireSelf": "This is your own gig \u2014 you can't hire yourself.",
-    "startFailed": "Could not start the conversation. Try again."
+    "startFailed": "Could not start the conversation. Try again.",
+    "redirectingCheckout": "Redirecting to secure checkout\u2026",
+    "orderCreatedDev": "Order created (dev mode \u2014 payment skipped)",
+    "checkoutFailed": "Could not start checkout. Try again.",
+    "somethingWrong": "Something went wrong. Try again."
   },
   "profile": {
     "editProfile": "Edit profile",
@@ -354,6 +360,67 @@
     "label": "Language",
     "english": "English",
     "amharic": "\u12a0\u121b\u122d\u129b"
+  },
+  "publicProfile": {
+    "notFound": "User not found",
+    "notFoundBody": "This profile may not exist or has been removed.",
+    "about": "About",
+    "reviews": "Reviews",
+    "joined": "joined {when}",
+    "perHourShort": "hr",
+    "noGigsSelf": "You haven't posted any gigs yet.",
+    "noGigs": "No gigs yet.",
+    "postFirstGig": "Post your first gig",
+    "linkCopied": "Link copied"
+  },
+  "postGig": {
+    "step1": "What service do you offer?",
+    "step1Blurb": "A clear, keyword-rich title helps clients find you.",
+    "gigTitlePlaceholder": "I will design a modern SaaS landing page",
+    "step2": "Category & tags",
+    "step2Blurb": "Pick where your gig belongs.",
+    "step3": "Describe your service",
+    "step3Blurb": "What clients get, your process, and why they should pick you.",
+    "step4": "Pricing",
+    "step4Blurb": "Set at least one package. You can offer up to 3 tiers.",
+    "packageBasic": "Basic",
+    "packageStandard": "Standard",
+    "packagePremium": "Premium",
+    "packageTitle": "Package title",
+    "packageDesc": "What's included",
+    "price": "Price (ETB)",
+    "deliveryDays": "Delivery days",
+    "revisions": "Revisions",
+    "publish": "Publish gig",
+    "publishing": "Publishing\u2026",
+    "success": "Your gig is live! \ud83c\udf89",
+    "publishFailed": "Could not publish. Check the fields and try again.",
+    "titleMax": "{count}/120 \u00b7 min 15",
+    "descMax": "{count}/5000 \u00b7 min 50",
+    "tagsLabel": "Tags (comma-separated, up to 8)",
+    "tagsPlaceholder": "e.g. figma, saas, landing, ui",
+    "descPlaceholder": "I design conversion-focused landing pages for SaaS startups\u2026",
+    "removePackage": "Remove package",
+    "priceHint": "Price:",
+    "addStandard": "Add Standard package",
+    "addPremium": "Add Premium package",
+    "onlyFreelancers": "Only freelancers can post gigs."
+  },
+  "browse": {
+    "title": "Browse",
+    "allCategories": "All categories",
+    "filters": "Filters",
+    "sortBy": "Sort by",
+    "recent": "Recent",
+    "rating": "Rating",
+    "priceLow": "Price: Low to high",
+    "priceHigh": "Price: High to low",
+    "resultsCount": "{count} results",
+    "byShort": "By"
+  },
+  "gigDetail": {
+    "review": "reviews",
+    "similar": "Similar gigs"
   },
   "footer": {
     "madeWith": "\u00a9 2026 {name} \u00b7 Made with \ud83c\uddea\ud83c\uddf9 in Addis Ababa",
