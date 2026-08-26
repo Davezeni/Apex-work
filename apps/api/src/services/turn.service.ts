@@ -42,11 +42,13 @@ const STUN_PLUS_FALLBACK = [...STUN_ONLY.slice(0, 1), ...OPEN_RELAY_FALLBACK];
 let cache: { fetchedAt: number; servers: RTCIceServer[] } | null = null;
 let lastError: { at: string; url: string; message: string } | null = null;
 let lastSuccessUrl: string | null = null;
-const lastAttempts: Array<{ at: string; url: string; result: string }> = [];
+const lastAttempts: Array<{ url: string; ok: boolean; message: string }> = [];
 const TTL_MS = 30 * 60 * 1000;
 
-const redactedUrl = (url: string, key = env.METERED_API_KEY): string =>
-  key ? url.replace(key, 'REDACTED') : url;
+const redactedUrl = (url: string, key = env.METERED_API_KEY): string => {
+  if (!key) return url;
+  return url.replace(encodeURIComponent(key), 'REDACTED').replace(key, 'REDACTED');
+};
 
 const keyPreview = (key: string | undefined): string | null =>
   key ? `${key.slice(0, 4)}…${key.slice(-4)}` : null;
@@ -57,8 +59,9 @@ export function turnDebug() {
     keyPreview: keyPreview(env.METERED_API_KEY),
     appName: env.METERED_APP_NAME,
     cachedAt: cache ? new Date(cache.fetchedAt).toISOString() : null,
-    cachedServerCount: cache?.servers.length ?? 0,
+    cachedServerCount: cache?.servers.length ?? (!env.METERED_API_KEY ? STUN_PLUS_FALLBACK.length : 0),
     lastSuccessUrl,
+    fallbackActive: !env.METERED_API_KEY || (!!cache && !lastSuccessUrl),
     lastError,
     lastAttempts: lastAttempts.slice(-8),
   };
@@ -80,7 +83,7 @@ async function tryFetch(url: string): Promise<RTCIceServer[] | null> {
       const body = await res.text().catch(() => '');
       const result = `HTTP ${res.status}: ${body.slice(0, 160)}`;
       lastError = { at, url: safeUrl, message: result };
-      lastAttempts.push({ at, url: safeUrl, result });
+      lastAttempts.push({ url: safeUrl, ok: false, message: result });
       return null;
     }
     const parsed = (await res.json()) as unknown;
@@ -93,23 +96,26 @@ async function tryFetch(url: string): Promise<RTCIceServer[] | null> {
     if (list.length === 0) {
       const result = 'empty server list';
       lastError = { at, url: safeUrl, message: result };
-      lastAttempts.push({ at, url: safeUrl, result });
+      lastAttempts.push({ url: safeUrl, ok: false, message: result });
       return null;
     }
     lastSuccessUrl = safeUrl;
-    lastAttempts.push({ at, url: safeUrl, result: `OK (${list.length} servers)` });
+    lastAttempts.push({ url: safeUrl, ok: true, message: `OK (${list.length} servers)` });
     return list;
   } catch (err) {
     const result = (err as Error).message || 'unknown network error';
     lastError = { at, url: safeUrl, message: result };
-    lastAttempts.push({ at, url: safeUrl, result });
+    lastAttempts.push({ url: safeUrl, ok: false, message: result });
     return null;
   }
 }
 
 export async function getIceServers(): Promise<RTCIceServer[]> {
   if (cache && Date.now() - cache.fetchedAt < TTL_MS) return cache.servers;
-  if (!env.METERED_API_KEY) return STUN_PLUS_FALLBACK;
+  if (!env.METERED_API_KEY) {
+    cache = { fetchedAt: Date.now(), servers: STUN_PLUS_FALLBACK };
+    return cache.servers;
+  }
 
   const key = encodeURIComponent(env.METERED_API_KEY);
   const configuredName = env.METERED_APP_NAME.trim();

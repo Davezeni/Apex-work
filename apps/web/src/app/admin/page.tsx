@@ -624,6 +624,7 @@ interface Diagnostics {
       appName: string;
       cachedAt: string | null;
       cachedServerCount: number;
+      fallbackActive?: boolean;
       lastError: { at: string; message: string; url: string } | null;
       lastSuccessUrl: string | null;
       lastAttempts: { url: string; ok: boolean; message: string }[];
@@ -731,8 +732,14 @@ function DiagnosticsTab() {
       )}
       <StatusRow
         label="Metered TURN"
-        ok={s.turn.hasKey && s.turn.cachedServerCount > 3}
-        note={s.turn.hasKey ? `app: ${s.turn.appName}` : 'no API key'}
+        ok={s.turn.cachedServerCount > 3}
+        note={
+          s.turn.fallbackActive
+            ? 'OpenRelay fallback active (managed key not connected)'
+            : s.turn.hasKey
+              ? `Managed TURN · app: ${s.turn.appName}`
+              : 'OpenRelay fallback'
+        }
       >
         {s.turn.hasKey && (
           <Button size="sm" variant="brand" onClick={() => refreshTurn.mutate()} disabled={refreshTurn.isPending}>
@@ -771,7 +778,7 @@ function DiagnosticsTab() {
             )}
           </div>
           <p className="mt-2 text-[10px] text-muted-foreground">
-            Metered key rejected? Check <a className="underline" href="https://dashboard.metered.ca/" target="_blank" rel="noopener noreferrer">dashboard.metered.ca</a> → sidebar → Developers → API Keys — copy the value shown as <b>&quot;Secret Key&quot;</b> (NOT the SDK / App Password), then update <code>METERED_API_KEY</code> on Render.
+            Managed TURN not active? Open <a className="underline" href="https://dashboard.metered.ca/" target="_blank" rel="noopener noreferrer">dashboard.metered.ca</a> → sidebar → TURN Server → Manage Credentials → open the credential row → <b>Show API Key</b>. Copy that credential-specific API key into <code>METERED_API_KEY</code> on Render. The Developers → Secret Key is a management key and returns 401 here; calls remain available through the OpenRelay fallback.
           </p>
         </details>
       )}
