@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { PhoneOff, Mic, MicOff, Video, VideoOff, Loader2, Users } from 'lucide-react';
+import { PhoneOff, Mic, MicOff, Video, VideoOff, Loader2, Users, CircleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
@@ -24,10 +24,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
  * Media is captured with getUserMedia respecting the requested `mode`
  * (audio-only vs video). Users can mute/blank at any time.
  *
- * We don't run a TURN server — most Ethiopian ISPs are behind CGNAT which
- * usually blocks pure STUN traversal. So we ALSO surface a warning when
- * a peer connection fails to gather relays. A future upgrade is a free
- * TURN via Metered / Twilio / Cloudflare Calls.
+ * ICE servers come from the API. The API keeps the Metered key private and
+ * returns short-lived credentials, with a public OpenRelay fallback when
+ * the managed key is missing or invalid.
  */
 const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -81,15 +80,13 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Browsers only expose mediaDevices on a secure context (HTTPS or
-      // localhost). Give a friendly, actionable message instead of a raw
-      // stack trace when we're on plain HTTP or an old browser.
-      if (typeof window === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
-        setError('Your browser does not support live calls, or this page is not being served over HTTPS.');
-        setPhase('error');
-        return;
-      }
       try {
+        if (typeof window === 'undefined' || !window.isSecureContext) {
+          throw new Error('Secure connection required. Open Apex-Work using HTTPS.');
+        }
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('This browser does not support camera or microphone access.');
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true, video: mode === 'video',
         });
@@ -97,19 +94,18 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
         setLocalStream(stream);
         setPhase('connecting');
       } catch (err) {
-        const name = (err as { name?: string }).name || '';
-        const msg = (err as Error).message || '';
-        let friendly = msg || 'Microphone / camera access denied';
-        if (name === 'NotAllowedError' || /permission/i.test(msg)) {
-          friendly = mode === 'video'
-            ? 'Camera & microphone permission denied. Tap the 🔒 lock icon in the address bar → Site settings → allow Camera and Microphone, then rejoin.'
-            : 'Microphone permission denied. Tap the 🔒 lock icon in the address bar → Site settings → allow Microphone, then rejoin.';
-        } else if (name === 'NotFoundError') {
-          friendly = 'No microphone or camera detected on this device.';
-        } else if (name === 'NotReadableError') {
-          friendly = 'Your camera or microphone is being used by another app. Close it and try again.';
+        const mediaError = err as { name?: string; message?: string };
+        let message = mediaError.message || 'Microphone / camera access was denied.';
+        if (mediaError.name === 'NotAllowedError' || mediaError.name === 'SecurityError') {
+          message = 'Permission denied. Tap the lock icon in the address bar, open Site settings, allow Camera and Microphone, then reopen the call.';
+        } else if (mediaError.name === 'NotFoundError') {
+          message = mode === 'video'
+            ? 'No camera or microphone was found on this device.'
+            : 'No microphone was found on this device.';
+        } else if (mediaError.name === 'NotReadableError') {
+          message = 'Your camera or microphone is being used by another app. Close it and try again.';
         }
-        setError(friendly);
+        setError(message);
         setPhase('error');
       }
     })();
@@ -283,16 +279,14 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
             <div className="max-w-sm text-center">
               {phase === 'error' ? (
                 <>
-                  <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-red-500/20 text-2xl">
-                    ⚠️
-                  </div>
-                  <div className="mt-3 text-base font-semibold">Can&rsquo;t start call</div>
-                  <div className="mt-2 text-sm leading-relaxed opacity-90">{error}</div>
+                  <CircleAlert className="mx-auto h-10 w-10 text-amber-300" />
+                  <div className="mt-4 text-base font-bold">Camera or microphone unavailable</div>
+                  <p className="mt-2 text-sm leading-relaxed text-white/75">{error}</p>
                   <button
                     onClick={onEnd}
-                    className="mt-5 rounded-full bg-white px-5 py-2 text-sm font-semibold text-black"
+                    className="mt-5 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black active:scale-95"
                   >
-                    Close
+                    Close call
                   </button>
                 </>
               ) : (
@@ -300,8 +294,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
                   <Loader2 className="mx-auto h-8 w-8 animate-spin opacity-60" />
                   <div className="mt-3 text-sm opacity-80">
                     {phase === 'starting' ? 'Starting camera / mic…' :
-                      phase === 'connecting' ? 'Waiting for others to join…' :
-                      'Connecting…'}
+                      phase === 'connecting' ? 'Waiting for others to join…' : 'Connecting…'}
                   </div>
                   <div className="mt-1 text-[11px] opacity-60">
                     <Users className="mr-1 inline h-3 w-3" /> Everyone in this chat can join

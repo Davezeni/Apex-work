@@ -12,6 +12,7 @@ import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
+import { contentTypeForFile } from '@/lib/file-types';
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function EditProfilePage() {
     e.target.value = '';
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return toast.error(t('editProfile.photoTooLarge'));
-    if (!/^image\/(jpeg|png|webp)$/.test(file.type))
+    if (!/^(image\/(jpeg|png|webp))$/.test(contentTypeForFile(file)))
       return toast.error(t('editProfile.photoBadType'));
     try {
       const res = await upload.mutateAsync({ file, bucket: 'avatars' });

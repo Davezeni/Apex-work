@@ -1,10 +1,11 @@
 /**
  * File-upload gateway backed by Supabase Storage.
  *
- * Rather than proxy raw bytes through our API (slow + Render's tiny disk),
- * we mint a short-lived signed upload URL and let the browser PUT directly
- * to Supabase. The client then POSTs the resulting public URL back to us
- * so we can attach it to a portfolio item, chat message, etc.
+ * The normal path is a short-lived signed URL so the browser can upload
+ * directly to Supabase. Some mobile networks, privacy browsers, and in-app
+ * browsers block cross-origin PUTs even when Supabase CORS is configured
+ * correctly. For those clients we also expose an authenticated, raw-byte
+ * proxy path. The proxy never writes to disk and is capped per bucket.
  *
  * Docs:
  * - https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl
@@ -13,8 +14,10 @@
  * Why service_role: the anon key can't create signed upload URLs; only the
  * server-side service_role key can. That key MUST never reach the browser.
  */
+import type { IncomingMessage } from 'node:http';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { BadRequestError } from '../lib/errors.js';
 import { randomToken } from '../lib/hash.js';
 
 export type StorageBucket = 'portfolio' | 'chat-attachments' | 'avatars';
@@ -25,12 +28,53 @@ const MAX_MB_PER_BUCKET: Record<StorageBucket, number> = {
   'chat-attachments': 25,
 };
 
-// Whitelist mirrors what we configured on the bucket itself (defense-in-depth).
+/**
+ * Browsers do not always report a useful MIME type (notably for Office files
+ * and files selected from Android document providers). Keep the allowlist
+ * explicit, but infer a type from a known extension when the browser reports
+ * application/octet-stream or an empty type.
+ */
+const MIME_BY_EXTENSION: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mov': 'video/quicktime',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.oga': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.pdf': 'application/pdf',
+  '.doc': 'application/msword',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xls': 'application/vnd.ms-excel',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.ppt': 'application/vnd.ms-powerpoint',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.rtf': 'application/rtf',
+};
+
+// Common files that are useful in a freelance brief, portfolio, review, or
+// chat attachment. `application/octet-stream` is allowed only for chat: some
+// Android/iOS document pickers provide no MIME at all, and the file is still
+// protected by the size cap and authenticated upload path.
+const COMMON_DOCUMENTS =
+  'application/pdf|application/msword|application/vnd\\.openxmlformats-officedocument\\.(wordprocessingml\\.document|spreadsheetml\\.sheet|presentationml\\.presentation)|application/vnd\\.ms-(excel|powerpoint)|text/(plain|csv)|application/rtf';
+
 const MIME_ALLOWLIST: Record<StorageBucket, RegExp> = {
   avatars: /^image\/(jpeg|png|webp)$/,
-  portfolio: /^(image\/(jpeg|png|webp|gif)|video\/mp4|application\/pdf)$/,
-  'chat-attachments':
-    /^(image\/(jpeg|png|webp|gif)|audio\/(webm|mpeg|ogg)|video\/mp4|application\/pdf)$/,
+  portfolio: new RegExp(
+    `^(image\\/(jpeg|png|webp|gif)|video\\/(mp4|webm|quicktime)|${COMMON_DOCUMENTS})$`,
+  ),
+  'chat-attachments': new RegExp(
+    `^(image\\/(jpeg|png|webp|gif)|audio\\/(webm|mpeg|ogg|wav|mp4)|video\\/(mp4|webm|quicktime)|${COMMON_DOCUMENTS}|application\\/octet-stream)$`,
+  ),
 };
 
 export interface SignedUploadRequest {
@@ -43,14 +87,18 @@ export interface SignedUploadRequest {
 }
 
 export interface SignedUploadResult {
-  /** Client PUTs the bytes here. */
+  /** Client PUTs the bytes here when the signed flow is used. */
   uploadUrl: string;
-  /** Token client must add as header/body. */
+  /** Token client must add as a query parameter for signed flow. */
   token: string;
   /** Final public URL to store in the DB after upload succeeds. */
   publicUrl: string;
   /** Server-generated path (never trust client-provided paths). */
   path: string;
+  /** Normalized MIME type that was sent to Storage. */
+  contentType: string;
+  /** Actual bytes accepted by the API. */
+  sizeBytes: number;
 }
 
 export class StorageService {
@@ -58,27 +106,43 @@ export class StorageService {
     return !!(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
   }
 
-  validate(req: Pick<SignedUploadRequest, 'bucket' | 'contentType' | 'sizeBytes'>): {
-    ok: boolean;
-    error?: string;
-  } {
-    const maxBytes = MAX_MB_PER_BUCKET[req.bucket] * 1024 * 1024;
+  maxBytes(bucket: StorageBucket): number {
+    return MAX_MB_PER_BUCKET[bucket] * 1024 * 1024;
+  }
+
+  /** Remove codec/charset parameters and infer Office/document types by extension. */
+  normalizeContentType(contentType: string, filename = ''): string {
+    const bare = (contentType.split(';')[0] ?? '').trim().toLowerCase();
+    if (bare && bare !== 'application/octet-stream') return bare;
+
+    const dot = filename.lastIndexOf('.');
+    const extension = dot >= 0 ? filename.slice(dot).toLowerCase() : '';
+    return (MIME_BY_EXTENSION[extension] ?? bare) || 'application/octet-stream';
+  }
+
+  validate(
+    req: Pick<SignedUploadRequest, 'bucket' | 'contentType' | 'sizeBytes'> & {
+      filename?: string;
+    },
+  ): { ok: boolean; error?: string; contentType: string } {
+    const contentType = this.normalizeContentType(req.contentType, req.filename);
+    const maxBytes = this.maxBytes(req.bucket);
     if (req.sizeBytes <= 0 || req.sizeBytes > maxBytes) {
-      return { ok: false, error: `File too large. Max ${MAX_MB_PER_BUCKET[req.bucket]}MB.` };
+      return {
+        ok: false,
+        error: `File too large. Max ${MAX_MB_PER_BUCKET[req.bucket]}MB.`,
+        contentType,
+      };
     }
-    // Strip codec/charset parameters (e.g. `audio/webm;codecs=opus` -> `audio/webm`)
-    // because MediaRecorder / browser file pickers routinely emit them and the bare
-    // media-type is what our allowlist matches against.
-    const bare = (req.contentType.split(';')[0] ?? '').trim().toLowerCase();
-    if (!MIME_ALLOWLIST[req.bucket].test(bare)) {
-      return { ok: false, error: `File type "${req.contentType}" not allowed here.` };
+    if (!MIME_ALLOWLIST[req.bucket].test(contentType)) {
+      return { ok: false, error: `File type "${contentType}" not allowed here.`, contentType };
     }
-    return { ok: true };
+    return { ok: true, contentType };
   }
 
   /**
    * Build a deterministic, namespaced storage path:
-   *   {bucket}/{userId}/{yyyy}/{mm}/{random}-{safeFilename}
+   *   {userId}/{yyyy}/{mm}/{random}-{safeFilename}
    * The random slug prevents guessable URLs; the userId prefix scopes
    * ownership; the date fragment makes bulk cleanup easier later.
    */
@@ -95,14 +159,26 @@ export class StorageService {
     return `${ownerId}/${y}/${m}/${rand}-${safe}`;
   }
 
+  private objectEndpoint(bucket: StorageBucket, path: string): string {
+    // `buildPath` sanitizes every filename character and the owner id is
+    // supplied by a verified JWT. Keep the slash separators literal: the
+    // Storage API treats them as a structured object key.
+    return `${env.SUPABASE_URL}/storage/v1/object/${bucket}/${path}`;
+  }
+
+  private publicUrl(bucket: StorageBucket, path: string): string {
+    return `${env.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  }
+
   async createSignedUpload(req: SignedUploadRequest): Promise<SignedUploadResult> {
     if (!this.isConfigured()) throw new Error('Storage is not configured');
 
+    const check = this.validate(req);
+    if (!check.ok) throw new BadRequestError(check.error ?? 'Invalid upload');
+
     const path = this.buildPath(req.ownerId, req.filename);
-    // NOTE: do NOT wrap `path` in encodeURIComponent — the path is a
-    // structured Supabase Storage object key (userId/year/month/random-name)
-    // and Supabase expects the '/' separators to be literal. Our buildPath()
-    // sanitizes each segment already, so this is safe.
+    // Do NOT wrap `path` in encodeURIComponent — that turns every `/` into
+    // `%2F`, while Supabase expects the user/year/month separators literally.
     const endpoint =
       `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
 
@@ -125,17 +201,95 @@ export class StorageService {
     const data = (await res.json()) as { url?: string; token?: string };
     if (!data.url || !data.token) throw new Error('Malformed sign response');
 
+    // Storage returns `/object/...` relative to its `/storage/v1` API base.
+    // Joining it directly to the project URL produces `supabase.co/object`
+    // (404 requested path is invalid), which the browser reports only as a
+    // generic network/CORS failure. Normalize both relative response shapes.
+    const relativeUrl = data.url.startsWith('/') ? data.url : `/${data.url}`;
     const uploadUrl = data.url.startsWith('http')
       ? data.url
-      : `${env.SUPABASE_URL}${data.url}`;
-
-    const publicUrl = `${env.SUPABASE_URL}/storage/v1/object/public/${req.bucket}/${path}`;
+      : data.url.startsWith('/storage/v1')
+        ? `${env.SUPABASE_URL}${data.url}`
+        : `${env.SUPABASE_URL}/storage/v1${relativeUrl}`;
 
     return {
       uploadUrl,
       token: data.token,
-      publicUrl,
+      publicUrl: this.publicUrl(req.bucket, path),
       path,
+      contentType: check.contentType,
+      sizeBytes: req.sizeBytes,
+    };
+  }
+
+  /**
+   * Fallback for clients that cannot complete a cross-origin PUT. The body is
+   * the raw file, not multipart/form-data, so Express never buffers it in a
+   * JSON parser and Render does not need a temporary disk file.
+   */
+  async uploadProxy(
+    req: IncomingMessage,
+    input: Omit<SignedUploadRequest, 'sizeBytes'> & { declaredSizeBytes?: number },
+  ): Promise<SignedUploadResult> {
+    if (!this.isConfigured()) throw new Error('Storage is not configured');
+
+    const contentType = this.normalizeContentType(input.contentType, input.filename);
+    const typeCheck = this.validate({
+      bucket: input.bucket,
+      filename: input.filename,
+      contentType,
+      // A missing Content-Length is allowed; the stream is checked below.
+      sizeBytes: Math.max(1, input.declaredSizeBytes ?? 1),
+    });
+    if (!typeCheck.ok) throw new BadRequestError(typeCheck.error ?? 'Invalid upload');
+
+    const maxBytes = this.maxBytes(input.bucket);
+    if ((input.declaredSizeBytes ?? 0) > maxBytes) {
+      throw new BadRequestError(`File too large. Max ${MAX_MB_PER_BUCKET[input.bucket]}MB.`);
+    }
+
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for await (const chunk of req) {
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+      total += buffer.length;
+      if (total > maxBytes) {
+        req.destroy();
+        throw new BadRequestError(`File too large. Max ${MAX_MB_PER_BUCKET[input.bucket]}MB.`);
+      }
+      chunks.push(buffer);
+    }
+    if (total <= 0) throw new BadRequestError('The selected file is empty.');
+
+    const path = this.buildPath(input.ownerId, input.filename);
+    const res = await fetch(this.objectEndpoint(input.bucket, path), {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+        'Content-Type': contentType,
+        'x-upsert': 'false',
+        'Content-Length': String(total),
+      },
+      body: Buffer.concat(chunks),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      logger.error(
+        { status: res.status, text: text.slice(0, 500), bucket: input.bucket },
+        'Supabase proxy upload failed',
+      );
+      throw new Error(`Storage upload failed (${res.status})`);
+    }
+
+    return {
+      uploadUrl: '',
+      token: '',
+      publicUrl: this.publicUrl(input.bucket, path),
+      path,
+      contentType,
+      sizeBytes: total,
     };
   }
 }
@@ -147,5 +301,5 @@ export const storage = new StorageService();
 if (storage.isConfigured()) {
   logger.info('Storage: Supabase configured');
 } else {
-  logger.warn('Storage: Supabase NOT configured — /uploads/sign will 409');
+  logger.warn('Storage: Supabase NOT configured — upload routes will 409');
 }

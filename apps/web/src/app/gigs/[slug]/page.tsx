@@ -63,6 +63,7 @@ export default function GigDetailPage() {
   const token = useAuthStore((s) => s.accessToken);
   const [tier, setTier] = useState<Tier>('BASIC');
   const [boostOpen, setBoostOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
   const translation = useGigTranslation(slug, locale === 'am' ? 'am' : undefined);
   const translate = useTranslateGig(slug);
 
@@ -71,7 +72,42 @@ export default function GigDetailPage() {
   useEffect(() => {
     if (!slug) return;
     void recordGigEvent(slug, 'VIEW', token);
+    try {
+      const savedGigs = JSON.parse(localStorage.getItem('apex-saved-gigs') ?? '[]') as string[];
+      setSaved(savedGigs.includes(slug));
+    } catch {
+      setSaved(false);
+    }
   }, [slug, token]);
+
+  const toggleSave = () => {
+    if (!slug) return;
+    try {
+      const savedGigs = JSON.parse(localStorage.getItem('apex-saved-gigs') ?? '[]') as string[];
+      const next = savedGigs.includes(slug)
+        ? savedGigs.filter((item) => item !== slug)
+        : [...savedGigs, slug];
+      localStorage.setItem('apex-saved-gigs', JSON.stringify(next.slice(-100)));
+      setSaved(next.includes(slug));
+      toast.success(next.includes(slug) ? 'Gig saved' : 'Gig removed from saved');
+    } catch {
+      toast.error('Could not update saved gigs');
+    }
+  };
+
+  const shareGig = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: gig?.title ?? 'Apex-Work gig', url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link copied');
+      }
+    } catch (error) {
+      if ((error as { name?: string }).name !== 'AbortError') toast.error('Could not share this gig');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -159,7 +195,7 @@ export default function GigDetailPage() {
           <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={gig.coverImageUrl} alt={gig.title} className="absolute inset-0 h-full w-full object-cover" />
-            <HeaderActions router={router} onTop />
+            <HeaderActions router={router} onTop saved={saved} onSave={toggleSave} onShare={shareGig} />
           </div>
           <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
         <div className="flex items-start gap-3">
@@ -236,10 +272,18 @@ export default function GigDetailPage() {
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Gig</div>
               <div className="truncate text-sm font-bold">{translation.data?.title ?? gig.title}</div>
             </div>
-            <button aria-label="Save" className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground">
-              <Heart className="h-5 w-5" />
+            <button
+              onClick={toggleSave}
+              aria-label={saved ? 'Remove from saved' : 'Save gig'}
+              className={cn('grid h-9 w-9 place-items-center rounded-full', saved ? 'text-primary' : 'text-muted-foreground')}
+            >
+              <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
             </button>
-            <button aria-label="Share" className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground">
+            <button
+              onClick={() => void shareGig()}
+              aria-label="Share"
+              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
+            >
               <Share2 className="h-5 w-5" />
             </button>
           </header>
@@ -498,7 +542,19 @@ function SimilarGigsSection({ slug }: { slug: string }) {
  * background. Pulled out as its own component so both variants of the
  * page header stay readable.
  */
-function HeaderActions({ router, onTop = false }: { router: ReturnType<typeof useRouter>; onTop?: boolean }) {
+function HeaderActions({
+  router,
+  onTop = false,
+  saved,
+  onSave,
+  onShare,
+}: {
+  router: ReturnType<typeof useRouter>;
+  onTop?: boolean;
+  saved: boolean;
+  onSave: () => void;
+  onShare: () => Promise<void>;
+}) {
   return (
     <div className={cn(
       'flex items-center justify-between px-4 py-3',
@@ -512,10 +568,21 @@ function HeaderActions({ router, onTop = false }: { router: ReturnType<typeof us
         <ArrowLeft className="h-5 w-5" />
       </button>
       <div className="flex gap-2">
-        <button aria-label="Save" className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
-          <Heart className="h-5 w-5" />
+        <button
+          onClick={onSave}
+          aria-label={saved ? 'Remove from saved' : 'Save gig'}
+          className={cn(
+            'grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur',
+            saved && 'text-pink-300',
+          )}
+        >
+          <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
         </button>
-        <button aria-label="Share" className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur">
+        <button
+          onClick={() => void onShare()}
+          aria-label="Share"
+          className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
+        >
           <Share2 className="h-5 w-5" />
         </button>
       </div>

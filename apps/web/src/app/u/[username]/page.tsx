@@ -18,6 +18,8 @@ import {
   MoreVertical,
   Flag,
   ShieldOff,
+  FileText,
+  Video,
 } from 'lucide-react';
 import { LazyReportUserSheet as ReportUserSheet } from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
@@ -29,6 +31,7 @@ import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useI18n } from '@/i18n';
+import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -371,14 +374,26 @@ function PortfolioTile({
       aria-label={p.title}
     >
       <div className="relative aspect-square bg-muted">
-        <Image
-          src={p.imageUrl}
-          alt={p.title}
-          fill
-          sizes="(max-width: 640px) 50vw, 33vw"
-          className="object-cover transition-transform group-hover:scale-105"
-          unoptimized
-        />
+        {isImageType('', p.imageUrl) ? (
+          <Image
+            src={p.imageUrl}
+            alt={p.title}
+            fill
+            sizes="(max-width: 640px) 50vw, 33vw"
+            className="object-cover transition-transform group-hover:scale-105"
+            unoptimized
+          />
+        ) : isVideoType('', p.imageUrl) ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 bg-black/80 text-white">
+            <Video className="h-8 w-8" />
+            <span className="text-[10px] font-semibold">Video · Open</span>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-2 bg-primary/5 p-3 text-center text-primary">
+            <FileText className="h-8 w-8" />
+            <span className="text-[10px] font-bold">{extensionOf(p.imageUrl)} · Open file</span>
+          </div>
+        )}
       </div>
       <div className="p-2">
         <div className="line-clamp-1 text-xs font-semibold">{p.title}</div>

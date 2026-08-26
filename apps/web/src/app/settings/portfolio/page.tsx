@@ -12,6 +12,8 @@ import {
   Trash2,
   X,
   Sparkles,
+  FileText,
+  Video,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -22,6 +24,13 @@ import {
   useMyPortfolio,
 } from '@/hooks/use-portfolio';
 import { useI18n } from '@/i18n';
+import {
+  PORTFOLIO_ACCEPT,
+  contentTypeForFile,
+  extensionOf,
+  isImageType,
+  isVideoType,
+} from '@/lib/file-types';
 
 export default function PortfolioPage() {
   const router = useRouter();
@@ -34,9 +43,13 @@ export default function PortfolioPage() {
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingImage, setPendingImage] = useState<{ url: string; localPreview: string } | null>(
-    null,
-  );
+  const [pendingImage, setPendingImage] = useState<{
+    url: string;
+    localPreview: string;
+    contentType: string;
+    isImage: boolean;
+    name: string;
+  } | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [progress, setProgress] = useState(0);
@@ -58,14 +71,22 @@ export default function PortfolioPage() {
       toast.error(t('portfolio.tooLarge'));
       return;
     }
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+    const contentType = contentTypeForFile(file);
+    const allowed = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.ms-(excel|powerpoint)|vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|rtf)|text\/(plain|csv))$/.test(contentType);
+    if (!allowed) {
       toast.error(t('portfolio.invalidType'));
       return;
     }
 
-    // Show local preview immediately so user isn't staring at nothing
+    // Show local preview immediately so user isn't staring at nothing.
     const localPreview = URL.createObjectURL(file);
-    setPendingImage({ url: '', localPreview });
+    setPendingImage({
+      url: '',
+      localPreview,
+      contentType,
+      isImage: isImageType(contentType),
+      name: file.name,
+    });
     setDialogOpen(true);
     setProgress(0);
 
@@ -75,7 +96,11 @@ export default function PortfolioPage() {
         bucket: 'portfolio',
         onProgress: setProgress,
       });
-      setPendingImage({ url: result.publicUrl, localPreview });
+      setPendingImage((current) =>
+        current
+          ? { ...current, url: result.publicUrl, contentType: result.contentType }
+          : current,
+      );
     } catch (err) {
       const e = err as { message?: string };
       toast.error(e.message ?? t('portfolio.uploadFailed'));
@@ -186,7 +211,7 @@ export default function PortfolioPage() {
         <input
           ref={fileRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept={PORTFOLIO_ACCEPT}
           onChange={onFile}
           className="hidden"
         />
@@ -215,14 +240,34 @@ export default function PortfolioPage() {
             </div>
 
             <div className="relative aspect-square overflow-hidden rounded-xl bg-muted">
-              <Image
-                src={pendingImage.url || pendingImage.localPreview}
-                alt="Preview"
-                fill
-                sizes="400px"
-                className="object-cover"
-                unoptimized
-              />
+              {pendingImage.isImage ? (
+                <Image
+                  src={pendingImage.url || pendingImage.localPreview}
+                  alt="Preview"
+                  fill
+                  sizes="400px"
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : isVideoType(pendingImage.contentType) ? (
+                <video
+                  src={pendingImage.url || pendingImage.localPreview}
+                  controls
+                  className="h-full w-full object-contain"
+                  preload="metadata"
+                />
+              ) : (
+                <a
+                  href={pendingImage.url || pendingImage.localPreview}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-primary"
+                >
+                  <FileText className="h-12 w-12" />
+                  <span className="break-all text-sm font-semibold">{pendingImage.name}</span>
+                  <span className="text-xs text-muted-foreground">Open file preview</span>
+                </a>
+              )}
               {upload.isPending && (
                 <div className="absolute inset-0 grid place-items-center bg-black/50 text-white">
                   <div className="text-center">
@@ -329,14 +374,31 @@ function PortfolioTile({ it, onRemove }: { it: PortfolioItem; onRemove: (id: str
       className={`group relative overflow-hidden rounded-2xl border border-border bg-card ${isDragging ? 'z-20 opacity-70 shadow-xl' : ''}`}
     >
       <div className="relative aspect-square">
-        <Image
-          src={it.imageUrl}
-          alt={it.title}
-          fill
-          sizes="(max-width: 640px) 50vw, 33vw"
-          className="object-cover"
-          unoptimized
-        />
+        {isImageType('', it.imageUrl) ? (
+          <Image
+            src={it.imageUrl}
+            alt={it.title}
+            fill
+            sizes="(max-width: 640px) 50vw, 33vw"
+            className="object-cover"
+            unoptimized
+          />
+        ) : isVideoType('', it.imageUrl) ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 bg-black/80 text-white">
+            <Video className="h-8 w-8" />
+            <span className="text-[10px] font-semibold">Video</span>
+          </div>
+        ) : (
+          <a
+            href={it.imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-full flex-col items-center justify-center gap-2 bg-primary/5 p-3 text-center text-primary"
+          >
+            <FileText className="h-8 w-8" />
+            <span className="text-[10px] font-bold">{extensionOf(it.imageUrl)} · Open</span>
+          </a>
+        )}
       </div>
       <div className="p-2">
         <div className="line-clamp-1 text-xs font-semibold">{it.title}</div>

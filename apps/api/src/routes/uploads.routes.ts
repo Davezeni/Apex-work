@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { signUploadSchema } from '@apex-work/shared';
+import { signUploadSchema, uploadBucketSchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -30,6 +30,69 @@ router.post(
 
     const result = await storage.createSignedUpload({
       ...body,
+      ownerId: req.user!.sub,
+      contentType: check.contentType,
+    });
+    return success(res, result);
+  }),
+);
+
+/**
+ * PUT /uploads/proxy — authenticated raw-byte fallback.
+ *
+ * A browser can fail the cross-origin Supabase PUT even when the signed URL
+ * is valid (in-app browsers, strict privacy modes, or a mobile firewall).
+ * This endpoint accepts the file as the request body and streams it into a
+ * bounded in-memory buffer before sending it to Supabase with service_role.
+ * It deliberately does not use multipart/form-data, so no multer/temp disk is
+ * required on Render's free tier.
+ *
+ * Query string:
+ *   bucket   one of portfolio, chat-attachments, avatars
+ *   filename original filename (used for MIME inference and safe object name)
+ */
+router.put(
+  '/proxy',
+  asyncHandler(async (req, res) => {
+    if (!storage.isConfigured()) {
+      throw new ConflictError('File uploads are not configured on this environment');
+    }
+
+    const query = req.query as { bucket?: unknown; filename?: unknown };
+    const bucketResult = uploadBucketSchema.safeParse(query.bucket);
+    if (!bucketResult.success) throw new BadRequestError('Invalid upload bucket');
+
+    const filename = typeof query.filename === 'string' ? query.filename.trim() : '';
+    if (!filename || filename.length > 120) {
+      throw new BadRequestError('A valid filename is required');
+    }
+
+    const rawContentType = req.headers['content-type'];
+    const contentType = Array.isArray(rawContentType)
+      ? (rawContentType[0] ?? 'application/octet-stream')
+      : rawContentType || 'application/octet-stream';
+    const rawLength = req.headers['content-length'];
+    const declaredSizeBytes = rawLength ? Number(rawLength) : undefined;
+
+    if (declaredSizeBytes !== undefined && (!Number.isFinite(declaredSizeBytes) || declaredSizeBytes < 0)) {
+      throw new BadRequestError('Invalid upload size');
+    }
+
+    // Validate type before consuming the body. The service checks the final
+    // byte count again while reading, including when Content-Length is absent.
+    const check = storage.validate({
+      bucket: bucketResult.data,
+      filename,
+      contentType,
+      sizeBytes: Math.max(1, declaredSizeBytes ?? 1),
+    });
+    if (!check.ok) throw new BadRequestError(check.error ?? 'Invalid upload');
+
+    const result = await storage.uploadProxy(req, {
+      bucket: bucketResult.data,
+      filename,
+      contentType: check.contentType,
+      declaredSizeBytes,
       ownerId: req.user!.sub,
     });
     return success(res, result);

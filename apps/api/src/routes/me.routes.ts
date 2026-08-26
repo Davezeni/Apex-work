@@ -22,6 +22,7 @@ router.get(
         fullName: true,
         email: true,
         phone: true,
+        pinHash: true,
         avatarUrl: true,
         role: true,
         bio: true,
@@ -42,6 +43,10 @@ router.get(
 
     return success(res, {
       ...user,
+      // Never send the hash itself; the client only needs the boolean to
+      // render Set PIN versus Change PIN accurately.
+      pinHash: undefined,
+      hasPin: !!user.pinHash,
       isVerified: user.isPhoneVerified && user.isIdVerified,
       createdAt: user.createdAt.toISOString(),
     });

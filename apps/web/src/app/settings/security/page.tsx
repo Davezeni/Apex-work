@@ -55,7 +55,7 @@ export default function SecuritySettingsPage() {
     );
   }
 
-  const hasPin = false; // /me endpoint doesn't expose pin state today — infer via presence of Change PIN CTA below
+  const hasPin = me.hasPin;
   const hasPasskeys = (passkeys.data?.items.length ?? 0) > 0;
 
   return (

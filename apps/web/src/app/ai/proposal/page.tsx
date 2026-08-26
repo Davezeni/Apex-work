@@ -9,10 +9,9 @@ import { useI18n } from '@/i18n';
 import { useAIProposal } from '@/hooks/use-ai';
 
 /**
- * AI Proposal Writer. Backend LLM integration is stubbed for now — we
- * generate a well-structured proposal template locally so the UX is real
- * and testable. When the /v1/ai/proposal endpoint ships, swap the local
- * generator for a fetch call.
+ * AI Proposal Writer. The API uses the configured LLM when available and
+ * returns a deterministic local template when the free-tier key is absent,
+ * so the tool remains usable in every environment.
  */
 export default function AIProposalPage() {
   const router = useRouter();

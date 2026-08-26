@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Search, Moon, Sun, Menu, X, ArrowRight, Star, MapPin, CheckCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
@@ -53,8 +54,22 @@ const featured = [
 ];
 
 export function DesktopLanding() {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const { theme, setTheme } = useTheme();
+
+  const runSearch = () => {
+    const query = search.trim();
+    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  };
+
+  const navLinks = [
+    { label: 'Browse', href: '/browse' },
+    { label: 'How it works', href: '/#how' },
+    { label: 'AI Tools', href: '/ai' },
+    { label: 'Pricing', href: '/#pricing' },
+  ];
 
   return (
     <div className="mesh-bg min-h-screen">
@@ -70,18 +85,13 @@ export function DesktopLanding() {
             </span>
           </Link>
           <div className="ml-auto hidden md:flex gap-1">
-            {[
-              { label: 'Browse', href: '/browse' },
-              { label: 'How it works', href: '/#how' },
-              { label: 'AI Tools', href: '/ai' },
-              { label: 'Pricing', href: '/#pricing' },
-            ].map((l) => (
+            {navLinks.map((link) => (
               <Link
-                key={l.label}
-                href={l.href}
+                key={link.label}
+                href={link.href}
                 className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
               >
-                {l.label}
+                {link.label}
               </Link>
             ))}
           </div>
@@ -111,14 +121,14 @@ export function DesktopLanding() {
         {menuOpen && (
           <div className="md:hidden mt-2 rounded-2xl border border-border bg-background/90 p-4 backdrop-blur-xl">
             <div className="flex flex-col gap-1">
-              {[
-                { label: 'Browse', href: '/browse' },
-                { label: 'How it works', href: '/#how' },
-                { label: 'AI Tools', href: '/ai' },
-                { label: 'Pricing', href: '/#pricing' },
-              ].map((l) => (
-                <Link key={l.label} href={l.href} onClick={() => setMenuOpen(false)} className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-secondary">
-                  {l.label}
+              {navLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  href={link.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="rounded-lg px-4 py-3 text-sm font-medium hover:bg-secondary"
+                >
+                  {link.label}
                 </Link>
               ))}
               <Button asChild variant="brand" className="mt-2">
@@ -190,10 +200,16 @@ export function DesktopLanding() {
         >
           <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
           <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') runSearch();
+            }}
             className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
             placeholder="Try 'Amharic translator' or 'React developer'…"
+            aria-label="Search freelancers and services"
           />
-          <Button variant="brand" className="hidden sm:inline-flex">
+          <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
             Search
           </Button>
         </motion.div>
@@ -247,7 +263,7 @@ export function DesktopLanding() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="container py-20 scroll-mt-24">
+      <section id="how" className="container scroll-mt-24 py-20">
         <SectionHeader eyebrow="Simple process" title="Hire in 3 steps" />
         <div className="grid gap-8 md:grid-cols-3">
           {[
@@ -267,24 +283,25 @@ export function DesktopLanding() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="container py-20 scroll-mt-24">
+      <section id="pricing" className="container scroll-mt-24 py-20">
         <SectionHeader
-          eyebrow="Transparent pricing"
-          title="Simple, fair fees"
-          description="No monthly subscription. You only pay when you earn."
+          eyebrow="Simple pricing"
+          title="Keep more of what you earn"
+          description="Start free. Pay only when you complete a paid project."
         />
-        <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
-          {[
-            { name: 'Clients', price: 'Free', desc: 'Post jobs, chat freelancers, hire. Zero platform fee.', highlight: false },
-            { name: 'Freelancers', price: '10%', desc: 'Flat service fee on delivered orders. No hidden costs.', highlight: true },
-            { name: 'Withdrawals', price: '1%', desc: 'Payout via Telebirr, CBE, Awash, Chapa — settled in ETB.', highlight: false },
-          ].map((p) => (
-            <div key={p.name} className={`rounded-3xl border p-8 text-center ${p.highlight ? 'border-primary bg-primary/5 shadow-lg shadow-primary/20' : 'border-border bg-card'}`}>
-              <div className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">{p.name}</div>
-              <div className="mt-3 text-5xl font-extrabold tracking-tight">{p.price}</div>
-              <p className="mt-3 text-sm text-muted-foreground">{p.desc}</p>
-            </div>
-          ))}
+        <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="text-sm font-bold text-primary">For clients</div>
+            <div className="mt-2 text-3xl font-extrabold">Free to post</div>
+            <p className="mt-2 text-sm text-muted-foreground">Browse talent, chat, and compare proposals before you hire.</p>
+            <Button asChild variant="brand" className="mt-5 w-full"><Link href="/jobs/new">Post a job</Link></Button>
+          </div>
+          <div className="rounded-2xl border border-primary/40 bg-primary/5 p-6">
+            <div className="text-sm font-bold text-accent">For freelancers</div>
+            <div className="mt-2 text-3xl font-extrabold">Join free</div>
+            <p className="mt-2 text-sm text-muted-foreground">Create your profile, showcase work, and apply to jobs.</p>
+            <Button asChild className="mt-5 w-full"><Link href="/signup?role=FREELANCER">Become a freelancer</Link></Button>
+          </div>
         </div>
       </section>
 
@@ -378,7 +395,9 @@ function FreelancerCard({ f }: { f: (typeof featured)[number] }) {
           <div className="text-xs text-muted-foreground">
             From <span className="text-base font-extrabold text-foreground">{formatEtb(f.price)}</span>
           </div>
-          <Button size="sm">Hire</Button>
+          <Button asChild size="sm">
+            <Link href="/browse">Hire</Link>
+          </Button>
         </div>
       </div>
     </div>

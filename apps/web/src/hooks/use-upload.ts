@@ -4,6 +4,9 @@ import { useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import type { UploadBucket } from '@apex-work/shared';
+import { contentTypeForFile } from '@/lib/file-types';
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
 
 export interface UploadResult {
   publicUrl: string;
@@ -18,27 +21,135 @@ interface SignResponse {
   token: string;
   publicUrl: string;
   path: string;
+  contentType?: string;
+  sizeBytes?: number;
+}
+
+function asError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+function signedUrlWithToken(uploadUrl: string, token: string): string {
+  const url = new URL(uploadUrl, API_URL);
+  if (!url.searchParams.has('token')) url.searchParams.set('token', token);
+  return url.toString();
+}
+
+function xhrUpload({
+  url,
+  method,
+  body,
+  headers,
+  onProgress,
+}: {
+  url: string;
+  method: 'PUT' | 'POST';
+  body: Blob | FormData;
+  headers?: Record<string, string>;
+  onProgress?: (pct: number) => void;
+}): Promise<{ status: number; text: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    // Large files should not be killed while a Render free-tier instance is
+    // waking up. The browser still reports a normal network error if the
+    // connection disappears.
+    xhr.timeout = 180_000;
+    for (const [key, value] of Object.entries(headers ?? {})) xhr.setRequestHeader(key, value);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out. Please try again.'));
+    xhr.onabort = () => reject(new Error('Upload was cancelled.'));
+    xhr.send(body);
+  });
+}
+
+async function uploadDirect(
+  signed: SignResponse,
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<void> {
+  const uploadUrl = signedUrlWithToken(signed.uploadUrl, signed.token);
+  // Supabase Storage's signed-upload protocol expects a FormData body for a
+  // browser Blob. Do not set Content-Type manually: XHR adds the multipart
+  // boundary. Setting it to the file MIME is the common cause of a 400/CORS
+  // failure here.
+  const form = new FormData();
+  form.append('cacheControl', '3600');
+  form.append('', file, file.name);
+
+  const result = await xhrUpload({
+    url: uploadUrl,
+    method: 'PUT',
+    body: form,
+    headers: { 'x-upsert': 'false' },
+    onProgress,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    throw new Error(`Direct storage upload failed (${result.status})`);
+  }
+}
+
+async function uploadThroughApi(
+  file: File,
+  bucket: UploadBucket,
+  token: string | null,
+  contentType: string,
+  onProgress?: (pct: number) => void,
+): Promise<UploadResult> {
+  if (!token) throw new Error('Please sign in before uploading a file.');
+
+  const query = new URLSearchParams({ bucket, filename: file.name });
+  const result = await xhrUpload({
+    url: `${API_URL}/v1/uploads/proxy?${query.toString()}`,
+    method: 'PUT',
+    body: file,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': contentType,
+    },
+    onProgress,
+  });
+
+  let json: unknown;
+  try {
+    json = JSON.parse(result.text);
+  } catch {
+    throw new Error(`Upload gateway returned an invalid response (${result.status}).`);
+  }
+  const body = json as {
+    ok?: boolean;
+    data?: Partial<UploadResult>;
+    error?: { message?: string };
+  };
+  if (result.status < 200 || result.status >= 300 || !body.ok || !body.data?.publicUrl) {
+    throw new Error(body.error?.message || `Upload failed (${result.status}).`);
+  }
+
+  return {
+    publicUrl: body.data.publicUrl,
+    path: body.data.path ?? '',
+    bucket,
+    contentType: body.data.contentType ?? contentType,
+    sizeBytes: body.data.sizeBytes ?? file.size,
+  };
 }
 
 /**
- * Upload a file to Supabase Storage via a two-step signed-URL flow:
- *   1) Ask our API to mint a signed upload URL (this validates size+MIME).
- *   2) PUT the raw bytes directly to Supabase — bypasses our server entirely
- *      so we never proxy large files (Render's disk is tiny and CPU-bound).
+ * Upload a file to Supabase Storage through a resilient two-path flow:
  *
- * IMPORTANT — matches the Supabase JS SDK's `uploadToSignedUrl` wire format
- * exactly, because the naive "PUT the raw file with Content-Type header"
- * approach fails on Supabase's storage backend. Specifically:
- *   - Body must be `multipart/form-data` with the Blob appended under the
- *     EMPTY key (`body.append('', file)`), plus a `cacheControl` field.
- *   - The auth token goes in the URL as `?token=...` (already baked into
- *     `signed.uploadUrl` by the server), NOT in an Authorization header.
- *   - `x-upsert` header controls whether existing files are replaced.
- *
- * We use XHR (not fetch) purely for the upload progress events.
+ *   1) Ask our API to mint a short-lived signed URL and upload directly to
+ *      Supabase using its browser FormData protocol.
+ *   2) If signing or the cross-origin PUT fails, send the raw bytes to our
+ *      authenticated `/uploads/proxy` gateway. This is the important mobile
+ *      fallback: it avoids Supabase CORS, captive portals, and in-app browser
+ *      restrictions without requiring a temporary file on Render.
  *
  * Returns the public URL to persist alongside the domain object
- * (portfolio item, message attachment, avatar).
+ * (portfolio item, message attachment, avatar, review photo, or job brief).
  */
 export function useUpload() {
   const token = useAuthStore((s) => s.accessToken);
@@ -49,59 +160,51 @@ export function useUpload() {
     { file: File; bucket: UploadBucket; onProgress?: (pct: number) => void }
   >({
     mutationFn: async ({ file, bucket, onProgress }) => {
-      // Step 1 — sign
-      const signed = await apiFetch<SignResponse>('/uploads/sign', {
-        method: 'POST',
-        token,
-        body: {
-          bucket,
-          filename: file.name,
-          contentType: file.type || 'application/octet-stream',
-          sizeBytes: file.size,
-        },
-      });
+      const contentType = contentTypeForFile(file);
+      let signed: SignResponse | null = null;
+      let firstError: Error | null = null;
 
-      // Step 2 — the sign endpoint returns a URL that either already has
-      // ?token=... appended, or a bare URL plus a separate token we must
-      // append ourselves. Normalise to always have ?token=.
-      const uploadUrl = signed.uploadUrl.includes('token=')
-        ? signed.uploadUrl
-        : signed.uploadUrl + (signed.uploadUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(signed.token)}`;
+      try {
+        signed = await apiFetch<SignResponse>('/uploads/sign', {
+          method: 'POST',
+          token,
+          body: {
+            bucket,
+            filename: file.name,
+            contentType,
+            sizeBytes: file.size,
+          },
+        });
+      } catch (error) {
+        firstError = asError(error);
+      }
 
-      // Step 3 — upload direct to Supabase Storage via multipart/form-data.
-      // Uses XHR (not fetch) so we get real progress events for a nice UX.
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('x-upsert', 'true');
-        // NOTE: do NOT set Content-Type — the browser must set it to
-        // `multipart/form-data; boundary=...` automatically for FormData.
+      if (signed) {
+        try {
+          await uploadDirect(signed, file, onProgress);
+          return {
+            publicUrl: signed.publicUrl,
+            path: signed.path,
+            bucket,
+            contentType: signed.contentType ?? contentType,
+            sizeBytes: signed.sizeBytes ?? file.size,
+          };
+        } catch (error) {
+          // This is expected on some mobile/in-app browsers. Continue to the
+          // same-origin API fallback rather than showing a false CORS toast.
+          firstError = asError(error);
+        }
+      }
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable && onProgress) {
-            onProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText.slice(0, 300)}`));
-        };
-        xhr.onerror = () => reject(new Error('Network error during upload — check your internet connection or CORS / firewall settings.'));
-        xhr.ontimeout = () => reject(new Error('Upload timed out.'));
-
-        const form = new FormData();
-        form.append('cacheControl', '3600');
-        form.append('', file, file.name);
-        xhr.send(form);
-      });
-
-      return {
-        publicUrl: signed.publicUrl,
-        path: signed.path,
-        bucket,
-        contentType: file.type || 'application/octet-stream',
-        sizeBytes: file.size,
-      };
+      try {
+        return await uploadThroughApi(file, bucket, token, contentType, onProgress);
+      } catch (error) {
+        const fallbackError = asError(error);
+        if (firstError && firstError.message !== fallbackError.message) {
+          throw new Error(`${fallbackError.message} (${firstError.message})`);
+        }
+        throw fallbackError;
+      }
     },
   });
 }

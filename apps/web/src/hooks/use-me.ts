@@ -22,6 +22,7 @@ export interface Me {
   isPhoneVerified: boolean;
   isEmailVerified: boolean;
   isIdVerified: boolean;
+  hasPin: boolean;
   isOnboarded: boolean;
   rating: number;
   ratingCount: number;

@@ -5,6 +5,7 @@ import { Paperclip, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUpload } from '@/hooks/use-upload';
 import { useI18n } from '@/i18n';
+import { ATTACHMENT_ACCEPT } from '@/lib/file-types';
 
 interface Props {
   onAttached: (info: {
@@ -74,7 +75,7 @@ export function AttachButton({ onAttached, disabled }: Props) {
       <input
         ref={fileRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,video/mp4"
+        accept={ATTACHMENT_ACCEPT}
         onChange={onFile}
         className="hidden"
       />

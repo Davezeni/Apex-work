@@ -3,10 +3,11 @@
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, FileText, Loader2, Video } from 'lucide-react';
 import { usePublicPortfolioItem } from '@/hooks/use-portfolio';
 import { useI18n } from '@/i18n';
 import { timeAgo } from '@/lib/utils';
+import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
 
 export default function PortfolioItemPage() {
   const { username, id } = useParams<{ username: string; id: string }>();
@@ -36,9 +37,26 @@ export default function PortfolioItemPage() {
         )}
       </header>
 
-      <div className="relative aspect-square bg-black">
-        <Image src={item.imageUrl} alt={item.title} fill unoptimized className="object-cover" priority />
-      </div>
+      <a
+        href={item.imageUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="relative flex aspect-square items-center justify-center bg-black"
+      >
+        {isImageType('', item.imageUrl) ? (
+          <Image src={item.imageUrl} alt={item.title} fill unoptimized className="object-cover" priority />
+        ) : isVideoType('', item.imageUrl) ? (
+          <div className="flex flex-col items-center gap-3 text-white">
+            <Video className="h-12 w-12" />
+            <span className="text-sm font-semibold">Open video</span>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 text-white">
+            <FileText className="h-12 w-12" />
+            <span className="text-sm font-semibold">Open {extensionOf(item.imageUrl)} file</span>
+          </div>
+        )}
+      </a>
 
       <div className="mx-4 mt-4">
         <h1 className="text-xl font-extrabold leading-tight tracking-tight">{item.title}</h1>

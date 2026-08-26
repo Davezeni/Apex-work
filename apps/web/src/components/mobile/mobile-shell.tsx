@@ -67,7 +67,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
               <TabButton key={t.id} tab={t} active={currentTab === t.id} onClick={haptic} />
             ))}
 
-            {/* Center FAB — smaller & lifts less so the whole bar can be shorter */}
+            {/* Center FAB */}
             <div className="-mt-4 flex justify-center">
               <button
                 onClick={() => {
@@ -75,7 +75,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   setSheetOpen(true);
                 }}
                 aria-label="Create"
-                className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-lg shadow-primary/50 transition-transform active:scale-90"
+                className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
               >
                 <Plus className="h-5 w-5" strokeWidth={2.5} />
               </button>
