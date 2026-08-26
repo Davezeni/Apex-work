@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Search, Edit3, Loader2, MessageCircleOff } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
@@ -29,6 +30,12 @@ export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
   const { data, isLoading, error } = useConversations();
   const { t } = useI18n();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const filteredItems = (data?.items ?? []).filter((conversation) => {
+    const haystack = `${conversation.peer?.fullName ?? ''} ${conversation.title ?? ''}`.toLowerCase();
+    return haystack.includes(query.trim().toLowerCase());
+  });
 
   if (!isAuthed) {
     return (
@@ -51,8 +58,16 @@ export default function MessagesPage() {
         <h1 className="text-2xl font-extrabold tracking-tight">{t('chat.messages')}</h1>
         <div className="flex gap-2">
           <button
-            aria-label="Search"
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
+            onClick={() => {
+              setSearchOpen((open) => !open);
+              if (searchOpen) setQuery('');
+            }}
+            aria-label="Search conversations"
+            aria-pressed={searchOpen}
+            className={cn(
+              'grid h-10 w-10 place-items-center rounded-full border border-border bg-card',
+              searchOpen && 'border-primary text-primary',
+            )}
           >
             <Search className="h-4 w-4" />
           </button>
@@ -65,6 +80,19 @@ export default function MessagesPage() {
           </Link>
         </div>
       </header>
+
+      {searchOpen && (
+        <div className="px-4 pt-3">
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search your conversations…"
+            aria-label="Search your conversations"
+            className="w-full rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+          />
+        </div>
+      )}
 
       {isLoading && (
         <div className="grid h-40 place-items-center">
@@ -90,7 +118,10 @@ export default function MessagesPage() {
       )}
 
       <div className="px-2 pb-4">
-        {data?.items.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} />)}
+        {searchOpen && query.trim() && filteredItems.length === 0 && (
+          <p className="px-4 py-8 text-center text-xs text-muted-foreground">No conversations found.</p>
+        )}
+        {filteredItems.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} />)}
       </div>
     </MobileShell>
   );
