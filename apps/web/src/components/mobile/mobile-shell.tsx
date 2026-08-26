@@ -9,6 +9,7 @@ import { Drawer } from 'vaul';
 import { cn } from '@/lib/utils';
 import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
 import { useNotificationSocket } from '@/hooks/use-notifications';
+import { useConversations } from '@/hooks/use-chat';
 import { PwaInstall } from '@/components/pwa-install';
 
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
@@ -36,6 +37,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   useOnboardingGuard();
   // Subscribe to the user's realtime notification stream (silent when signed out).
   useNotificationSocket();
+  const { data: conversations } = useConversations();
+  const unreadChats = conversations?.items.reduce((total, item) => total + item.unread, 0) ?? 0;
 
   const currentTab: MobileTab | undefined =
     activeTab ??
@@ -87,7 +90,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                 tab={t}
                 active={currentTab === t.id}
                 onClick={haptic}
-                badge={t.id === 'chat' ? 3 : undefined}
+                badge={t.id === 'chat' && unreadChats > 0 ? unreadChats : undefined}
               />
             ))}
           </div>
