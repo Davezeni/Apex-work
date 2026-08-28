@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,13 +29,15 @@ import {
   LifeBuoy,
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
-import { formatEtb } from '@/lib/utils';
+import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
+import { formatEtb, cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { useI18n } from '@/i18n';
 
 export default function ProfilePage() {
   const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
   const logout = useLogout();
+  const savedGigs = useSavedGigs();
   const { t } = useI18n();
 
   // Not signed in → show sign-in CTA
@@ -100,6 +103,9 @@ export default function ProfilePage() {
           <Link href={`/u/${me.username}`}>Share</Link>
         </Button>
       </div>
+
+      {/* Saved gigs — visible on the profile so saved services are not hidden in a menu. */}
+      <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
 
       {/* Wallet — only for freelancers */}
       {me.role === 'FREELANCER' && (
@@ -266,6 +272,57 @@ export default function ProfilePage() {
         />
       </div>
     </MobileShell>
+  );
+}
+
+function ProfileSavedGigs({
+  saved,
+  isLoading,
+}: {
+  saved: SavedGig[];
+  isLoading: boolean;
+}) {
+  return (
+    <section className="mx-5 mt-5">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bookmark className="h-4 w-4 text-primary" />
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Saved gigs</h2>
+        </div>
+        <Link href="/saved" className="text-xs font-semibold text-primary">View all</Link>
+      </div>
+      {isLoading ? (
+        <div className="grid h-24 place-items-center rounded-2xl border border-border bg-card">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : saved.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
+          <p className="text-xs font-semibold">You have not saved a gig yet.</p>
+          <Link href="/browse" className="mt-2 inline-block text-xs font-bold text-primary">Browse gigs</Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {saved.slice(0, 3).map((item) => (
+            <Link
+              key={item.id}
+              href={`/gigs/${item.gig.slug}`}
+              className={cn('overflow-hidden rounded-xl border border-border bg-card', item.gig.status !== 'ACTIVE' && 'opacity-70')}
+            >
+              <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-violet-500/25 to-emerald-500/20">
+                {item.gig.coverImageUrl ? (
+                  <Image src={item.gig.coverImageUrl} alt={item.gig.title} fill unoptimized sizes="120px" className="object-cover" />
+                ) : (
+                  <div className="grid h-full place-items-center text-lg font-extrabold text-primary">
+                    {item.gig.title.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="truncate px-2 py-2 text-[10px] font-semibold">{item.gig.title}</div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

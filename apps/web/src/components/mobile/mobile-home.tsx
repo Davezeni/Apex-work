@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Bookmark, Star, MapPin, CheckCircle2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Search, Bookmark, Star, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,6 +10,9 @@ import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
+import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
@@ -38,6 +41,8 @@ export function MobileHome() {
   const { data: me } = useMe();
   const { t } = useI18n();
   const router = useRouter();
+  const { data: savedData } = useSavedGigs();
+  const savedSlugs = new Set(savedData?.items.map((item) => item.gig.slug) ?? []);
   const { data: gigsData, isLoading } = useGigs({
     category: activeCategory !== 'for-you' ? activeCategory : undefined,
     limit: 20,
@@ -146,7 +151,7 @@ export function MobileHome() {
           </div>
         )}
         {gigs.map((g) => (
-          <GigCard key={g.id} g={g} />
+          <GigCard key={g.id} g={g} saved={savedSlugs.has(g.slug)} />
         ))}
       </div>
     </div>
@@ -177,17 +182,17 @@ function CategoryChip({
   );
 }
 
-function GigCard({ g }: { g: GigListItem }) {
+function GigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
   // Two layouts:
   //   - IMAGE cover  → traditional hero (200px image, avatar row below)
   //   - NO cover     → compact card, no giant gradient block. Avatar +
   //     freelancer info sit on the top row, title + price below.
-  if (!g.coverImageUrl) return <NoCoverGigCard g={g} />;
-  return <ImageGigCard g={g} />;
+  if (!g.coverImageUrl) return <NoCoverGigCard g={g} saved={saved} />;
+  return <ImageGigCard g={g} saved={saved} />;
 }
 
 /** Card variant used when the gig has a real image. */
-function ImageGigCard({ g }: { g: GigListItem }) {
+function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
   return (
     <Link
       href={`/gigs/${g.slug}`}
@@ -204,13 +209,7 @@ function ImageGigCard({ g }: { g: GigListItem }) {
             🔥 Top Rated
           </span>
         ) : null}
-        <button
-          aria-label="Save"
-          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur"
-          onClick={(e) => e.preventDefault()}
-        >
-          <Bookmark className="h-4 w-4" />
-        </button>
+        <HomeSaveButton slug={g.slug} saved={saved} />
       </div>
       <CardBody g={g} />
     </Link>
@@ -218,7 +217,7 @@ function ImageGigCard({ g }: { g: GigListItem }) {
 }
 
 /** Compact card variant used when the gig has no cover image. No hero. */
-function NoCoverGigCard({ g }: { g: GigListItem }) {
+function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
   return (
     <Link
       href={`/gigs/${g.slug}`}
@@ -250,16 +249,74 @@ function NoCoverGigCard({ g }: { g: GigListItem }) {
           </div>
           <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
         </div>
-        <button
-          aria-label="Save"
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted"
-          onClick={(e) => { e.preventDefault(); }}
-        >
-          <Bookmark className="h-4 w-4" />
-        </button>
+        <HomeSaveButton slug={g.slug} saved={saved} compact />
       </div>
       <CardBody g={g} noTopPadding />
     </Link>
+  );
+}
+
+function HomeSaveButton({
+  slug,
+  saved,
+  compact = false,
+}: {
+  slug: string;
+  saved: boolean;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const token = useAuthStore((state) => state.accessToken);
+  const save = useSaveGig();
+  const unsave = useUnsaveGig();
+  const busy = save.isPending || unsave.isPending;
+  const [localSaved, setLocalSaved] = useState(saved);
+
+  useEffect(() => {
+    if (!busy) setLocalSaved(saved);
+  }, [saved, busy]);
+
+  const onClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (busy) return;
+    if (!token) {
+      router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
+      return;
+    }
+    const nextSaved = !localSaved;
+    setLocalSaved(nextSaved);
+    const mutation = nextSaved ? save : unsave;
+    mutation.mutate(slug, {
+      onSuccess: () => toast.success(nextSaved ? 'Gig saved' : 'Gig removed from saved'),
+      onError: (error) => {
+        setLocalSaved(!nextSaved);
+        toast.error(error.message);
+      },
+    });
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={localSaved ? 'Remove gig from saved' : 'Save gig'}
+      aria-pressed={localSaved}
+      disabled={busy}
+      onClick={onClick}
+      className={cn(
+        compact
+          ? 'grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted'
+          : 'absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur',
+        'z-10 disabled:opacity-60',
+        localSaved && (compact ? 'bg-primary/10 text-primary' : 'text-pink-200'),
+      )}
+    >
+      {busy ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Bookmark className="h-4 w-4" fill={localSaved ? 'currentColor' : 'none'} />
+      )}
+    </button>
   );
 }
 
