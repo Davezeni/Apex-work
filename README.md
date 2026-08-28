@@ -128,6 +128,8 @@ This starts:
 |---------|-------------|
 | `npm run dev` | Start web + api in parallel |
 | `npm run build` | Build all packages for production |
+| `npm run test` | Run API unit tests |
+| `npm run smoke:prod` | Check live web/API/payment endpoints |
 | `npm run lint` | Lint all packages |
 | `npm run typecheck` | Type-check all packages |
 | `npm run format` | Format code with Prettier |

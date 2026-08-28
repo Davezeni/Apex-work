@@ -12,6 +12,8 @@
     "dev:web": "npm --workspace @apex-work/web run dev",
     "dev:api": "npm --workspace @apex-work/api run dev",
     "build": "npm-run-all build:shared build:web build:api",
+    "test": "npm --workspace @apex-work/api run test",
+    "smoke:prod": "node scripts/smoke-production.mjs",
     "build:shared": "npm --workspace @apex-work/shared run build",
     "build:web": "npm --workspace @apex-work/web run build",
     "build:api": "npm --workspace @apex-work/api run build",
