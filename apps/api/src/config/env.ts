@@ -10,7 +10,14 @@ const envSchema = z.object({
   // Render + most PaaS set PORT; local dev uses API_PORT. Prefer PORT.
   PORT: z.coerce.number().int().min(1).max(65535).optional(),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
-  API_URL: z.string().url().default('http://localhost:4000'),
+  // Render also sets this in render.yaml. The production default prevents
+  // Chapa callbacks from falling back to localhost if a dashboard sync is
+  // delayed or the variable was omitted.
+  API_URL: z.string().url().default(
+    process.env.NODE_ENV === 'production'
+      ? 'https://apex-work-api.onrender.com'
+      : 'http://localhost:4000',
+  ),
   WEB_URL: z.string().url().default('http://localhost:3000'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 

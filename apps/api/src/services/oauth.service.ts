@@ -15,6 +15,7 @@ export interface OAuthState {
   provider: OAuthProvider;
   role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>;
   next: string;
+  callbackBaseUrl?: string;
 }
 
 export interface OAuthProfile {
@@ -48,8 +49,8 @@ export function isProviderConfigured(provider: OAuthProvider): boolean {
     : !!env.GITHUB_CLIENT_ID && !!env.GITHUB_CLIENT_SECRET;
 }
 
-export function callbackUrl(provider: OAuthProvider): string {
-  return `${apiBase()}/v1/auth/oauth/${provider}/callback`;
+export function callbackUrl(provider: OAuthProvider, baseUrl = apiBase()): string {
+  return `${baseUrl.replace(/\/$/, '')}/v1/auth/oauth/${provider}/callback`;
 }
 
 function safeNext(next: string | undefined): string {
@@ -70,15 +71,21 @@ export async function start(
   provider: OAuthProvider,
   role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>,
   next?: string,
+  requestBaseUrl?: string,
 ): Promise<string> {
   const { clientId } = clientConfig(provider);
   const state = randomToken(24);
-  const stateData: OAuthState = { provider, role, next: safeNext(next) };
+  const stateData: OAuthState = {
+    provider,
+    role,
+    next: safeNext(next),
+    callbackBaseUrl: requestBaseUrl?.replace(/\/$/, '') || apiBase(),
+  };
   await redis.setex(`${STATE_PREFIX}${state}`, STATE_TTL_SECONDS, JSON.stringify(stateData));
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: callbackUrl(provider),
+    redirect_uri: callbackUrl(provider, stateData.callbackBaseUrl),
     response_type: 'code',
     state,
   });
@@ -108,7 +115,7 @@ async function parseJson(res: Response): Promise<Record<string, unknown>> {
   return data && typeof data === 'object' ? data as Record<string, unknown> : {};
 }
 
-async function exchangeGoogle(code: string): Promise<OAuthProfile> {
+async function exchangeGoogle(code: string, requestBaseUrl?: string): Promise<OAuthProfile> {
   const { clientId, clientSecret } = clientConfig('google');
   const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -117,7 +124,7 @@ async function exchangeGoogle(code: string): Promise<OAuthProfile> {
       code,
       client_id: clientId,
       client_secret: clientSecret,
-      redirect_uri: callbackUrl('google'),
+      redirect_uri: callbackUrl('google', requestBaseUrl),
       grant_type: 'authorization_code',
     }),
     signal: AbortSignal.timeout(10_000),
@@ -143,7 +150,7 @@ async function exchangeGoogle(code: string): Promise<OAuthProfile> {
   return { provider: 'google', providerAccountId, email, fullName, avatarUrl };
 }
 
-async function exchangeGithub(code: string): Promise<OAuthProfile> {
+async function exchangeGithub(code: string, requestBaseUrl?: string): Promise<OAuthProfile> {
   const { clientId, clientSecret } = clientConfig('github');
   const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
@@ -151,7 +158,7 @@ async function exchangeGithub(code: string): Promise<OAuthProfile> {
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: callbackUrl('github') }),
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: callbackUrl('github', requestBaseUrl) }),
     signal: AbortSignal.timeout(10_000),
   });
   const tokenData = await parseJson(tokenResponse);
@@ -183,9 +190,9 @@ async function exchangeGithub(code: string): Promise<OAuthProfile> {
   return { provider: 'github', providerAccountId, email, fullName, avatarUrl };
 }
 
-export async function exchangeCode(provider: OAuthProvider, code: string): Promise<OAuthProfile> {
+export async function exchangeCode(provider: OAuthProvider, code: string, requestBaseUrl?: string): Promise<OAuthProfile> {
   if (!code || code.length > 2000) throw new BadRequestError('Invalid OAuth authorization code');
-  return provider === 'google' ? exchangeGoogle(code) : exchangeGithub(code);
+  return provider === 'google' ? exchangeGoogle(code, requestBaseUrl) : exchangeGithub(code, requestBaseUrl);
 }
 
 export async function createPending(profile: OAuthProfile, state: OAuthState): Promise<string> {

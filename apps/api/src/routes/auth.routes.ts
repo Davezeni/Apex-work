@@ -50,6 +50,15 @@ const oauthQuery = (req: { query: unknown }) => req.query as {
   next?: string;
 };
 
+/** Only derive the callback from a known deployment host; never trust an arbitrary Host header. */
+const oauthRequestBase = (req: { protocol: string; get(name: string): string | undefined }): string => {
+  const host = req.get('host') ?? '';
+  if (host === 'apex-work-api.onrender.com' || /^localhost(?::\\d+)?$/.test(host) || /^127\\.0\\.0\\.1(?::\\d+)?$/.test(host)) {
+    return `${req.protocol}://${host}`;
+  }
+  return env.API_URL;
+};
+
 /** Begin Google/GitHub OAuth without exposing provider secrets to the browser. */
 router.get(
   '/oauth/:provider/start',
@@ -59,7 +68,7 @@ router.get(
     const query = oauthQuery(req);
     const role = query.role === 'FREELANCER' ? 'FREELANCER' : 'CLIENT';
     try {
-      const authorizationUrl = await oauth.start(provider, role, query.next);
+      const authorizationUrl = await oauth.start(provider, role, query.next, oauthRequestBase(req));
       return res.redirect(authorizationUrl);
     } catch {
       return res.redirect(oauth.callbackErrorUrl('provider_unavailable', query.next));
@@ -78,7 +87,7 @@ router.get(
       if (query.error) throw new BadRequestError('OAuth sign-in was cancelled');
       if (!query.code || !query.state) throw new BadRequestError('OAuth response was incomplete');
       state = await oauth.consumeState(query.state, provider);
-      const profile = await oauth.exchangeCode(provider, query.code);
+      const profile = await oauth.exchangeCode(provider, query.code, state.callbackBaseUrl ?? oauthRequestBase(req));
       const result = await authService.loginWithOAuth(profile, clientCtx(req));
 
       if (result.pending) {
