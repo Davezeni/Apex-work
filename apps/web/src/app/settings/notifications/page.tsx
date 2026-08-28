@@ -4,22 +4,20 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, MessageCircle, Package, Star, Wallet, Bell, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
 import { usePush } from '@/hooks/use-push';
+import { useMe } from '@/hooks/use-me';
+import {
+  useNotificationPreferences,
+  useUpdateNotificationPreferences,
+} from '@/hooks/use-notification-preferences';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  type NotificationPreferences,
+} from '@apex-work/shared';
 
-/**
- * Notification preferences. Persisted in localStorage until we ship a
- * /me/notification-prefs backend endpoint — the client is the source of
- * truth today for a good reason: we only push web notifications on this
- * device, so per-device toggles feel natural.
- */
-type PrefKey =
-  | 'messages'
-  | 'orders'
-  | 'reviews'
-  | 'payments'
-  | 'promotions'
-  | 'system';
+type PrefKey = keyof NotificationPreferences;
 
 const KEYS: { key: PrefKey; icon: React.ReactNode; label: string; sub: string }[] = [
   { key: 'messages', icon: <MessageCircle className="h-4 w-4" />, label: 'New messages', sub: 'When someone messages you' },
@@ -30,31 +28,42 @@ const KEYS: { key: PrefKey; icon: React.ReactNode; label: string; sub: string }[
   { key: 'system', icon: <Bell className="h-4 w-4" />, label: 'System alerts', sub: 'Security & account activity' },
 ];
 
-const STORAGE_KEY = 'apex-work-notif-prefs-v1';
-
 export default function NotifSettingsPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>({
-    messages: true, orders: true, reviews: true,
-    payments: true, promotions: false, system: true,
-  });
+  const { data: me, isLoading: meLoading, isAuthed } = useMe();
+  const preferences = useNotificationPreferences();
+  const update = useUpdateNotificationPreferences();
+  const [prefs, setPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const push = usePush();
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setPrefs((prev) => ({ ...prev, ...JSON.parse(raw) }));
-    } catch { /* ignore */ }
-  }, []);
+    if (!meLoading && !isAuthed) router.replace('/login?next=/settings/notifications');
+  }, [meLoading, isAuthed, router]);
 
-  const toggle = (k: PrefKey, v: boolean) => {
-    setPrefs((prev) => {
-      const next = { ...prev, [k]: v };
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
+  useEffect(() => {
+    if (preferences.data) setPrefs(preferences.data);
+  }, [preferences.data]);
+
+  const toggle = (key: PrefKey, value: boolean) => {
+    const previous = prefs;
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    update.mutate(next, {
+      onError: (error) => {
+        setPrefs(previous);
+        toast.error(error.message || 'Could not save notification preference');
+      },
     });
   };
+
+  if (meLoading || !me) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background pb-24">
@@ -66,7 +75,10 @@ export default function NotifSettingsPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">{t('settings.notifications')}</h1>
+        <div>
+          <h1 className="text-lg font-extrabold tracking-tight">{t('settings.notifications')}</h1>
+          <p className="text-[11px] text-muted-foreground">Synced across your devices</p>
+        </div>
       </header>
 
       {/* Push permission */}
@@ -107,10 +119,16 @@ export default function NotifSettingsPage() {
               <div className="text-sm font-semibold">{row.label}</div>
               <div className="text-[11px] text-muted-foreground">{row.sub}</div>
             </div>
-            <Switch checked={prefs[row.key]} onChange={(v) => toggle(row.key, v)} />
+            <Switch checked={prefs[row.key]} onChange={(value) => toggle(row.key, value)} />
           </label>
         ))}
       </div>
+      {preferences.isLoading && (
+        <p className="mt-3 text-center text-[11px] text-muted-foreground">Loading account preferences…</p>
+      )}
+      {update.isPending && (
+        <p className="mt-3 text-center text-[11px] text-primary">Saving preference…</p>
+      )}
     </div>
   );
 }
@@ -127,7 +145,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       }`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
           checked ? 'translate-x-5' : ''
         }`}
       />

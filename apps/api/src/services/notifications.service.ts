@@ -9,6 +9,10 @@ import type { NotificationType, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { logger } from '../config/logger.js';
 import { getIo } from '../realtime/socket.js';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  notificationPreferencesSchema,
+} from '@apex-work/shared';
 
 export interface NotifyInput {
   userId: string;
@@ -18,7 +22,35 @@ export interface NotifyInput {
   payload?: Prisma.InputJsonValue;
 }
 
+type PreferenceKey = keyof typeof DEFAULT_NOTIFICATION_PREFERENCES;
+
+const preferenceForType: Record<NotificationType, PreferenceKey> = {
+  NEW_MESSAGE: 'messages',
+  NEW_BID: 'orders',
+  ORDER_UPDATE: 'orders',
+  PAYMENT: 'payments',
+  REVIEW: 'reviews',
+  SYSTEM: 'system',
+};
+
+async function isEnabled(userId: string, type: NotificationType): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { notificationPrefsJson: true },
+    });
+    const parsed = notificationPreferencesSchema.safeParse(user?.notificationPrefsJson ?? {});
+    const preferences = parsed.success ? parsed.data : DEFAULT_NOTIFICATION_PREFERENCES;
+    return preferences[preferenceForType[type]];
+  } catch (err) {
+    // Preference lookup must never block important order/payment events.
+    logger.warn({ err, userId, type }, 'notification preference lookup failed; allowing notification');
+    return true;
+  }
+}
+
 export async function notify(input: NotifyInput) {
+  if (!(await isEnabled(input.userId, input.type))) return null;
   try {
     const notification = await prisma.notification.create({
       data: {

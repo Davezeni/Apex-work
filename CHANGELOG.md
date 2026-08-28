@@ -3,6 +3,20 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.2] — 2026-08-28 — Account-synced notification controls
+
+### Added
+
+- Account-level notification preferences for messages, orders, reviews, payments, promotions, and system alerts.
+- Durable preference API at `/v1/me/notification-preferences`.
+- Notification delivery now respects saved categories while failing open if preference lookup is unavailable.
+- Notification settings are synchronized across devices instead of stored only in browser localStorage.
+
+### Database
+
+- Added nullable `User.notificationPrefsJson`; safe defaults apply to existing accounts.
+- Applied migration `20260828150000_notification_preferences` to production Neon.
+
 ## [0.2.1] — 2026-08-28 — Chapa checkout and payout safety
 
 ### Fixed

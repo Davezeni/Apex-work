@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { updateProfileSchema } from '@apex-work/shared';
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  notificationPreferencesSchema,
+  updateProfileSchema,
+} from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -91,6 +95,34 @@ router.patch(
       }
       throw err;
     }
+  }),
+);
+
+/** GET /me/notification-preferences — account-level notification settings. */
+router.get(
+  '/notification-preferences',
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.sub },
+      select: { notificationPrefsJson: true },
+    });
+    if (!user) throw new NotFoundError('User');
+    const parsed = notificationPreferencesSchema.safeParse(user.notificationPrefsJson ?? {});
+    return success(res, parsed.success ? parsed.data : DEFAULT_NOTIFICATION_PREFERENCES);
+  }),
+);
+
+/** PATCH /me/notification-preferences — persist category toggles per account. */
+router.patch(
+  '/notification-preferences',
+  validate(notificationPreferencesSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').NotificationPreferences;
+    await prisma.user.update({
+      where: { id: req.user!.sub },
+      data: { notificationPrefsJson: body as never },
+    });
+    return success(res, body);
   }),
 );
 

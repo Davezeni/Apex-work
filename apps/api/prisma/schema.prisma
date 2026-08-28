@@ -118,6 +118,8 @@ model User {
   /// Availability is a compact JSON grid { day: [bool ×9 hour slots] } so
   /// we don't need a separate row-per-slot table for this feature.
   availabilityJson Json?
+  /// Account-level notification category preferences. NULL uses safe defaults.
+  notificationPrefsJson Json?
 
   // Referrals
   referralCode   String   @unique @default(cuid())
