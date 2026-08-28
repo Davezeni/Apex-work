@@ -51,6 +51,8 @@ services:
         value: "12"
       - key: CORS_ORIGINS
         value: https://apex-work-gold.vercel.app,http://localhost:3000
+      - key: API_URL
+        value: https://apex-work-api.onrender.com
       - key: WEB_URL
         value: https://apex-work-gold.vercel.app
       - key: AFROMESSAGE_API_KEY

@@ -23,13 +23,23 @@ const checks = [
     name: 'Google OAuth start',
     url: 'https://apex-work-api.onrender.com/v1/auth/oauth/google/start?next=%2Fprofile',
     redirect: 'manual',
-    expected: (res) => res.status >= 300 && res.status < 400 && res.headers.get('location')?.startsWith('https://accounts.google.com/'),
+    expected: (res) => {
+      const location = res.headers.get('location');
+      return res.status >= 300 && res.status < 400 && !!location &&
+        location.startsWith('https://accounts.google.com/') &&
+        new URL(location).searchParams.get('redirect_uri') === 'https://apex-work-api.onrender.com/v1/auth/oauth/google/callback';
+    },
   },
   {
     name: 'GitHub OAuth start',
     url: 'https://apex-work-api.onrender.com/v1/auth/oauth/github/start?next=%2Fprofile',
     redirect: 'manual',
-    expected: (res) => res.status >= 300 && res.status < 400 && res.headers.get('location')?.startsWith('https://github.com/login/oauth/authorize'),
+    expected: (res) => {
+      const location = res.headers.get('location');
+      return res.status >= 300 && res.status < 400 && !!location &&
+        location.startsWith('https://github.com/login/oauth/authorize') &&
+        new URL(location).searchParams.get('redirect_uri') === 'https://apex-work-api.onrender.com/v1/auth/oauth/github/callback';
+    },
   },
 
   {
