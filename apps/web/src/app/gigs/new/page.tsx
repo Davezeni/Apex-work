@@ -60,6 +60,8 @@ export default function PostGigPage() {
     else if (me && me.role !== 'FREELANCER') {
       toast.error(t('postGig.onlyFreelancers'));
       router.replace('/');
+    } else if (me && (!me.phone || !me.isPhoneVerified)) {
+      router.replace('/settings/phone?next=/gigs/new');
     } else if (me && !me.isOnboarded) {
       router.replace('/onboarding');
     }

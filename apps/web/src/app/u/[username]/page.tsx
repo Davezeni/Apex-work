@@ -91,6 +91,10 @@ export default function PublicProfilePage() {
       router.push(`/login?next=/u/${user.username}`);
       return;
     }
+    if (!me.phone || !me.isPhoneVerified) {
+      router.push(`/settings/phone?next=${encodeURIComponent(`/u/${user.username}`)}`);
+      return;
+    }
     if (isSelf) return;
     try {
       const conv = await startConversation.mutateAsync(user.id);

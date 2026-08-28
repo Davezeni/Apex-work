@@ -138,7 +138,11 @@ export default function GigDetailPage() {
 
   const handleMessageFreelancer = async () => {
     if (!me) {
-      router.push('/login');
+      router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
+      return;
+    }
+    if (!me.phone || !me.isPhoneVerified) {
+      router.push(`/settings/phone?next=${encodeURIComponent(`/gigs/${slug}`)}`);
       return;
     }
     try {

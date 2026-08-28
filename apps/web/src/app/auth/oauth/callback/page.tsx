@@ -45,12 +45,13 @@ export default function OAuthCallbackPage() {
         if (cancelled) return;
         const { phone, requiresPhone, ...tokens } = result;
         setSession(tokens as AuthSessionTokens, phone ?? undefined);
-        toast.success('Signed in successfully');
-        if (requiresPhone) {
-          router.replace(`/settings/phone?next=${encodeURIComponent(next)}`);
-        } else {
-          router.replace(next);
-        }
+        toast.success(requiresPhone
+          ? 'Signed in. Verify your phone before high-trust actions.'
+          : 'Signed in successfully');
+        // OAuth is allowed to create a basic account first. Phone verification
+        // is a step-up at the point of posting, ordering, messaging, or payout;
+        // do not force a duplicate OTP immediately after social sign-in.
+        router.replace(next);
       })
       .catch((reason: unknown) => {
         if (cancelled) return;

@@ -35,8 +35,12 @@ export default function NewJobPage() {
   const [attachments, setAttachments] = useState<{ url: string; name: string; contentType: string; sizeBytes: number }[]>([]);
 
   useEffect(() => {
-    if (!isLoading && !isAuthed) router.replace('/login?next=/jobs/new');
-  }, [isLoading, isAuthed, router]);
+    if (isLoading) return;
+    if (!isAuthed) router.replace('/login?next=/jobs/new');
+    else if (me && (!me.phone || !me.isPhoneVerified)) {
+      router.replace('/settings/phone?next=/jobs/new');
+    }
+  }, [isLoading, isAuthed, me, router]);
 
   // Prefill from AI Brief Generator (?title=…&description=…&skills=…&budgetMin=…&budgetMax=…)
   useEffect(() => {
