@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import {
+  completeOAuthSignupSchema,
   loginSchema,
   loginWithPinSchema,
+  oauthHandoffSchema,
+  oauthProviderSchema,
   refreshSchema,
   requestOtpSchema,
   setPinSchema,
@@ -16,6 +19,8 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { success } from '../lib/response.js';
 import { BadRequestError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
+import * as oauth from '../services/oauth.service.js';
+import { env } from '../config/env.js';
 
 const router: Router = Router();
 
@@ -29,6 +34,101 @@ const clientCtx = (req: any) => ({
   userAgent: req?.headers?.['user-agent'],
   ipAddress: req?.ip,
 });
+
+const oauthProviderFromRequest = (req: { params: unknown }) => {
+  const value = (req.params as { provider?: unknown }).provider;
+  const parsed = oauthProviderSchema.safeParse(value);
+  if (!parsed.success) throw new BadRequestError('Unsupported OAuth provider');
+  return parsed.data;
+};
+
+const oauthQuery = (req: { query: unknown }) => req.query as {
+  code?: string;
+  state?: string;
+  error?: string;
+  role?: string;
+  next?: string;
+};
+
+/** Begin Google/GitHub OAuth without exposing provider secrets to the browser. */
+router.get(
+  '/oauth/:provider/start',
+  authLimiter,
+  asyncHandler(async (req, res) => {
+    const provider = oauthProviderFromRequest(req);
+    const query = oauthQuery(req);
+    const role = query.role === 'FREELANCER' ? 'FREELANCER' : 'CLIENT';
+    try {
+      const authorizationUrl = await oauth.start(provider, role, query.next);
+      return res.redirect(authorizationUrl);
+    } catch {
+      return res.redirect(oauth.callbackErrorUrl('provider_unavailable', query.next));
+    }
+  }),
+);
+
+/** Provider callback. Exchanges the code server-side, then hands the session to the web app once. */
+router.get(
+  '/oauth/:provider/callback',
+  asyncHandler(async (req, res) => {
+    const provider = oauthProviderFromRequest(req);
+    const query = oauthQuery(req);
+    let state: Awaited<ReturnType<typeof oauth.consumeState>> | null = null;
+    try {
+      if (query.error) throw new BadRequestError('OAuth sign-in was cancelled');
+      if (!query.code || !query.state) throw new BadRequestError('OAuth response was incomplete');
+      state = await oauth.consumeState(query.state, provider);
+      const profile = await oauth.exchangeCode(provider, query.code);
+      const result = await authService.loginWithOAuth(profile, clientCtx(req));
+
+      if (result.pending) {
+        const oauthToken = await oauth.createPending(profile, state);
+        const params = new URLSearchParams({ oauthToken, role: state.role });
+        if (state.next !== '/') params.set('next', state.next);
+        if (profile.fullName) params.set('oauthName', profile.fullName);
+        return res.redirect(`${env.WEB_URL.replace(/\/$/, '')}/signup?${params.toString()}`);
+      }
+
+      const handoff = await oauth.createHandoff({
+        ...result.tokens,
+        phone: result.phone,
+      });
+      return res.redirect(oauth.callbackHandoffUrl(handoff, state.next));
+    } catch {
+      return res.redirect(oauth.callbackErrorUrl('oauth_failed', state?.next));
+    }
+  }),
+);
+
+/** Exchange a one-time browser handoff for the normal Apex-Work session tokens. */
+router.post(
+  '/oauth/handoff',
+  authLimiter,
+  validate(oauthHandoffSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').OAuthHandoffInput;
+    return success(res, await oauth.consumeHandoff(body.handoff));
+  }),
+);
+
+/** Complete an OAuth signup after the new user verifies an Ethiopian phone number. */
+router.post(
+  '/oauth/complete-signup',
+  authLimiter,
+  validate(completeOAuthSignupSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').CompleteOAuthSignupInput;
+    const pending = await oauth.getPending(body.oauthToken);
+    const result = await authService.completeOAuthSignup(pending, {
+      phone: body.phone,
+      otpToken: body.otpToken,
+      fullName: body.fullName,
+      role: body.role,
+    }, clientCtx(req));
+    await oauth.consumePending(body.oauthToken);
+    return success(res, { ...result, phone: body.phone, next: pending.next });
+  }),
+);
 
 router.post(
   '/otp/request',

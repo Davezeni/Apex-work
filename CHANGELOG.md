@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] — 2026-08-28 — Google and GitHub sign-in
+
+### Added
+
+- OAuth start/callback flow for Google and GitHub with Redis-backed single-use state.
+- One-time token handoff from API to web so access/refresh tokens never travel in the redirect URL.
+- Existing accounts link by verified provider email; new OAuth users must verify an Ethiopian phone number before signup completes.
+- Provider identity records stored without access tokens.
+- Login and signup buttons for Google and GitHub.
+- OAuth callback page and safe internal redirect validation.
+- OAuth provider credentials documented as Render API environment variables.
+
+### Security
+
+- Provider secrets remain server-side only.
+- OAuth state, pending signup tokens, and session handoffs expire and are single-use.
+- Google/GitHub OAuth does not bypass phone verification for new accounts.
+
 ## [0.2.2] — 2026-08-28 — Account-synced notification controls
 
 ### Added

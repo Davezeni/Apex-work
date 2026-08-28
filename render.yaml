@@ -76,6 +76,16 @@ services:
       - key: CHAPA_TRANSFERS_ENABLED
         value: "false" # Enable only after verifying Chapa transfer bank codes in sandbox.
 
+      # OAuth sign-in credentials are entered in the Render dashboard; never commit values.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+
       # WebAuthn / passkeys — must exactly match the web app's origin.
       # RP_ID = the domain (no scheme, no port). RP_ORIGIN = the full https origin.
       # Update these if you move to a custom domain.

@@ -1,19 +1,14 @@
 'use client';
 
 /**
- * Connected apps / integrations. Lists the third-party services that CAN
- * be connected to your Apex-Work account (Telegram bot notifications,
- * Google / GitHub OAuth, Chapa payment methods), showing which are
- * currently linked and letting you connect/disconnect each.
- *
- * Where no first-class OAuth flow exists yet, we show the integration as
- * "Available soon" with a small note explaining how it will work — this
- * gives users transparency about the roadmap rather than a dead route.
+ * Connected apps / integrations. Lists the account-backed passkeys and
+ * Chapa checkout options, plus the live Google/GitHub sign-in entry point.
+ * Provider credentials stay on the API; this page never handles secrets.
  */
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Send, ExternalLink, KeyRound, CreditCard, Trash2, Plus } from 'lucide-react';
+import { ArrowLeft, Chrome, ExternalLink, Github, KeyRound, CreditCard, Loader2, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
@@ -136,52 +131,38 @@ export default function ConnectedAppsPage() {
         </Link>
       </section>
 
-      {/* Telegram bot — roadmap */}
-      <section className="mx-3 mt-6">
-        <SectionHeader
-          icon={<Send className="h-4 w-4" />}
-          title="Telegram notifications"
-          subtitle="Get orders, chats & alerts on Telegram"
-        />
-        <div className="rounded-2xl border border-dashed border-border bg-card p-4">
-          <div className="flex items-start gap-3">
-            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-500/10 text-sky-500">
-              <Send className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold">Coming soon</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Link your Telegram account to <b>@apex_work_bot</b> and get instant push
-                notifications for new orders, chat messages, and dispute updates — even when
-                the app is closed.
-              </p>
-              <a
-                href="https://t.me/apex_work_support"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary"
-              >
-                Ask support to get early access
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* OAuth roadmap */}
+      {/* Social sign-in — real OAuth flow from the login screen. */}
       <section className="mx-3 mt-6">
         <SectionHeader
           icon={<KeyRound className="h-4 w-4" />}
           title="Social sign-in"
           subtitle="Google & GitHub"
         />
-        <div className="rounded-2xl border border-dashed border-border bg-card p-4">
-          <p className="text-xs text-muted-foreground">
-            One-tap sign-in with your Google or GitHub account is on the roadmap. For now you can
-            already use a <b>passkey</b> (Face ID, Touch ID) for the same one-tap experience —
-            add one above.
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Google and GitHub sign-in are available from the login screen. Existing accounts link
+            through a verified email; new accounts still verify an Ethiopian phone number.
           </p>
+          <div className="mt-3 flex gap-2">
+            <Link
+              href="/login"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold"
+            >
+              <Chrome className="h-3.5 w-3.5" />
+              Open sign in
+            </Link>
+            <Link
+              href="/settings/notifications"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold"
+            >
+              Notification settings
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
+            <Github className="h-3 w-3" />
+            OAuth connections are managed securely by the API.
+          </div>
         </div>
       </section>
 

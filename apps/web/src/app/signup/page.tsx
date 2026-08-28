@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles, Chrome, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
 import { OtpInput } from '@/components/auth/otp-input';
@@ -13,6 +13,8 @@ import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, type UserRole } from '@apex-work/sha
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/i18n';
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
 
 type Step = 'role' | 'phone' | 'otp' | 'name';
 
@@ -26,14 +28,18 @@ export default function SignupPage() {
 
 function SignupInner() {
   const params = useSearchParams();
-  // Prefill phone from URL (e.g. redirected from /login when no account exists)
+  // Prefill phone from URL (e.g. redirected from /login when no account exists).
+  // An OAuth callback skips role selection and asks only for phone verification.
   const phoneFromQuery = params.get('phone');
-  const [step, setStep] = useState<Step>(phoneFromQuery ? 'phone' : 'role');
-  const [role, setRole] = useState<UserRole>((params.get('role') as UserRole) ?? 'CLIENT');
+  const oauthToken = params.get('oauthToken');
+  const oauthName = params.get('oauthName');
+  const [step, setStep] = useState<Step>(oauthToken || phoneFromQuery ? 'phone' : 'role');
+  const roleFromQuery = params.get('role');
+  const [role, setRole] = useState<UserRole>(roleFromQuery === 'FREELANCER' ? 'FREELANCER' : 'CLIENT');
   const [phone, setPhone] = useState(phoneFromQuery ?? '+251');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState(oauthName ?? '');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const router = useRouter();
@@ -41,6 +47,10 @@ function SignupInner() {
   const { t } = useI18n();
 
   const chooseRole = () => setStep('phone');
+  const startOAuth = (provider: 'google' | 'github') => {
+    const query = new URLSearchParams({ role, next: params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/') });
+    window.location.assign(`${API_URL}/v1/auth/oauth/${provider}/start?${query.toString()}`);
+  };
 
   const sendOtp = async (isResend = false) => {
     if (!ETHIOPIAN_PHONE_REGEX.test(phone)) {
@@ -91,16 +101,19 @@ function SignupInner() {
     try {
       const result = await apiFetch<{
         user: { id: string };
-        tokens: { accessToken: string; refreshToken: string; expiresIn: number };
-      }>('/auth/signup', {
+        tokens: { accessToken: string; refreshToken: string; expiresIn: number; deviceToken?: string; deviceExpiresAt?: string };
+        next?: string;
+      }>(oauthToken ? '/auth/oauth/complete-signup' : '/auth/signup', {
         method: 'POST',
-        body: { phone, otpToken, fullName: fullName.trim(), role },
+        body: oauthToken
+          ? { oauthToken, phone, otpToken, fullName: fullName.trim(), role }
+          : { phone, otpToken, fullName: fullName.trim(), role },
       });
       setSession(result.tokens, phone);
       toast.success(t('auth.welcomeUser', { name: fullName.split(' ')[0] ?? '' }));
-      // Offer to set a PIN so the next login skips the SMS step. It routes
-      // onward to onboarding (freelancer) or home (client) via ?next=.
-      const next = role === 'FREELANCER' ? '/onboarding' : '/';
+      // Offer to set a PIN so the next login skips the SMS step. OAuth keeps
+      // the callback's safe destination when the user was sent here from it.
+      const next = result.next ?? params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/');
       router.push(`/settings/pin?next=${encodeURIComponent(next)}`);
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Signup failed');
@@ -160,6 +173,22 @@ function SignupInner() {
               <Button variant="brand" size="lg" className="mt-8 w-full" onClick={chooseRole}>
                 {t('common.continue')} <ArrowRight className="h-4 w-4" />
               </Button>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => startOAuth('google')}
+                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:bg-muted"
+                >
+                  <Chrome className="h-4 w-4" /> Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startOAuth('github')}
+                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:bg-muted"
+                >
+                  <Github className="h-4 w-4" /> GitHub
+                </button>
+              </div>
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 {t('auth.alreadyRegistered')}{' '}
                 <Link href="/login" className="font-semibold text-primary">
@@ -171,8 +200,10 @@ function SignupInner() {
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.yourPhone')}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">{t('auth.weWillSendCode')}</p>
+              <h1 className="text-3xl font-extrabold tracking-tight">{oauthToken ? 'Add your phone number' : t('auth.yourPhone')}</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {oauthToken ? 'Verify your Ethiopian phone to finish creating this account.' : t('auth.weWillSendCode')}
+              </p>
               <input
                 autoFocus
                 type="tel"

@@ -13,6 +13,8 @@ import {
   LockKeyhole,
   Fingerprint,
   RefreshCw,
+  Chrome,
+  Github,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OtpInput } from '@/components/auth/otp-input';
@@ -23,6 +25,8 @@ import { useAuthStore, type AuthSessionTokens } from '@/stores/auth-store';
 import { getDeviceToken } from '@/lib/device';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { useI18n } from '@/i18n';
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
 
 type Step = 'phone' | 'pin' | 'otp' | 'no-account' | 'auto';
 
@@ -55,6 +59,13 @@ function LoginInner() {
   const [resending, setResending] = useState(false);
 
   const next = params.get('next') ?? '/';
+  const oauthError = params.get('oauthError');
+
+  const startOAuth = (provider: 'google' | 'github') => {
+    const query = new URLSearchParams({ next });
+    window.location.assign(`${API_URL}/v1/auth/oauth/${provider}/start?${query.toString()}`);
+  };
+
   const finishLogin = (result: AuthResponse, phoneJustUsed: string) => {
     setSession(result.tokens, phoneJustUsed);
     toast.success(t('loginSmart.welcomeBack'));
@@ -79,6 +90,13 @@ function LoginInner() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!oauthError) return;
+    toast.error(oauthError === 'provider_unavailable'
+      ? 'This sign-in provider is not configured yet.'
+      : 'OAuth sign-in could not be completed.');
+  }, [oauthError]);
 
   // ---------------------------------------
   // Step: phone — decide the best next step
@@ -302,6 +320,23 @@ function LoginInner() {
                 <Fingerprint className="h-4 w-4" />
                 {t('loginSmart.useBiometrics')}
               </button>
+
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => startOAuth('google')}
+                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+                >
+                  <Chrome className="h-4 w-4" /> Google
+                </button>
+                <button
+                  type="button"
+                  onClick={() => startOAuth('github')}
+                  className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+                >
+                  <Github className="h-4 w-4" /> GitHub
+                </button>
+              </div>
 
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 {t('auth.newHere')}{' '}

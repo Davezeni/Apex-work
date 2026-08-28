@@ -27,4 +27,5 @@ export * from './dispute.js';
 export * from './saved-search.js';
 export * from './support.js';
 export * from './notifications.js';
+export * from './oauth.js';
 export * from './featured.js';

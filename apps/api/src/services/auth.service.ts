@@ -1,4 +1,5 @@
 import { OTP_LENGTH, OTP_TTL_SECONDS, type UserRole } from '@apex-work/shared';
+import type { OAuthProfile } from './oauth.service.js';
 import type { OtpPurpose, User } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import {
@@ -325,6 +326,140 @@ export const loginWithTrustedDevice = async (
   // rolling extension happened inside findUserByTrustedDevice.
   const tokens = await issueTokens({ id: user.id, role: user.role as UserRole }, ctx);
   return { user: { id: user.id, role: user.role }, tokens };
+};
+
+// ==========================================
+// OAuth
+// ==========================================
+
+export type OAuthLoginResult =
+  | { pending: true }
+  | {
+      pending: false;
+      user: { id: string; role: UserRole };
+      phone: string;
+      tokens: Awaited<ReturnType<typeof issueTokensAndTrustDevice>>;
+    };
+
+/**
+ * Link a provider identity to an existing account by provider subject or
+ * verified email, then issue the same trusted-device session as OTP login.
+ * New OAuth identities are returned as `pending` so signup can still require
+ * an Ethiopian phone verification before creating a User row.
+ */
+export const loginWithOAuth = async (
+  profile: OAuthProfile,
+  ctx: { userAgent?: string; ipAddress?: string },
+): Promise<OAuthLoginResult> => {
+  const linked = await prisma.oAuthAccount.findUnique({
+    where: {
+      provider_providerAccountId: {
+        provider: profile.provider,
+        providerAccountId: profile.providerAccountId,
+      },
+    },
+    select: {
+      user: { select: { id: true, role: true, phone: true, isActive: true, avatarUrl: true } },
+    },
+  });
+
+  let user = linked?.user ?? null;
+  if (!user && profile.email) {
+    user = await prisma.user.findUnique({
+      where: { email: profile.email },
+      select: { id: true, role: true, phone: true, isActive: true, avatarUrl: true },
+    });
+  }
+  if (!user) return { pending: true };
+  if (!user.isActive) throw new UnauthorizedError('Account inactive');
+
+  if (!linked) {
+    try {
+      await prisma.oAuthAccount.create({
+        data: {
+          provider: profile.provider,
+          providerAccountId: profile.providerAccountId,
+          userId: user.id,
+          email: profile.email ?? null,
+          profileName: profile.fullName,
+          avatarUrl: profile.avatarUrl ?? null,
+        },
+      });
+    } catch (err) {
+      // A concurrent callback may have linked the same provider subject. Only
+      // hide that race; all other database errors must surface.
+      if ((err as { code?: string }).code !== 'P2002') throw err;
+    }
+  }
+
+  if (!user.avatarUrl && profile.avatarUrl) {
+    await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: profile.avatarUrl } });
+  }
+
+  const tokens = await issueTokensAndTrustDevice(user, ctx);
+  return {
+    pending: false,
+    user: { id: user.id, role: user.role as UserRole },
+    phone: user.phone,
+    tokens,
+  };
+};
+
+/** Finish a new OAuth account after the user verifies their Ethiopian phone. */
+export const completeOAuthSignup = async (
+  profile: OAuthProfile,
+  input: {
+    phone: string;
+    otpToken: string;
+    fullName: string;
+    role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>;
+  },
+  ctx: { userAgent?: string; ipAddress?: string },
+) => {
+  const verified = await consumeVerifiedToken(input.otpToken);
+  if (verified.phone !== input.phone || verified.purpose !== 'SIGNUP' || verified.userId) {
+    throw new UnauthorizedError('Phone verification token is invalid');
+  }
+
+  const existingPhone = await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } });
+  if (existingPhone) throw new ConflictError('This phone number is already registered. Please sign in instead.');
+  if (profile.email) {
+    const existingEmail = await prisma.user.findUnique({ where: { email: profile.email }, select: { id: true } });
+    if (existingEmail) throw new ConflictError('An account already uses this email. Please sign in instead.');
+  }
+
+  try {
+    const user = await prisma.user.create({
+      data: {
+        phone: input.phone,
+        email: profile.email ?? null,
+        fullName: input.fullName.trim() || profile.fullName,
+        username: await generateUniqueUsername(input.fullName.trim() || profile.fullName),
+        avatarUrl: profile.avatarUrl ?? null,
+        role: input.role,
+        isPhoneVerified: true,
+        isEmailVerified: !!profile.email,
+        wallet: { create: {} },
+        oauthAccounts: {
+          create: {
+            provider: profile.provider,
+            providerAccountId: profile.providerAccountId,
+            email: profile.email ?? null,
+            profileName: profile.fullName,
+            avatarUrl: profile.avatarUrl ?? null,
+          },
+        },
+      },
+      select: { id: true, role: true },
+    });
+    const tokens = await issueTokensAndTrustDevice(user, ctx);
+    return { user, tokens };
+  } catch (err) {
+    if ((err as { code?: string }).code === 'P2002') {
+      throw new ConflictError('This phone or OAuth account is already registered. Please sign in instead.');
+    }
+    throw err;
+  }
 };
 
 // ==========================================

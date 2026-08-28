@@ -146,6 +146,7 @@ model User {
   sessions       Session[]
   trustedDevices TrustedDevice[]
   passkeys       Passkey[]
+  oauthAccounts  OAuthAccount[]
   reports        Report[]             @relation("Reports")
   blocking       UserBlock[]          @relation("Blocker")
   blockedBy      UserBlock[]          @relation("Blocked")
@@ -646,6 +647,26 @@ model Passkey {
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+// ================= OAUTH ACCOUNTS =================
+/// External identity linked to an Apex-Work account. We never store provider
+/// access tokens; only the stable provider subject and verified profile data.
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  provider          String
+  providerAccountId String
+  userId            String
+  email             String?
+  profileName       String?
+  avatarUrl         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
   @@index([userId])
 }
 

@@ -20,6 +20,19 @@ const checks = [
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,
   },
   {
+    name: 'Google OAuth start',
+    url: 'https://apex-work-api.onrender.com/v1/auth/oauth/google/start?next=%2Fprofile',
+    redirect: 'manual',
+    expected: (res) => res.status >= 300 && res.status < 400 && res.headers.get('location')?.startsWith('https://accounts.google.com/'),
+  },
+  {
+    name: 'GitHub OAuth start',
+    url: 'https://apex-work-api.onrender.com/v1/auth/oauth/github/start?next=%2Fprofile',
+    redirect: 'manual',
+    expected: (res) => res.status >= 300 && res.status < 400 && res.headers.get('location')?.startsWith('https://github.com/login/oauth/authorize'),
+  },
+
+  {
     name: 'Chapa config',
     url: 'https://apex-work-api.onrender.com/v1/payments/config',
     expected: async (res) => {
@@ -42,7 +55,7 @@ const checks = [
 let failed = 0;
 for (const check of checks) {
   try {
-    const response = await fetch(check.url, { redirect: 'follow' });
+    const response = await fetch(check.url, { redirect: check.redirect ?? 'follow' });
     const ok = await check.expected(response);
     console.log(`${ok ? 'PASS' : 'FAIL'} ${check.name} (${response.status})`);
     if (!ok) failed++;

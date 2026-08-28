@@ -36,6 +36,13 @@ const envSchema = z.object({
   // bank-code mapping is verified, and a small sandbox payout succeeds.
   CHAPA_TRANSFERS_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 
+  // OAuth providers. Redirect URLs are derived from API_URL so they remain
+  // consistent between production and local development.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),

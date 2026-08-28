@@ -9,6 +9,7 @@ Built with 100% open-source stack, free-tier services, and mobile-first design. 
 ## ✨ Features
 
 - 🇪🇹 **Ethiopia-first** — Amharic UI, Telebirr payments, local phone auth
+- 🔑 **Flexible sign-in** — Phone/OTP, passkeys, Google, and GitHub OAuth
 - 📱 **Native app experience** — PWA with bottom navigation, offline support
 - 💬 **Telegram-quality chat** — voice notes, files, real-time, encrypted
 - 🤖 **AI-powered** — smart matching, proposal writer, live translation
