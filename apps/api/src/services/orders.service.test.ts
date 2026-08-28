@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { prismaMock, notifyMock } = vi.hoisted(() => ({
   prismaMock: {
-    order: { findUnique: vi.fn(), update: vi.fn() },
-    wallet: { update: vi.fn() },
+    gig: { findUnique: vi.fn() },
+    order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    payment: { create: vi.fn(), updateMany: vi.fn() },
+    wallet: { update: vi.fn(), upsert: vi.fn() },
     user: { update: vi.fn() },
     transaction: { create: vi.fn() },
     $transaction: vi.fn(),
@@ -17,9 +19,12 @@ vi.mock('./notifications.service.js', () => ({ notify: notifyMock }));
 import {
   acceptDelivery,
   cancelOrder,
+  confirmPaymentByTxRef,
+  createOrderAndInitiatePayment,
   markDelivered,
   requestRevision,
 } from './orders.service.js';
+import { chapa } from './chapa.service.js';
 
 const order = {
   id: 'order-1',
@@ -110,5 +115,99 @@ describe('order escrow lifecycle', () => {
       data: expect.objectContaining({ type: 'ORDER_REFUND', amountEtb: order.amountEtb }),
     }));
     expect(notifyMock).toHaveBeenCalledWith(expect.objectContaining({ userId: order.sellerId }));
+  });
+});
+
+describe('checkout payment flow', () => {
+  it('creates a pending order and payment after Chapa returns a checkout URL', async () => {
+    const gig = {
+      id: 'gig-1',
+      ownerId: 'seller-1',
+      status: 'ACTIVE' as const,
+      title: 'Logo design',
+      packages: [{ tier: 'BASIC' as const, title: 'Basic', priceEtb: 1000, deliveryDays: 3 }],
+      owner: { id: 'seller-1', fullName: 'Seller One' },
+    };
+    const pendingOrder = {
+      id: 'order-2',
+      clientId: 'client-1',
+      sellerId: 'seller-1',
+      amountEtb: 1000,
+      platformFeeEtb: 100,
+      sellerNetEtb: 900,
+      status: 'PENDING' as const,
+      title: 'Logo design — Basic',
+    };
+    prismaMock.gig.findUnique.mockResolvedValue(gig);
+    prismaMock.order.create.mockResolvedValue(pendingOrder);
+    prismaMock.payment.create.mockResolvedValue({ id: 'payment-1' });
+    const initialize = vi.spyOn(chapa, 'initialize').mockResolvedValue({
+      ok: true,
+      checkoutUrl: 'https://checkout.chapa.co/test-order',
+    });
+
+    const result = await createOrderAndInitiatePayment(
+      'client-1',
+      gig.id,
+      'BASIC',
+      'Use the supplied brand colors.',
+      {
+        id: 'client-1',
+        email: 'client@example.com',
+        phone: '+251911111111',
+        fullName: 'Client One',
+      },
+    );
+
+    expect(result.checkoutUrl).toBe('https://checkout.chapa.co/test-order');
+    expect(result.devSkipped).toBe(false);
+    expect(prismaMock.payment.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        orderId: pendingOrder.id,
+        providerRef: `apex-${pendingOrder.id}`,
+        status: 'PENDING',
+      }),
+    }));
+    expect(initialize).toHaveBeenCalledWith(expect.objectContaining({
+      amountEtb: 1000,
+      txRef: `apex-${pendingOrder.id}`,
+    }));
+    initialize.mockRestore();
+  });
+
+  it('verifies the provider, credits escrow, and activates the order exactly once', async () => {
+    const pendingOrder = {
+      ...order,
+      status: 'PENDING' as const,
+      payments: [{ id: 'payment-1', status: 'PENDING' as const, providerRef: 'apex-order-1' }],
+      seller: { id: order.sellerId },
+      gig: { title: order.title },
+    };
+    prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.wallet.upsert.mockResolvedValue({ userId: order.sellerId });
+    prismaMock.order.update.mockResolvedValue({ ...pendingOrder, status: 'ACTIVE' });
+    const verify = vi.spyOn(chapa, 'verify').mockResolvedValue({
+      ok: true,
+      status: 'success',
+      amount: order.amountEtb,
+      method: 'telebirr',
+      raw: { status: 'success' },
+    });
+
+    const result = await confirmPaymentByTxRef('apex-order-1');
+
+    expect(result.updated).toBe(true);
+    expect(result.order.status).toBe('ACTIVE');
+    expect(prismaMock.payment.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ providerRef: 'apex-order-1', status: 'PENDING' }),
+      data: expect.objectContaining({ status: 'SUCCESS', method: 'telebirr' }),
+    }));
+    expect(prismaMock.wallet.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: order.sellerId },
+      update: { pendingEtb: { increment: order.sellerNetEtb } },
+    }));
+    expect(notifyMock).toHaveBeenCalledTimes(2);
+    verify.mockRestore();
   });
 });
