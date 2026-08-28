@@ -7,6 +7,7 @@ import { checkAllSavedSearches } from '../services/savedSearches.service.js';
 import { autoReleaseEscrow } from '../services/orders.service.js';
 import { expireFeatured } from '../services/featured.service.js';
 import { flushPending as flushEmails } from '../services/email.service.js';
+import { syncProcessingWithdrawals } from '../services/withdrawals.service.js';
 
 const router: Router = Router();
 
@@ -47,16 +48,22 @@ router.all('/emails', asyncHandler(async (req, res) => {
   return success(res, await flushEmails());
 }));
 
+router.all('/withdrawals', asyncHandler(async (req, res) => {
+  gate(req);
+  return success(res, await syncProcessingWithdrawals());
+}));
+
 /** Fan-out entrypoint: run every scheduled worker. Called by one cron. */
 router.all('/tick', asyncHandler(async (req, res) => {
   gate(req);
-  const [saved, escrow, featured, emails] = await Promise.all([
+  const [saved, escrow, featured, emails, withdrawals] = await Promise.all([
     checkAllSavedSearches().catch((e) => ({ error: (e as Error).message })),
     autoReleaseEscrow().catch((e) => ({ error: (e as Error).message })),
     expireFeatured().catch((e) => ({ error: (e as Error).message })),
     flushEmails().catch((e) => ({ error: (e as Error).message })),
+    syncProcessingWithdrawals().catch((e) => ({ error: (e as Error).message })),
   ]);
-  return success(res, { saved, escrow, featured, emails });
+  return success(res, { saved, escrow, featured, emails, withdrawals });
 }));
 
 export default router;

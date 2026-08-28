@@ -3,13 +3,15 @@
  *
  * Docs: https://developer.chapa.co/docs/accept-payments/
  *
- * Two flows we use:
- *   1. Initialize a transaction → get a hosted checkout URL (redirect user there)
- *   2. Verify a transaction by tx_ref → confirm status after webhook or return
+ * Flows used by Apex-Work:
+ *   1. Initialize a checkout transaction → hosted payment URL.
+ *   2. Verify a transaction by tx_ref after a webhook or return redirect.
+ *   3. Optionally initiate/verify withdrawals through Chapa Transfers when
+ *      the explicit CHAPA_TRANSFERS_ENABLED feature flag is enabled.
  *
  * We NEVER trust webhook payloads alone — every webhook triggers a
- * server-side verify() call before we credit anything. Prevents forged
- * callbacks from crediting fake orders.
+ * server-side verify() call before we credit anything. Payment and transfer
+ * credentials stay on the API; the browser only sees public configuration.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '../config/env.js';
@@ -50,13 +52,32 @@ export interface VerifyResult {
   error?: string;
 }
 
+export interface ChapaBank {
+  name: string;
+  code: string;
+}
+
+export interface TransferResult {
+  ok: boolean;
+  status: 'pending' | 'failed' | 'unknown';
+  reference?: string;
+  error?: string;
+  raw?: unknown;
+}
+
 class ChapaService {
   private get secretKey() {
     return env.CHAPA_SECRET_KEY;
   }
 
+  private bankCache: { fetchedAt: number; banks: ChapaBank[] } | null = null;
+
   isConfigured(): boolean {
     return !!this.secretKey;
+  }
+
+  transfersEnabled(): boolean {
+    return this.isConfigured() && env.CHAPA_TRANSFERS_ENABLED;
   }
 
   /**
@@ -67,10 +88,6 @@ class ChapaService {
    * We deliberately use `apex-work.com` (a real-sounding domain that passes
    * Chapa's DNS-lookup check). Chapa doesn't actually send mail to this
    * address; it's only stored on the receipt.
-   *
-   * Exposed as a static helper so both this service and callers building the
-   * payload share ONE source of truth for the "what email do we send to Chapa"
-   * rule.
    */
   static safeEmail(email: string | null | undefined, userId: string): string {
     if (email && !email.endsWith('.et')) return email;
@@ -184,7 +201,7 @@ class ChapaService {
       return {
         ok: true,
         status: mapped,
-        amount: data.data.amount ? Number(data.data.amount) : undefined,
+        amount: data.data.amount !== undefined ? Number(data.data.amount) : undefined,
         currency: data.data.currency,
         method: data.data.method,
         reference: data.data.reference,
@@ -196,10 +213,154 @@ class ChapaService {
     }
   }
 
+  /** Fetch and cache Chapa's live bank-code list for transfer payouts. */
+  async listBanks(): Promise<ChapaBank[]> {
+    if (!this.secretKey) return [];
+    if (this.bankCache && Date.now() - this.bankCache.fetchedAt < 6 * 60 * 60 * 1000) {
+      return this.bankCache.banks;
+    }
+
+    try {
+      const res = await fetch(`${CHAPA_BASE}/banks`, {
+        headers: { Authorization: `Bearer ${this.secretKey}` },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const raw = (await res.json()) as unknown;
+      if (!res.ok) {
+        logger.warn({ status: res.status }, 'Chapa bank list failed');
+        return [];
+      }
+
+      const root = raw as {
+        data?: unknown;
+        banks?: unknown;
+      };
+      const candidates = Array.isArray(raw)
+        ? raw
+        : Array.isArray(root.data)
+          ? root.data
+          : Array.isArray(root.banks)
+            ? root.banks
+            : root.data && typeof root.data === 'object' && Array.isArray((root.data as { banks?: unknown }).banks)
+              ? (root.data as { banks: unknown[] }).banks
+              : [];
+
+      const banks = candidates.flatMap((item) => {
+        if (!item || typeof item !== 'object') return [];
+        const row = item as Record<string, unknown>;
+        const name = row.name ?? row.bank_name ?? row.bankName;
+        const code = row.code ?? row.bank_code ?? row.bankCode ?? row.id;
+        return typeof name === 'string' && (typeof code === 'string' || typeof code === 'number')
+          ? [{ name, code: String(code) }]
+          : [];
+      });
+      this.bankCache = { fetchedAt: Date.now(), banks };
+      return banks;
+    } catch (err) {
+      logger.warn({ err }, 'Chapa bank list network error');
+      return [];
+    }
+  }
+
+  /** Resolve our user-facing payout destination to Chapa's current bank code. */
+  async findBankCode(destination: string): Promise<string | null> {
+    const aliases: Record<string, string[]> = {
+      telebirr: ['telebirr'],
+      cbebirr: ['cbebirr', 'cbe birr'],
+      cbe_bank: ['commercial bank of ethiopia', 'cbe bank', 'cbe'],
+      awash_bank: ['awash bank', 'awash'],
+      dashen_bank: ['dashen bank', 'dashen'],
+      bank_of_abyssinia: ['bank of abyssinia', 'abyssinia'],
+    };
+    const wanted = aliases[destination] ?? [destination];
+    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const normalizedWanted = wanted.map(normalize);
+    const banks = await this.listBanks();
+    const match = banks.find((bank) => {
+      const name = normalize(bank.name);
+      return normalizedWanted.some((alias) => name === alias || name.includes(alias) || alias.includes(name));
+    });
+    return match?.code ?? null;
+  }
+
+  /** Queue a Chapa transfer. Final status is confirmed by verifyTransfer(). */
+  async initiateTransfer(input: {
+    amountEtb: number;
+    accountNumber: string;
+    accountName?: string;
+    bankCode: string;
+    reference: string;
+  }): Promise<TransferResult> {
+    if (!this.secretKey) return { ok: false, status: 'unknown', error: 'chapa_not_configured' };
+
+    try {
+      const numericCode = /^\d+$/.test(input.bankCode) ? Number(input.bankCode) : input.bankCode;
+      const res = await fetch(`${CHAPA_BASE}/transfers`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.secretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          account_name: input.accountName,
+          account_number: input.accountNumber,
+          amount: String(input.amountEtb),
+          currency: 'ETB',
+          reference: input.reference,
+          bank_code: numericCode,
+        }),
+      });
+      const raw = (await res.json()) as unknown;
+      const root = raw as { status?: string; message?: unknown; data?: unknown };
+      const data = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : {};
+      const providerReference =
+        (typeof root.data === 'string' ? root.data : undefined) ??
+        (typeof data.reference === 'string' ? data.reference : undefined) ??
+        (typeof data.tx_ref === 'string' ? data.tx_ref : undefined) ??
+        (typeof data.transfer_id === 'string' ? data.transfer_id : undefined) ??
+        input.reference;
+      const status = String(root.status ?? data.status ?? '').toLowerCase();
+
+      if (!res.ok || status === 'failed' || status === 'error') {
+        const message = typeof root.message === 'string' ? root.message : `transfer_failed_${res.status}`;
+        logger.warn({ status: res.status, message }, 'Chapa transfer failed');
+        return { ok: false, status: 'failed', reference: providerReference, error: message, raw };
+      }
+      if (status === 'success' || status === 'pending' || status === 'queued') {
+        return { ok: true, status: 'pending', reference: providerReference, raw };
+      }
+      return { ok: false, status: 'unknown', reference: providerReference, error: 'unknown_transfer_status', raw };
+    } catch (err) {
+      logger.error({ err }, 'Chapa transfer network error');
+      return { ok: false, status: 'unknown', error: 'network_error' };
+    }
+  }
+
+  async verifyTransfer(reference: string): Promise<TransferResult> {
+    if (!this.secretKey) return { ok: false, status: 'unknown', error: 'chapa_not_configured' };
+    try {
+      const res = await fetch(`${CHAPA_BASE}/transfers/verify/${encodeURIComponent(reference)}`, {
+        headers: { Authorization: `Bearer ${this.secretKey}` },
+      });
+      const raw = (await res.json()) as unknown;
+      const root = raw as { status?: string; message?: unknown; data?: unknown };
+      const data = root.data && typeof root.data === 'object' ? root.data as Record<string, unknown> : {};
+      const status = String(data.status ?? root.status ?? '').toLowerCase();
+      if (status === 'success' || status === 'completed') return { ok: true, status: 'pending', reference, raw };
+      if (status === 'failed' || status === 'reverted' || status === 'error') {
+        return { ok: false, status: 'failed', reference, error: typeof root.message === 'string' ? root.message : status, raw };
+      }
+      return { ok: false, status: 'unknown', reference, error: 'unknown_transfer_status', raw };
+    } catch (err) {
+      logger.warn({ err, reference }, 'Chapa transfer verification network error');
+      return { ok: false, status: 'unknown', reference, error: 'network_error' };
+    }
+  }
+
   /**
    * Chapa signs webhooks with a shared secret you configure in their dashboard.
    * Verify by computing HMAC-SHA256 of the request body with the secret and
-   * comparing with the `x-chapa-signature` header via timing-safe compare.
+   * comparing with the chapa-signature headers via timing-safe compare.
    */
   verifyWebhookSignature(rawBody: string, providedSignature: string | undefined): boolean {
     if (!env.CHAPA_WEBHOOK_SECRET || !providedSignature) return false;

@@ -3,6 +3,20 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] — 2026-08-28 — Chapa checkout and payout safety
+
+### Fixed
+
+- Chapa webhooks now preserve raw request bytes for signature verification.
+- Both Chapa signature header variants and nested transaction references are accepted.
+- Production gig, job-bid, and offer flows no longer leave unpaid orders behind when Chapa is unavailable or initialization fails.
+- Checkout options now report live Chapa status instead of storing fake payment details in browser localStorage.
+
+### Added
+
+- Explicitly opt-in Chapa Transfers integration with bank-list lookup and processing-status reconciliation.
+- `/v1/cron/withdrawals` is available for scheduled transfer reconciliation; automated transfers remain disabled until sandbox verification.
+
 ## [0.2.0] — 2026-08-28 — Account-backed saved gigs
 
 ### Added

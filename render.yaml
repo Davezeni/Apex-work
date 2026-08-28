@@ -73,6 +73,8 @@ services:
         # Set to the value shown in Chapa dashboard when you configure the
         # webhook URL. Leave empty in test mode; production should always have one.
         sync: false
+      - key: CHAPA_TRANSFERS_ENABLED
+        value: "false" # Enable only after verifying Chapa transfer bank codes in sandbox.
 
       # WebAuthn / passkeys — must exactly match the web app's origin.
       # RP_ID = the domain (no scheme, no port). RP_ORIGIN = the full https origin.

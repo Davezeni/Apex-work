@@ -32,6 +32,9 @@ const envSchema = z.object({
   CHAPA_PUBLIC_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
   CHAPA_ENCRYPTION_KEY: z.string().optional(),
+  // Keep automated withdrawals off until Chapa Transfers is configured,
+  // bank-code mapping is verified, and a small sandbox payout succeeds.
+  CHAPA_TRANSFERS_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
 
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),

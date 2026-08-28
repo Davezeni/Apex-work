@@ -1,10 +1,11 @@
 /**
  * Withdrawals.
  *
- * MVP flow: user requests a payout → we deduct from their wallet.balanceEtb
- * atomically, create a Withdrawal(PENDING) row, and add a Transaction
- * ledger entry. An operator (or a future Chapa B2C integration) then flips
- * status → SUCCESS.
+ * User requests a payout → we deduct from their wallet.balanceEtb atomically,
+ * create a Withdrawal(PENDING) row, and add a Transaction ledger entry.
+ * Admin review remains the safe default; an explicit CHAPA_TRANSFERS_ENABLED
+ * flag can hand eligible destinations to Chapa Transfers, then the cron
+ * reconciler moves PROCESSING rows to SUCCESS/FAILED.
  *
  * We DEBIT the wallet immediately on request so users don't double-spend
  * their balance while an operator is processing. If the withdrawal fails,
@@ -15,6 +16,9 @@ import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
 import { notify } from './notifications.service.js';
+import { chapa } from './chapa.service.js';
+import { env } from '../config/env.js';
+import { logger } from '../config/logger.js';
 
 const DESTINATION_TO_ENUM = {
   telebirr: 'TELEBIRR',
@@ -91,7 +95,118 @@ export async function requestWithdrawal(input: {
     payload: { withdrawalId: wd.id },
   });
 
+  // Automated transfers are explicitly opt-in. Until the feature flag is
+  // enabled, the existing admin review flow remains the safe default.
+  if (chapa.transfersEnabled()) {
+    await tryAutomatedPayout(wd.id, input);
+  }
+
   return wd;
+}
+
+async function tryAutomatedPayout(
+  withdrawalId: string,
+  input: {
+    userId: string;
+    amountEtb: number;
+    destination: IncomingDestination;
+    accountNumber: string;
+    accountName?: string;
+  },
+): Promise<void> {
+  const bankCode = await chapa.findBankCode(input.destination);
+  if (!bankCode) {
+    logger.warn({ withdrawalId, destination: input.destination }, 'No Chapa bank code found; leaving payout for admin review');
+    await prisma.withdrawal.update({
+      where: { id: withdrawalId },
+      data: { failureReason: 'Automatic payout could not resolve this destination; admin review required.' },
+    });
+    return;
+  }
+
+  const reference = `apx-wd-${withdrawalId}`;
+  const transfer = await chapa.initiateTransfer({
+    amountEtb: input.amountEtb,
+    accountNumber: input.accountNumber,
+    accountName: input.accountName,
+    bankCode,
+    reference,
+  });
+
+  if (transfer.status === 'failed') {
+    await markStatus(withdrawalId, 'FAILED', {
+      providerRef: transfer.reference ?? reference,
+      failureReason: transfer.error ?? 'Chapa rejected the transfer',
+    });
+    await notify({
+      userId: input.userId,
+      type: 'PAYMENT',
+      title: 'Withdrawal failed',
+      body: transfer.error ?? 'Chapa rejected the payout. Your balance has been restored.',
+      payload: { withdrawalId },
+    }).catch(() => undefined);
+    return;
+  }
+
+  if (transfer.status === 'pending' && transfer.reference) {
+    await markStatus(withdrawalId, 'PROCESSING', { providerRef: transfer.reference });
+    await notify({
+      userId: input.userId,
+      type: 'PAYMENT',
+      title: 'Withdrawal processing',
+      body: 'Chapa accepted your payout request. We are checking the transfer status.',
+      payload: { withdrawalId },
+    }).catch(() => undefined);
+    return;
+  }
+
+  // A network/unknown response is not safe to retry automatically: the
+  // provider may have accepted the transfer even if our request timed out.
+  await prisma.withdrawal.update({
+    where: { id: withdrawalId },
+    data: { failureReason: 'Chapa transfer status is unknown; admin review required before retrying.' },
+  });
+}
+
+/** Reconcile Chapa transfers that were accepted but are not final yet. */
+export async function syncProcessingWithdrawals(limit = 25) {
+  if (!chapa.transfersEnabled()) return { enabled: false, checked: 0, succeeded: 0, failed: 0 };
+  const items = await prisma.withdrawal.findMany({
+    where: { status: 'PROCESSING', providerRef: { not: null } },
+    orderBy: { createdAt: 'asc' },
+    take: limit,
+  });
+  let succeeded = 0;
+  let failed = 0;
+  for (const item of items) {
+    if (!item.providerRef) continue;
+    const result = await chapa.verifyTransfer(item.providerRef);
+    if (result.ok) {
+      await markStatus(item.id, 'SUCCESS', { providerRef: item.providerRef });
+      await notify({
+        userId: item.userId,
+        type: 'PAYMENT',
+        title: 'Withdrawal completed',
+        body: `Your ${item.amountEtb.toLocaleString()} ETB payout has been completed.`,
+        payload: { withdrawalId: item.id },
+      }).catch(() => undefined);
+      succeeded++;
+    } else if (result.status === 'failed') {
+      await markStatus(item.id, 'FAILED', {
+        providerRef: item.providerRef,
+        failureReason: result.error ?? 'Chapa transfer failed',
+      });
+      await notify({
+        userId: item.userId,
+        type: 'PAYMENT',
+        title: 'Withdrawal failed',
+        body: result.error ?? 'Your payout failed and the balance was restored.',
+        payload: { withdrawalId: item.id },
+      }).catch(() => undefined);
+      failed++;
+    }
+  }
+  return { enabled: true, checked: items.length, succeeded, failed };
 }
 
 /** Operator-facing / webhook-facing state transitions. */
