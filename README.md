@@ -82,7 +82,7 @@ apex-work/  (npm workspaces monorepo)
 
 ### Prerequisites
 
-- Node.js `>=20.0.0`
+- Node.js `24.x`
 - npm `>=10.0.0`
 - PostgreSQL running locally OR a Neon free-tier account
 - Redis running locally OR an Upstash free-tier account

@@ -174,6 +174,11 @@ export function useChatSocket(
   const qc = useQueryClient();
   const socketRef = useRef<Socket | null>(null);
   const typingRef = useRef<{ [uid: string]: number }>({});
+  const incomingCallRef = useRef(handlers.onIncomingCall);
+
+  useEffect(() => {
+    incomingCallRef.current = handlers.onIncomingCall;
+  }, [handlers.onIncomingCall]);
 
   useEffect(() => {
     if (!token || !conversationId) return;
@@ -211,7 +216,7 @@ export function useChatSocket(
 
     socket.on('call:start', (data: { conversationId: string; from: string; mode: 'audio' | 'video' }) => {
       if (data.conversationId !== conversationId) return;
-      handlers.onIncomingCall?.(data.from, data.mode);
+      incomingCallRef.current?.(data.from, data.mode);
     });
 
     return () => {

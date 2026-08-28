@@ -63,7 +63,7 @@ export default function PostGigPage() {
     } else if (me && !me.isOnboarded) {
       router.replace('/onboarding');
     }
-  }, [isLoading, isSignedIn, me, router]);
+  }, [isLoading, isSignedIn, me, router, t]);
 
   const step = STEPS[stepIdx]!;
   const tags = useMemo(

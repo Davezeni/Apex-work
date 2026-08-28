@@ -2,7 +2,10 @@ import globals from 'globals';
 import tseslint from '@typescript-eslint/eslint-plugin';
 
 export default [
-  { ignores: ['dist/**', 'coverage/**', 'node_modules/**'] },
+  {
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
   ...tseslint.configs['flat/recommended'],
   {
     files: ['src/**/*.ts'],
