@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import express from 'express';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { success } from '../lib/response.js';
 import { logger } from '../config/logger.js';
@@ -12,29 +11,29 @@ const router: Router = Router();
 /**
  * Chapa webhook.
  *
- * Chapa POSTs here after checkout completion. We:
- *   1. Verify the signature if CHAPA_WEBHOOK_SECRET is configured
- *      (recommended for production; skip in dev).
- *   2. Extract tx_ref from either body or query string (Chapa varies).
- *   3. Re-verify against Chapa's API — NEVER trust the payload alone.
- *   4. Advance the order to ACTIVE.
- *
- * Always respond 200 quickly so Chapa doesn't retry unnecessarily.
- * Any processing errors get logged but don't fail the webhook.
+ * The app-level middleware captures the raw bytes before express.json(). We:
+ *   1. Verify either Chapa signature header when a webhook secret is set.
+ *   2. Extract tx_ref from common Chapa payload shapes/query variants.
+ *   3. Re-verify the transaction against Chapa's API — never trust payload.
+ *   4. Advance the order to ACTIVE exactly once.
  */
 router.post(
   '/webhook',
-  // Use a raw body parser so signature verification sees the exact bytes.
-  express.raw({ type: '*/*', limit: '512kb' }),
   asyncHandler(async (req, res) => {
-    const raw = req.body instanceof Buffer ? req.body.toString('utf8') : '';
-    const signature = req.headers['chapa-signature'] as string | undefined ??
-                      req.headers['x-chapa-signature'] as string | undefined;
+    const raw = Buffer.isBuffer(req.body)
+      ? req.body.toString('utf8')
+      : JSON.stringify(req.body ?? {});
+    const headers = [
+      req.headers['chapa-signature'],
+      req.headers['x-chapa-signature'],
+    ].flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []));
 
     if (env.CHAPA_WEBHOOK_SECRET) {
-      const ok = chapa.verifyWebhookSignature(raw, signature);
-      if (!ok) {
-        logger.warn({ signature }, 'Chapa webhook signature verification failed');
+      const verified = headers.some((signature) =>
+        chapa.verifyWebhookSignature(raw, signature),
+      );
+      if (!verified) {
+        logger.warn({ hasSignature: headers.length > 0 }, 'Chapa webhook signature verification failed');
         return res.status(401).json({ ok: false });
       }
     }
@@ -46,21 +45,30 @@ router.post(
       logger.warn('Chapa webhook body was not JSON');
     }
 
+    const nested = payload.data && typeof payload.data === 'object'
+      ? payload.data as Record<string, unknown>
+      : {};
     const query = req.query as { tx_ref?: string; trx_ref?: string };
-    const txRef =
-      (payload.tx_ref as string | undefined) ??
-      (payload.trx_ref as string | undefined) ??
-      query.tx_ref ??
-      query.trx_ref;
+    const txRef = [
+      payload.tx_ref,
+      payload.trx_ref,
+      nested.tx_ref,
+      nested.trx_ref,
+      query.tx_ref,
+      query.trx_ref,
+    ].find((value): value is string => typeof value === 'string' && value.length > 0);
 
     if (!txRef || !txRef.startsWith('apex-')) {
-      logger.warn({ payload, query: req.query }, 'Chapa webhook missing tx_ref');
+      logger.warn({ payloadKeys: Object.keys(payload), query }, 'Chapa webhook missing tx_ref');
       return res.status(200).json({ ok: true, ignored: true });
     }
 
     try {
       await confirmPaymentByTxRef(txRef);
     } catch (err) {
+      // Return 200 so Chapa does not retry a transaction that is already being
+      // verified; the order page's return verification/polling is the second
+      // safety net and the error is available in Render logs.
       logger.error({ err, txRef }, 'confirmPaymentByTxRef failed');
     }
     return res.status(200).json({ ok: true });

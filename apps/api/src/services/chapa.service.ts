@@ -204,13 +204,19 @@ class ChapaService {
   verifyWebhookSignature(rawBody: string, providedSignature: string | undefined): boolean {
     if (!env.CHAPA_WEBHOOK_SECRET || !providedSignature) return false;
     try {
-      const expected = createHmac('sha256', env.CHAPA_WEBHOOK_SECRET)
-        .update(rawBody)
-        .digest('hex');
-      const a = Buffer.from(expected, 'hex');
-      const b = Buffer.from(providedSignature, 'hex');
-      if (a.length !== b.length) return false;
-      return timingSafeEqual(a, b);
+      const secret = env.CHAPA_WEBHOOK_SECRET;
+      // Chapa documents two signature headers: one is an HMAC of the
+      // payload and the other is an HMAC of the configured secret. Accept
+      // either header form; the route checks every supplied signature and
+      // still performs server-side transaction verification afterwards.
+      const expectedPayload = createHmac('sha256', secret).update(rawBody).digest('hex');
+      const expectedSecret = createHmac('sha256', secret).update(secret).digest('hex');
+      const provided = Buffer.from(providedSignature.trim(), 'hex');
+      if (provided.length === 0) return false;
+      return [expectedPayload, expectedSecret].some((expected) => {
+        const actual = Buffer.from(expected, 'hex');
+        return actual.length === provided.length && timingSafeEqual(actual, provided);
+      });
     } catch {
       return false;
     }

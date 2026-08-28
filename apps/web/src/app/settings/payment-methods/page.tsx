@@ -1,154 +1,126 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, CreditCard, Trash2, CheckCircle2 } from 'lucide-react';
-import { toast } from 'sonner';
+import Link from 'next/link';
+import { ArrowLeft, CheckCircle2, ChevronRight, CreditCard, Loader2, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { PAYMENT_METHODS } from '@apex-work/shared';
+import { usePaymentConfig } from '@/hooks/use-payment';
 import { cn } from '@/lib/utils';
 
-interface SavedMethod {
-  id: string;
-  type: string;
-  label: string;
-  masked: string;
-  isDefault: boolean;
-}
-
-const STORAGE = 'apex-payment-methods-v1';
-
+/**
+ * Chapa hosts the actual payment form, so Apex-Work must not collect or
+ * persist wallet PINs, CVVs, or full account numbers in localStorage. This
+ * page explains the real checkout options and reports live gateway status.
+ */
 export default function PaymentMethodsPage() {
   const router = useRouter();
   const { t } = useI18n();
-  const [methods, setMethods] = useState<SavedMethod[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE) ?? '[]');
-    } catch { return []; }
-  });
-  const [adding, setAdding] = useState(false);
-  const [chosenType, setChosenType] = useState<string>('telebirr');
-  const [account, setAccount] = useState('');
-
-  const persist = (list: SavedMethod[]) => {
-    setMethods(list);
-    localStorage.setItem(STORAGE, JSON.stringify(list));
-  };
-
-  const add = () => {
-    if (account.trim().length < 4) return toast.error('Enter a valid account');
-    const method = PAYMENT_METHODS.find((m) => m.id === chosenType);
-    const masked = account.length > 4 ? `••••${account.slice(-4)}` : account;
-    const next: SavedMethod = {
-      id: `${chosenType}-${Date.now()}`,
-      type: chosenType,
-      label: method?.label ?? chosenType,
-      masked,
-      isDefault: methods.length === 0,
-    };
-    persist([...methods, next]);
-    setAdding(false);
-    setAccount('');
-    toast.success('Payment method added');
-  };
-
-  const remove = (id: string) => {
-    if (!window.confirm('Remove this payment method?')) return;
-    persist(methods.filter((m) => m.id !== id));
-  };
-
-  const setDefault = (id: string) => {
-    persist(methods.map((m) => ({ ...m, isDefault: m.id === id })));
-  };
+  const config = usePaymentConfig();
 
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">Payment methods</h1>
+        <div>
+          <h1 className="text-lg font-extrabold tracking-tight">Payment methods</h1>
+          <p className="text-[11px] text-muted-foreground">Secure checkout through Chapa</p>
+        </div>
       </header>
 
-      <div className="mx-3 mt-4 space-y-2">
-        {methods.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-            <CreditCard className="mx-auto h-8 w-8 text-primary" />
-            <p className="mt-3 text-sm font-semibold">No saved methods</p>
-            <p className="mt-1 text-xs text-muted-foreground">Add Telebirr, CBE Birr, or a card to check out faster.</p>
+      <section className="mx-3 mt-4">
+        <div
+          className={cn(
+            'rounded-2xl border p-4',
+            config.data?.enabled
+              ? 'border-emerald-500/30 bg-emerald-500/5'
+              : config.isLoading
+                ? 'border-border bg-card'
+                : 'border-amber-500/30 bg-amber-500/5',
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {config.isLoading ? (
+              <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-muted-foreground" />
+            ) : config.data?.enabled ? (
+              <CheckCircle2 className="mt-0.5 h-5 w-5 text-emerald-500" />
+            ) : (
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-amber-500" />
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold">
+                {config.isLoading
+                  ? 'Checking payment gateway…'
+                  : config.data?.enabled
+                    ? 'Chapa checkout is ready'
+                    : 'Checkout is temporarily unavailable'}
+              </h2>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {config.data?.enabled
+                  ? 'When you continue an order, Chapa opens a secure checkout where you choose your wallet, bank, or card.'
+                  : 'Please try again later. No payment details are collected or stored while checkout is unavailable.'}
+              </p>
+            </div>
           </div>
-        )}
-        {methods.map((m) => {
-          const meta = PAYMENT_METHODS.find((x) => x.id === m.type);
-          return (
-            <div key={m.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4">
+          {config.isError && (
+            <button onClick={() => void config.refetch()} className="mt-3 text-xs font-bold text-primary">
+              Check again
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="mx-3 mt-6">
+        <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Available at secure checkout
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
+          {PAYMENT_METHODS.map((method) => (
+            <div key={method.id} className="flex items-center gap-3 px-4 py-3.5">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-lg">
-                {meta?.icon ?? '💳'}
+                {method.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold">{m.label}</span>
-                  {m.isDefault && (
-                    <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-500">DEFAULT</span>
-                  )}
+                <div className="text-sm font-bold">{method.label}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  Choose this option on the Chapa payment screen
                 </div>
-                <div className="text-[11px] text-muted-foreground">{m.masked}</div>
               </div>
-              {!m.isDefault && (
-                <button onClick={() => setDefault(m.id)} className="text-[11px] font-bold text-primary">
-                  Make default
-                </button>
-              )}
-              <button onClick={() => remove(m.id)} aria-label="Delete" className="grid h-8 w-8 place-items-center rounded-full text-red-500 active:bg-red-500/10">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             </div>
-          );
-        })}
-      </div>
-
-      {adding ? (
-        <section className="mx-3 mt-5 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-bold">Add payment method</h2>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.slice(0, 6).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setChosenType(m.id)}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border-2 px-3 py-3 text-left text-sm font-semibold',
-                  chosenType === m.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background',
-                )}
-              >
-                <span>{m.icon}</span>
-                <span className="truncate">{m.label}</span>
-              </button>
-            ))}
-          </div>
-          <input
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-            placeholder={chosenType === 'telebirr' || chosenType === 'cbebirr' ? '+2519XXXXXXXX' : 'Account / card number'}
-            className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
-          />
-          <div className="mt-3 flex gap-2">
-            <Button variant="outline" size="lg" className="flex-1" onClick={() => setAdding(false)}>
-              Cancel
-            </Button>
-            <Button variant="brand" size="lg" className="flex-1" onClick={add}>
-              Save
-            </Button>
-          </div>
-        </section>
-      ) : (
-        <div className="mx-3 mt-5">
-          <Button variant="brand" size="lg" className="w-full" onClick={() => setAdding(true)}>
-            <Plus className="h-4 w-4" /> Add payment method
-          </Button>
+          ))}
         </div>
-      )}
+      </section>
+
+      <section className="mx-3 mt-6 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-start gap-3">
+          <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <h2 className="text-sm font-bold">How your payment is protected</h2>
+            <ol className="mt-2 space-y-2 text-xs leading-relaxed text-muted-foreground">
+              <li><b className="text-foreground">1.</b> Apex-Work creates a unique order reference.</li>
+              <li><b className="text-foreground">2.</b> Chapa hosts the wallet, bank, or card payment form.</li>
+              <li><b className="text-foreground">3.</b> Apex-Work verifies the transaction server-side before activating the order.</li>
+              <li><b className="text-foreground">4.</b> Funds stay in escrow until delivery is accepted or a dispute is resolved.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-3 mt-5">
+        <Button asChild variant="brand" size="lg" className="w-full" disabled={config.data?.enabled === false}>
+          <Link href="/browse">
+            Browse services <ChevronRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
     </div>
   );
 }

@@ -247,6 +247,18 @@ export async function acceptBid(bidId: string, clientId: string) {
   });
 
   if (!chapa.isConfigured()) {
+    // Do not close the job or leave an unpaid order behind in production.
+    // Local development may still use the shortcut for workflow testing.
+    if (env.NODE_ENV === 'production') {
+      await prisma.$transaction(async (tx) => {
+        await tx.order.delete({ where: { id: order.id } });
+        await tx.job.update({
+          where: { id: bid.jobId },
+          data: { isOpen: true, closedAt: null },
+        });
+      });
+      throw new ConflictError('Payment gateway is not configured. Please try again later.');
+    }
     return { order, checkoutUrl: null as string | null, devSkipped: true };
   }
 

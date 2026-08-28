@@ -87,8 +87,10 @@ export async function createOrderAndInitiatePayment(
 
   // Initialize Chapa
   if (!chapa.isConfigured()) {
-    // No Chapa key — fall back to auto-activating the order (dev mode only).
+    // Never create an unpaid order in production. The development shortcut
+    // exists only for local testing and must not leave a stuck PENDING row.
     if (env.NODE_ENV === 'production') {
+      await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
       throw new ConflictError('Payment gateway is not configured. Please try again later.');
     }
     return { order, checkoutUrl: null, devSkipped: true };
@@ -165,7 +167,7 @@ export async function confirmPaymentByTxRef(txRef: string) {
   }
 
   // Amount tampering guard — reject if the amount doesn't match.
-  if (verify.amount && Math.round(verify.amount) !== order.amountEtb) {
+  if (verify.amount !== undefined && Math.round(verify.amount) !== order.amountEtb) {
     throw new BadRequestError('Payment amount mismatch');
   }
 

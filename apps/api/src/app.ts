@@ -54,6 +54,12 @@ export const createApp = (): Express => {
     }),
   );
 
+  // Chapa signs the exact webhook bytes. Parse this endpoint before the
+  // global JSON parser so the route can verify the signature and then decode
+  // the payload itself. Without this ordering, express.json() consumes the
+  // stream first and the webhook appears empty to the raw parser.
+  app.use('/v1/payments/webhook', express.raw({ type: '*/*', limit: '512kb' }));
+
   // Body parsers with size limits
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));

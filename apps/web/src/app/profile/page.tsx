@@ -154,7 +154,7 @@ export default function ProfilePage() {
         <MenuItem
           icon={<CreditCard className="h-4 w-4" />}
           title={t('profile.paymentMethods')}
-          subtitle="Telebirr, CBE Birr"
+          subtitle="Secure Chapa checkout options"
           href="/settings/payment-methods"
         />
         {me.role === 'FREELANCER' && (

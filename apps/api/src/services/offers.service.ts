@@ -151,6 +151,18 @@ export async function respondToOffer(
   });
 
   if (!chapa.isConfigured()) {
+    // Acceptance is provisional until payment can be initiated. Never leave
+    // an offer marked ACCEPTED with an unpaid order in production.
+    if (env.NODE_ENV === 'production') {
+      await prisma.$transaction(async (tx) => {
+        await tx.order.delete({ where: { id: order.id } });
+        await tx.customOffer.update({
+          where: { id: offer.id },
+          data: { status: 'PENDING', respondedAt: null, orderId: null },
+        });
+      });
+      throw new ConflictError('Payment gateway is not configured. Please try again later.');
+    }
     return { offer, order, checkoutUrl: null as string | null };
   }
 
@@ -175,6 +187,13 @@ export async function respondToOffer(
     description: `Offer: ${offer.title.slice(0, 40)}`,
   });
   if (!init.ok || !init.checkoutUrl) {
+    await prisma.$transaction(async (tx) => {
+      await tx.order.delete({ where: { id: order.id } });
+      await tx.customOffer.update({
+        where: { id: offer.id },
+        data: { status: 'PENDING', respondedAt: null, orderId: null },
+      });
+    });
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
   await prisma.payment.create({

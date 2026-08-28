@@ -30,6 +30,7 @@ import { useGig } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useCreateOrder } from '@/hooks/use-orders';
+import { usePaymentConfig } from '@/hooks/use-payment';
 import { useSaveGig, useSavedGigStatus, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
@@ -59,6 +60,7 @@ export default function GigDetailPage() {
   const { data: me } = useMe();
   const startConversation = useStartConversation();
   const createOrder = useCreateOrder();
+  const payment = usePaymentConfig();
   const { t } = useI18n();
   const { locale } = useI18nRoot();
   const token = useAuthStore((s) => s.accessToken);
@@ -152,6 +154,10 @@ export default function GigDetailPage() {
     if (!selected || !gig) return;
     if (!me) {
       router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
+      return;
+    }
+    if (payment.data?.enabled === false) {
+      toast.error('Secure checkout is temporarily unavailable. Please try again later.');
       return;
     }
     if (isOwnGig) {
@@ -484,10 +490,12 @@ export default function GigDetailPage() {
             size="lg"
             className="flex-1"
             onClick={handleContinue}
-            disabled={!selected || createOrder.isPending}
+            disabled={!selected || createOrder.isPending || payment.data?.enabled === false}
           >
             {createOrder.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
+            ) : payment.data?.enabled === false ? (
+              'Checkout unavailable'
             ) : isOwnGig ? (
               t('gig.preview')
             ) : selected ? (
