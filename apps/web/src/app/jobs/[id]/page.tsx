@@ -72,6 +72,14 @@ export default function JobDetailPage() {
   };
 
   const acceptBid = async (bidId: string) => {
+    if (!me) {
+      router.push(`/login?next=${encodeURIComponent(`/jobs/${id}`)}`);
+      return;
+    }
+    if (!me.phone || !me.isPhoneVerified) {
+      router.push(`/settings/phone?next=${encodeURIComponent(`/jobs/${id}`)}`);
+      return;
+    }
     try {
       const res = await accept.mutateAsync(bidId);
       toast.success(t('jobs.accepted'));

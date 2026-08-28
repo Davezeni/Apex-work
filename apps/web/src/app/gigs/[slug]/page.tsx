@@ -160,6 +160,10 @@ export default function GigDetailPage() {
       router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
       return;
     }
+    if (!me.phone || !me.isPhoneVerified) {
+      router.push(`/settings/phone?next=${encodeURIComponent(`/gigs/${slug}`)}`);
+      return;
+    }
     if (payment.data?.enabled === false) {
       toast.error('Secure checkout is temporarily unavailable. Please try again later.');
       return;
