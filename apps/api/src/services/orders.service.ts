@@ -36,7 +36,8 @@ const APP_URL = () => env.WEB_URL;
 interface Actor {
   id: string;
   email: string | null;
-  phone: string;
+  phone: string | null;
+  isPhoneVerified: boolean;
   fullName: string;
 }
 
@@ -58,6 +59,9 @@ export async function createOrderAndInitiatePayment(
     include: { packages: true, owner: true },
   });
   if (!gig || gig.status !== 'ACTIVE') throw new NotFoundError('Gig');
+  if (!actor.phone || !actor.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before placing an order');
+  }
   if (gig.ownerId === clientId) {
     throw new BadRequestError('You cannot order your own gig');
   }

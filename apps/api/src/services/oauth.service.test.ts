@@ -113,11 +113,11 @@ describe('OAuth provider integration', () => {
 
   it('makes OAuth handoffs one-time', async () => {
     const handoff = await createHandoff({
-      accessToken: 'access', refreshToken: 'refresh', expiresIn: 900, phone: '+251911111111',
+      accessToken: 'access', refreshToken: 'refresh', expiresIn: 900, phone: '+251911111111', requiresPhone: false,
     });
     expect(handoff.length).toBeGreaterThan(30);
     redisMock.getdel.mockResolvedValueOnce(JSON.stringify({
-      accessToken: 'access', refreshToken: 'refresh', expiresIn: 900, phone: '+251911111111',
+      accessToken: 'access', refreshToken: 'refresh', expiresIn: 900, phone: '+251911111111', requiresPhone: false,
     }));
     await expect(consumeHandoff(handoff)).resolves.toMatchObject({ phone: '+251911111111' });
     expect(redisMock.getdel).toHaveBeenCalledWith(expect.stringContaining(handoff));

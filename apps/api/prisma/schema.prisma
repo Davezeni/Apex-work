@@ -80,7 +80,7 @@ enum NotificationType {
 
 model User {
   id             String   @id @default(cuid())
-  phone          String   @unique
+  phone          String?  @unique
   email          String?  @unique
   passwordHash   String?  // null until user sets one (OTP-only accounts)
   pinHash        String?  // Argon2 hash of a 6-digit PIN, optional shortcut for repeat logins

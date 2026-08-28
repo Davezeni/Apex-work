@@ -29,11 +29,14 @@ export async function createJob(clientId: string, input: {
 }) {
   const client = await prisma.user.findUnique({
     where: { id: clientId },
-    select: { id: true, role: true },
+    select: { id: true, role: true, phone: true, isPhoneVerified: true },
   });
   if (!client) throw new NotFoundError('User');
   if (client.role !== 'CLIENT' && client.role !== 'ADMIN') {
     throw new ForbiddenError('Only clients can post jobs');
+  }
+  if (!client.phone || !client.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before posting a job');
   }
   return prisma.job.create({
     data: {
@@ -215,9 +218,12 @@ export async function acceptBid(bidId: string, clientId: string) {
 
   const client = await prisma.user.findUnique({
     where: { id: clientId },
-    select: { id: true, email: true, phone: true, fullName: true },
+    select: { id: true, email: true, phone: true, isPhoneVerified: true, fullName: true },
   });
   if (!client) throw new NotFoundError('User');
+  if (!client.phone || !client.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before accepting a proposal');
+  }
 
   const platformFee = Math.round((bid.priceEtb * PLATFORM_FEE_PERCENT) / 100);
   const sellerNet = bid.priceEtb - platformFee;
@@ -271,7 +277,7 @@ export async function acceptBid(bidId: string, clientId: string) {
       email: ChapaService.safeEmail(client.email, client.id),
       firstName: client.fullName.split(' ')[0] ?? 'Customer',
       lastName: client.fullName.split(' ').slice(1).join(' ') || 'Apex',
-      phone: client.phone,
+      phone: client.phone ?? undefined,
     },
     title: 'Apex-Work',
     description: `Job: ${bid.job.title.slice(0, 40)}`,

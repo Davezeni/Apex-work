@@ -169,11 +169,14 @@ router.post(
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, role: true, isOnboarded: true },
+      select: { id: true, role: true, isOnboarded: true, phone: true, isPhoneVerified: true },
     });
     if (!user) throw new NotFoundError('User');
     if (user.role !== 'FREELANCER') {
       throw new ForbiddenError('Only freelancers can post gigs');
+    }
+    if (!user.phone || !user.isPhoneVerified) {
+      throw new ConflictError('Verify your phone number before posting a gig');
     }
     if (!user.isOnboarded) {
       throw new BadRequestError('Please complete your profile before posting a gig');

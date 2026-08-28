@@ -4,8 +4,19 @@
  */
 import type { Message } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
+
+/** OAuth-created accounts can browse first, but must verify phone before trust-sensitive chat actions. */
+export async function assertPhoneVerified(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { phone: true, isPhoneVerified: true },
+  });
+  if (!user || !user.phone || !user.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before starting or sending a conversation');
+  }
+}
 
 /**
  * Get-or-create a 1-to-1 conversation between two users.
@@ -14,6 +25,7 @@ import { notify } from './notifications.service.js';
  * This keeps chat history unified across sessions.
  */
 export async function getOrCreateDirectConversation(selfId: string, peerId: string) {
+  await assertPhoneVerified(selfId);
   if (selfId === peerId) throw new BadRequestError('Cannot start a conversation with yourself');
 
   const peer = await prisma.user.findUnique({
@@ -159,6 +171,7 @@ export async function sendMessage(input: {
   attachmentMeta?: Record<string, unknown>;
   replyToId?: string;
 }): Promise<Message> {
+  await assertPhoneVerified(input.senderId);
   await assertMember(input.conversationId, input.senderId);
 
   const message = await prisma.$transaction(async (tx) => {

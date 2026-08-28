@@ -11,7 +11,7 @@ export interface Me {
   username: string;
   fullName: string;
   email: string | null;
-  phone: string;
+  phone: string | null;
   avatarUrl: string | null;
   role: 'CLIENT' | 'FREELANCER' | 'ADMIN';
   bio: string | null;

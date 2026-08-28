@@ -38,7 +38,7 @@ export async function createOffer(
 
   const sender = await prisma.user.findUnique({
     where: { id: senderId },
-    select: { id: true, role: true, isOnboarded: true },
+    select: { id: true, role: true, isOnboarded: true, phone: true, isPhoneVerified: true },
   });
   if (!sender) throw new NotFoundError('User');
   if (sender.role !== 'FREELANCER') {
@@ -46,6 +46,9 @@ export async function createOffer(
   }
   if (!sender.isOnboarded) {
     throw new BadRequestError('Complete your profile before sending offers');
+  }
+  if (!sender.phone || !sender.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before sending offers');
   }
 
   // Find the other member — direct chats are 2 members; for now we only
@@ -107,6 +110,9 @@ export async function respondToOffer(
     });
   }
   if (offer.recipientId !== userId) throw new ForbiddenError();
+  if (!offer.recipient.phone || !offer.recipient.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before accepting an offer');
+  }
 
   if (action === 'decline') {
     await notify({
@@ -181,7 +187,7 @@ export async function respondToOffer(
       email: ChapaService.safeEmail(client.email, client.id),
       firstName: client.fullName.split(' ')[0] ?? 'Customer',
       lastName: client.fullName.split(' ').slice(1).join(' ') || 'Apex',
-      phone: client.phone,
+      phone: client.phone ?? undefined,
     },
     title: 'Apex-Work',
     description: `Offer: ${offer.title.slice(0, 40)}`,

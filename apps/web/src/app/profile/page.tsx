@@ -104,6 +104,19 @@ export default function ProfilePage() {
         </Button>
       </div>
 
+      {!me.isPhoneVerified && (
+        <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-500" />
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold">Verify your phone</div>
+            <p className="text-[11px] text-muted-foreground">Required before messaging, ordering, posting, or withdrawing.</p>
+          </div>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/settings/phone?next=/profile">Verify</Link>
+          </Button>
+        </div>
+      )}
+
       {/* Saved gigs — visible on the profile so saved services are not hidden in a menu. */}
       <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
 

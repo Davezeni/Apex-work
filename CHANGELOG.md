@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.1] — 2026-08-28 — OAuth phone step-up
+
+### Changed
+
+- Google/GitHub users can create a basic account without repeating phone OTP during OAuth signup.
+- Existing OAuth accounts without a verified phone are sent to `/settings/phone` after sign-in.
+- Ethiopian phone OTP remains mandatory for phone-based signup.
+- High-trust actions require a verified phone: posting gigs/jobs, ordering, messaging, offers, groups, and withdrawals.
+- Added a phone verification page and authenticated phone binding endpoint.
+- Made the User phone field nullable for OAuth-created accounts while keeping it unique when present.
+
+### Database
+
+- Applied migration `20260828200000_oauth_phone_step_up` to production Neon.
+
 ## [0.3.0] — 2026-08-28 — Google and GitHub sign-in
 
 ### Added

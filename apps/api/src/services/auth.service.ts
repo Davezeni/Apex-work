@@ -337,15 +337,16 @@ export type OAuthLoginResult =
   | {
       pending: false;
       user: { id: string; role: UserRole };
-      phone: string;
+      phone: string | null;
+      requiresPhone: boolean;
       tokens: Awaited<ReturnType<typeof issueTokensAndTrustDevice>>;
     };
 
 /**
  * Link a provider identity to an existing account by provider subject or
  * verified email, then issue the same trusted-device session as OTP login.
- * New OAuth identities are returned as `pending` so signup can still require
- * an Ethiopian phone verification before creating a User row.
+ * New OAuth identities are returned as `pending` so the caller can create a
+ * limited account and send the user through phone step-up before high-trust actions.
  */
 export const loginWithOAuth = async (
   profile: OAuthProfile,
@@ -359,7 +360,7 @@ export const loginWithOAuth = async (
       },
     },
     select: {
-      user: { select: { id: true, role: true, phone: true, isActive: true, avatarUrl: true } },
+      user: { select: { id: true, role: true, phone: true, isPhoneVerified: true, isActive: true, avatarUrl: true } },
     },
   });
 
@@ -367,7 +368,7 @@ export const loginWithOAuth = async (
   if (!user && profile.email) {
     user = await prisma.user.findUnique({
       where: { email: profile.email },
-      select: { id: true, role: true, phone: true, isActive: true, avatarUrl: true },
+      select: { id: true, role: true, phone: true, isPhoneVerified: true, isActive: true, avatarUrl: true },
     });
   }
   if (!user) return { pending: true };
@@ -401,6 +402,7 @@ export const loginWithOAuth = async (
     pending: false,
     user: { id: user.id, role: user.role as UserRole },
     phone: user.phone,
+    requiresPhone: !user.phone || !user.isPhoneVerified,
     tokens,
   };
 };
@@ -409,19 +411,29 @@ export const loginWithOAuth = async (
 export const completeOAuthSignup = async (
   profile: OAuthProfile,
   input: {
-    phone: string;
-    otpToken: string;
+    phone?: string;
+    otpToken?: string;
     fullName: string;
     role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>;
   },
   ctx: { userAgent?: string; ipAddress?: string },
 ) => {
-  const verified = await consumeVerifiedToken(input.otpToken);
-  if (verified.phone !== input.phone || verified.purpose !== 'SIGNUP' || verified.userId) {
-    throw new UnauthorizedError('Phone verification token is invalid');
+  // Phone signup can provide an OTP here. OAuth signup deliberately omits
+  // both fields: it creates a limited account first and asks for phone OTP
+  // only when the user reaches a high-trust action.
+  if (input.phone || input.otpToken) {
+    if (!input.phone || !input.otpToken) {
+      throw new UnauthorizedError('Phone verification token is invalid');
+    }
+    const verified = await consumeVerifiedToken(input.otpToken);
+    if (verified.phone !== input.phone || verified.purpose !== 'SIGNUP' || verified.userId) {
+      throw new UnauthorizedError('Phone verification token is invalid');
+    }
   }
 
-  const existingPhone = await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } });
+  const existingPhone = input.phone
+    ? await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } })
+    : null;
   if (existingPhone) throw new ConflictError('This phone number is already registered. Please sign in instead.');
   if (profile.email) {
     const existingEmail = await prisma.user.findUnique({ where: { email: profile.email }, select: { id: true } });
@@ -431,13 +443,13 @@ export const completeOAuthSignup = async (
   try {
     const user = await prisma.user.create({
       data: {
-        phone: input.phone,
+        phone: input.phone ?? null,
         email: profile.email ?? null,
         fullName: input.fullName.trim() || profile.fullName,
         username: await generateUniqueUsername(input.fullName.trim() || profile.fullName),
         avatarUrl: profile.avatarUrl ?? null,
         role: input.role,
-        isPhoneVerified: true,
+        isPhoneVerified: !!input.phone,
         isEmailVerified: !!profile.email,
         wallet: { create: {} },
         oauthAccounts: {
@@ -460,6 +472,31 @@ export const completeOAuthSignup = async (
     }
     throw err;
   }
+};
+
+/** Complete phone verification for an OAuth-created account. */
+export const completePhoneVerification = async (
+  userId: string,
+  input: { phone: string; otpToken: string },
+) => {
+  const verified = await consumeVerifiedToken(input.otpToken);
+  if (verified.phone !== input.phone || verified.purpose !== 'RESET') {
+    throw new UnauthorizedError('Phone verification token is invalid');
+  }
+  if (verified.userId && verified.userId !== userId) {
+    throw new UnauthorizedError('Phone verification token belongs to another account');
+  }
+
+  const owner = await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } });
+  if (owner && owner.id !== userId) {
+    throw new ConflictError('That phone number is already registered to another account');
+  }
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: { phone: input.phone, isPhoneVerified: true },
+    select: { phone: true, isPhoneVerified: true },
+  });
 };
 
 // ==========================================

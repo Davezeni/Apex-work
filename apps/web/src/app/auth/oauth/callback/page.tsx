@@ -35,17 +35,22 @@ export default function OAuthCallbackPage() {
       expiresIn: number;
       deviceToken?: string;
       deviceExpiresAt?: string;
-      phone: string;
+      phone: string | null;
+      requiresPhone: boolean;
     }>('/auth/oauth/handoff', {
       method: 'POST',
       body: { handoff },
     })
       .then((result) => {
         if (cancelled) return;
-        const { phone, ...tokens } = result;
-        setSession(tokens as AuthSessionTokens, phone);
+        const { phone, requiresPhone, ...tokens } = result;
+        setSession(tokens as AuthSessionTokens, phone ?? undefined);
         toast.success('Signed in successfully');
-        router.replace(next);
+        if (requiresPhone) {
+          router.replace(`/settings/phone?next=${encodeURIComponent(next)}`);
+        } else {
+          router.replace(next);
+        }
       })
       .catch((reason: unknown) => {
         if (cancelled) return;

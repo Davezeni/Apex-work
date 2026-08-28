@@ -20,7 +20,7 @@ router.post(
     const body = req.body as import('@apex-work/shared').CreateOrderInput;
     const actor = await prisma.user.findUnique({
       where: { id: req.user!.sub },
-      select: { id: true, email: true, phone: true, fullName: true },
+      select: { id: true, email: true, phone: true, isPhoneVerified: true, fullName: true },
     });
     if (!actor) throw new NotFoundError('User');
     const result = await orders.createOrderAndInitiatePayment(

@@ -37,7 +37,8 @@ export interface OAuthHandoff {
   expiresIn: number;
   deviceToken?: string;
   deviceExpiresAt?: string | Date;
-  phone: string;
+  phone: string | null;
+  requiresPhone: boolean;
 }
 
 const apiBase = () => env.API_URL.replace(/\/$/, '');

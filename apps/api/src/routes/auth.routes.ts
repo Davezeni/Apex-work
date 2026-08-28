@@ -91,16 +91,25 @@ router.get(
       const result = await authService.loginWithOAuth(profile, clientCtx(req));
 
       if (result.pending) {
-        const oauthToken = await oauth.createPending(profile, state);
-        const params = new URLSearchParams({ oauthToken, role: state.role });
-        if (state.next !== '/') params.set('next', state.next);
-        if (profile.fullName) params.set('oauthName', profile.fullName);
-        return res.redirect(`${env.WEB_URL.replace(/\/$/, '')}/signup?${params.toString()}`);
+        // OAuth has already authenticated the external identity. Create the
+        // account now with phone=null, then use the normal logged-in step-up
+        // page for phone verification before high-trust actions.
+        const created = await authService.completeOAuthSignup(profile, {
+          fullName: profile.fullName,
+          role: state.role,
+        }, clientCtx(req));
+        const handoff = await oauth.createHandoff({
+          ...created.tokens,
+          phone: null,
+          requiresPhone: true,
+        });
+        return res.redirect(oauth.callbackHandoffUrl(handoff, state.next));
       }
 
       const handoff = await oauth.createHandoff({
         ...result.tokens,
         phone: result.phone,
+        requiresPhone: result.requiresPhone,
       });
       return res.redirect(oauth.callbackHandoffUrl(handoff, state.next));
     } catch {
@@ -120,7 +129,7 @@ router.post(
   }),
 );
 
-/** Complete an OAuth signup after the new user verifies an Ethiopian phone number. */
+/** Backward-compatible completion route for an OAuth pending signup with phone OTP. */
 router.post(
   '/oauth/complete-signup',
   authLimiter,

@@ -44,6 +44,13 @@ export async function requestWithdrawal(input: {
   if (input.amountEtb < MIN_WITHDRAWAL_ETB) {
     throw new BadRequestError(`Minimum withdrawal is ${MIN_WITHDRAWAL_ETB} ETB`);
   }
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { phone: true, isPhoneVerified: true },
+  });
+  if (!user || !user.phone || !user.isPhoneVerified) {
+    throw new ConflictError('Verify your phone number before requesting a withdrawal');
+  }
   const fee = feeFor();
   const net = input.amountEtb - fee;
 

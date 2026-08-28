@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  completePhoneVerificationSchema,
   DEFAULT_NOTIFICATION_PREFERENCES,
   notificationPreferencesSchema,
   updateProfileSchema,
@@ -10,6 +11,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
+import * as authService from '../services/auth.service.js';
 
 const router: Router = Router();
 
@@ -95,6 +97,17 @@ router.patch(
       }
       throw err;
     }
+  }),
+);
+
+/** PATCH /me/phone — bind a newly verified phone to an OAuth account. */
+router.patch(
+  '/phone',
+  validate(completePhoneVerificationSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').CompletePhoneVerificationInput;
+    const updated = await authService.completePhoneVerification(req.user!.sub, body);
+    return success(res, updated);
   }),
 );
 

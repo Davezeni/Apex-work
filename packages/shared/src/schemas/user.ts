@@ -15,7 +15,7 @@ export type PublicUser = z.infer<typeof publicUserSchema>;
 
 export const meSchema = publicUserSchema.extend({
   email: z.string().email().nullable(),
-  phone: z.string(),
+  phone: z.string().nullable(),
   bio: z.string().nullable(),
   hourlyRateEtb: z.number().nullable(),
   isOnboarded: z.boolean(),

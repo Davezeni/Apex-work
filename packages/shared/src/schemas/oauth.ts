@@ -25,3 +25,10 @@ export const completeOAuthSignupSchema = z.object({
   role: z.enum(['CLIENT', 'FREELANCER']).default('CLIENT'),
 });
 export type CompleteOAuthSignupInput = z.infer<typeof completeOAuthSignupSchema>;
+
+/** Add or re-verify the phone number for an OAuth-created account. */
+export const completePhoneVerificationSchema = z.object({
+  phone: phoneSchema,
+  otpToken: z.string().min(1).max(200),
+});
+export type CompletePhoneVerificationInput = z.infer<typeof completePhoneVerificationSchema>;

@@ -155,6 +155,7 @@ describe('checkout payment flow', () => {
         id: 'client-1',
         email: 'client@example.com',
         phone: '+251911111111',
+        isPhoneVerified: true,
         fullName: 'Client One',
       },
     );

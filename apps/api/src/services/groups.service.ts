@@ -13,8 +13,10 @@
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { isBlocked } from './moderation.service.js';
+import { assertPhoneVerified } from './chat.service.js';
 
 export async function createGroup(creatorId: string, input: { title: string; avatarUrl?: string | null; memberIds: string[] }) {
+  await assertPhoneVerified(creatorId);
   const uniqueMembers = Array.from(new Set(input.memberIds.filter((id) => id !== creatorId)));
   if (uniqueMembers.length === 0) throw new BadRequestError('Add at least one other member');
 
