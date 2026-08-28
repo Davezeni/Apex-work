@@ -17,7 +17,6 @@ import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '.
 import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
 import { notify } from './notifications.service.js';
 import { chapa } from './chapa.service.js';
-import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 
 const DESTINATION_TO_ENUM = {
@@ -31,7 +30,7 @@ const DESTINATION_TO_ENUM = {
 type IncomingDestination = keyof typeof DESTINATION_TO_ENUM;
 
 /** Small fixed fee to cover Chapa payout overhead. Tweak per rail later. */
-function feeFor(_dest: IncomingDestination, _amount: number): number {
+function feeFor(): number {
   return 0; // v1: eat the fee ourselves to reduce checkout friction
 }
 
@@ -45,7 +44,7 @@ export async function requestWithdrawal(input: {
   if (input.amountEtb < MIN_WITHDRAWAL_ETB) {
     throw new BadRequestError(`Minimum withdrawal is ${MIN_WITHDRAWAL_ETB} ETB`);
   }
-  const fee = feeFor(input.destination, input.amountEtb);
+  const fee = feeFor();
   const net = input.amountEtb - fee;
 
   const wd = await prisma.$transaction(async (tx) => {
