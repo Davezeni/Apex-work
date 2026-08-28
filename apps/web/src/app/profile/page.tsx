@@ -23,6 +23,7 @@ import {
   FileText,
   Award,
   Search as SearchIcon,
+  Bookmark,
   MapPin,
   LifeBuoy,
 } from 'lucide-react';
@@ -183,6 +184,12 @@ export default function ProfilePage() {
           title="Saved searches"
           subtitle="Get pinged when new matches appear"
           href="/settings/saved-searches"
+        />
+        <MenuItem
+          icon={<Bookmark className="h-4 w-4" />}
+          title="Saved gigs"
+          subtitle="Keep services you want to hire later"
+          href="/saved"
         />
         <MenuItem
           icon={<MapPin className="h-4 w-4" />}

@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] — 2026-08-28 — Account-backed saved gigs
+
+### Added
+
+- Persistent saved gigs stored per account in PostgreSQL.
+- Idempotent save/unsave API operations and a per-gig status endpoint.
+- Saved Gigs page at `/saved`, linked from the profile menu.
+- Archived or paused saved services remain visible instead of disappearing silently.
+- Gig detail heart state now syncs across browsers and devices instead of using browser-only localStorage.
+
+### Database
+
+- Added `SavedGig` with a unique `(userId, gigId)` constraint and cascade cleanup.
+- Applied migration `20260828090000_saved_gigs` to the production Neon database.
+
 ## [0.1.0] — 2026-08-20 — MVP Core Scaffold
 
 ### Added

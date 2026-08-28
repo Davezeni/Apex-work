@@ -30,6 +30,7 @@ import { useGig } from '@/hooks/use-gigs';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useCreateOrder } from '@/hooks/use-orders';
+import { useSaveGig, useSavedGigStatus, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 
@@ -63,7 +64,11 @@ export default function GigDetailPage() {
   const token = useAuthStore((s) => s.accessToken);
   const [tier, setTier] = useState<Tier>('BASIC');
   const [boostOpen, setBoostOpen] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const savedStatus = useSavedGigStatus(slug);
+  const saveGig = useSaveGig();
+  const unsaveGig = useUnsaveGig();
+  const saved = savedStatus.data?.saved ?? false;
+  const savePending = saveGig.isPending || unsaveGig.isPending;
   const translation = useGigTranslation(slug, locale === 'am' ? 'am' : undefined);
   const translate = useTranslateGig(slug);
 
@@ -72,27 +77,19 @@ export default function GigDetailPage() {
   useEffect(() => {
     if (!slug) return;
     void recordGigEvent(slug, 'VIEW', token);
-    try {
-      const savedGigs = JSON.parse(localStorage.getItem('apex-saved-gigs') ?? '[]') as string[];
-      setSaved(savedGigs.includes(slug));
-    } catch {
-      setSaved(false);
-    }
   }, [slug, token]);
 
   const toggleSave = () => {
-    if (!slug) return;
-    try {
-      const savedGigs = JSON.parse(localStorage.getItem('apex-saved-gigs') ?? '[]') as string[];
-      const next = savedGigs.includes(slug)
-        ? savedGigs.filter((item) => item !== slug)
-        : [...savedGigs, slug];
-      localStorage.setItem('apex-saved-gigs', JSON.stringify(next.slice(-100)));
-      setSaved(next.includes(slug));
-      toast.success(next.includes(slug) ? 'Gig saved' : 'Gig removed from saved');
-    } catch {
-      toast.error('Could not update saved gigs');
+    if (!slug || savePending) return;
+    if (!token) {
+      router.push(`/login?next=${encodeURIComponent(`/gigs/${slug}`)}`);
+      return;
     }
+    const mutation = saved ? unsaveGig : saveGig;
+    mutation.mutate(slug, {
+      onSuccess: () => toast.success(saved ? 'Gig removed from saved' : 'Gig saved'),
+      onError: (error) => toast.error(error.message),
+    });
   };
 
   const shareGig = async () => {
@@ -195,7 +192,7 @@ export default function GigDetailPage() {
           <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={gig.coverImageUrl} alt={gig.title} className="absolute inset-0 h-full w-full object-cover" />
-            <HeaderActions router={router} onTop saved={saved} onSave={toggleSave} onShare={shareGig} />
+            <HeaderActions router={router} onTop saved={saved} saving={savePending} onSave={toggleSave} onShare={shareGig} />
           </div>
           <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
         <div className="flex items-start gap-3">
@@ -274,8 +271,9 @@ export default function GigDetailPage() {
             </div>
             <button
               onClick={toggleSave}
+              disabled={savePending}
               aria-label={saved ? 'Remove from saved' : 'Save gig'}
-              className={cn('grid h-9 w-9 place-items-center rounded-full', saved ? 'text-primary' : 'text-muted-foreground')}
+              className={cn('grid h-9 w-9 place-items-center rounded-full disabled:opacity-50', saved ? 'text-primary' : 'text-muted-foreground')}
             >
               <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
             </button>
@@ -546,12 +544,14 @@ function HeaderActions({
   router,
   onTop = false,
   saved,
+  saving,
   onSave,
   onShare,
 }: {
   router: ReturnType<typeof useRouter>;
   onTop?: boolean;
   saved: boolean;
+  saving: boolean;
   onSave: () => void;
   onShare: () => Promise<void>;
 }) {
@@ -570,9 +570,10 @@ function HeaderActions({
       <div className="flex gap-2">
         <button
           onClick={onSave}
+          disabled={saving}
           aria-label={saved ? 'Remove from saved' : 'Save gig'}
           className={cn(
-            'grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur',
+            'grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur disabled:opacity-50',
             saved && 'text-pink-300',
           )}
         >

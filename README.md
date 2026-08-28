@@ -155,6 +155,7 @@ Routes:
 /u/[username]          → Freelancer profile
 /messages              → Inbox
 /messages/[id]         → Conversation
+/saved                 → Account-backed saved gigs
 /orders                → Orders list
 /orders/[id]           → Order detail
 /wallet                → Earnings & payouts
