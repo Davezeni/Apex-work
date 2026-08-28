@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 export interface SavedGig {
@@ -44,15 +44,27 @@ export function useSavedGigStatus(slug: string | undefined) {
     queryFn: () => apiFetch(`/me/saved-gigs/${encodeURIComponent(slug!)}`, { token }),
     enabled: !!token && !!slug,
     staleTime: 30_000,
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 401) && failureCount < 1,
   });
 }
 
 export function useSaveGig() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
-  return useMutation<{ saved: true }, Error, string>({
+  return useMutation<{ saved: true }, Error, string, { previous?: { saved: boolean } }>({
     mutationFn: (slug) =>
       apiFetch(`/me/saved-gigs/${encodeURIComponent(slug)}`, { method: 'PUT', token }),
+    onMutate: async (slug) => {
+      await qc.cancelQueries({ queryKey: ['saved-gig-status', slug] });
+      const previous = qc.getQueryData<{ saved: boolean }>(['saved-gig-status', slug]);
+      qc.setQueryData(['saved-gig-status', slug], { saved: true });
+      return { previous };
+    },
+    onError: (_error, slug, context) => {
+      if (context?.previous) qc.setQueryData(['saved-gig-status', slug], context.previous);
+      else qc.removeQueries({ queryKey: ['saved-gig-status', slug], exact: true });
+    },
     onSuccess: (_result, slug) => {
       qc.setQueryData(['saved-gig-status', slug], { saved: true });
       qc.invalidateQueries({ queryKey: ['saved-gigs'] });
@@ -63,9 +75,19 @@ export function useSaveGig() {
 export function useUnsaveGig() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
-  return useMutation<{ saved: false }, Error, string>({
+  return useMutation<{ saved: false }, Error, string, { previous?: { saved: boolean } }>({
     mutationFn: (slug) =>
       apiFetch(`/me/saved-gigs/${encodeURIComponent(slug)}`, { method: 'DELETE', token }),
+    onMutate: async (slug) => {
+      await qc.cancelQueries({ queryKey: ['saved-gig-status', slug] });
+      const previous = qc.getQueryData<{ saved: boolean }>(['saved-gig-status', slug]);
+      qc.setQueryData(['saved-gig-status', slug], { saved: false });
+      return { previous };
+    },
+    onError: (_error, slug, context) => {
+      if (context?.previous) qc.setQueryData(['saved-gig-status', slug], context.previous);
+      else qc.removeQueries({ queryKey: ['saved-gig-status', slug], exact: true });
+    },
     onSuccess: (_result, slug) => {
       qc.setQueryData(['saved-gig-status', slug], { saved: false });
       qc.invalidateQueries({ queryKey: ['saved-gigs'] });

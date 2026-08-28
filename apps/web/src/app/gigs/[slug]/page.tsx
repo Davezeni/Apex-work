@@ -275,7 +275,7 @@ export default function GigDetailPage() {
               aria-label={saved ? 'Remove from saved' : 'Save gig'}
               className={cn('grid h-9 w-9 place-items-center rounded-full disabled:opacity-50', saved ? 'text-primary' : 'text-muted-foreground')}
             >
-              <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
+              {savePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />}
             </button>
             <button
               onClick={() => void shareGig()}
@@ -577,7 +577,7 @@ function HeaderActions({
             saved && 'text-pink-300',
           )}
         >
-          <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />}
         </button>
         <button
           onClick={() => void onShare()}
