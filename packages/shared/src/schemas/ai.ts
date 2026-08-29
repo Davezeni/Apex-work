@@ -93,3 +93,34 @@ export const aiPortfolioCaseStudySchema = z.object({
   outcome: z.string().trim().max(1200).optional(),
 });
 export type AIPortfolioCaseStudyInput = z.infer<typeof aiPortfolioCaseStudySchema>;
+
+/** Tailor a current resume to a specific job brief without inventing facts. */
+export const aiResumeTailorSchema = z.object({
+  jobDescription: z.string().trim().min(30).max(6000),
+  targetRole: z.string().trim().max(120).optional(),
+  resume: z.object({
+    headline: z.string().trim().max(120).optional(),
+    summary: z.string().trim().max(2000).optional(),
+    skills: z.array(z.string().trim().max(60)).max(40).default([]),
+    experience: z
+      .array(
+        z.object({
+          role: z.string().trim().max(120),
+          company: z.string().trim().max(120),
+          description: z.string().trim().max(2000).optional(),
+        }),
+      )
+      .max(20)
+      .default([]),
+    projects: z
+      .array(
+        z.object({
+          title: z.string().trim().max(120),
+          description: z.string().trim().max(1600).optional(),
+        }),
+      )
+      .max(20)
+      .default([]),
+  }),
+});
+export type AIResumeTailorInput = z.infer<typeof aiResumeTailorSchema>;

@@ -14,6 +14,7 @@ import {
   reviewResume,
   suggestResumeSkills,
 } from './resumeStudioAi.service.js';
+import { tailorResume } from './resumeTailorAi.service.js';
 
 describe('Resume Studio AI fallbacks', () => {
   it('scores missing resume sections without inventing facts', async () => {
@@ -43,6 +44,33 @@ describe('Resume Studio AI fallbacks', () => {
     expect(result.skills).not.toContain('Figma');
     expect(result.skills).toContain('Design systems');
     expect(result.rationale).toContain('only skills');
+  });
+
+  it('tailors a resume using existing facts when AI is unavailable', async () => {
+    const result = await tailorResume({
+      jobDescription: 'We need a React developer with strong communication and project management.',
+      targetRole: 'Frontend Developer',
+      resume: {
+        headline: 'Frontend Developer',
+        summary: 'I build reliable web interfaces.',
+        skills: ['React'],
+        experience: [
+          {
+            role: 'Developer',
+            company: 'Apex',
+            description: 'Built dashboards and improved documentation.',
+          },
+        ],
+        projects: [],
+      },
+    });
+
+    expect(result.source).toBe('fallback');
+    expect(result.tailoredHeadline).toBe('Frontend Developer');
+    expect(result.experienceBullets[0]?.bullets).toContain(
+      'Built dashboards and improved documentation',
+    );
+    expect(result.recommendations.join(' ')).toContain('only missing keywords');
   });
 
   it('turns portfolio facts into a safe deterministic case study', async () => {

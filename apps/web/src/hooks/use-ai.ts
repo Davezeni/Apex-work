@@ -85,6 +85,35 @@ export function useAIResumeSkills() {
   });
 }
 
+export function useAIResumeTailor() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    {
+      matchScore: number;
+      tailoredHeadline: string;
+      tailoredSummary: string;
+      experienceBullets: { role: string; company: string; bullets: string[] }[];
+      keywordGaps: string[];
+      recommendations: string[];
+      source: 'ai' | 'fallback';
+    },
+    Error,
+    {
+      jobDescription: string;
+      targetRole?: string;
+      resume: {
+        headline?: string;
+        summary?: string;
+        skills: string[];
+        experience: { role: string; company: string; description?: string }[];
+        projects: { title: string; description?: string }[];
+      };
+    }
+  >({
+    mutationFn: (body) => apiFetch('/ai/resume/tailor', { method: 'POST', token, body }),
+  });
+}
+
 export function useAIPortfolioCaseStudy() {
   const token = useAuthStore((s) => s.accessToken);
   return useMutation<

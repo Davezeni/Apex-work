@@ -160,6 +160,7 @@ model User {
   pushSubs       PushSubscription[]
   resume         Resume?
   resumeTemplatePurchases ResumeTemplatePurchase[]
+  resumeVersions ResumeVersion[]
   wallet         Wallet?
   transactions   Transaction[]
   notifications  Notification[]
@@ -868,6 +869,21 @@ model ResumeTemplatePurchase {
   @@unique([userId, templateId])
   @@index([userId, status])
   @@index([providerRef, status])
+}
+
+/// Named, user-owned resume snapshots for safe role tailoring and restore.
+model ResumeVersion {
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  targetRole   String?
+  templateId   String?
+  snapshotJson Json
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model WorkExperience {

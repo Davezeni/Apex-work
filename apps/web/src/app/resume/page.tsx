@@ -21,6 +21,8 @@ import {
   Palette,
   ShieldCheck,
   BarChart3,
+  WandSparkles,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -38,9 +40,10 @@ import {
   useDeleteCertification,
   type Resume,
 } from '@/hooks/use-resume';
-import { useAIResumeEnhance, useAIResumeReview } from '@/hooks/use-ai';
+import { useAIResumeEnhance, useAIResumeReview, useAIResumeTailor } from '@/hooks/use-ai';
 import { useResumeTemplates } from '@/hooks/use-resume-templates';
 import { ResumeStudioSections } from '@/components/resume/studio-sections';
+import { ResumeVersionsPanel } from '@/components/resume/versions-panel';
 import { useI18n } from '@/i18n';
 import type { ResumeContent, ResumeTemplateId } from '@apex-work/shared';
 
@@ -72,6 +75,7 @@ export default function ResumeBuilderPage() {
   const update = useUpdateResume();
   const enhance = useAIResumeEnhance();
   const review = useAIResumeReview();
+  const tailor = useAIResumeTailor();
   const templateCatalog = useResumeTemplates();
 
   useEffect(() => {
@@ -95,6 +99,8 @@ export default function ResumeBuilderPage() {
   });
   const [content, setContent] = useState<ResumeContent>(EMPTY_RESUME_CONTENT);
   const [langInput, setLangInput] = useState('');
+  const [tailorOpen, setTailorOpen] = useState(false);
+  const [jobDescription, setJobDescription] = useState('');
   const [aiTarget, setAiTarget] = useState<null | {
     section: 'summary' | 'experience' | 'education';
     onApply: (s: string) => void;
@@ -175,6 +181,46 @@ export default function ResumeBuilderPage() {
         onError: (error) => toast.error(error.message),
       },
     );
+  };
+
+  const runTailor = () => {
+    if (jobDescription.trim().length < 30)
+      return toast.error('Paste a job description of at least 30 characters');
+    tailor.mutate(
+      {
+        jobDescription,
+        targetRole: basics.targetRole || undefined,
+        resume: {
+          headline: basics.headline || undefined,
+          summary: basics.summary || undefined,
+          skills: content.skills.map((skill) => skill.name),
+          experience: resume.experiences.map((item) => ({
+            role: item.role,
+            company: item.company,
+            description: item.description ?? undefined,
+          })),
+          projects: content.projects.map((item) => ({
+            title: item.title,
+            description: item.description ?? undefined,
+          })),
+        },
+      },
+      {
+        onSuccess: () => toast.success('Role-tailored recommendations are ready'),
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  const applyTailoredSummary = () => {
+    if (!tailor.data) return;
+    setBasics((current) => ({
+      ...current,
+      headline: tailor.data.tailoredHeadline || current.headline,
+      summary: tailor.data.tailoredSummary || current.summary,
+    }));
+    toast.success('Tailored headline and summary applied — save your resume');
+    setTailorOpen(false);
   };
 
   const runAI = async () => {
@@ -281,19 +327,34 @@ export default function ResumeBuilderPage() {
                 A complete profile gives AI better context and makes recruiter scanning easier.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-auto min-h-12 justify-start"
-              onClick={runReview}
-              disabled={review.isPending}
-            >
-              <BarChart3 className="h-4 w-4 text-primary" />
-              {review.isPending ? 'Reviewing…' : 'Run AI Resume Coach'}
-            </Button>
+            <div className="flex flex-wrap gap-2 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto min-h-12 justify-start"
+                onClick={runReview}
+                disabled={review.isPending}
+              >
+                <BarChart3 className="h-4 w-4 text-primary" />
+                {review.isPending ? 'Reviewing…' : 'Run AI Resume Coach'}
+              </Button>
+              <Button
+                type="button"
+                variant="brand"
+                className="h-auto min-h-12 justify-start"
+                onClick={() => {
+                  tailor.reset();
+                  setTailorOpen(true);
+                }}
+              >
+                <WandSparkles className="h-4 w-4" /> Tailor to a job
+              </Button>
+            </div>
           </div>
           {review.data && <CoachReport report={review.data} />}
         </section>
+
+        <ResumeVersionsPanel targetRole={basics.targetRole} />
 
         {/* Basics */}
         <Section title="Basics">
@@ -575,6 +636,164 @@ export default function ResumeBuilderPage() {
                   )}
                 </Button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tailor this resume to one job without changing the saved CV until the user approves. */}
+        {tailorOpen && (
+          <div
+            className="fixed inset-0 z-[100] grid place-items-end bg-black/60 backdrop-blur-sm sm:place-items-center"
+            onClick={() => setTailorOpen(false)}
+          >
+            <div
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
+              <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <WandSparkles className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-extrabold">Tailor your CV to a job</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    Paste the job description. Apex will reorder your strengths and rewrite your
+                    headline and summary using only facts already in your resume.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTailorOpen(false)}
+                  aria-label="Close"
+                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <textarea
+                value={jobDescription}
+                onChange={(event) => setJobDescription(event.target.value)}
+                rows={7}
+                maxLength={6000}
+                placeholder="Paste the job description here…"
+                className="input mt-4 min-h-[150px]"
+              />
+              <div className="mt-3 flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setTailorOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="brand"
+                  className="flex-1"
+                  onClick={runTailor}
+                  disabled={tailor.isPending}
+                >
+                  {tailor.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <WandSparkles className="h-4 w-4" />
+                  )}{' '}
+                  {tailor.isPending ? 'Tailoring…' : 'Tailor with AI'}
+                </Button>
+              </div>
+              {tailor.data && (
+                <div className="mt-5 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-14 w-14 place-items-center rounded-full border-4 border-primary/20 bg-background text-lg font-black text-primary">
+                      {tailor.data.matchScore}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold">Role match estimate</h3>
+                      <p className="text-[11px] text-muted-foreground">
+                        {tailor.data.source === 'ai'
+                          ? 'AI-tailored from your current facts'
+                          : 'Starter estimate — AI provider unavailable'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-background p-3">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Suggested headline
+                      </div>
+                      <p className="mt-1 text-sm font-semibold">
+                        {tailor.data.tailoredHeadline || 'Keep your current headline'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-background p-3">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Suggested summary
+                      </div>
+                      <p className="mt-1 line-clamp-5 whitespace-pre-wrap text-xs">
+                        {tailor.data.tailoredSummary || 'Add a summary before tailoring.'}
+                      </p>
+                    </div>
+                  </div>
+                  {tailor.data.keywordGaps.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-xs font-bold">Keyword gaps to review</div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {tailor.data.keywordGaps.map((item) => (
+                          <span
+                            key={item}
+                            className="rounded-full bg-background px-2 py-1 text-[10px] font-semibold"
+                          >
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {tailor.data.experienceBullets.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-xs font-bold">Suggested bullet rewrites</div>
+                      <div className="mt-2 space-y-2">
+                        {tailor.data.experienceBullets.map((item) => (
+                          <div
+                            key={`${item.company}-${item.role}`}
+                            className="rounded-xl bg-background p-3"
+                          >
+                            <div className="text-xs font-semibold">
+                              {item.role}
+                              {item.company ? ` · ${item.company}` : ''}
+                            </div>
+                            <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">
+                              {item.bullets.map((bullet) => (
+                                <li key={bullet}>{bullet}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setTailorOpen(false)}
+                    >
+                      Keep reviewing
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="brand"
+                      className="flex-1"
+                      onClick={applyTailoredSummary}
+                    >
+                      <Save className="h-4 w-4" /> Apply headline & summary
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

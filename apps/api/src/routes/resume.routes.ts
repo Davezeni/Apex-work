@@ -6,6 +6,8 @@ import {
   certificationSchema,
   resumeTemplateSelectSchema,
   resumeTemplateVerifySchema,
+  resumeVersionCreateSchema,
+  resumeVersionIdSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -15,6 +17,7 @@ import { BadRequestError, NotFoundError } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
 import * as resume from '../services/resume.service.js';
 import * as resumeTemplates from '../services/resumeTemplates.service.js';
+import * as resumeVersions from '../services/resumeVersions.service.js';
 
 const router: Router = Router();
 router.use(requireAuth);
@@ -36,6 +39,41 @@ router.patch(
     const body = req.body as import('@apex-work/shared').ResumeInput;
     const r = await resume.updateResume(req.user!.sub, body);
     return success(res, r);
+  }),
+);
+
+// ---------------- Resume Studio versions ----------------
+router.get(
+  '/versions',
+  asyncHandler(async (req, res) => {
+    return success(res, { items: await resumeVersions.list(req.user!.sub) });
+  }),
+);
+
+router.post(
+  '/versions',
+  validate(resumeVersionCreateSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').ResumeVersionCreateInput;
+    return success(res, await resumeVersions.create(req.user!.sub, body.name), 201);
+  }),
+);
+
+router.post(
+  '/versions/:id/restore',
+  validate(resumeVersionIdSchema, 'params'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await resumeVersions.restore(req.user!.sub, id));
+  }),
+);
+
+router.delete(
+  '/versions/:id',
+  validate(resumeVersionIdSchema, 'params'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await resumeVersions.remove(req.user!.sub, id));
   }),
 );
 

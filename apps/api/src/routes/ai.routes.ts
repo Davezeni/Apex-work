@@ -8,6 +8,7 @@ import {
   aiResumeReviewSchema,
   aiResumeSkillsSchema,
   aiPortfolioCaseStudySchema,
+  aiResumeTailorSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -15,6 +16,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import * as ai from '../services/ai.service.js';
 import * as studioAi from '../services/resumeStudioAi.service.js';
+import * as tailorAi from '../services/resumeTailorAi.service.js';
 
 const router: Router = Router();
 router.use(requireAuth);
@@ -78,6 +80,15 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').AIPortfolioCaseStudyInput;
     return success(res, await studioAi.generatePortfolioCaseStudy(body));
+  }),
+);
+
+router.post(
+  '/resume/tailor',
+  validate(aiResumeTailorSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIResumeTailorInput;
+    return success(res, await tailorAi.tailorResume(body));
   }),
 );
 
