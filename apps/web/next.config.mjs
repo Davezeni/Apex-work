@@ -52,7 +52,11 @@ const nextConfig = {
           // browser then won't even prompt the user for permission, and
           // there's no way to grant it from device settings. We want
           // `camera=(self)` which allows same-origin scripts to request it.
-          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self), display-capture=(self), fullscreen=(self)' },
+          {
+            key: 'Permissions-Policy',
+            value:
+              'camera=(self), microphone=(self), geolocation=(self), display-capture=(self), fullscreen=(self)',
+          },
         ],
       },
       // Permissive CORS for Next.js chunks so proxied hosts (Codespaces) can load them.
@@ -61,7 +65,6 @@ const nextConfig = {
         headers: [
           { key: 'Access-Control-Allow-Origin', value: '*' },
           { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD, OPTIONS' },
-          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
         ],
       },
       {
@@ -78,16 +81,10 @@ const nextConfig = {
         ],
       },
       {
-        // Static assets emitted by Next are hashed → safe to cache forever.
-        source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-      {
         // Public marketing/landing routes — safe to cache at Vercel edge with SWR.
         // Auth-gated routes + sw.js/manifest below override this.
-        source: '/((?!api|sw\\.js|manifest\\.webmanifest|login|signup|onboarding|settings|profile|wallet|messages|notifications|orders).*)',
+        source:
+          '/((?!api|sw\\.js|manifest\\.webmanifest|login|signup|onboarding|settings|profile|wallet|messages|notifications|orders).*)',
         headers: [
           { key: 'Cache-Control', value: 'public, s-maxage=60, stale-while-revalidate=300' },
           { key: 'Vary', value: 'Accept-Encoding, Accept-Language' },
@@ -95,7 +92,8 @@ const nextConfig = {
       },
       {
         // Authed routes: never cache at the CDN — they're per-user.
-        source: '/(login|signup|onboarding|settings/:path*|profile|wallet|messages/:path*|notifications|orders/:path*)',
+        source:
+          '/(login|signup|onboarding|settings/:path*|profile|wallet|messages/:path*|notifications|orders/:path*)',
         headers: [{ key: 'Cache-Control', value: 'private, no-store' }],
       },
     ];
