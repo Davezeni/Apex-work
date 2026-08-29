@@ -108,8 +108,10 @@ export function AIAssistant() {
       // Send only role/content; drop UI-only fields.
       const payload = next.map(({ role, content }) => ({ role, content }));
       const r = await chat.mutateAsync({ messages: payload });
+      if (r.source === 'fallback') void aiStatus.refetch();
       persist([...next, { role: 'assistant', content: r.text, source: r.source }]);
     } catch {
+      void aiStatus.refetch();
       // Still provide useful product help if the session, API, network, or
       // live model is unavailable. The user should never get a dead chat box.
       persist([
@@ -166,9 +168,11 @@ export function AIAssistant() {
                   <div className="text-[10px] opacity-80">
                     {aiStatus.data?.providerReachable === true
                       ? 'AI online · Apex-Work help'
-                      : aiStatus.data?.configured
-                        ? 'AI key configured · fallback ready'
-                        : 'Apex-Work help · fallback ready'}
+                      : aiStatus.data?.providerReachable === false
+                        ? 'AI provider unavailable · fallback ready'
+                        : aiStatus.data?.configured
+                          ? 'AI key configured · fallback ready'
+                          : 'Apex-Work help · fallback ready'}
                   </div>
                 </div>
                 {msgs.length > 0 && (
