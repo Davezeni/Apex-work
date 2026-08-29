@@ -27,7 +27,7 @@ const HIDE_ON = [
   '/admin', // admin dashboards
   '/login',
   '/signup',
-  '/onboarding',
+  // Onboarding is authenticated; keep the assistant available for profile and skill help.
 ];
 
 const STORAGE_KEY = 'apex-assistant-history-v1';
@@ -187,6 +187,7 @@ export function AIAssistant() {
                       'How do withdrawals work?',
                       'What is the platform fee?',
                       'How do I get verified?',
+                      'What skills should I add to my profile?',
                       'ክፍያ እንዴት እወስዳለሁ?',
                     ].map((s) => (
                       <button
