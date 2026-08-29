@@ -28,6 +28,7 @@ import { useMe } from '@/hooks/use-me';
 import {
   useOAuthAccounts,
   useUnlinkOAuthAccount,
+  useStartOAuthLink,
   type OAuthAccount,
 } from '@/hooks/use-oauth-accounts';
 import { useI18n } from '@/i18n';
@@ -48,6 +49,7 @@ export default function ConnectedAppsPage() {
   const { isLoading: meLoading, isAuthed, data: me } = useMe();
   const oauthAccounts = useOAuthAccounts();
   const unlinkOAuth = useUnlinkOAuthAccount();
+  const linkOAuth = useStartOAuthLink();
 
   useEffect(() => {
     if (!meLoading && !isAuthed) router.replace('/login?next=/settings/connected');
@@ -168,7 +170,13 @@ export default function ConnectedAppsPage() {
           <OAuthRow
             provider="google"
             account={oauthAccounts.data?.items.find((item) => item.provider === 'google')}
-            busy={unlinkOAuth.isPending}
+            busy={unlinkOAuth.isPending || linkOAuth.isPending}
+            onLink={() => {
+              linkOAuth.mutate('google', {
+                onSuccess: ({ authorizationUrl }) => window.location.assign(authorizationUrl),
+                onError: (error) => toast.error(error.message),
+              });
+            }}
             onUnlink={() => {
               if (!window.confirm('Disconnect Google sign-in?')) return;
               unlinkOAuth.mutate('google', {
@@ -180,7 +188,13 @@ export default function ConnectedAppsPage() {
           <OAuthRow
             provider="github"
             account={oauthAccounts.data?.items.find((item) => item.provider === 'github')}
-            busy={unlinkOAuth.isPending}
+            busy={unlinkOAuth.isPending || linkOAuth.isPending}
+            onLink={() => {
+              linkOAuth.mutate('github', {
+                onSuccess: ({ authorizationUrl }) => window.location.assign(authorizationUrl),
+                onError: (error) => toast.error(error.message),
+              });
+            }}
             onUnlink={() => {
               if (!window.confirm('Disconnect GitHub sign-in?')) return;
               unlinkOAuth.mutate('github', {
@@ -190,10 +204,7 @@ export default function ConnectedAppsPage() {
             }}
           />
           <div className="p-3 text-center text-[11px] text-muted-foreground">
-            <Link href="/login" className="font-bold text-primary">
-              Open sign in
-            </Link>{' '}
-            to connect another provider.
+            Connect stays on this Apex-Work account; it will not create a second account.
           </div>
         </div>
       </section>
@@ -211,11 +222,13 @@ function OAuthRow({
   provider,
   account,
   busy,
+  onLink,
   onUnlink,
 }: {
   provider: 'google' | 'github';
   account?: OAuthAccount;
   busy: boolean;
+  onLink: () => void;
   onUnlink: () => void;
 }) {
   const isGoogle = provider === 'google';
@@ -250,9 +263,15 @@ function OAuthRow({
           </button>
         </>
       ) : (
-        <Link href="/login" className="text-[11px] font-bold text-primary">
+        <button
+          type="button"
+          onClick={onLink}
+          disabled={busy}
+          className="inline-flex items-center gap-1 text-[11px] font-bold text-primary disabled:opacity-50"
+        >
+          {busy && <Loader2 className="h-3 w-3 animate-spin" />}
           Connect
-        </Link>
+        </button>
       )}
     </div>
   );

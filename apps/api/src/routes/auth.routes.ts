@@ -17,9 +17,10 @@ import { authLimiter, otpLimiter, pinLimiter } from '../middleware/rateLimit.js'
 import { requireAuth } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { success } from '../lib/response.js';
-import { BadRequestError } from '../lib/errors.js';
+import { BadRequestError, ConflictError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
 import * as oauth from '../services/oauth.service.js';
+import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import { env } from '../config/env.js';
 
 const router: Router = Router();
@@ -42,18 +43,26 @@ const oauthProviderFromRequest = (req: { params: unknown }) => {
   return parsed.data;
 };
 
-const oauthQuery = (req: { query: unknown }) => req.query as {
-  code?: string;
-  state?: string;
-  error?: string;
-  role?: string;
-  next?: string;
-};
+const oauthQuery = (req: { query: unknown }) =>
+  req.query as {
+    code?: string;
+    state?: string;
+    error?: string;
+    role?: string;
+    next?: string;
+  };
 
 /** Only derive the callback from a known deployment host; never trust an arbitrary Host header. */
-const oauthRequestBase = (req: { protocol: string; get(name: string): string | undefined }): string => {
+const oauthRequestBase = (req: {
+  protocol: string;
+  get(name: string): string | undefined;
+}): string => {
   const host = req.get('host') ?? '';
-  if (host === 'apex-work-api.onrender.com' || /^localhost(?::\\d+)?$/.test(host) || /^127\\.0\\.0\\.1(?::\\d+)?$/.test(host)) {
+  if (
+    host === 'apex-work-api.onrender.com' ||
+    /^localhost(?::\d+)?$/.test(host) ||
+    /^127\.0\.0\.1(?::\d+)?$/.test(host)
+  ) {
     return `${req.protocol}://${host}`;
   }
   return env.API_URL;
@@ -76,6 +85,27 @@ router.get(
   }),
 );
 
+/**
+ * Start an authenticated provider-link flow. The browser first obtains this
+ * URL with its Bearer token, then follows the provider redirect. The Redis
+ * state is bound to this account, so a callback cannot attach to another one.
+ */
+router.post(
+  '/oauth/:provider/link/start',
+  authLimiter,
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const provider = oauthProviderFromRequest(req);
+    const query = oauthQuery(req);
+    const role = req.user!.role === 'FREELANCER' ? 'FREELANCER' : 'CLIENT';
+    const authorizationUrl = await oauth.start(provider, role, query.next, oauthRequestBase(req), {
+      mode: 'link',
+      userId: req.user!.sub,
+    });
+    return success(res, { authorizationUrl });
+  }),
+);
+
 /** Provider callback. Exchanges the code server-side, then hands the session to the web app once. */
 router.get(
   '/oauth/:provider/callback',
@@ -84,20 +114,36 @@ router.get(
     const query = oauthQuery(req);
     let state: Awaited<ReturnType<typeof oauth.consumeState>> | null = null;
     try {
-      if (query.error) throw new BadRequestError('OAuth sign-in was cancelled');
-      if (!query.code || !query.state) throw new BadRequestError('OAuth response was incomplete');
+      if (!query.state) throw new BadRequestError('OAuth response was incomplete');
       state = await oauth.consumeState(query.state, provider);
-      const profile = await oauth.exchangeCode(provider, query.code, state.callbackBaseUrl ?? oauthRequestBase(req));
+      if (query.error) throw new BadRequestError('OAuth sign-in was cancelled');
+      if (!query.code) throw new BadRequestError('OAuth response was incomplete');
+      const profile = await oauth.exchangeCode(
+        provider,
+        query.code,
+        state.callbackBaseUrl ?? oauthRequestBase(req),
+      );
+
+      if (state.mode === 'link') {
+        if (!state.userId) throw new BadRequestError('OAuth link session is invalid');
+        await oauthAccounts.link(state.userId, profile);
+        return res.redirect(oauth.callbackLinkUrl(provider, state.next));
+      }
+
       const result = await authService.loginWithOAuth(profile, clientCtx(req));
 
       if (result.pending) {
         // OAuth has already authenticated the external identity. Create the
         // account now with phone=null, then use the normal logged-in step-up
         // page for phone verification before high-trust actions.
-        const created = await authService.completeOAuthSignup(profile, {
-          fullName: profile.fullName,
-          role: state.role,
-        }, clientCtx(req));
+        const created = await authService.completeOAuthSignup(
+          profile,
+          {
+            fullName: profile.fullName,
+            role: state.role,
+          },
+          clientCtx(req),
+        );
         const handoff = await oauth.createHandoff({
           ...created.tokens,
           phone: null,
@@ -112,8 +158,14 @@ router.get(
         requiresPhone: result.requiresPhone,
       });
       return res.redirect(oauth.callbackHandoffUrl(handoff, state.next));
-    } catch {
-      return res.redirect(oauth.callbackErrorUrl('oauth_failed', state?.next));
+    } catch (error) {
+      const code =
+        state?.mode === 'link'
+          ? error instanceof ConflictError
+            ? 'oauth_link_conflict'
+            : 'oauth_link_failed'
+          : 'oauth_failed';
+      return res.redirect(oauth.callbackErrorUrl(code, state?.next, state?.mode));
     }
   }),
 );
@@ -137,12 +189,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').CompleteOAuthSignupInput;
     const pending = await oauth.getPending(body.oauthToken);
-    const result = await authService.completeOAuthSignup(pending, {
-      phone: body.phone,
-      otpToken: body.otpToken,
-      fullName: body.fullName,
-      role: body.role,
-    }, clientCtx(req));
+    const result = await authService.completeOAuthSignup(
+      pending,
+      {
+        phone: body.phone,
+        otpToken: body.otpToken,
+        fullName: body.fullName,
+        role: body.role,
+      },
+      clientCtx(req),
+    );
     await oauth.consumePending(body.oauthToken);
     return success(res, { ...result, phone: body.phone, next: pending.next });
   }),

@@ -11,11 +11,16 @@ const STATE_TTL_SECONDS = 10 * 60;
 const PENDING_TTL_SECONDS = 15 * 60;
 const HANDOFF_TTL_SECONDS = 60;
 
+export type OAuthMode = 'login' | 'link';
+
 export interface OAuthState {
   provider: OAuthProvider;
   role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>;
   next: string;
   callbackBaseUrl?: string;
+  /** link states are bound to the already-authenticated Apex-Work user. */
+  mode: OAuthMode;
+  userId?: string;
 }
 
 export interface OAuthProfile {
@@ -59,9 +64,10 @@ function safeNext(next: string | undefined): string {
 }
 
 function clientConfig(provider: OAuthProvider): { clientId: string; clientSecret: string } {
-  const config = provider === 'google'
-    ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
-    : { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET };
+  const config =
+    provider === 'google'
+      ? { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
+      : { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET };
   if (!config.clientId || !config.clientSecret) {
     throw new ConflictError(`${provider} sign-in is not configured yet`);
   }
@@ -73,6 +79,7 @@ export async function start(
   role: Extract<UserRole, 'CLIENT' | 'FREELANCER'>,
   next?: string,
   requestBaseUrl?: string,
+  options: { mode?: OAuthMode; userId?: string } = {},
 ): Promise<string> {
   const { clientId } = clientConfig(provider);
   const state = randomToken(24);
@@ -81,7 +88,12 @@ export async function start(
     role,
     next: safeNext(next),
     callbackBaseUrl: requestBaseUrl?.replace(/\/$/, '') || apiBase(),
+    mode: options.mode ?? 'login',
+    ...(options.userId ? { userId: options.userId } : {}),
   };
+  if (stateData.mode === 'link' && !stateData.userId) {
+    throw new BadRequestError('OAuth link session is missing its account');
+  }
   await redis.setex(`${STATE_PREFIX}${state}`, STATE_TTL_SECONDS, JSON.stringify(stateData));
 
   const params = new URLSearchParams({
@@ -113,7 +125,7 @@ export async function consumeState(state: string, provider: OAuthProvider): Prom
 
 async function parseJson(res: Response): Promise<Record<string, unknown>> {
   const data = (await res.json().catch(() => ({}))) as unknown;
-  return data && typeof data === 'object' ? data as Record<string, unknown> : {};
+  return data && typeof data === 'object' ? (data as Record<string, unknown>) : {};
 }
 
 async function exchangeGoogle(code: string, requestBaseUrl?: string): Promise<OAuthProfile> {
@@ -132,7 +144,8 @@ async function exchangeGoogle(code: string, requestBaseUrl?: string): Promise<OA
   });
   const tokenData = await parseJson(tokenResponse);
   const accessToken = typeof tokenData.access_token === 'string' ? tokenData.access_token : null;
-  if (!tokenResponse.ok || !accessToken) throw new BadRequestError('Google sign-in could not be completed');
+  if (!tokenResponse.ok || !accessToken)
+    throw new BadRequestError('Google sign-in could not be completed');
 
   const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -144,9 +157,10 @@ async function exchangeGoogle(code: string, requestBaseUrl?: string): Promise<OA
   if (!profileResponse.ok || !providerAccountId || !fullName) {
     throw new BadRequestError('Google did not return a usable profile');
   }
-  const email = profile.email_verified === true && typeof profile.email === 'string'
-    ? profile.email.trim().toLowerCase()
-    : undefined;
+  const email =
+    profile.email_verified === true && typeof profile.email === 'string'
+      ? profile.email.trim().toLowerCase()
+      : undefined;
   const avatarUrl = typeof profile.picture === 'string' ? profile.picture : undefined;
   return { provider: 'google', providerAccountId, email, fullName, avatarUrl };
 }
@@ -159,12 +173,18 @@ async function exchangeGithub(code: string, requestBaseUrl?: string): Promise<OA
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code, redirect_uri: callbackUrl('github', requestBaseUrl) }),
+    body: JSON.stringify({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code,
+      redirect_uri: callbackUrl('github', requestBaseUrl),
+    }),
     signal: AbortSignal.timeout(10_000),
   });
   const tokenData = await parseJson(tokenResponse);
   const accessToken = typeof tokenData.access_token === 'string' ? tokenData.access_token : null;
-  if (!tokenResponse.ok || !accessToken) throw new BadRequestError('GitHub sign-in could not be completed');
+  if (!tokenResponse.ok || !accessToken)
+    throw new BadRequestError('GitHub sign-in could not be completed');
 
   const headers = { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github+json' };
   const [profileResponse, emailResponse] = await Promise.all([
@@ -172,28 +192,39 @@ async function exchangeGithub(code: string, requestBaseUrl?: string): Promise<OA
     fetch('https://api.github.com/user/emails', { headers, signal: AbortSignal.timeout(10_000) }),
   ]);
   const profile = await parseJson(profileResponse);
-  const emails = await emailResponse.json().catch(() => []) as unknown;
+  const emails = (await emailResponse.json().catch(() => [])) as unknown;
   const emailRows = Array.isArray(emails) ? emails : [];
   const primaryEmail = emailRows.find((row) => {
     if (!row || typeof row !== 'object') return false;
     const item = row as Record<string, unknown>;
     return item.primary === true && item.verified === true && typeof item.email === 'string';
   }) as Record<string, unknown> | undefined;
-  const providerAccountId = typeof profile.id === 'number' || typeof profile.id === 'string' ? String(profile.id) : null;
-  const fullName = typeof profile.name === 'string' && profile.name.trim()
-    ? profile.name.trim()
-    : typeof profile.login === 'string' ? profile.login : '';
+  const providerAccountId =
+    typeof profile.id === 'number' || typeof profile.id === 'string' ? String(profile.id) : null;
+  const fullName =
+    typeof profile.name === 'string' && profile.name.trim()
+      ? profile.name.trim()
+      : typeof profile.login === 'string'
+        ? profile.login
+        : '';
   if (!profileResponse.ok || !providerAccountId || !fullName) {
     throw new BadRequestError('GitHub did not return a usable profile');
   }
-  const email = typeof primaryEmail?.email === 'string' ? primaryEmail.email.trim().toLowerCase() : undefined;
+  const email =
+    typeof primaryEmail?.email === 'string' ? primaryEmail.email.trim().toLowerCase() : undefined;
   const avatarUrl = typeof profile.avatar_url === 'string' ? profile.avatar_url : undefined;
   return { provider: 'github', providerAccountId, email, fullName, avatarUrl };
 }
 
-export async function exchangeCode(provider: OAuthProvider, code: string, requestBaseUrl?: string): Promise<OAuthProfile> {
+export async function exchangeCode(
+  provider: OAuthProvider,
+  code: string,
+  requestBaseUrl?: string,
+): Promise<OAuthProfile> {
   if (!code || code.length > 2000) throw new BadRequestError('Invalid OAuth authorization code');
-  return provider === 'google' ? exchangeGoogle(code, requestBaseUrl) : exchangeGithub(code, requestBaseUrl);
+  return provider === 'google'
+    ? exchangeGoogle(code, requestBaseUrl)
+    : exchangeGithub(code, requestBaseUrl);
 }
 
 export async function createPending(profile: OAuthProfile, state: OAuthState): Promise<string> {
@@ -232,15 +263,34 @@ export async function consumeHandoff(token: string): Promise<OAuthHandoff> {
   return JSON.parse(raw) as OAuthHandoff;
 }
 
-export function callbackErrorUrl(code: string, next?: string): string {
-  const params = new URLSearchParams({ oauthError: code });
+function webPathWithQuery(path: string, params: Record<string, string>): string {
+  const url = new URL(path, `${webBase()}/`);
+  for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  return url.toString();
+}
+
+export function callbackErrorUrl(code: string, next?: string, mode: OAuthMode = 'login'): string {
   const safe = safeNext(next);
-  if (safe !== '/') params.set('next', safe);
-  return `${webBase()}/login?${params.toString()}`;
+  if (mode === 'link') {
+    return webPathWithQuery('/auth/oauth/callback', {
+      oauthError: code,
+      oauthMode: 'link',
+      next: safe === '/' ? '/settings/connected' : safe,
+    });
+  }
+  return webPathWithQuery('/login', {
+    oauthError: code,
+    ...(safe !== '/' ? { next: safe } : {}),
+  });
 }
 
 export function callbackHandoffUrl(handoff: string, next: string): string {
-  const params = new URLSearchParams({ handoff, next: safeNext(next) });
-  return `${webBase()}/auth/oauth/callback?${params.toString()}`;
+  return webPathWithQuery('/auth/oauth/callback', { handoff, next: safeNext(next) });
 }
 
+export function callbackLinkUrl(provider: OAuthProvider, next: string): string {
+  return webPathWithQuery('/auth/oauth/callback', {
+    linked: provider,
+    next: safeNext(next),
+  });
+}

@@ -19,8 +19,12 @@ jobs:
     steps:
       - name: Run all cron workers
         env:
-          TOKEN: 8370bdb5437a94e3cd07aa756621b608406af5c181d3bd6db7b3f3ee2c103384
+          TOKEN: ${{ secrets.CRON_TOKEN }}
         run: |
+          if [ -z "$TOKEN" ]; then
+            echo "CRON_TOKEN GitHub Actions secret is not configured"
+            exit 1
+          fi
           for i in 1 2 3; do
             code=$(curl -sS -o /tmp/out -w "%{http_code}" --max-time 180 \
               -H "Authorization: Bearer $TOKEN" \

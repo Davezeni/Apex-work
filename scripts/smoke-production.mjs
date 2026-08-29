@@ -15,6 +15,16 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web connected-apps page',
+    url: 'https://apex-work-gold.vercel.app/settings/connected',
+    expected: (res) => res.status === 200,
+  },
+  {
+    name: 'web phone-verification page',
+    url: 'https://apex-work-gold.vercel.app/settings/phone',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'API health',
     url: 'https://apex-work-api.onrender.com/v1/health',
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,
@@ -25,9 +35,14 @@ const checks = [
     redirect: 'manual',
     expected: (res) => {
       const location = res.headers.get('location');
-      return res.status >= 300 && res.status < 400 && !!location &&
+      return (
+        res.status >= 300 &&
+        res.status < 400 &&
+        !!location &&
         location.startsWith('https://accounts.google.com/') &&
-        new URL(location).searchParams.get('redirect_uri') === 'https://apex-work-api.onrender.com/v1/auth/oauth/google/callback';
+        new URL(location).searchParams.get('redirect_uri') ===
+          'https://apex-work-api.onrender.com/v1/auth/oauth/google/callback'
+      );
     },
   },
   {
@@ -36,9 +51,14 @@ const checks = [
     redirect: 'manual',
     expected: (res) => {
       const location = res.headers.get('location');
-      return res.status >= 300 && res.status < 400 && !!location &&
+      return (
+        res.status >= 300 &&
+        res.status < 400 &&
+        !!location &&
         location.startsWith('https://github.com/login/oauth/authorize') &&
-        new URL(location).searchParams.get('redirect_uri') === 'https://apex-work-api.onrender.com/v1/auth/oauth/github/callback';
+        new URL(location).searchParams.get('redirect_uri') ===
+          'https://apex-work-api.onrender.com/v1/auth/oauth/github/callback'
+      );
     },
   },
 
@@ -51,6 +71,12 @@ const checks = [
     },
   },
   {
+    name: 'OAuth link auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/auth/oauth/google/link/start?next=%2Fsettings%2Fconnected',
+    init: { method: 'POST' },
+    expected: (res) => res.status === 401,
+  },
+  {
     name: 'saved-gigs auth gate',
     url: 'https://apex-work-api.onrender.com/v1/me/saved-gigs',
     expected: (res) => res.status === 401,
@@ -58,14 +84,18 @@ const checks = [
   {
     name: 'service worker version',
     url: 'https://apex-work-gold.vercel.app/sw.js',
-    expected: async (res) => res.status === 200 && (await res.text()).includes("const VERSION = 'v6'"),
+    expected: async (res) =>
+      res.status === 200 && (await res.text()).includes("const VERSION = 'v6'"),
   },
 ];
 
 let failed = 0;
 for (const check of checks) {
   try {
-    const response = await fetch(check.url, { redirect: check.redirect ?? 'follow' });
+    const response = await fetch(check.url, {
+      redirect: check.redirect ?? 'follow',
+      ...(check.init ?? {}),
+    });
     const ok = await check.expected(response);
     console.log(`${ok ? 'PASS' : 'FAIL'} ${check.name} (${response.status})`);
     if (!ok) failed++;

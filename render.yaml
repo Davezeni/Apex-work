@@ -99,16 +99,15 @@ services:
         value: Apex-Work
 
       # Supabase Storage (portfolio images, chat attachments, avatars).
-      # Only SERVICE_ROLE key touches the API; ANON key is public and used
-      # by the browser for direct-to-Supabase uploads via signed URLs.
-      # ⚠️ These are BETA keys for the shared project — rotate before
-      # production launch. Set `sync: false` above once you have your own.
+      # Keep both keys in the Render dashboard. The service-role key is
+      # privileged and the anon key identifies the project; neither belongs
+      # in this tracked Blueprint file.
       - key: SUPABASE_URL
         value: https://zjkeuwghphutnuyxwmaa.supabase.co
       - key: SUPABASE_SERVICE_ROLE_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpqa2V1d2docGh1dG51eXh3bWFhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NzMzOTE3OCwiZXhwIjoyMTAyOTE1MTc4fQ.-vJkamK93X8aR0pfxcqDewZQPq9ik240nobl5QC-VZM
+        sync: false
       - key: SUPABASE_ANON_KEY
-        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpqa2V1d2docGh1dG51eXh3bWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczMzkxNzgsImV4cCI6MjEwMjkxNTE3OH0.gLLOv_ju07R3x_JJmpFBBG0BCYn7JilMwGDRkXM3W8A
+        sync: false
 
       # LLM (Groq — free tier). Get a key from https://console.groq.com
       # Powers /v1/ai/* (proposal writer, brief generator, resume enhance,
@@ -117,18 +116,18 @@ services:
       - key: GROQ_API_KEY
         sync: false
 
-      # Web Push (VAPID) — baked-in beta defaults so push works without
-      # manual dashboard setup. ⚠️  Rotate before production launch with:
+      # Web Push (VAPID). Keep the key pair in Render; the private key must
+      # never be committed. Generate a fresh pair before a real launch with:
       #   npx web-push generate-vapid-keys
-      # then update these values (or switch to sync:false + Render dashboard).
       - key: VAPID_PUBLIC
-        value: BPMyP9TLhBSEHGjzF6Ipw-GEqRl0SlyjP3japtn_RMIaHQZ56kQD_6U-ZfI0-ILteMe5e6rlA3LMTUgSB0NG5y8
+        sync: false
       - key: VAPID_PRIVATE
-        value: hwCjd7gP_ZanMZ_O6e_k2_cX2zX_fi8qEFvoMWtZ_zE
+        sync: false
       - key: VAPID_SUBJECT
         value: mailto:support@apex-work.com
 
       # Cron token — protects /v1/cron/* endpoints called by GitHub Actions
-      # every 15 minutes to run the saved-search scanner. Rotate freely.
+      # every 15 minutes to run the saved-search scanner. Keep it in both
+      # hosting dashboards as a secret, never in this file.
       - key: CRON_TOKEN
-        value: 8370bdb5437a94e3cd07aa756621b608406af5c181d3bd6db7b3f3ee2c103384
+        sync: false

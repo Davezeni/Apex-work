@@ -34,3 +34,17 @@ export function useUnlinkOAuthAccount() {
     },
   });
 }
+
+/** Start an authenticated provider-link flow without creating a second account. */
+export function useStartOAuthLink(next = '/settings/connected') {
+  const token = useAuthStore((state) => state.accessToken);
+  return useMutation<{ authorizationUrl: string }, Error, OAuthProvider>({
+    mutationFn: (provider) => {
+      const query = new URLSearchParams({ next });
+      return apiFetch(`/auth/oauth/${provider}/link/start?${query.toString()}`, {
+        method: 'POST',
+        token,
+      });
+    },
+  });
+}
