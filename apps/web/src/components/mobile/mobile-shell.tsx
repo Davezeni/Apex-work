@@ -64,23 +64,23 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
       <PwaInstall />
 
       {showTabBar && (
-        <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/85 backdrop-blur-xl backdrop-saturate-150">
-          <div className="mx-auto grid max-w-md grid-cols-5 items-center px-4 pt-1 pb-1.5">
+        <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40">
+          <div className="mobile-bottom-nav__bar mx-auto grid max-w-md grid-cols-5 items-center px-4">
             {TABS.slice(0, 2).map((t) => (
               <TabButton key={t.id} tab={t} active={currentTab === t.id} onClick={haptic} />
             ))}
 
-            {/* Center FAB */}
-            <div className="-mt-4 flex justify-center">
+            {/* Center FAB — same create action and grid position, with the raised pink style. */}
+            <div className="mobile-bottom-nav__create relative z-20 flex h-full items-center justify-center">
               <button
                 onClick={() => {
                   haptic();
                   setSheetOpen(true);
                 }}
                 aria-label="Create"
-                className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
+                className="mobile-bottom-nav__create-button grid h-16 w-16 place-items-center rounded-full text-white shadow-[0_3px_10px_rgba(255,45,117,0.35)] transition-transform active:scale-90"
               >
-                <Plus className="h-5 w-5" strokeWidth={2.5} />
+                <Plus className="h-8 w-8" strokeWidth={2.25} />
               </button>
             </div>
 
@@ -101,7 +101,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
       <Drawer.Root open={sheetOpen} onOpenChange={setSheetOpen}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-3xl border border-border border-b-0 bg-card focus:outline-none">
+          <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-3xl border border-b-0 border-border bg-card focus:outline-none">
             <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-muted" />
             <div className="p-6">
               <Drawer.Title className="text-xl font-extrabold">Create</Drawer.Title>
@@ -174,22 +174,26 @@ function TabButton({
     <Link
       href={tab.href}
       onClick={onClick}
+      aria-label={tab.label}
       className={cn(
-        'relative flex flex-col items-center gap-0.5 rounded-xl py-1 text-[10px] font-semibold transition-colors',
-        active ? 'text-primary' : 'text-muted-foreground',
+        'mobile-bottom-nav__tab relative flex h-16 flex-col items-center justify-center rounded-xl transition-colors',
+        active && 'mobile-bottom-nav__tab--active',
       )}
     >
-      <motion.div animate={{ scale: active ? 1.1 : 1 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
-        <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
+      <motion.div
+        animate={{ scale: active ? 1.1 : 1 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+      >
+        <Icon className="h-7 w-7" strokeWidth={active ? 2.25 : 1.8} />
       </motion.div>
-      <span>{tab.label}</span>
+      <span className="sr-only">{tab.label}</span>
       <AnimatePresence>
         {badge !== undefined && badge > 0 && (
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className="absolute right-3 top-1 grid min-w-[18px] items-center rounded-full border-2 border-background bg-destructive px-1.5 text-[10px] font-bold text-white"
+            className="absolute right-2 top-2 grid min-w-[18px] items-center rounded-full border-2 border-white bg-destructive px-1.5 text-[10px] font-bold text-white"
           >
             {badge > 99 ? '99+' : badge}
           </motion.span>
@@ -223,7 +227,9 @@ function SheetAction({
       onClick={onClick}
       className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4 text-left transition-all active:scale-[.98]"
     >
-      <div className={cn('grid h-11 w-11 place-items-center rounded-xl text-xl', bgs[color])}>{icon}</div>
+      <div className={cn('grid h-11 w-11 place-items-center rounded-xl text-xl', bgs[color])}>
+        {icon}
+      </div>
       <div className="flex-1">
         <div className="text-sm font-bold">{title}</div>
         <div className="text-xs text-muted-foreground">{subtitle}</div>

@@ -11,13 +11,13 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 262 83% 58%;              /* violet */
+    --primary: 262 83% 58%; /* violet */
     --primary-foreground: 0 0% 98%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 142 71% 45%;               /* Ethiopian green */
+    --accent: 142 71% 45%; /* Ethiopian green */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
@@ -57,20 +57,28 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
     font-feature-settings: 'ss01', 'cv11';
   }
 
   /* Prevent mobile viewport bounce/zoom */
-  html, body {
+  html,
+  body {
     overscroll-behavior-y: none;
   }
 }
 
 @layer utilities {
-  .text-balance { text-wrap: balance; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 
   .grad-hero {
     background: linear-gradient(135deg, #7c3aed 0%, #22c55e 50%, #fbbf24 100%);
@@ -93,16 +101,83 @@
     inset: -20%;
     z-index: -2;
     background:
-      radial-gradient(circle at 20% 20%, rgba(124,58,237,.20), transparent 40%),
-      radial-gradient(circle at 80% 30%, rgba(34,197,94,.15), transparent 45%),
-      radial-gradient(circle at 50% 90%, rgba(251,191,36,.14), transparent 50%);
+      radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.2), transparent 40%),
+      radial-gradient(circle at 80% 30%, rgba(34, 197, 94, 0.15), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(251, 191, 36, 0.14), transparent 50%);
     filter: blur(80px);
-    opacity: .6;
+    opacity: 0.6;
     pointer-events: none;
   }
 
   /* Safe-area helpers (iOS) */
-  .safe-top { padding-top: env(safe-area-inset-top, 0); }
-  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
-  .safe-b-nav { padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0)); }
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .safe-b-nav {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0));
+  }
+
+  /*
+   * Mobile bottom navigation — the controls stay in the existing five-column
+   * grid; only the presentation changes to the raised center-button style.
+   * The curved white cap creates the shallow U-shaped notch behind the FAB.
+   */
+  .mobile-bottom-nav {
+    --mobile-nav-bg: #ffffff;
+    --mobile-nav-border: #dedede;
+    --mobile-nav-accent: #ff2d75;
+    --mobile-nav-icon: #565656;
+    pointer-events: none;
+  }
+  .mobile-bottom-nav__bar {
+    min-height: 4.25rem;
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
+    pointer-events: auto;
+    background: var(--mobile-nav-bg);
+    border: 1px solid var(--mobile-nav-border);
+    border-bottom: 0;
+    box-shadow: 0 -2px 10px rgb(0 0 0 / 0.08);
+  }
+  .mobile-bottom-nav__bar::before {
+    content: '';
+    position: absolute;
+    z-index: 0;
+    top: -1px;
+    left: 50%;
+    width: 6.25rem;
+    height: 3rem;
+    transform: translateX(-50%);
+    background: var(--mobile-nav-bg);
+    border: 1px solid var(--mobile-nav-border);
+    border-top: 0;
+    border-radius: 0 0 50% 50%;
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.03);
+  }
+  .mobile-bottom-nav__tab {
+    position: relative;
+    z-index: 1;
+    color: var(--mobile-nav-icon);
+  }
+  .mobile-bottom-nav__tab--active {
+    color: var(--mobile-nav-accent);
+  }
+  .mobile-bottom-nav__create {
+    transform: translateY(-1.125rem);
+    pointer-events: none;
+  }
+  .mobile-bottom-nav__create-button {
+    pointer-events: auto;
+    background: var(--mobile-nav-accent);
+    border: 2px solid var(--mobile-nav-bg);
+  }
+  .dark .mobile-bottom-nav {
+    --mobile-nav-bg: hsl(var(--background));
+    --mobile-nav-border: hsl(var(--border));
+    --mobile-nav-icon: hsl(var(--muted-foreground));
+  }
 }
