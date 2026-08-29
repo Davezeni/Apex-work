@@ -122,8 +122,8 @@
 
   /*
    * Mobile bottom navigation chrome. The existing five controls are left
-   * untouched; this only adds the reference bar, outline, shadow, and curved
-   * cap behind the existing center button.
+   * untouched; this only adds the reference bar, outline, shadow, and a
+   * smooth center cut-out so the existing Create button floats above it.
    */
   .mobile-bottom-nav {
     --mobile-nav-bg: #ffffff;
@@ -135,25 +135,26 @@
     isolation: isolate;
     overflow: visible;
     pointer-events: auto;
-    background: var(--mobile-nav-bg);
-    border: 1px solid var(--mobile-nav-border);
-    border-bottom: 0;
-    box-shadow: 0 -2px 10px rgb(0 0 0 / 0.08);
   }
   .mobile-bottom-nav__bar::before {
     content: '';
     position: absolute;
     z-index: 0;
-    top: -1px;
-    left: 50%;
-    width: 5rem;
-    height: 2.5rem;
-    transform: translateX(-50%);
+    inset: 0;
+    pointer-events: none;
     background: var(--mobile-nav-bg);
     border: 1px solid var(--mobile-nav-border);
-    border-top: 0;
-    border-radius: 0 0 50% 50%;
-    box-shadow: 0 2px 4px rgb(0 0 0 / 0.03);
+    border-bottom: 0;
+    box-shadow: 0 -2px 10px rgb(0 0 0 / 0.08);
+    /* Clear the center instead of painting a second white layer behind the FAB. */
+    -webkit-mask: radial-gradient(ellipse 3.15rem 2.35rem at 50% 0, transparent 0 93%, #000 100%);
+    mask: radial-gradient(ellipse 3.15rem 2.35rem at 50% 0, transparent 0 93%, #000 100%);
+  }
+  .mobile-bottom-nav__create {
+    transform: translateY(-0.25rem);
+  }
+  .mobile-bottom-nav__create-button {
+    filter: drop-shadow(0 0.35rem 0.3rem rgb(0 0 0 / 0.18));
   }
   .dark .mobile-bottom-nav {
     --mobile-nav-bg: hsl(var(--background));

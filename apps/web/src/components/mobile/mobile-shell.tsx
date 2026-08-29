@@ -71,14 +71,14 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
             ))}
 
             {/* Center FAB — same action, size, color, and grid position as before. */}
-            <div className="relative z-10 -mt-4 flex justify-center">
+            <div className="mobile-bottom-nav__create relative z-10 -mt-4 flex justify-center">
               <button
                 onClick={() => {
                   haptic();
                   setSheetOpen(true);
                 }}
                 aria-label="Create"
-                className="grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
+                className="mobile-bottom-nav__create-button grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
               >
                 <Plus className="h-5 w-5" strokeWidth={2.5} />
               </button>
