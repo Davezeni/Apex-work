@@ -164,9 +164,11 @@ export function AIAssistant() {
                 <div className="flex-1">
                   <div className="text-sm font-extrabold">Apex Assistant</div>
                   <div className="text-[10px] opacity-80">
-                    {aiStatus.data?.configured
+                    {aiStatus.data?.providerReachable === true
                       ? 'AI online · Apex-Work help'
-                      : 'Apex-Work help · fallback ready'}
+                      : aiStatus.data?.configured
+                        ? 'AI key configured · fallback ready'
+                        : 'Apex-Work help · fallback ready'}
                   </div>
                 </div>
                 {msgs.length > 0 && (

@@ -23,6 +23,20 @@ const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 const FALLBACK_MODELS = ['llama-3.1-8b-instant', 'openai/gpt-oss-20b'] as const;
 const WHISPER_MODEL = 'whisper-large-v3-turbo';
 
+let providerState: {
+  reachable: boolean | null;
+  lastError: string | null;
+  checkedAt: string | null;
+} = {
+  reachable: null,
+  lastError: null,
+  checkedAt: null,
+};
+
+export function aiProviderStatus() {
+  return { ...providerState };
+}
+
 function isConfigured(): boolean {
   return !!env.GROQ_API_KEY;
 }
@@ -72,6 +86,11 @@ async function callGroq(
         const txt = await res.text().catch(() => '');
         logger.warn({ model, status: res.status, txt: txt.slice(0, 300) }, 'Groq request failed');
         lastError = new Error(`GROQ_HTTP_${res.status}`);
+        providerState = {
+          reachable: false,
+          lastError: `HTTP_${res.status}`,
+          checkedAt: new Date().toISOString(),
+        };
         // A bad/expired key cannot be fixed by changing models.
         if (res.status === 401 || res.status === 403) throw lastError;
         continue;
@@ -86,11 +105,17 @@ async function callGroq(
         continue;
       }
 
+      providerState = { reachable: true, lastError: null, checkedAt: new Date().toISOString() };
       // Cache for 10 minutes — identical prompts return the same result cheaply.
       await redis.set(key, out, 'EX', 600).catch(() => undefined);
       return out;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      providerState = {
+        reachable: false,
+        lastError: lastError.message.startsWith('GROQ_') ? lastError.message : 'NETWORK',
+        checkedAt: new Date().toISOString(),
+      };
       if (/GROQ_HTTP_401|GROQ_HTTP_403/.test(lastError.message)) throw lastError;
     }
   }

@@ -5,7 +5,14 @@ import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 export function useAIStatus(enabled = true) {
-  return useQuery<{ configured: boolean; fallbackAvailable: boolean; model: string | null }>({
+  return useQuery<{
+    configured: boolean;
+    fallbackAvailable: boolean;
+    fallbackVersion: string;
+    model: string | null;
+    providerReachable: boolean | null;
+    lastProviderError: string | null;
+  }>({
     queryKey: ['ai-status'],
     queryFn: () => apiFetch('/ai/status'),
     enabled,
