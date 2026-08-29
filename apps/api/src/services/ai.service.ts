@@ -20,6 +20,7 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_TRANSCRIBE_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 // Fast + free model that follows instructions well and knows Amharic context.
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+const FALLBACK_MODELS = ['llama-3.1-8b-instant', 'openai/gpt-oss-20b'] as const;
 const WHISPER_MODEL = 'whisper-large-v3-turbo';
 
 function isConfigured(): boolean {
@@ -37,41 +38,64 @@ async function callGroq(
 ): Promise<string> {
   if (!isConfigured()) throw new Error('GROQ_NOT_CONFIGURED');
 
-  const key = 'ai:groq:' + createHash('sha1').update(JSON.stringify({ messages, ...opts })).digest('hex').slice(0, 24);
+  const key =
+    'ai:groq:' +
+    createHash('sha1')
+      .update(JSON.stringify({ messages, ...opts }))
+      .digest('hex')
+      .slice(0, 24);
   const cached = await redis.get(key).catch(() => null);
   if (cached) return cached;
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: opts.model ?? DEFAULT_MODEL,
-      messages,
-      temperature: opts.temperature ?? 0.7,
-      max_tokens: opts.maxTokens ?? 800,
-    }),
-    // Ensure we never hang forever on a slow provider.
-    signal: AbortSignal.timeout(25_000),
-  });
+  const models = opts.model ? [opts.model] : [DEFAULT_MODEL, ...FALLBACK_MODELS];
+  let lastError: Error = new Error('GROQ_EMPTY');
 
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '');
-    logger.warn({ status: res.status, txt: txt.slice(0, 300) }, 'Groq request failed');
-    throw new Error(`GROQ_HTTP_${res.status}`);
+  for (const model of models) {
+    try {
+      const res = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${env.GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature: opts.temperature ?? 0.7,
+          max_tokens: opts.maxTokens ?? 800,
+        }),
+        // Ensure we never hang forever on a slow provider.
+        signal: AbortSignal.timeout(25_000),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        logger.warn({ model, status: res.status, txt: txt.slice(0, 300) }, 'Groq request failed');
+        lastError = new Error(`GROQ_HTTP_${res.status}`);
+        // A bad/expired key cannot be fixed by changing models.
+        if (res.status === 401 || res.status === 403) throw lastError;
+        continue;
+      }
+
+      const json = (await res.json()) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const out = json.choices?.[0]?.message?.content?.trim() ?? '';
+      if (!out) {
+        lastError = new Error('GROQ_EMPTY');
+        continue;
+      }
+
+      // Cache for 10 minutes — identical prompts return the same result cheaply.
+      await redis.set(key, out, 'EX', 600).catch(() => undefined);
+      return out;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (/GROQ_HTTP_401|GROQ_HTTP_403/.test(lastError.message)) throw lastError;
+    }
   }
 
-  const json = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const out = json.choices?.[0]?.message?.content?.trim() ?? '';
-  if (!out) throw new Error('GROQ_EMPTY');
-
-  // Cache for 10 minutes — identical prompts return the same result cheaply.
-  await redis.set(key, out, 'EX', 600).catch(() => undefined);
-  return out;
+  throw lastError;
 }
 
 // ---------------- PROPOSAL WRITER ----------------
@@ -113,9 +137,20 @@ Write a proposal to send this client.`;
   }
 }
 
-function fallbackProposal(i: { jobDescription: string; name?: string; skills?: string; tone: string }): string {
+function fallbackProposal(i: {
+  jobDescription: string;
+  name?: string;
+  skills?: string;
+  tone: string;
+}): string {
   const name = i.name || 'there';
-  const skills = i.skills?.split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ') || '';
+  const skills =
+    i.skills
+      ?.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 4)
+      .join(', ') || '';
   return `Hi ${name === 'there' ? 'there' : name}! 👋
 
 I read your brief and this looks like a great fit for me. Here's what I understood:
@@ -164,7 +199,9 @@ Budgets should be realistic for Ethiopia in ETB (100-500,000 range). Never menti
       title: String(parsed.title ?? '').slice(0, 140),
       description: String(parsed.description ?? '').slice(0, 6000),
       skills: Array.isArray(parsed.skills)
-        ? parsed.skills.slice(0, 10).map((s: unknown) => String(s).trim().toLowerCase().slice(0, 40))
+        ? parsed.skills
+            .slice(0, 10)
+            .map((s: unknown) => String(s).trim().toLowerCase().slice(0, 40))
         : [],
       budgetMinEtb: Math.max(100, Math.min(500_000, Number(parsed.budgetMinEtb) || 3000)),
       budgetMaxEtb: Math.max(100, Math.min(500_000, Number(parsed.budgetMaxEtb) || 15_000)),
@@ -178,15 +215,22 @@ Budgets should be realistic for Ethiopia in ETB (100-500,000 range). Never menti
 
 function fallbackBrief(idea: string) {
   const lower = idea.toLowerCase();
-  const cat =
-    /app|mobile|ios|android/.test(lower) ? { skills: ['react-native', 'flutter', 'firebase'], min: 15_000, max: 60_000 }
-      : /website|landing|next|react/.test(lower) ? { skills: ['nextjs', 'tailwind', 'typescript'], min: 8000, max: 30_000 }
-      : /logo|brand|design|figma/.test(lower) ? { skills: ['figma', 'ui-design', 'branding'], min: 3000, max: 12_000 }
-      : /video|reel|tiktok/.test(lower) ? { skills: ['video-editing', 'premiere', 'motion-graphics'], min: 3000, max: 10_000 }
-      : /translate|write|blog|seo/.test(lower) ? { skills: ['copywriting', 'seo', 'amharic'], min: 2000, max: 8000 }
-      : { skills: ['communication', 'time-management'], min: 3000, max: 12_000 };
+  const cat = /app|mobile|ios|android/.test(lower)
+    ? { skills: ['react-native', 'flutter', 'firebase'], min: 15_000, max: 60_000 }
+    : /website|landing|next|react/.test(lower)
+      ? { skills: ['nextjs', 'tailwind', 'typescript'], min: 8000, max: 30_000 }
+      : /logo|brand|design|figma/.test(lower)
+        ? { skills: ['figma', 'ui-design', 'branding'], min: 3000, max: 12_000 }
+        : /video|reel|tiktok/.test(lower)
+          ? { skills: ['video-editing', 'premiere', 'motion-graphics'], min: 3000, max: 10_000 }
+          : /translate|write|blog|seo/.test(lower)
+            ? { skills: ['copywriting', 'seo', 'amharic'], min: 2000, max: 8000 }
+            : { skills: ['communication', 'time-management'], min: 3000, max: 12_000 };
   return {
-    title: (idea.length > 100 ? idea.slice(0, 97) + '…' : idea).replace(/^i (need|want)/i, 'Looking for someone to'),
+    title: (idea.length > 100 ? idea.slice(0, 97) + '…' : idea).replace(
+      /^i (need|want)/i,
+      'Looking for someone to',
+    ),
     description: `${idea}\n\nDeliverables:\n- Quality work on time\n- Regular progress updates\n- Post-delivery support`,
     skills: cat.skills,
     budgetMinEtb: cat.min,
@@ -196,7 +240,10 @@ function fallbackBrief(idea: string) {
 
 // ---------------- RESUME ENHANCE ----------------
 
-export async function enhanceResume(section: 'summary' | 'experience' | 'education', text: string): Promise<{ text: string; source: 'ai' | 'fallback' }> {
+export async function enhanceResume(
+  section: 'summary' | 'experience' | 'education',
+  text: string,
+): Promise<{ text: string; source: 'ai' | 'fallback' }> {
   const system =
     section === 'summary'
       ? `You rewrite a freelancer's ABOUT/SUMMARY section for their CV. Keep it 2-4 sentences, first person, warm but confident. Never invent facts. English by default; Amharic if the input is Amharic.`
@@ -236,26 +283,58 @@ Product facts (ONLY answer with these):
 Style: be warm, concise (under 120 words), and always answer in the SAME LANGUAGE as the user. Use "we" for Apex-Work.
 If the user asks something outside these facts, say briefly that you don't have that info and suggest they email support@apex-work.com or Telegram @apex_work_support.`;
 
-export async function chatAssistant(history: { role: 'user' | 'assistant'; content: string }[]): Promise<{ text: string; source: 'ai' | 'fallback' }> {
+function fallbackAssistantReply(input: string): string {
+  const query = input.toLowerCase();
+  if (/withdraw|payout|cash/.test(query)) {
+    return 'Withdrawals are available from Wallet after your balance is eligible. Apex-Work supports Telebirr, CBE Birr, and major Ethiopian banks; the minimum withdrawal is 100 ETB.';
+  }
+  if (/fee|commission|charge/.test(query)) {
+    return 'Apex-Work charges a 10% platform fee on completed orders. Joining and listing services are free.';
+  }
+  if (/verify|verification|phone|otp/.test(query)) {
+    return 'Phone verification is required before messaging, ordering, posting, sending offers, and withdrawing. Open Settings → Phone to verify with OTP.';
+  }
+  if (/payment|chapa|telebirr|cbe/.test(query)) {
+    return 'Payments use Chapa and can support Telebirr, CBE Birr, cards, and other available Ethiopian payment methods. Funds are held in escrow until delivery is accepted.';
+  }
+  if (/resume|cv|portfolio|template/.test(query)) {
+    return 'Open Resume Studio to build your CV, use free or Pro templates, run the AI coach, tailor your CV to a job, and download PDF or DOCX files.';
+  }
+  if (/[\u1200-\u137f]/.test(input)) {
+    return 'እርዳታ ለማግኘት የApex-Work መተግበሪያን ይጠቀሙ። ስለ ክፍያ፣ ማረጋገጫ፣ CV ወይም ፖርትፎሊዮ ይጠይቁኝ።';
+  }
+  return 'I can help with Apex-Work payments, escrow, verification, withdrawals, resumes, portfolios, and marketplace features. Try asking about one of those topics.';
+}
+
+export async function chatAssistant(
+  history: { role: 'user' | 'assistant'; content: string }[],
+): Promise<{ text: string; source: 'ai' | 'fallback' }> {
   try {
-    const text = await callGroq(
-      [{ role: 'system', content: HELP_SYSTEM }, ...history],
-      { temperature: 0.4, maxTokens: 400 },
-    );
+    const text = await callGroq([{ role: 'system', content: HELP_SYSTEM }, ...history], {
+      temperature: 0.4,
+      maxTokens: 400,
+    });
     return { text, source: 'ai' };
-  } catch {
+  } catch (error) {
     const last = history[history.length - 1]?.content ?? '';
-    return {
-      text: `I'm having trouble reaching my brain right now — please try again in a moment. Meanwhile you can email support@apex-work.com. (You asked: "${last.slice(0, 120)}")`,
-      source: 'fallback',
-    };
+    logger.warn(
+      { err: (error as Error).message },
+      'assistant AI unavailable — using deterministic help',
+    );
+    return { text: fallbackAssistantReply(last), source: 'fallback' };
   }
 }
 
 // ---------------- GIG TRANSLATION ----------------
 
-export async function translateGig(sourceTitle: string, sourceDescription: string, targetLocale: 'en' | 'am'): Promise<{
-  title: string; description: string; source: 'ai' | 'fallback';
+export async function translateGig(
+  sourceTitle: string,
+  sourceDescription: string,
+  targetLocale: 'en' | 'am',
+): Promise<{
+  title: string;
+  description: string;
+  source: 'ai' | 'fallback';
 }> {
   const languageName = targetLocale === 'am' ? 'Amharic (አማርኛ)' : 'English';
   const system = `You are a professional translator. Translate the JSON below into ${languageName}.
@@ -267,7 +346,10 @@ Return ONLY a valid JSON object of shape { "title": string, "description": strin
 
   try {
     const raw = await callGroq(
-      [{ role: 'system', content: system }, { role: 'user', content: user }],
+      [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
       { temperature: 0.3, maxTokens: 2000 },
     );
     const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
@@ -285,7 +367,10 @@ Return ONLY a valid JSON object of shape { "title": string, "description": strin
 
 // ---------------- TRANSCRIPTION ----------------
 
-export async function transcribeAudioUrl(audioUrl: string, language?: string): Promise<{ text: string; source: 'ai' | 'fallback' }> {
+export async function transcribeAudioUrl(
+  audioUrl: string,
+  language?: string,
+): Promise<{ text: string; source: 'ai' | 'fallback' }> {
   if (!isConfigured()) return { text: '', source: 'fallback' };
   try {
     // Fetch the audio bytes from Supabase → forward to Groq's Whisper endpoint.
@@ -293,7 +378,11 @@ export async function transcribeAudioUrl(audioUrl: string, language?: string): P
     if (!audioRes.ok) throw new Error(`AUDIO_FETCH_${audioRes.status}`);
     const buf = await audioRes.arrayBuffer();
     const form = new FormData();
-    form.append('file', new Blob([buf], { type: audioRes.headers.get('content-type') ?? 'audio/webm' }), 'voice.webm');
+    form.append(
+      'file',
+      new Blob([buf], { type: audioRes.headers.get('content-type') ?? 'audio/webm' }),
+      'voice.webm',
+    );
     form.append('model', WHISPER_MODEL);
     if (language) form.append('language', language);
     form.append('response_format', 'json');
