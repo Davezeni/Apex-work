@@ -40,6 +40,11 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web freelancer onboarding page',
+    url: 'https://apex-work-gold.vercel.app/onboarding',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'API health',
     url: 'https://apex-work-api.onrender.com/v1/health',
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,
@@ -111,6 +116,16 @@ const checks = [
   {
     name: 'Resume versions auth gate',
     url: 'https://apex-work-api.onrender.com/v1/me/resume/versions',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'custom-skill creation auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/skills',
+    init: {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Custom QA Skill' }),
+    },
     expected: (res) => res.status === 401,
   },
   {
