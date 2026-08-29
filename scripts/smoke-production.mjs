@@ -103,6 +103,17 @@ const checks = [
     expected: (res) => res.status === 401,
   },
   {
+    name: 'Resume tailor auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/ai/resume/tailor',
+    init: { method: 'POST' },
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'Resume versions auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/me/resume/versions',
+    expected: (res) => res.status === 401,
+  },
+  {
     name: 'VAPID push configuration',
     url: 'https://apex-work-api.onrender.com/v1/push/vapid-key',
     expected: async (res) => {
