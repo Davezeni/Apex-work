@@ -26,6 +26,7 @@ router.get('/status', (_req, res) => {
   return success(res, {
     configured: !!env.GROQ_API_KEY,
     fallbackAvailable: true,
+    fallbackVersion: 'deterministic-v2',
     model: env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : null,
   });
 });

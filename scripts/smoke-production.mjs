@@ -110,6 +110,7 @@ const checks = [
         res.status === 200 &&
         body.ok === true &&
         body.data?.fallbackAvailable === true &&
+        body.data?.fallbackVersion === 'deterministic-v2' &&
         typeof body.data?.configured === 'boolean'
       );
     },
