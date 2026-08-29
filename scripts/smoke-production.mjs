@@ -102,6 +102,19 @@ const checks = [
     expected: (res) => res.status === 401,
   },
   {
+    name: 'AI service status',
+    url: 'https://apex-work-api.onrender.com/v1/ai/status',
+    expected: async (res) => {
+      const body = await res.json();
+      return (
+        res.status === 200 &&
+        body.ok === true &&
+        body.data?.fallbackAvailable === true &&
+        typeof body.data?.configured === 'boolean'
+      );
+    },
+  },
+  {
     name: 'Resume AI auth gate',
     url: 'https://apex-work-api.onrender.com/v1/ai/resume/review',
     init: { method: 'POST' },

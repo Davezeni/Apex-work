@@ -14,11 +14,22 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
+import { env } from '../config/env.js';
 import * as ai from '../services/ai.service.js';
 import * as studioAi from '../services/resumeStudioAi.service.js';
 import * as tailorAi from '../services/resumeTailorAi.service.js';
 
 const router: Router = Router();
+
+/** Public, non-secret diagnostic so the UI can explain whether live AI is available. */
+router.get('/status', (_req, res) => {
+  return success(res, {
+    configured: !!env.GROQ_API_KEY,
+    fallbackAvailable: true,
+    model: env.GROQ_API_KEY ? 'llama-3.3-70b-versatile' : null,
+  });
+});
+
 router.use(requireAuth);
 
 router.post(

@@ -1,6 +1,10 @@
 import type { ApiFailure, ApiSuccess } from '@apex-work/shared';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  (process.env.NODE_ENV === 'production'
+    ? 'https://apex-work-api.onrender.com'
+    : 'http://localhost:4000');
 
 export class ApiError extends Error {
   code: string;

@@ -1,8 +1,18 @@
 'use client';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+
+export function useAIStatus(enabled = true) {
+  return useQuery<{ configured: boolean; fallbackAvailable: boolean; model: string | null }>({
+    queryKey: ['ai-status'],
+    queryFn: () => apiFetch('/ai/status'),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
 
 export function useAIProposal() {
   const token = useAuthStore((s) => s.accessToken);
