@@ -8,6 +8,7 @@ import Image from 'next/image';
 import {
   ArrowLeft,
   ImagePlus,
+  Pencil,
   Loader2,
   Trash2,
   X,
@@ -20,7 +21,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useUpload } from '@/hooks/use-upload';
-import { useAddPortfolioItem, useDeletePortfolioItem, useMyPortfolio } from '@/hooks/use-portfolio';
+import {
+  useAddPortfolioItem,
+  useDeletePortfolioItem,
+  useMyPortfolio,
+  useUpdatePortfolioItem,
+  type PortfolioItem,
+} from '@/hooks/use-portfolio';
 import { useI18n } from '@/i18n';
 import { useAIPortfolioCaseStudy } from '@/hooks/use-ai';
 import {
@@ -38,11 +45,13 @@ export default function PortfolioPage() {
   const upload = useUpload();
   const addItem = useAddPortfolioItem();
   const removeItem = useDeletePortfolioItem();
+  const updateItem = useUpdatePortfolioItem();
   const caseStudy = useAIPortfolioCaseStudy();
   const { t } = useI18n();
 
   const fileRef = useRef<HTMLInputElement>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingImage, setPendingImage] = useState<{
     url: string;
     localPreview: string;
@@ -88,6 +97,7 @@ export default function PortfolioPage() {
 
     // Show local preview immediately so user isn't staring at nothing.
     const localPreview = URL.createObjectURL(file);
+    setEditingId(null);
     setPendingImage({
       url: '',
       localPreview,
@@ -122,27 +132,53 @@ export default function PortfolioPage() {
       toast.error(t('portfolio.needTitle'));
       return;
     }
+    const payload = {
+      title: title.trim(),
+      description: description.trim() || undefined,
+      imageUrl: pendingImage.url,
+      externalUrl: externalUrl.trim() || undefined,
+      role: role.trim() || undefined,
+      tools: tools
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 20),
+      outcome: outcome.trim() || undefined,
+      featured,
+    };
     try {
-      await addItem.mutateAsync({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        imageUrl: pendingImage.url,
-        externalUrl: externalUrl.trim() || undefined,
-        role: role.trim() || undefined,
-        tools: tools
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean)
-          .slice(0, 20),
-        outcome: outcome.trim() || undefined,
-        featured,
-      });
-      toast.success(t('portfolio.added'));
+      if (editingId) {
+        await updateItem.mutateAsync({ id: editingId, ...payload });
+        toast.success('Portfolio project updated');
+      } else {
+        await addItem.mutateAsync(payload);
+        toast.success(t('portfolio.added'));
+      }
       closeDialog();
     } catch (err) {
       const e = err as { message?: string };
       toast.error(e.message ?? t('portfolio.saveFailed'));
     }
+  };
+
+  const openEdit = (item: PortfolioItem) => {
+    const image = isImageType('', item.imageUrl);
+    setEditingId(item.id);
+    setPendingImage({
+      url: item.imageUrl,
+      localPreview: item.imageUrl,
+      contentType: image ? 'image/jpeg' : 'application/pdf',
+      isImage: image,
+      name: item.title,
+    });
+    setTitle(item.title);
+    setDescription(item.description ?? '');
+    setRole(item.role ?? '');
+    setTools(item.tools.join(', '));
+    setOutcome(item.outcome ?? '');
+    setExternalUrl(item.externalUrl ?? '');
+    setFeatured(item.featured);
+    setDialogOpen(true);
   };
 
   const generateCaseStudy = () => {
@@ -178,7 +214,9 @@ export default function PortfolioPage() {
   };
 
   const closeDialog = () => {
-    if (pendingImage?.localPreview) URL.revokeObjectURL(pendingImage.localPreview);
+    if (pendingImage?.localPreview?.startsWith('blob:'))
+      URL.revokeObjectURL(pendingImage.localPreview);
+    setEditingId(null);
     setPendingImage(null);
     setDialogOpen(false);
     setTitle('');
@@ -284,6 +322,7 @@ export default function PortfolioPage() {
           if (!window.confirm(t('portfolio.confirmDelete'))) return;
           removeItem.mutate(id, { onSuccess: () => toast.success(t('portfolio.removed')) });
         }}
+        onEdit={openEdit}
       />
 
       {/* Sticky add button */}
@@ -442,10 +481,14 @@ export default function PortfolioPage() {
               size="lg"
               className="mt-4 w-full"
               onClick={savePortfolioItem}
-              disabled={!pendingImage.url || upload.isPending || addItem.isPending}
+              disabled={
+                !pendingImage.url || upload.isPending || addItem.isPending || updateItem.isPending
+              }
             >
-              {addItem.isPending ? (
+              {addItem.isPending || updateItem.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
+              ) : editingId ? (
+                'Update project'
               ) : (
                 t('portfolio.save')
               )}
@@ -479,15 +522,17 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
-import { useReorderPortfolio, type PortfolioItem } from '@/hooks/use-portfolio';
+import { useReorderPortfolio } from '@/hooks/use-portfolio';
 import { useEffect as useEffectRe, useState as useStateRe } from 'react';
 
 function SortablePortfolio({
   items,
   onRemove,
+  onEdit,
 }: {
   items: PortfolioItem[];
   onRemove: (id: string) => void;
+  onEdit: (item: PortfolioItem) => void;
 }) {
   const reorder = useReorderPortfolio();
   const [ordered, setOrdered] = useStateRe<PortfolioItem[]>(items);
@@ -519,7 +564,7 @@ function SortablePortfolio({
       <SortableContext items={ordered.map((i) => i.id)} strategy={rectSortingStrategy}>
         <div className="mx-3 mt-4 grid grid-cols-2 gap-2 pb-24 sm:grid-cols-3">
           {ordered.map((it) => (
-            <PortfolioTile key={it.id} it={it} onRemove={onRemove} />
+            <PortfolioTile key={it.id} it={it} onRemove={onRemove} onEdit={onEdit} />
           ))}
         </div>
       </SortableContext>
@@ -527,7 +572,15 @@ function SortablePortfolio({
   );
 }
 
-function PortfolioTile({ it, onRemove }: { it: PortfolioItem; onRemove: (id: string) => void }) {
+function PortfolioTile({
+  it,
+  onRemove,
+  onEdit,
+}: {
+  it: PortfolioItem;
+  onRemove: (id: string) => void;
+  onEdit: (item: PortfolioItem) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: it.id,
   });
@@ -595,6 +648,13 @@ function PortfolioTile({ it, onRemove }: { it: PortfolioItem; onRemove: (id: str
         className="absolute left-2 top-2 grid h-7 w-7 cursor-grab place-items-center rounded-full bg-black/60 text-white backdrop-blur active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100"
       >
         <GripVertical className="h-3.5 w-3.5" />
+      </button>
+      <button
+        onClick={() => onEdit(it)}
+        aria-label="Edit project"
+        className="absolute right-11 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
+      >
+        <Pencil className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => onRemove(it.id)}

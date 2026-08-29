@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Loader2,
   Plus,
+  Share2,
   Trash2,
   Edit2,
   Save,
@@ -146,7 +147,7 @@ export default function ResumeBuilderPage() {
         languages: basics.languages,
         theme: basics.templateId,
       });
-      toast.success('Saved ✅');
+      toast.success('Resume saved ✅');
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Save failed');
     }
@@ -204,11 +205,18 @@ export default function ResumeBuilderPage() {
           <h1 className="text-lg font-extrabold tracking-tight">Resume / CV</h1>
           <div className="text-[10px] text-muted-foreground">Build once — export or share</div>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/resume/preview">
-            <Eye className="h-4 w-4" /> Preview
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/u/${me.username}/resume`}>
+              <Share2 className="h-4 w-4" /> Share
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/resume/preview">
+              <Eye className="h-4 w-4" /> Preview
+            </Link>
+          </Button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-5xl pb-10">
@@ -486,7 +494,7 @@ export default function ResumeBuilderPage() {
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <>
-                <Save className="h-4 w-4" /> Save basics
+                <Save className="h-4 w-4" /> Save resume
               </>
             )}
           </Button>
@@ -498,6 +506,24 @@ export default function ResumeBuilderPage() {
           targetRole={basics.targetRole}
           summary={basics.summary}
         />
+
+        <div className="mx-3 mt-4">
+          <Button
+            variant="brand"
+            size="lg"
+            className="w-full"
+            onClick={saveBasics}
+            disabled={update.isPending}
+          >
+            {update.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Save className="h-4 w-4" /> Save all resume changes
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Experience */}
         <ExperienceSection resume={resume} />

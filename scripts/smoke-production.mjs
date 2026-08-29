@@ -35,6 +35,11 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web public CV page',
+    url: 'https://apex-work-gold.vercel.app/u/demo/resume',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'API health',
     url: 'https://apex-work-api.onrender.com/v1/health',
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,
@@ -83,6 +88,17 @@ const checks = [
   {
     name: 'OAuth link auth gate',
     url: 'https://apex-work-api.onrender.com/v1/auth/oauth/google/link/start?next=%2Fsettings%2Fconnected',
+    init: { method: 'POST' },
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'Resume Studio auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/me/resume/templates',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'Resume AI auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/ai/resume/review',
     init: { method: 'POST' },
     expected: (res) => res.status === 401,
   },

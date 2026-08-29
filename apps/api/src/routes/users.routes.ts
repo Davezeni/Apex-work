@@ -60,7 +60,7 @@ router.get(
           },
         },
         portfolio: {
-          orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
+          orderBy: [{ featured: 'desc' }, { position: 'asc' }, { createdAt: 'desc' }],
           take: 12,
           select: {
             id: true,

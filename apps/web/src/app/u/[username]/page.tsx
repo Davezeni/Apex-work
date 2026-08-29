@@ -46,7 +46,14 @@ function gradientFor(id: string): string {
   return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
 }
 function initialsOf(name: string): string {
-  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  return (
+    name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 export default function PublicProfilePage() {
@@ -238,8 +245,16 @@ export default function PublicProfilePage() {
           />
         </div>
 
+        <div className="mt-4 flex gap-2">
+          <Button asChild variant="outline" className="flex-1">
+            <Link href={`/u/${user.username}/resume`}>
+              <FileText className="h-4 w-4" /> View CV
+            </Link>
+          </Button>
+        </div>
+
         {!isSelf && (
-          <div className="mt-4 flex gap-2">
+          <div className="mt-2 flex gap-2">
             <Button
               variant="brand"
               className="flex-1"
@@ -295,7 +310,10 @@ export default function PublicProfilePage() {
           <div className="grid grid-cols-3 gap-2">
             <MiniKpi label="Hires" value={String(stats.asClient.hires)} />
             <MiniKpi label="Total spent" value={formatEtb(stats.asClient.totalSpentEtb)} />
-            <MiniKpi label="Member since" value={new Date(user.createdAt).getFullYear().toString()} />
+            <MiniKpi
+              label="Member since"
+              value={new Date(user.createdAt).getFullYear().toString()}
+            />
           </div>
         </Section>
       )}
@@ -303,7 +321,10 @@ export default function PublicProfilePage() {
         <Section title="Freelancer stats">
           <div className="grid grid-cols-3 gap-2">
             <MiniKpi label="Orders done" value={String(stats.asFreelancer.completedOrders)} />
-            <MiniKpi label="Lifetime earned" value={formatEtb(stats.asFreelancer.lifetimeEarnedEtb)} />
+            <MiniKpi
+              label="Lifetime earned"
+              value={formatEtb(stats.asFreelancer.lifetimeEarnedEtb)}
+            />
             <MiniKpi label="Reviews" value={String(stats.ratingCount)} />
           </div>
         </Section>
@@ -367,11 +388,21 @@ export default function PublicProfilePage() {
 function PortfolioTile({
   p,
 }: {
-  p: { id: string; title: string; description: string | null; imageUrl: string };
+  p: {
+    id: string;
+    title: string;
+    description: string | null;
+    imageUrl: string;
+    externalUrl?: string | null;
+    role?: string | null;
+    tools?: string[];
+    outcome?: string | null;
+    featured?: boolean;
+  };
 }) {
   return (
     <a
-      href={p.imageUrl}
+      href={p.externalUrl || p.imageUrl}
       target="_blank"
       rel="noreferrer"
       className="group relative block overflow-hidden rounded-2xl border border-border bg-card"
@@ -400,9 +431,23 @@ function PortfolioTile({
         )}
       </div>
       <div className="p-2">
-        <div className="line-clamp-1 text-xs font-semibold">{p.title}</div>
+        <div className="flex items-center gap-1">
+          <div className="line-clamp-1 flex-1 text-xs font-semibold">{p.title}</div>
+          {p.featured && (
+            <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">
+              Featured
+            </span>
+          )}
+        </div>
+        {p.role && <div className="mt-0.5 text-[10px] font-semibold text-primary">{p.role}</div>}
         {p.description && (
           <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{p.description}</p>
+        )}
+        {p.outcome && <p className="mt-1 line-clamp-1 text-[10px] text-emerald-600">{p.outcome}</p>}
+        {p.tools && p.tools.length > 0 && (
+          <p className="mt-1 line-clamp-1 text-[9px] text-muted-foreground">
+            {p.tools.join(' · ')}
+          </p>
         )}
       </div>
     </a>
@@ -433,7 +478,9 @@ function MiniKpi({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border bg-card p-3 text-center">
       <div className="text-sm font-extrabold tracking-tight text-primary">{value}</div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
     </div>
   );
 }
@@ -443,7 +490,11 @@ function MiniKpi({ label, value }: { label: string; value: string }) {
  * in /settings/availability. Compact — one column per day, one row per
  * 2-hour block.
  */
-function AvailabilityGrid({ data }: { data: { hours?: Record<string, boolean[]>; timezone?: string; vacation?: boolean } }) {
+function AvailabilityGrid({
+  data,
+}: {
+  data: { hours?: Record<string, boolean[]>; timezone?: string; vacation?: boolean };
+}) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const hours = ['06', '08', '10', '12', '14', '16', '18', '20', '22'];
   return (
@@ -458,7 +509,11 @@ function AvailabilityGrid({ data }: { data: { hours?: Record<string, boolean[]>;
           <thead>
             <tr>
               <th className="w-8" />
-              {days.map((d) => <th key={d} className="pb-1 font-semibold text-muted-foreground">{d}</th>)}
+              {days.map((d) => (
+                <th key={d} className="pb-1 font-semibold text-muted-foreground">
+                  {d}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -467,10 +522,12 @@ function AvailabilityGrid({ data }: { data: { hours?: Record<string, boolean[]>;
                 <td className="pr-1 text-right text-muted-foreground">{h}</td>
                 {days.map((d) => (
                   <td key={d}>
-                    <div className={cn(
-                      'my-0.5 h-4 w-full rounded',
-                      data.hours?.[d]?.[hi] ? 'bg-primary/70' : 'bg-muted',
-                    )} />
+                    <div
+                      className={cn(
+                        'my-0.5 h-4 w-full rounded',
+                        data.hours?.[d]?.[hi] ? 'bg-primary/70' : 'bg-muted',
+                      )}
+                    />
                   </td>
                 ))}
               </tr>
@@ -515,7 +572,10 @@ function GigMiniCard({ g, owner }: { g: PublicUser['gigs'][number]; owner: Publi
           <span>@{owner.username}</span>
         </div>
         <div className="mt-1.5 text-[11px] text-muted-foreground">
-          From <span className="text-sm font-extrabold text-foreground">{formatEtb(g.startingPriceEtb)}</span>
+          From{' '}
+          <span className="text-sm font-extrabold text-foreground">
+            {formatEtb(g.startingPriceEtb)}
+          </span>
         </div>
       </div>
     </Link>
