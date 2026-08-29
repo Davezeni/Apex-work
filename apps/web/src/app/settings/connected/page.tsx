@@ -8,12 +8,28 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Chrome, ExternalLink, Github, KeyRound, CreditCard, Loader2, Trash2, Plus } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Chrome,
+  ExternalLink,
+  Github,
+  KeyRound,
+  CreditCard,
+  Loader2,
+  Trash2,
+  Plus,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
+import {
+  useOAuthAccounts,
+  useUnlinkOAuthAccount,
+  type OAuthAccount,
+} from '@/hooks/use-oauth-accounts';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
 
@@ -30,6 +46,8 @@ export default function ConnectedAppsPage() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   const { isLoading: meLoading, isAuthed, data: me } = useMe();
+  const oauthAccounts = useOAuthAccounts();
+  const unlinkOAuth = useUnlinkOAuthAccount();
 
   useEffect(() => {
     if (!meLoading && !isAuthed) router.replace('/login?next=/settings/connected');
@@ -55,7 +73,11 @@ export default function ConnectedAppsPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">{t('settings.connectedApps')}</h1>
@@ -79,7 +101,9 @@ export default function ConnectedAppsPage() {
               Add a passkey for lightning-fast sign-in without a password.
             </p>
             <Button asChild size="sm" variant="brand" className="mt-4">
-              <Link href="/settings/security"><Plus className="mr-1 h-3 w-3" /> Add passkey</Link>
+              <Link href="/settings/security">
+                <Plus className="mr-1 h-3 w-3" /> Add passkey
+              </Link>
             </Button>
           </div>
         ) : (
@@ -107,7 +131,9 @@ export default function ConnectedAppsPage() {
             ))}
             <div className="p-3">
               <Button asChild size="sm" variant="outline" className="w-full">
-                <Link href="/settings/security"><Plus className="mr-1 h-3 w-3" /> Add another passkey</Link>
+                <Link href="/settings/security">
+                  <Plus className="mr-1 h-3 w-3" /> Add another passkey
+                </Link>
               </Button>
             </div>
           </div>
@@ -131,37 +157,43 @@ export default function ConnectedAppsPage() {
         </Link>
       </section>
 
-      {/* Social sign-in — real OAuth flow from the login screen. */}
+      {/* Social sign-in — real OAuth accounts with safe unlinking. */}
       <section className="mx-3 mt-6">
         <SectionHeader
           icon={<KeyRound className="h-4 w-4" />}
           title="Social sign-in"
           subtitle="Google & GitHub"
         />
-        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Google and GitHub sign-in are available from the login screen. Existing accounts link
-            through a verified email; new accounts still verify an Ethiopian phone number.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Link
-              href="/login"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold"
-            >
-              <Chrome className="h-3.5 w-3.5" />
+        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+          <OAuthRow
+            provider="google"
+            account={oauthAccounts.data?.items.find((item) => item.provider === 'google')}
+            busy={unlinkOAuth.isPending}
+            onUnlink={() => {
+              if (!window.confirm('Disconnect Google sign-in?')) return;
+              unlinkOAuth.mutate('google', {
+                onSuccess: () => toast.success('Google sign-in disconnected'),
+                onError: (error) => toast.error(error.message),
+              });
+            }}
+          />
+          <OAuthRow
+            provider="github"
+            account={oauthAccounts.data?.items.find((item) => item.provider === 'github')}
+            busy={unlinkOAuth.isPending}
+            onUnlink={() => {
+              if (!window.confirm('Disconnect GitHub sign-in?')) return;
+              unlinkOAuth.mutate('github', {
+                onSuccess: () => toast.success('GitHub sign-in disconnected'),
+                onError: (error) => toast.error(error.message),
+              });
+            }}
+          />
+          <div className="p-3 text-center text-[11px] text-muted-foreground">
+            <Link href="/login" className="font-bold text-primary">
               Open sign in
-            </Link>
-            <Link
-              href="/settings/notifications"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-bold"
-            >
-              Notification settings
-              <ExternalLink className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="mt-3 flex items-center gap-2 text-[10px] text-muted-foreground">
-            <Github className="h-3 w-3" />
-            OAuth connections are managed securely by the API.
+            </Link>{' '}
+            to connect another provider.
           </div>
         </div>
       </section>
@@ -175,12 +207,73 @@ export default function ConnectedAppsPage() {
   );
 }
 
-function SectionHeader({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+function OAuthRow({
+  provider,
+  account,
+  busy,
+  onUnlink,
+}: {
+  provider: 'google' | 'github';
+  account?: OAuthAccount;
+  busy: boolean;
+  onUnlink: () => void;
+}) {
+  const isGoogle = provider === 'google';
+  const Icon = isGoogle ? Chrome : Github;
+  const label = isGoogle ? 'Google' : 'GitHub';
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-bold">{label}</div>
+        {account ? (
+          <div className="truncate text-[11px] text-muted-foreground">
+            {account.email || account.profileName || 'Connected'}
+          </div>
+        ) : (
+          <div className="text-[11px] text-muted-foreground">Available at sign in</div>
+        )}
+      </div>
+      {account ? (
+        <>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600">
+            <CheckCircle2 className="h-3 w-3" /> Connected
+          </span>
+          <button
+            onClick={onUnlink}
+            disabled={busy}
+            className="text-[11px] font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+          >
+            Disconnect
+          </button>
+        </>
+      ) : (
+        <Link href="/login" className="text-[11px] font-bold text-primary">
+          Connect
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function SectionHeader({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+}) {
   return (
     <div className="mb-2 flex items-center gap-2 px-2">
       <span className="text-muted-foreground">{icon}</span>
       <div>
-        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{title}</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {title}
+        </div>
         <div className="text-[10px] text-muted-foreground/80">{subtitle}</div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import {
   completePhoneVerificationSchema,
   DEFAULT_NOTIFICATION_PREFERENCES,
   notificationPreferencesSchema,
+  oauthProviderSchema,
   updateProfileSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
@@ -12,6 +13,7 @@ import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
+import * as oauthAccounts from '../services/oauthAccounts.service.js';
 
 const router: Router = Router();
 
@@ -97,6 +99,23 @@ router.patch(
       }
       throw err;
     }
+  }),
+);
+
+/** GET /me/oauth-accounts — provider identities linked to this account. */
+router.get(
+  '/oauth-accounts',
+  asyncHandler(async (req, res) => {
+    return success(res, { items: await oauthAccounts.listMine(req.user!.sub) });
+  }),
+);
+
+/** DELETE /me/oauth-accounts/:provider — unlink without exposing provider tokens. */
+router.delete(
+  '/oauth-accounts/:provider',
+  asyncHandler(async (req, res) => {
+    const provider = oauthProviderSchema.parse((req.params as { provider?: unknown }).provider);
+    return success(res, await oauthAccounts.unlink(req.user!.sub, provider));
   }),
 );
 
