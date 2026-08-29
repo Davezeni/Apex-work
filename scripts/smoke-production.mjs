@@ -77,6 +77,29 @@ const checks = [
     expected: (res) => res.status === 401,
   },
   {
+    name: 'VAPID push configuration',
+    url: 'https://apex-work-api.onrender.com/v1/push/vapid-key',
+    expected: async (res) => {
+      const body = await res.json();
+      return (
+        res.status === 200 &&
+        body.ok === true &&
+        body.data?.configured === true &&
+        typeof body.data?.publicKey === 'string' &&
+        body.data.publicKey.length > 20
+      );
+    },
+  },
+  {
+    name: 'TURN ICE configuration',
+    url: 'https://apex-work-api.onrender.com/v1/push/ice-servers',
+    expected: async (res) => {
+      const body = await res.json();
+      const servers = body.data?.servers;
+      return res.status === 200 && body.ok === true && Array.isArray(servers) && servers.length > 0;
+    },
+  },
+  {
     name: 'saved-gigs auth gate',
     url: 'https://apex-work-api.onrender.com/v1/me/saved-gigs',
     expected: (res) => res.status === 401,
