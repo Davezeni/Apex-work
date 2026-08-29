@@ -8,8 +8,20 @@ import { prisma } from '../lib/prisma.js';
 import { BadRequestError, NotFoundError } from '../lib/errors.js';
 
 function slug(s: string): string {
-  return s.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  const ascii = s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  if (ascii.length >= 2 && !/[^\x00-\x7f]/.test(s)) return ascii;
+  const unicodeSlug = [...s.trim()]
+    .map((char) => char.codePointAt(0)?.toString(36) ?? '')
+    .filter(Boolean)
+    .join('-')
+    .slice(0, 54);
+  return `skill-${unicodeSlug}`.slice(0, 60);
 }
 
 export async function listMySkills(userId: string) {
@@ -20,7 +32,10 @@ export async function listMySkills(userId: string) {
   });
 }
 
-export async function addSkill(userId: string, input: { skillId?: string; name?: string; level: number }) {
+export async function addSkill(
+  userId: string,
+  input: { skillId?: string; name?: string; level: number },
+) {
   let skillId = input.skillId;
   if (!skillId) {
     if (!input.name) throw new BadRequestError('skillId or name required');

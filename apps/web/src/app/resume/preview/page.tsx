@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { downloadResumeDocx, downloadResumePdf } from '@/lib/resume-export';
 import { useMe } from '@/hooks/use-me';
 import { useMyResume, type Resume } from '@/hooks/use-resume';
 import { useI18n } from '@/i18n';
@@ -50,6 +52,7 @@ export default function ResumePreviewPage() {
   const { data: me } = useMe();
   const { data: resume, isLoading } = useMyResume();
   const [format, setFormat] = useState<ResumeFormatId>(() => safeFormat(params.get('format')));
+  const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null);
 
   useEffect(() => {
     setFormat(safeFormat(params.get('format')));
@@ -75,6 +78,32 @@ export default function ResumePreviewPage() {
       </div>
     );
   }
+
+  const handlePdfDownload = async () => {
+    const element = document.getElementById('resume-document');
+    if (!element) return toast.error('Resume preview is not ready yet');
+    setExporting('pdf');
+    try {
+      await downloadResumePdf(element, me.fullName, format);
+      toast.success('PDF downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'PDF export failed');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const handleDocxDownload = async () => {
+    setExporting('docx');
+    try {
+      await downloadResumeDocx(resume, me.fullName, format);
+      toast.success('Editable DOCX downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'DOCX export failed');
+    } finally {
+      setExporting(null);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-muted/40 pb-24">
@@ -120,11 +149,31 @@ export default function ResumePreviewPage() {
           </Button>
           <Button
             size="sm"
-            variant="brand"
-            onClick={() => window.print()}
-            title="Choose Save as PDF in the print dialog"
+            variant="outline"
+            onClick={handleDocxDownload}
+            disabled={!!exporting}
+            title="Download an editable Word document"
           >
-            <Download className="h-4 w-4" /> PDF
+            {exporting === 'docx' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileText className="h-4 w-4" />
+            )}{' '}
+            <span className="hidden sm:inline">DOCX</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="brand"
+            onClick={handlePdfDownload}
+            disabled={!!exporting}
+            title="Download a PDF file"
+          >
+            {exporting === 'pdf' ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}{' '}
+            PDF
           </Button>
         </div>
       </header>
@@ -148,6 +197,7 @@ export default function ResumePreviewPage() {
       </div>
 
       <div
+        id="resume-document"
         className={cn(
           'resume-paper mx-auto my-6 max-w-3xl bg-white text-black shadow-xl print:my-0 print:max-w-none print:shadow-none',
           `resume-paper-${format}`,
@@ -159,8 +209,8 @@ export default function ResumePreviewPage() {
       </div>
 
       <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 text-[11px] text-muted-foreground sm:px-0 print:hidden">
-        <Eye className="h-3.5 w-3.5" /> Tip: in the print dialog choose <b>Save as PDF</b>, enable
-        background graphics for colored templates, and keep scale at 100%.
+        <Eye className="h-3.5 w-3.5" /> PDF and DOCX downloads are generated in your browser; use
+        Print only when you need the native print dialog.
       </div>
 
       <style jsx global>{`

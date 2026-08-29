@@ -163,7 +163,7 @@
     "rateBlurb": "You can always change this later.",
     "perHour": "per hour",
     "skillsStep": "What are your skills?",
-    "skillsBlurb": "Search for a skill or type your own to add it — pick up to {max}.",
+    "skillsBlurb": "Choose up to {max} skills from the catalog — or type a custom skill and add it yourself.",
     "searchSkills": "Search or type a new skill…",
     "addAsNew": "Add \"{name}\" as new skill",
     "addAsNewSub": "Can't find your skill? Create it — others will see it too.",

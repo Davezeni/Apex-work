@@ -22,13 +22,23 @@ const router: Router = Router();
  *   'UI/UX Design'  → 'ui-ux-design'
  */
 function slugify(input: string): string {
-  return input
+  const ascii = input
     .toLowerCase()
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '') // strip diacritics
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
+  if (ascii.length >= 2 && !/[^\x00-\x7f]/.test(input)) return ascii;
+
+  // Keep Amharic/other Unicode skill names valid even though the public slug
+  // is ASCII. Code-point tokens are deterministic and remain URL-safe.
+  const unicodeSlug = [...input.trim()]
+    .map((char) => char.codePointAt(0)?.toString(36) ?? '')
+    .filter(Boolean)
+    .join('-')
+    .slice(0, 54);
+  return `skill-${unicodeSlug}`.slice(0, 60);
 }
 
 /**

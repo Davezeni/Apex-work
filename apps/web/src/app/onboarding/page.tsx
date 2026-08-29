@@ -213,7 +213,9 @@ export default function OnboardingPage() {
                   <div className="grad-text text-5xl font-extrabold tracking-tight">
                     {formatEtb(rate)}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">{t('onboarding.perHour')}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {t('onboarding.perHour')}
+                  </div>
                   <input
                     type="range"
                     min={50}
@@ -274,16 +276,24 @@ function StepBlurb({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Max skills a freelancer can pick. Mirrors the API schema (freelancerOnboardingSchema).
+ * Maximum total skills a freelancer can pick. The catalog is only a starting
+ * point; custom skills can be created from the same search field.
  */
-const MAX_SKILLS = 15;
+// Keep the curated picker generous while allowing freelancers to add custom
+// skills that are not in the catalog. The API enforces the same total.
+const MAX_SKILLS = 40;
 
 /**
  * Client-side dedupe check — same rule as server slugify().
  * Used to decide whether "Add 'X' as new skill" should appear.
  */
 function normalizeForCompare(s: string): string {
-  return s.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function SkillsPicker({
@@ -346,10 +356,7 @@ function SkillsPicker({
   const hasExactMatch = results.some((s) => normalizeForCompare(s.name) === qKey);
   // Show "Add as new" when the user typed something meaningful that isn't in results.
   const canCreate =
-    trimmedQ.length >= 2 &&
-    qKey.length >= 2 &&
-    !hasExactMatch &&
-    !createSkill.isPending;
+    trimmedQ.length >= 2 && qKey.length >= 2 && !hasExactMatch && !createSkill.isPending;
 
   const handleCreate = async () => {
     if (!canCreate) return;
@@ -435,15 +442,13 @@ function SkillsPicker({
             <div className="truncate text-sm font-semibold">
               {t('onboarding.addAsNew', { name: trimmedQ })}
             </div>
-            <div className="text-[11px] text-muted-foreground">
-              {t('onboarding.addAsNewSub')}
-            </div>
+            <div className="text-[11px] text-muted-foreground">{t('onboarding.addAsNewSub')}</div>
           </div>
         </button>
       )}
 
       {/* Results grid */}
-      <div className="mt-3 flex flex-wrap gap-2 min-h-[60px]">
+      <div className="mt-3 flex min-h-[60px] flex-wrap gap-2">
         {isLoading && (
           <div className="grid h-16 w-full place-items-center text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -469,7 +474,7 @@ function SkillsPicker({
             );
           })}
         {!isLoading && !canCreate && results.length === 0 && trimmedQ.length === 0 && (
-          <p className="text-center text-xs text-muted-foreground w-full py-4">
+          <p className="w-full py-4 text-center text-xs text-muted-foreground">
             {t('onboarding.startTyping')}
           </p>
         )}

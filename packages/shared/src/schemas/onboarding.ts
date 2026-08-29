@@ -21,7 +21,7 @@ export const freelancerOnboardingSchema = z.object({
   skillIds: z
     .array(z.string().min(1))
     .min(1, 'Pick at least one skill')
-    .max(15, 'You can select up to 15 skills'),
+    .max(40, 'You can select up to 40 skills'),
 });
 export type FreelancerOnboardingInput = z.infer<typeof freelancerOnboardingSchema>;
 
