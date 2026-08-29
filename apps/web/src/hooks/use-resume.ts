@@ -4,7 +4,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import type {
-  ResumeInput, WorkExperienceInput, EducationInput, CertificationInput,
+  ResumeContent,
+  ResumeInput,
+  WorkExperienceInput,
+  EducationInput,
+  CertificationInput,
 } from '@apex-work/shared';
 
 export interface Resume {
@@ -18,7 +22,13 @@ export interface Resume {
   linkedin: string | null;
   github: string | null;
   languages: string[];
-  theme: 'classic' | 'modern' | 'minimal';
+  theme: string;
+  templateId: string;
+  targetRole: string | null;
+  accentColor: string | null;
+  isPublic: boolean;
+  content: ResumeContent;
+  contentJson?: unknown;
   experiences: (WorkExperienceInput & { id: string; position: number })[];
   education: (EducationInput & { id: string; position: number })[];
   certifications: (CertificationInput & { id: string; position: number })[];
@@ -44,21 +54,25 @@ export function useUpdateResume() {
 
 // ---------- experience ----------
 export function useAddExperience() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, WorkExperienceInput>({
     mutationFn: (body) => apiFetch('/me/resume/experience', { method: 'POST', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
   });
 }
 export function useUpdateExperience() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, { id: string } & WorkExperienceInput>({
-    mutationFn: ({ id, ...body }) => apiFetch(`/me/resume/experience/${id}`, { method: 'PATCH', token, body }),
+    mutationFn: ({ id, ...body }) =>
+      apiFetch(`/me/resume/experience/${id}`, { method: 'PATCH', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
   });
 }
 export function useDeleteExperience() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, string>({
     mutationFn: (id) => apiFetch(`/me/resume/experience/${id}`, { method: 'DELETE', token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
@@ -67,21 +81,25 @@ export function useDeleteExperience() {
 
 // ---------- education ----------
 export function useAddEducation() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, EducationInput>({
     mutationFn: (body) => apiFetch('/me/resume/education', { method: 'POST', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
   });
 }
 export function useUpdateEducation() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, { id: string } & EducationInput>({
-    mutationFn: ({ id, ...body }) => apiFetch(`/me/resume/education/${id}`, { method: 'PATCH', token, body }),
+    mutationFn: ({ id, ...body }) =>
+      apiFetch(`/me/resume/education/${id}`, { method: 'PATCH', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
   });
 }
 export function useDeleteEducation() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, string>({
     mutationFn: (id) => apiFetch(`/me/resume/education/${id}`, { method: 'DELETE', token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
@@ -90,14 +108,16 @@ export function useDeleteEducation() {
 
 // ---------- certifications ----------
 export function useAddCertification() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, CertificationInput>({
     mutationFn: (body) => apiFetch('/me/resume/certification', { method: 'POST', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),
   });
 }
 export function useDeleteCertification() {
-  const token = useAuthStore((s) => s.accessToken); const qc = useQueryClient();
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
   return useMutation<unknown, Error, string>({
     mutationFn: (id) => apiFetch(`/me/resume/certification/${id}`, { method: 'DELETE', token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'resume'] }),

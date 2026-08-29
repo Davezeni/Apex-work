@@ -25,6 +25,16 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web Resume Studio page',
+    url: 'https://apex-work-gold.vercel.app/resume',
+    expected: (res) => res.status === 200,
+  },
+  {
+    name: 'web Resume Studio templates page',
+    url: 'https://apex-work-gold.vercel.app/resume/templates',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'API health',
     url: 'https://apex-work-api.onrender.com/v1/health',
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,

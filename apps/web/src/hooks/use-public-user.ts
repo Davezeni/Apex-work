@@ -37,6 +37,11 @@ export interface PublicUser {
     description: string | null;
     imageUrl: string;
     externalUrl: string | null;
+    role: string | null;
+    tools: string[];
+    outcome: string | null;
+    tags: string[];
+    featured: boolean;
   }[];
 }
 

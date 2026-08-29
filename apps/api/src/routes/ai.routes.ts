@@ -1,10 +1,20 @@
 import { Router } from 'express';
-import { aiProposalSchema, aiBriefSchema, aiTranscribeSchema, enhanceResumeSchema, aiChatSchema } from '@apex-work/shared';
+import {
+  aiProposalSchema,
+  aiBriefSchema,
+  aiTranscribeSchema,
+  enhanceResumeSchema,
+  aiChatSchema,
+  aiResumeReviewSchema,
+  aiResumeSkillsSchema,
+  aiPortfolioCaseStudySchema,
+} from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import * as ai from '../services/ai.service.js';
+import * as studioAi from '../services/resumeStudioAi.service.js';
 
 const router: Router = Router();
 router.use(requireAuth);
@@ -41,6 +51,33 @@ router.post(
     const body = req.body as import('@apex-work/shared').EnhanceResumeInput;
     const result = await ai.enhanceResume(body.section, body.text);
     return success(res, result);
+  }),
+);
+
+router.post(
+  '/resume/review',
+  validate(aiResumeReviewSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIResumeReviewInput;
+    return success(res, await studioAi.reviewResume(body));
+  }),
+);
+
+router.post(
+  '/resume/suggest-skills',
+  validate(aiResumeSkillsSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIResumeSkillsInput;
+    return success(res, await studioAi.suggestResumeSkills(body));
+  }),
+);
+
+router.post(
+  '/portfolio/case-study',
+  validate(aiPortfolioCaseStudySchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIPortfolioCaseStudyInput;
+    return success(res, await studioAi.generatePortfolioCaseStudy(body));
   }),
 );
 

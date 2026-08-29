@@ -5,6 +5,7 @@ import { logger } from '../config/logger.js';
 import { confirmPaymentByTxRef } from '../services/orders.service.js';
 import { chapa } from '../services/chapa.service.js';
 import { env } from '../config/env.js';
+import * as resumeTemplates from '../services/resumeTemplates.service.js';
 
 const router: Router = Router();
 
@@ -23,17 +24,17 @@ router.post(
     const raw = Buffer.isBuffer(req.body)
       ? req.body.toString('utf8')
       : JSON.stringify(req.body ?? {});
-    const headers = [
-      req.headers['chapa-signature'],
-      req.headers['x-chapa-signature'],
-    ].flatMap((value) => (Array.isArray(value) ? value : value ? [value] : []));
+    const headers = [req.headers['chapa-signature'], req.headers['x-chapa-signature']].flatMap(
+      (value) => (Array.isArray(value) ? value : value ? [value] : []),
+    );
 
     if (env.CHAPA_WEBHOOK_SECRET) {
-      const verified = headers.some((signature) =>
-        chapa.verifyWebhookSignature(raw, signature),
-      );
+      const verified = headers.some((signature) => chapa.verifyWebhookSignature(raw, signature));
       if (!verified) {
-        logger.warn({ hasSignature: headers.length > 0 }, 'Chapa webhook signature verification failed');
+        logger.warn(
+          { hasSignature: headers.length > 0 },
+          'Chapa webhook signature verification failed',
+        );
         return res.status(401).json({ ok: false });
       }
     }
@@ -45,9 +46,10 @@ router.post(
       logger.warn('Chapa webhook body was not JSON');
     }
 
-    const nested = payload.data && typeof payload.data === 'object'
-      ? payload.data as Record<string, unknown>
-      : {};
+    const nested =
+      payload.data && typeof payload.data === 'object'
+        ? (payload.data as Record<string, unknown>)
+        : {};
     const query = req.query as { tx_ref?: string; trx_ref?: string };
     const txRef = [
       payload.tx_ref,
@@ -64,7 +66,11 @@ router.post(
     }
 
     try {
-      await confirmPaymentByTxRef(txRef);
+      if (txRef.startsWith('apex-resume-')) {
+        await resumeTemplates.confirmByTransactionRef(txRef);
+      } else {
+        await confirmPaymentByTxRef(txRef);
+      }
     } catch (err) {
       // Return 200 so Chapa does not retry a transaction that is already being
       // verified; the order page's return verification/polling is the second

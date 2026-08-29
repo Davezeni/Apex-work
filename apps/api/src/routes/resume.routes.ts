@@ -4,12 +4,17 @@ import {
   workExperienceSchema,
   educationSchema,
   certificationSchema,
+  resumeTemplateSelectSchema,
+  resumeTemplateVerifySchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
+import { BadRequestError, NotFoundError } from '../lib/errors.js';
+import { prisma } from '../lib/prisma.js';
 import * as resume from '../services/resume.service.js';
+import * as resumeTemplates from '../services/resumeTemplates.service.js';
 
 const router: Router = Router();
 router.use(requireAuth);
@@ -31,6 +36,49 @@ router.patch(
     const body = req.body as import('@apex-work/shared').ResumeInput;
     const r = await resume.updateResume(req.user!.sub, body);
     return success(res, r);
+  }),
+);
+
+// ---------------- Resume Studio templates ----------------
+router.get(
+  '/templates',
+  asyncHandler(async (req, res) => {
+    return success(res, await resumeTemplates.listForUser(req.user!.sub));
+  }),
+);
+
+router.patch(
+  '/template',
+  validate(resumeTemplateSelectSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').ResumeTemplateSelectInput;
+    return success(res, await resumeTemplates.selectForUser(req.user!.sub, body.templateId));
+  }),
+);
+
+router.post(
+  '/templates/:templateId/checkout',
+  asyncHandler(async (req, res) => {
+    const { templateId } = req.params as { templateId: string };
+    const actor = await prisma.user.findUnique({
+      where: { id: req.user!.sub },
+      select: { id: true, fullName: true, email: true, phone: true, isPhoneVerified: true },
+    });
+    if (!actor) throw new NotFoundError('User');
+    return success(res, await resumeTemplates.startPurchase(actor, templateId));
+  }),
+);
+
+router.post(
+  '/templates/:templateId/verify',
+  validate(resumeTemplateVerifySchema),
+  asyncHandler(async (req, res) => {
+    const { templateId } = req.params as { templateId: string };
+    const body = req.body as import('@apex-work/shared').ResumeTemplateVerifyInput;
+    const result = await resumeTemplates.confirmForUser(req.user!.sub, body.purchaseId);
+    if (result.templateId !== templateId)
+      throw new BadRequestError('Template purchase does not match this template');
+    return success(res, result);
   }),
 );
 

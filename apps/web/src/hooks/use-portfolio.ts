@@ -10,6 +10,11 @@ export interface PortfolioItem {
   description: string | null;
   imageUrl: string;
   externalUrl: string | null;
+  role: string | null;
+  tools: string[];
+  outcome: string | null;
+  tags: string[];
+  featured: boolean;
   position: number;
   createdAt: string;
 }
@@ -33,8 +38,12 @@ export function useAddPortfolioItem() {
       description?: string;
       imageUrl: string;
       externalUrl?: string;
-    }) =>
-      apiFetch<PortfolioItem>('/me/portfolio', { method: 'POST', body: input, token }),
+      role?: string;
+      tools?: string[];
+      outcome?: string;
+      tags?: string[];
+      featured?: boolean;
+    }) => apiFetch<PortfolioItem>('/me/portfolio', { method: 'POST', body: input, token }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['my-portfolio'] });
       qc.invalidateQueries({ queryKey: ['public-user'] });
@@ -59,7 +68,18 @@ export function useUpdatePortfolioItem() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; title?: string; description?: string; externalUrl?: string; imageUrl?: string }) => {
+    mutationFn: (input: {
+      id: string;
+      title?: string;
+      description?: string;
+      externalUrl?: string;
+      imageUrl?: string;
+      role?: string;
+      tools?: string[];
+      outcome?: string;
+      tags?: string[];
+      featured?: boolean;
+    }) => {
       const { id, ...body } = input;
       return apiFetch<PortfolioItem>(`/me/portfolio/${id}`, { method: 'PATCH', token, body });
     },
@@ -87,13 +107,21 @@ export function useReorderPortfolio() {
       }
       return { prev };
     },
-    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(['my-portfolio'], ctx.prev); },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['my-portfolio'], ctx.prev);
+    },
     onSettled: () => qc.invalidateQueries({ queryKey: ['my-portfolio'] }),
   });
 }
 
 export interface PublicPortfolioItem extends PortfolioItem {
-  owner: { id: string; username: string; fullName: string; avatarUrl: string | null; title: string | null };
+  owner: {
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+    title: string | null;
+  };
 }
 
 export function usePublicPortfolioItem(username: string | undefined, id: string | undefined) {

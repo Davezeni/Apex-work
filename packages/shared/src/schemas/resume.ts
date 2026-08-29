@@ -1,11 +1,75 @@
 import { z } from 'zod';
+import { RESUME_TEMPLATE_IDS } from '../constants/resume.js';
 
 const currentYear = new Date().getFullYear();
 
+const templateIdSchema = z.enum(RESUME_TEMPLATE_IDS);
+const monthSchema = z.number().int().min(1).max(12);
+const yearSchema = z
+  .number()
+  .int()
+  .min(1950)
+  .max(currentYear + 1);
+const optionalUrl = z.string().trim().url().max(500).nullable().optional();
+
+/** A compact, reusable skills matrix shown by premium templates. */
+export const resumeSkillSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  level: z.number().int().min(1).max(5).default(3),
+  years: z.number().min(0).max(60).nullable().optional(),
+});
+export type ResumeSkillInput = z.output<typeof resumeSkillSchema>;
+
+/** A project/case-study card that can be rendered in a resume or portfolio PDF. */
+export const resumeProjectSchema = z.object({
+  id: z.string().trim().max(80).optional(),
+  title: z.string().trim().min(2).max(120),
+  role: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(1600).nullable().optional(),
+  url: optionalUrl,
+  technologies: z.array(z.string().trim().min(1).max(40)).max(15).default([]),
+  highlights: z.array(z.string().trim().min(2).max(240)).max(8).default([]),
+  startYear: yearSchema.nullable().optional(),
+  endYear: yearSchema.nullable().optional(),
+});
+export type ResumeProjectInput = z.output<typeof resumeProjectSchema>;
+
+export const resumeVolunteerSchema = z.object({
+  organization: z.string().trim().min(2).max(120),
+  role: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(800).nullable().optional(),
+  startYear: yearSchema.nullable().optional(),
+  endYear: yearSchema.nullable().optional(),
+});
+export type ResumeVolunteerInput = z.output<typeof resumeVolunteerSchema>;
+
+export const resumeReferenceSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  role: z.string().trim().max(120).nullable().optional(),
+  company: z.string().trim().max(120).nullable().optional(),
+  email: z.string().trim().email().max(200).nullable().optional(),
+  phone: z.string().trim().max(40).nullable().optional(),
+});
+export type ResumeReferenceInput = z.output<typeof resumeReferenceSchema>;
+
 /**
- * Resume / CV — a structured version of a freelancer's professional
- * history. Kept small on purpose: we render it into a beautiful PDF on
- * the client, so all we need is text-safe fields.
+ * Expandable content beyond the original basics/experience/education fields.
+ * Kept in one validated JSON document so new Studio sections do not require a
+ * database migration every time a freelancer adds a new type of achievement.
+ */
+export const resumeContentSchema = z.object({
+  skills: z.array(resumeSkillSchema).max(40).default([]),
+  projects: z.array(resumeProjectSchema).max(20).default([]),
+  achievements: z.array(z.string().trim().min(2).max(240)).max(20).default([]),
+  volunteer: z.array(resumeVolunteerSchema).max(10).default([]),
+  publications: z.array(z.string().trim().min(2).max(300)).max(20).default([]),
+  references: z.array(resumeReferenceSchema).max(5).default([]),
+});
+export type ResumeContent = z.output<typeof resumeContentSchema>;
+
+/**
+ * Resume / CV — a structured version of a freelancer's professional history.
+ * The new Studio fields are optional so all existing resumes remain valid.
  */
 export const resumeSchema = z.object({
   headline: z.string().trim().max(120).nullable().optional(),
@@ -16,13 +80,30 @@ export const resumeSchema = z.object({
   website: z.string().trim().url().max(300).nullable().optional(),
   linkedin: z.string().trim().url().max(300).nullable().optional(),
   github: z.string().trim().url().max(300).nullable().optional(),
+  targetRole: z.string().trim().max(120).nullable().optional(),
+  accentColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .nullable()
+    .optional(),
+  templateId: templateIdSchema.optional(),
+  content: resumeContentSchema.optional(),
+  isPublic: z.boolean().optional(),
   languages: z.array(z.string().trim().max(60)).max(15).default([]),
-  theme: z.enum(['classic', 'modern', 'minimal']).default('classic'),
+  /** Legacy field retained for older clients; Studio maps it to templateId. */
+  theme: z.string().trim().max(60).optional(),
 });
 export type ResumeInput = z.infer<typeof resumeSchema>;
 
-const monthSchema = z.number().int().min(1).max(12);
-const yearSchema = z.number().int().min(1950).max(currentYear + 1);
+export const resumeTemplateSelectSchema = z.object({
+  templateId: templateIdSchema,
+});
+export type ResumeTemplateSelectInput = z.infer<typeof resumeTemplateSelectSchema>;
+
+export const resumeTemplateVerifySchema = z.object({
+  purchaseId: z.string().trim().min(10).max(80),
+});
+export type ResumeTemplateVerifyInput = z.infer<typeof resumeTemplateVerifySchema>;
 
 export const workExperienceSchema = z
   .object({

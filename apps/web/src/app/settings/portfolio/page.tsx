@@ -14,16 +14,15 @@ import {
   Sparkles,
   FileText,
   Video,
+  Share2,
+  WandSparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useUpload } from '@/hooks/use-upload';
-import {
-  useAddPortfolioItem,
-  useDeletePortfolioItem,
-  useMyPortfolio,
-} from '@/hooks/use-portfolio';
+import { useAddPortfolioItem, useDeletePortfolioItem, useMyPortfolio } from '@/hooks/use-portfolio';
 import { useI18n } from '@/i18n';
+import { useAIPortfolioCaseStudy } from '@/hooks/use-ai';
 import {
   PORTFOLIO_ACCEPT,
   contentTypeForFile,
@@ -39,6 +38,7 @@ export default function PortfolioPage() {
   const upload = useUpload();
   const addItem = useAddPortfolioItem();
   const removeItem = useDeletePortfolioItem();
+  const caseStudy = useAIPortfolioCaseStudy();
   const { t } = useI18n();
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -52,6 +52,11 @@ export default function PortfolioPage() {
   } | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [role, setRole] = useState('');
+  const [tools, setTools] = useState('');
+  const [outcome, setOutcome] = useState('');
+  const [externalUrl, setExternalUrl] = useState('');
+  const [featured, setFeatured] = useState(false);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
@@ -72,7 +77,10 @@ export default function PortfolioPage() {
       return;
     }
     const contentType = contentTypeForFile(file);
-    const allowed = /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.ms-(excel|powerpoint)|vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|rtf)|text\/(plain|csv))$/.test(contentType);
+    const allowed =
+      /^(image\/(jpeg|png|webp|gif)|video\/(mp4|webm|quicktime)|application\/(pdf|msword|vnd\.ms-(excel|powerpoint)|vnd\.openxmlformats-officedocument\.(wordprocessingml\.document|spreadsheetml\.sheet|presentationml\.presentation)|rtf)|text\/(plain|csv))$/.test(
+        contentType,
+      );
     if (!allowed) {
       toast.error(t('portfolio.invalidType'));
       return;
@@ -97,9 +105,7 @@ export default function PortfolioPage() {
         onProgress: setProgress,
       });
       setPendingImage((current) =>
-        current
-          ? { ...current, url: result.publicUrl, contentType: result.contentType }
-          : current,
+        current ? { ...current, url: result.publicUrl, contentType: result.contentType } : current,
       );
     } catch (err) {
       const e = err as { message?: string };
@@ -121,6 +127,15 @@ export default function PortfolioPage() {
         title: title.trim(),
         description: description.trim() || undefined,
         imageUrl: pendingImage.url,
+        externalUrl: externalUrl.trim() || undefined,
+        role: role.trim() || undefined,
+        tools: tools
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, 20),
+        outcome: outcome.trim() || undefined,
+        featured,
       });
       toast.success(t('portfolio.added'));
       closeDialog();
@@ -130,12 +145,49 @@ export default function PortfolioPage() {
     }
   };
 
+  const generateCaseStudy = () => {
+    if (title.trim().length < 2 || description.trim().length < 10) {
+      toast.error('Add a project title and a few facts first');
+      return;
+    }
+    caseStudy.mutate(
+      {
+        title: title.trim(),
+        role: role.trim() || undefined,
+        tools: tools
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, 20),
+        roughDescription: description.trim(),
+        outcome: outcome.trim() || undefined,
+      },
+      {
+        onSuccess: (result) => {
+          setDescription(result.description);
+          setOutcome(result.outcome);
+          toast.success(
+            result.source === 'ai'
+              ? 'Case study polished with AI ✨'
+              : 'Starter case study generated',
+          );
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
   const closeDialog = () => {
     if (pendingImage?.localPreview) URL.revokeObjectURL(pendingImage.localPreview);
     setPendingImage(null);
     setDialogOpen(false);
     setTitle('');
     setDescription('');
+    setRole('');
+    setTools('');
+    setOutcome('');
+    setExternalUrl('');
+    setFeatured(false);
     setProgress(0);
   };
 
@@ -161,9 +213,56 @@ export default function PortfolioPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-lg font-extrabold tracking-tight">{t('portfolio.title')}</h1>
-          <p className="text-[11px] text-muted-foreground">{items.length} / 24</p>
+          <p className="text-[11px] text-muted-foreground">
+            {items.length} / 24 projects · drag to curate your story
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/u/${me.username}`}>
+              <Share2 className="h-4 w-4" /> Share
+            </Link>
+          </Button>
         </div>
       </header>
+
+      <section className="mx-3 mt-4 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-xl">
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+              <Sparkles className="h-3 w-3" /> Portfolio Studio
+            </span>
+            <h2 className="mt-3 text-2xl font-black tracking-tight">
+              Turn finished work into proof.
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Upload the work, explain the problem, and let AI turn your raw notes into a credible
+              case study. Never fake metrics — show the craft.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/resume/templates">
+              <FileText className="h-4 w-4" /> Resume Studio
+            </Link>
+          </Button>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-background p-3">
+            <div className="text-lg font-black text-primary">{items.length}</div>
+            <div className="text-[11px] text-muted-foreground">Curated projects</div>
+          </div>
+          <div className="rounded-xl bg-background p-3">
+            <div className="text-lg font-black text-emerald-500">
+              {items.filter((item) => !!item.externalUrl).length}
+            </div>
+            <div className="text-[11px] text-muted-foreground">Live project links</div>
+          </div>
+          <div className="rounded-xl bg-background p-3">
+            <div className="text-lg font-black text-amber-500">AI</div>
+            <div className="text-[11px] text-muted-foreground">Case-study assistant</div>
+          </div>
+        </div>
+      </section>
 
       {pLoading && (
         <div className="grid h-40 place-items-center">
@@ -289,10 +388,54 @@ export default function PortfolioPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              maxLength={1000}
-              placeholder={t('portfolio.descPlaceholder')}
+              maxLength={1600}
+              placeholder="What was the problem, what did you deliver, and how did you solve it?"
               className="mt-2 min-h-[70px] w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
             />
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <input
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="Your role (e.g. Lead designer)"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+              />
+              <input
+                value={tools}
+                onChange={(e) => setTools(e.target.value)}
+                placeholder="Tools / skills, comma separated"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+              />
+            </div>
+            <input
+              value={outcome}
+              onChange={(e) => setOutcome(e.target.value)}
+              placeholder="Outcome or result (optional — do not invent numbers)"
+              className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            />
+            <input
+              value={externalUrl}
+              onChange={(e) => setExternalUrl(e.target.value)}
+              placeholder="Live project URL (optional)"
+              className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
+            />
+            <label className="mt-2 flex items-center gap-2 text-xs font-semibold">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+              />
+              Feature this project on my public profile
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={generateCaseStudy}
+              disabled={caseStudy.isPending}
+            >
+              <WandSparkles className="h-4 w-4" />
+              {caseStudy.isPending ? 'Writing case study…' : 'Improve case study with AI'}
+            </Button>
 
             <Button
               variant="brand"
@@ -318,25 +461,45 @@ export default function PortfolioPage() {
 // SORTABLE GRID
 // -----------------------------------------------------------------------------
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor, KeyboardSensor,
-  useSensor, useSensors, type DragEndEvent,
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core';
-import { SortableContext, useSortable, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+  sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import { useReorderPortfolio, type PortfolioItem } from '@/hooks/use-portfolio';
 import { useEffect as useEffectRe, useState as useStateRe } from 'react';
 
-function SortablePortfolio({ items, onRemove }: { items: PortfolioItem[]; onRemove: (id: string) => void }) {
+function SortablePortfolio({
+  items,
+  onRemove,
+}: {
+  items: PortfolioItem[];
+  onRemove: (id: string) => void;
+}) {
   const reorder = useReorderPortfolio();
   const [ordered, setOrdered] = useStateRe<PortfolioItem[]>(items);
 
   // Keep local order in sync when the query refetches.
-  useEffectRe(() => { setOrdered(items); }, [items]);
+  useEffectRe(() => {
+    setOrdered(items);
+  }, [items]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor,   { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -365,7 +528,9 @@ function SortablePortfolio({ items, onRemove }: { items: PortfolioItem[]; onRemo
 }
 
 function PortfolioTile({ it, onRemove }: { it: PortfolioItem; onRemove: (id: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: it.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: it.id,
+  });
   const style = { transform: CSS.Transform.toString(transform), transition };
   return (
     <div
@@ -401,9 +566,25 @@ function PortfolioTile({ it, onRemove }: { it: PortfolioItem; onRemove: (id: str
         )}
       </div>
       <div className="p-2">
-        <div className="line-clamp-1 text-xs font-semibold">{it.title}</div>
+        <div className="flex items-center gap-1">
+          <div className="line-clamp-1 flex-1 text-xs font-semibold">{it.title}</div>
+          {it.featured && (
+            <span className="rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold text-amber-600">
+              Featured
+            </span>
+          )}
+        </div>
+        {it.role && <div className="mt-0.5 text-[10px] font-semibold text-primary">{it.role}</div>}
         {it.description && (
           <p className="mt-0.5 line-clamp-2 text-[10px] text-muted-foreground">{it.description}</p>
+        )}
+        {it.outcome && (
+          <p className="mt-1 line-clamp-1 text-[10px] text-emerald-600">Outcome: {it.outcome}</p>
+        )}
+        {it.tools.length > 0 && (
+          <p className="mt-1 line-clamp-1 text-[9px] text-muted-foreground">
+            {it.tools.join(' · ')}
+          </p>
         )}
       </div>
       {/* Drag handle */}

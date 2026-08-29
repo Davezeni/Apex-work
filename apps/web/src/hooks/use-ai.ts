@@ -9,7 +9,12 @@ export function useAIProposal() {
   return useMutation<
     { text: string; source: 'ai' | 'fallback' },
     Error,
-    { jobDescription: string; name?: string; skills?: string; tone: 'friendly' | 'professional' | 'confident' }
+    {
+      jobDescription: string;
+      name?: string;
+      skills?: string;
+      tone: 'friendly' | 'professional' | 'confident';
+    }
   >({
     mutationFn: (body) => apiFetch('/ai/proposal', { method: 'POST', token, body }),
   });
@@ -18,7 +23,14 @@ export function useAIProposal() {
 export function useAIBrief() {
   const token = useAuthStore((s) => s.accessToken);
   return useMutation<
-    { title: string; description: string; skills: string[]; budgetMinEtb: number; budgetMaxEtb: number; source: 'ai' | 'fallback' },
+    {
+      title: string;
+      description: string;
+      skills: string[];
+      budgetMinEtb: number;
+      budgetMaxEtb: number;
+      source: 'ai' | 'fallback';
+    },
     Error,
     { idea: string }
   >({
@@ -34,6 +46,59 @@ export function useAIResumeEnhance() {
     { section: 'summary' | 'experience' | 'education'; text: string }
   >({
     mutationFn: (body) => apiFetch('/ai/resume/enhance', { method: 'POST', token, body }),
+  });
+}
+
+export function useAIResumeReview() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    {
+      score: number;
+      strengths: string[];
+      improvements: string[];
+      missingSections: string[];
+      keywords: string[];
+      source: 'ai' | 'fallback';
+    },
+    Error,
+    {
+      targetRole?: string;
+      headline?: string;
+      summary?: string;
+      skills: string[];
+      experience: { role: string; company: string; description?: string }[];
+      projects: { title: string; description?: string }[];
+    }
+  >({
+    mutationFn: (body) => apiFetch('/ai/resume/review', { method: 'POST', token, body }),
+  });
+}
+
+export function useAIResumeSkills() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { skills: string[]; keywords: string[]; rationale: string; source: 'ai' | 'fallback' },
+    Error,
+    { targetRole: string; existingSkills: string[]; summary?: string }
+  >({
+    mutationFn: (body) => apiFetch('/ai/resume/suggest-skills', { method: 'POST', token, body }),
+  });
+}
+
+export function useAIPortfolioCaseStudy() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { description: string; highlights: string[]; outcome: string; source: 'ai' | 'fallback' },
+    Error,
+    {
+      title: string;
+      role?: string;
+      tools: string[];
+      roughDescription: string;
+      outcome?: string;
+    }
+  >({
+    mutationFn: (body) => apiFetch('/ai/portfolio/case-study', { method: 'POST', token, body }),
   });
 }
 

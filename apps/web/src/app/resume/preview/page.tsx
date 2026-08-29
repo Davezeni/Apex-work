@@ -1,141 +1,598 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Download, Loader2, Printer } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowLeft,
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  Palette,
+  Printer,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
-import { useMyResume } from '@/hooks/use-resume';
+import { useMyResume, type Resume } from '@/hooks/use-resume';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
+import {
+  RESUME_FORMATS,
+  RESUME_TEMPLATES,
+  type ResumeFormatId,
+  type ResumeTemplateId,
+} from '@apex-work/shared';
+
+const FORMAT_IDS = new Set(RESUME_FORMATS.map((format) => format.id));
+const TEMPLATE_IDS = new Set(RESUME_TEMPLATES.map((template) => template.id));
+
+function safeFormat(value: string | null): ResumeFormatId {
+  return value && FORMAT_IDS.has(value as ResumeFormatId) ? (value as ResumeFormatId) : 'a4';
+}
+
+function safeTemplate(value: string | null | undefined): ResumeTemplateId | string {
+  return value && TEMPLATE_IDS.has(value as ResumeTemplateId)
+    ? (value as ResumeTemplateId)
+    : 'classic';
+}
 
 /**
- * Resume preview / print-ready view. Uses window.print() to produce a PDF
- * client-side — the @media print CSS below tightens margins, hides the
- * header, and stretches to A4. No puppeteer/server needed.
+ * Resume Studio preview. Every toolbar format prints through the browser's
+ * Unicode-safe PDF pipeline, so Amharic text and international characters are
+ * preserved. Users choose "Save as PDF" in the native print dialog.
  */
 export default function ResumePreviewPage() {
   const router = useRouter();
+  const params = useSearchParams();
   const { t } = useI18n();
   const { data: me } = useMe();
   const { data: resume, isLoading } = useMyResume();
+  const [format, setFormat] = useState<ResumeFormatId>(() => safeFormat(params.get('format')));
+
+  useEffect(() => {
+    setFormat(safeFormat(params.get('format')));
+  }, [params]);
 
   useEffect(() => {
     document.title = `${me?.fullName ?? 'My'} · Resume`;
-    return () => { document.title = 'Apex-Work'; };
+    return () => {
+      document.title = 'Apex-Work';
+    };
   }, [me]);
 
-  if (isLoading || !resume || !me) {
-    return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  }
+  const templateId = safeTemplate(resume?.templateId || resume?.theme);
+  const template = useMemo(
+    () => RESUME_TEMPLATES.find((item) => item.id === templateId),
+    [templateId],
+  );
 
-  const theme = resume.theme;
+  if (isLoading || !resume || !me) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-muted/40 pb-24">
-      {/* Toolbar — hidden on print */}
-      <header className="print:hidden safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+      <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl print:hidden">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">Preview</h1>
-        <div className="ml-auto flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> Print
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg font-extrabold tracking-tight">Resume preview</h1>
+          <p className="truncate text-[10px] text-muted-foreground">
+            {template?.name ?? 'Apex template'} · {formatName(format)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/resume/templates">
+              <Palette className="h-4 w-4" /> Templates
+            </Link>
           </Button>
-          <Button size="sm" variant="brand" onClick={() => window.print()}>
+          <select
+            value={format}
+            onChange={(event) => setFormat(safeFormat(event.target.value))}
+            aria-label="PDF format"
+            className="hidden h-9 rounded-lg border border-border bg-background px-2 text-xs font-semibold sm:block"
+          >
+            {RESUME_FORMATS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.print()}
+            title="Print or save as PDF"
+          >
+            <Printer className="h-4 w-4" /> <span className="hidden sm:inline">Print</span>
+          </Button>
+          <Button
+            size="sm"
+            variant="brand"
+            onClick={() => window.print()}
+            title="Choose Save as PDF in the print dialog"
+          >
             <Download className="h-4 w-4" /> PDF
           </Button>
         </div>
       </header>
 
-      {/* Paper */}
-      <div className={cn('mx-auto my-6 max-w-3xl bg-white text-black shadow-xl print:my-0 print:max-w-none print:shadow-none', 'p-6 sm:p-10 print:p-8')}>
-        {theme === 'modern' ? <ModernTheme resume={resume} name={me.fullName} /> :
-          theme === 'minimal' ? <MinimalTheme resume={resume} name={me.fullName} /> :
-            <ClassicTheme resume={resume} name={me.fullName} />}
+      <div className="mx-3 mt-3 flex gap-2 overflow-x-auto sm:hidden print:hidden">
+        {RESUME_FORMATS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setFormat(item.id)}
+            className={cn(
+              'shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold',
+              format === item.id
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-card text-muted-foreground',
+            )}
+          >
+            {item.name}
+          </button>
+        ))}
+      </div>
+
+      <div
+        className={cn(
+          'resume-paper mx-auto my-6 max-w-3xl bg-white text-black shadow-xl print:my-0 print:max-w-none print:shadow-none',
+          `resume-paper-${format}`,
+          'p-6 sm:p-10 print:p-8',
+        )}
+      >
+        <ResumeTemplate templateId={templateId} resume={resume} name={me.fullName} />
+        {format === 'portfolio' && <PortfolioAppendix resume={resume} />}
+      </div>
+
+      <div className="mx-auto flex max-w-3xl items-center gap-2 px-4 text-[11px] text-muted-foreground sm:px-0 print:hidden">
+        <Eye className="h-3.5 w-3.5" /> Tip: in the print dialog choose <b>Save as PDF</b>, enable
+        background graphics for colored templates, and keep scale at 100%.
       </div>
 
       <style jsx global>{`
         @media print {
-          @page { size: A4; margin: 12mm; }
-          html, body { background: white !important; }
+          @page {
+            size: ${format === 'letter' ? 'letter' : 'A4'};
+            margin: ${format === 'one-page' ? '8mm' : '12mm'};
+          }
+          html,
+          body {
+            background: white !important;
+          }
+          .resume-paper-one-page {
+            font-size: 0.86em !important;
+          }
+          .resume-paper-portfolio {
+            font-size: 0.92em !important;
+          }
+          .resume-paper-portfolio .resume-project-card {
+            break-inside: avoid;
+          }
+          .resume-paper-one-page section {
+            margin-top: 0.7rem !important;
+          }
+        }
+        @media screen {
+          .resume-paper {
+            min-height: 297mm;
+          }
+          .resume-paper-letter {
+            min-height: 279mm;
+          }
         }
       `}</style>
     </div>
   );
 }
 
-type Resume = NonNullable<ReturnType<typeof useMyResume>['data']>;
+function formatName(format: ResumeFormatId) {
+  return RESUME_FORMATS.find((item) => item.id === format)?.name ?? 'A4 Resume';
+}
 
-function periodLabel(sy: number, sm: number, ey: number | null | undefined, em: number | null | undefined) {
-  const s = `${String(sm).padStart(2, '0')}/${sy}`;
-  const e = ey ? `${String(em ?? 12).padStart(2, '0')}/${ey}` : 'Present';
-  return `${s} – ${e}`;
+function ResumeTemplate({
+  templateId,
+  resume,
+  name,
+}: {
+  templateId: ResumeTemplateId | string;
+  resume: Resume;
+  name: string;
+}) {
+  switch (templateId) {
+    case 'modern':
+      return <ModernTheme resume={resume} name={name} />;
+    case 'minimal':
+      return <MinimalTheme resume={resume} name={name} />;
+    case 'ats-clean':
+      return <AtsCleanTheme resume={resume} name={name} />;
+    case 'executive':
+      return <ExecutiveTheme resume={resume} name={name} />;
+    case 'creative':
+      return <CreativeTheme resume={resume} name={name} />;
+    case 'tech-grid':
+      return <TechGridTheme resume={resume} name={name} />;
+    case 'academic':
+      return <AcademicTheme resume={resume} name={name} />;
+    default:
+      return <ClassicTheme resume={resume} name={name} />;
+  }
+}
+
+function periodLabel(
+  sy: number,
+  sm: number,
+  ey: number | null | undefined,
+  em: number | null | undefined,
+) {
+  const start = `${String(sm).padStart(2, '0')}/${sy}`;
+  const end = ey ? `${String(em ?? 12).padStart(2, '0')}/${ey}` : 'Present';
+  return `${start} – ${end}`;
+}
+
+function Header({ resume, name, dark = false }: { resume: Resume; name: string; dark?: boolean }) {
+  const contact = [
+    resume.email,
+    resume.phone,
+    resume.city,
+    resume.website,
+    resume.linkedin,
+    resume.github,
+  ].filter(Boolean);
+  return (
+    <header className={cn('border-b pb-3', dark ? 'border-white/30' : 'border-black')}>
+      <h1 className="text-3xl font-extrabold tracking-tight">{name}</h1>
+      {resume.headline && (
+        <p
+          className={cn(
+            'mt-1 text-base font-semibold',
+            dark ? 'text-white/80' : 'text-neutral-700',
+          )}
+        >
+          {resume.headline}
+        </p>
+      )}
+      {resume.targetRole && (
+        <p
+          className={cn(
+            'mt-1 text-xs font-bold uppercase tracking-widest',
+            dark ? 'text-white/60' : 'text-neutral-500',
+          )}
+        >
+          Target role · {resume.targetRole}
+        </p>
+      )}
+      {contact.length > 0 && (
+        <div
+          className={cn(
+            'mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs',
+            dark ? 'text-white/75' : 'text-neutral-600',
+          )}
+        >
+          {contact.map((item, index) => (
+            <span key={`${item}-${index}`}>{String(item).replace(/^https?:\/\//, '')}</span>
+          ))}
+        </div>
+      )}
+    </header>
+  );
 }
 
 function ClassicTheme({ resume, name }: { resume: Resume; name: string }) {
   return (
     <div className="font-serif leading-relaxed">
-      <header className="border-b border-black pb-3">
-        <h1 className="text-3xl font-extrabold tracking-tight">{name}</h1>
-        {resume.headline && <p className="mt-1 text-base font-semibold text-neutral-700">{resume.headline}</p>}
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600">
-          {resume.email && <span>{resume.email}</span>}
-          {resume.phone && <span>· {resume.phone}</span>}
-          {resume.city && <span>· {resume.city}</span>}
-          {resume.website && <span>· {resume.website}</span>}
-          {resume.linkedin && <span>· {resume.linkedin.replace(/^https?:\/\//, '')}</span>}
-          {resume.github && <span>· {resume.github.replace(/^https?:\/\//, '')}</span>}
+      <Header resume={resume} name={name} />
+      <CommonSections resume={resume} />
+    </div>
+  );
+}
+
+function AtsCleanTheme({ resume, name }: { resume: Resume; name: string }) {
+  return (
+    <div className="font-sans leading-relaxed">
+      <Header resume={resume} name={name} />
+      {resume.summary && (
+        <section className="mt-4">
+          <h2 className="text-sm font-bold uppercase tracking-wide">Professional Summary</h2>
+          <p className="mt-1 whitespace-pre-wrap text-sm">{resume.summary}</p>
+        </section>
+      )}
+      {resume.experiences.length > 0 && (
+        <section className="mt-4">
+          <h2 className="border-b border-black pb-1 text-sm font-bold uppercase tracking-wide">
+            Professional Experience
+          </h2>
+          {resume.experiences.map((item) => (
+            <ExperienceItem key={item.id} item={item} compact />
+          ))}
+        </section>
+      )}
+      {resume.content.skills.length > 0 && (
+        <section className="mt-4">
+          <h2 className="border-b border-black pb-1 text-sm font-bold uppercase tracking-wide">
+            Core Skills
+          </h2>
+          <p className="mt-1 text-sm">
+            {resume.content.skills.map((skill) => skill.name).join(' · ')}
+          </p>
+        </section>
+      )}
+      {resume.education.length > 0 && (
+        <section className="mt-4">
+          <h2 className="border-b border-black pb-1 text-sm font-bold uppercase tracking-wide">
+            Education
+          </h2>
+          {resume.education.map((item) => (
+            <EducationItem key={item.id} item={item} />
+          ))}
+        </section>
+      )}
+      {resume.certifications.length > 0 && (
+        <section className="mt-4">
+          <h2 className="border-b border-black pb-1 text-sm font-bold uppercase tracking-wide">
+            Certifications
+          </h2>
+          <p className="mt-1 text-sm">
+            {resume.certifications.map((item) => `${item.name} — ${item.issuer}`).join(' · ')}
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ModernTheme({ resume, name }: { resume: Resume; name: string }) {
+  const accent = resume.accentColor ?? '#111827';
+  return (
+    <div className="grid grid-cols-3 gap-6 font-sans leading-relaxed">
+      <aside
+        className="print:print-color-adjust-exact col-span-1 p-4 text-white"
+        style={{ backgroundColor: accent }}
+      >
+        <h1 className="text-2xl font-extrabold">{name}</h1>
+        {resume.headline && <p className="mt-1 text-xs opacity-80">{resume.headline}</p>}
+        <ContactList resume={resume} />
+        <SkillList resume={resume} dark />
+        {resume.languages.length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-70">
+              Languages
+            </h3>
+            <ul className="mt-1 text-xs">
+              {resume.languages.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </aside>
+      <div className="col-span-2 space-y-4">
+        {resume.summary && (
+          <p className="whitespace-pre-wrap text-sm text-neutral-800">{resume.summary}</p>
+        )}
+        <ExperienceBlock resume={resume} />
+        <ProjectBlock resume={resume} />
+        <EducationBlock resume={resume} />
+        <AchievementBlock resume={resume} />
+      </div>
+    </div>
+  );
+}
+
+function MinimalTheme({ resume, name }: { resume: Resume; name: string }) {
+  return (
+    <div className="font-sans leading-relaxed">
+      <Header resume={resume} name={name} />
+      {resume.summary && <p className="mt-6 whitespace-pre-wrap text-sm">{resume.summary}</p>}
+      <ExperienceBlock resume={resume} minimal />
+      <ProjectBlock resume={resume} minimal />
+      <EducationBlock resume={resume} minimal />
+      <div className="mt-6 grid grid-cols-2 gap-6">
+        <SkillList resume={resume} />
+        <AchievementBlock resume={resume} />
+      </div>
+    </div>
+  );
+}
+
+function ExecutiveTheme({ resume, name }: { resume: Resume; name: string }) {
+  const accent = resume.accentColor ?? '#7c3aed';
+  return (
+    <div className="font-sans leading-relaxed">
+      <div
+        className="flex items-end justify-between gap-6 border-b-4 pb-4"
+        style={{ borderColor: accent }}
+      >
+        <div>
+          <h1 className="text-4xl font-black tracking-tight">{name}</h1>
+          {resume.headline && (
+            <p className="mt-1 text-sm font-semibold text-neutral-600">{resume.headline}</p>
+          )}
+          {resume.targetRole && (
+            <p
+              className="mt-1 text-xs font-bold uppercase tracking-widest"
+              style={{ color: accent }}
+            >
+              {resume.targetRole}
+            </p>
+          )}
         </div>
-      </header>
+        <ContactList resume={resume} compact />
+      </div>
+      <div className="mt-5 grid grid-cols-3 gap-7">
+        <div className="col-span-2">
+          <SummaryHeading title="Profile" accent={accent} />
+          {resume.summary && <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>}
+          <SummaryHeading title="Experience" accent={accent} />
+          <ExperienceItems resume={resume} />
+          <SummaryHeading title="Selected projects" accent={accent} />
+          <ProjectList resume={resume} />
+        </div>
+        <aside className="col-span-1">
+          <SummaryHeading title="Expertise" accent={accent} />
+          <SkillList resume={resume} />
+          <SummaryHeading title="Education" accent={accent} />
+          <EducationList resume={resume} />
+          <SummaryHeading title="Awards" accent={accent} />
+          <AchievementList resume={resume} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function CreativeTheme({ resume, name }: { resume: Resume; name: string }) {
+  const accent = resume.accentColor ?? '#ec4899';
+  return (
+    <div className="font-sans leading-relaxed">
+      <div
+        className="print:print-color-adjust-exact rounded-2xl p-6 text-white"
+        style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)` }}
+      >
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/70">Portfolio CV</p>
+        <h1 className="mt-2 text-4xl font-black">{name}</h1>
+        {resume.headline && <p className="mt-1 text-sm text-white/85">{resume.headline}</p>}
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/80">
+          {[resume.email, resume.city, resume.website].filter(Boolean).map((item) => (
+            <span key={item}>{item}</span>
+          ))}
+        </div>
+      </div>
+      {resume.summary && (
+        <p className="mt-6 max-w-2xl whitespace-pre-wrap text-sm leading-7 text-neutral-700">
+          {resume.summary}
+        </p>
+      )}
+      <div className="mt-6 grid grid-cols-3 gap-6">
+        <div className="col-span-2">
+          <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: accent }}>
+            Featured work
+          </h2>
+          <ProjectList resume={resume} card accent={accent} />
+          <h2
+            className="mt-6 text-xs font-black uppercase tracking-[0.2em]"
+            style={{ color: accent }}
+          >
+            Experience
+          </h2>
+          <ExperienceItems resume={resume} />
+        </div>
+        <aside className="col-span-1">
+          <h2 className="text-xs font-black uppercase tracking-[0.2em]" style={{ color: accent }}>
+            Toolkit
+          </h2>
+          <SkillList resume={resume} pills accent={accent} />
+          <AchievementList resume={resume} accent={accent} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function TechGridTheme({ resume, name }: { resume: Resume; name: string }) {
+  const accent = resume.accentColor ?? '#0f766e';
+  return (
+    <div className="font-mono leading-relaxed">
+      <div className="border-l-8 pl-5" style={{ borderColor: accent }}>
+        <h1 className="text-3xl font-black">{name}</h1>
+        <p className="mt-1 text-sm text-neutral-600">
+          {resume.targetRole || resume.headline || 'Freelance professional'}
+        </p>
+        <ContactList resume={resume} compact />
+      </div>
+      <div className="mt-6 grid grid-cols-2 gap-6">
+        <div>
+          <TechHeading title="// summary" accent={accent} />
+          {resume.summary && <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>}
+          <TechHeading title="// experience" accent={accent} />
+          {resume.experiences.map((item) => (
+            <ExperienceItem key={item.id} item={item} compact />
+          ))}
+          <TechHeading title="// projects" accent={accent} />
+          {resume.content.projects.map((item) => (
+            <ProjectCard key={item.id ?? item.title} project={item} accent={accent} />
+          ))}
+        </div>
+        <aside>
+          <TechHeading title="// skills" accent={accent} />
+          <SkillList resume={resume} grid accent={accent} />
+          <TechHeading title="// education" accent={accent} />
+          <EducationList resume={resume} />
+          <TechHeading title="// achievements" accent={accent} />
+          <AchievementList resume={resume} />
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function AcademicTheme({ resume, name }: { resume: Resume; name: string }) {
+  return (
+    <div className="font-serif leading-relaxed">
+      <Header resume={resume} name={name} />
+      {resume.summary && (
+        <section className="mt-5">
+          <h2 className="text-sm font-bold">Research profile</h2>
+          <p className="mt-1 whitespace-pre-wrap text-sm">{resume.summary}</p>
+        </section>
+      )}
+      <section className="mt-5">
+        <h2 className="border-b border-black pb-1 text-sm font-bold">Appointments & experience</h2>
+        <ExperienceItems resume={resume} />
+      </section>
+      <section className="mt-5">
+        <h2 className="border-b border-black pb-1 text-sm font-bold">Education</h2>
+        <EducationList resume={resume} />
+      </section>
+      <section className="mt-5">
+        <h2 className="border-b border-black pb-1 text-sm font-bold">
+          Publications, talks & projects
+        </h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+          {[
+            ...resume.content.publications,
+            ...resume.content.projects.map(
+              (item) => `${item.title}${item.description ? ` — ${item.description}` : ''}`,
+            ),
+          ].map((item, index) => (
+            <li key={`${item}-${index}`}>{item}</li>
+          ))}
+        </ul>
+      </section>
+      <AchievementBlock resume={resume} />
+      <SkillList resume={resume} />
+    </div>
+  );
+}
+
+function CommonSections({ resume }: { resume: Resume }) {
+  return (
+    <>
       {resume.summary && (
         <Block title="Summary">
           <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>
         </Block>
       )}
-      {resume.experiences.length > 0 && (
-        <Block title="Experience">
-          {resume.experiences.map((e) => (
-            <div key={e.id} className="mb-3">
-              <div className="flex justify-between text-sm font-bold">
-                <span>{e.role} · {e.company}</span>
-                <span className="text-xs font-normal text-neutral-600">{periodLabel(e.startYear, e.startMonth, e.endYear, e.endMonth)}</span>
-              </div>
-              {e.location && <div className="text-xs italic text-neutral-600">{e.location}</div>}
-              {e.description && <p className="mt-1 whitespace-pre-wrap text-sm">{e.description}</p>}
-            </div>
-          ))}
-        </Block>
-      )}
-      {resume.education.length > 0 && (
-        <Block title="Education">
-          {resume.education.map((e) => (
-            <div key={e.id} className="mb-2">
-              <div className="flex justify-between text-sm font-bold">
-                <span>{e.school}</span>
-                <span className="text-xs font-normal text-neutral-600">{e.startYear} – {e.endYear ?? 'Present'}</span>
-              </div>
-              <div className="text-xs">{e.degree}{e.fieldOfStudy ? ` · ${e.fieldOfStudy}` : ''}</div>
-            </div>
-          ))}
-        </Block>
-      )}
-      {resume.certifications.length > 0 && (
-        <Block title="Certifications">
-          <ul className="ml-4 list-disc text-sm">
-            {resume.certifications.map((c) => (
-              <li key={c.id}>{c.name} — {c.issuer} ({c.issueYear})</li>
-            ))}
-          </ul>
-        </Block>
-      )}
-      {resume.languages.length > 0 && (
-        <Block title="Languages">
-          <p className="text-sm">{resume.languages.join(' · ')}</p>
-        </Block>
-      )}
-    </div>
+      <ExperienceBlock resume={resume} />
+      <ProjectBlock resume={resume} />
+      <EducationBlock resume={resume} />
+      <CertificationBlock resume={resume} />
+      <AchievementBlock resume={resume} />
+      <SkillList resume={resume} />
+    </>
   );
 }
 
@@ -148,119 +605,297 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   );
 }
 
-function ModernTheme({ resume, name }: { resume: Resume; name: string }) {
+function ExperienceBlock({ resume, minimal = false }: { resume: Resume; minimal?: boolean }) {
+  return resume.experiences.length > 0 ? (
+    <section className={minimal ? 'mt-6' : 'mt-4'}>
+      <h2
+        className={cn(
+          'mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500',
+          minimal && 'border-b border-neutral-300 pb-1',
+        )}
+      >
+        Experience
+      </h2>
+      <ExperienceItems resume={resume} />
+    </section>
+  ) : null;
+}
+function ExperienceItems({ resume }: { resume: Resume }) {
   return (
-    <div className="grid grid-cols-3 gap-6 font-sans leading-relaxed">
-      <aside className="col-span-1 bg-neutral-900 p-4 text-neutral-100 print:bg-neutral-900">
-        <h1 className="text-2xl font-extrabold">{name}</h1>
-        {resume.headline && <p className="mt-1 text-xs opacity-80">{resume.headline}</p>}
-        <div className="mt-3 space-y-1 text-[11px]">
-          {resume.email && <div>{resume.email}</div>}
-          {resume.phone && <div>{resume.phone}</div>}
-          {resume.city && <div>{resume.city}</div>}
-          {resume.website && <div>{resume.website}</div>}
-          {resume.linkedin && <div>{resume.linkedin.replace(/^https?:\/\//, '')}</div>}
-          {resume.github && <div>{resume.github.replace(/^https?:\/\//, '')}</div>}
-        </div>
-        {resume.languages.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-70">Languages</h3>
-            <ul className="mt-1 text-xs">{resume.languages.map((l) => <li key={l}>{l}</li>)}</ul>
-          </div>
+    <div>
+      {resume.experiences.map((item) => (
+        <ExperienceItem key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}
+function ExperienceItem({
+  item,
+  compact = false,
+}: {
+  item: Resume['experiences'][number];
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn('mb-3', compact && 'mb-2')}>
+      <div className="flex justify-between gap-3 text-sm font-bold">
+        <span>
+          {item.role} · {item.company}
+        </span>
+        <span className="shrink-0 text-xs font-normal text-neutral-600">
+          {periodLabel(item.startYear, item.startMonth, item.endYear, item.endMonth)}
+        </span>
+      </div>
+      {item.location && <div className="text-xs italic text-neutral-600">{item.location}</div>}
+      {item.description && <p className="mt-1 whitespace-pre-wrap text-sm">{item.description}</p>}
+    </div>
+  );
+}
+function EducationBlock({ resume, minimal = false }: { resume: Resume; minimal?: boolean }) {
+  return resume.education.length > 0 ? (
+    <section className={minimal ? 'mt-6' : 'mt-4'}>
+      <h2
+        className={cn(
+          'mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500',
+          minimal && 'border-b border-neutral-300 pb-1',
         )}
-      </aside>
-      <div className="col-span-2 space-y-4">
-        {resume.summary && <p className="whitespace-pre-wrap text-sm text-neutral-800">{resume.summary}</p>}
-        {resume.experiences.length > 0 && (
-          <section>
-            <h2 className="mb-2 border-b border-neutral-300 pb-1 text-xs font-bold uppercase tracking-widest text-neutral-500">Experience</h2>
-            {resume.experiences.map((e) => (
-              <div key={e.id} className="mb-3">
-                <div className="text-sm font-bold">{e.role}</div>
-                <div className="text-xs text-neutral-600">{e.company}{e.location ? ` · ${e.location}` : ''} · {periodLabel(e.startYear, e.startMonth, e.endYear, e.endMonth)}</div>
-                {e.description && <p className="mt-1 whitespace-pre-wrap text-sm">{e.description}</p>}
-              </div>
-            ))}
-          </section>
-        )}
-        {resume.education.length > 0 && (
-          <section>
-            <h2 className="mb-2 border-b border-neutral-300 pb-1 text-xs font-bold uppercase tracking-widest text-neutral-500">Education</h2>
-            {resume.education.map((e) => (
-              <div key={e.id} className="mb-2">
-                <div className="text-sm font-bold">{e.school}</div>
-                <div className="text-xs">{e.degree}{e.fieldOfStudy ? ` · ${e.fieldOfStudy}` : ''} · {e.startYear}–{e.endYear ?? 'Present'}</div>
-              </div>
-            ))}
-          </section>
-        )}
-        {resume.certifications.length > 0 && (
-          <section>
-            <h2 className="mb-2 border-b border-neutral-300 pb-1 text-xs font-bold uppercase tracking-widest text-neutral-500">Certifications</h2>
-            <ul className="ml-4 list-disc text-sm">
-              {resume.certifications.map((c) => (
-                <li key={c.id}>{c.name} — {c.issuer} ({c.issueYear})</li>
-              ))}
-            </ul>
-          </section>
-        )}
+      >
+        Education
+      </h2>
+      <EducationList resume={resume} />
+    </section>
+  ) : null;
+}
+function EducationList({ resume }: { resume: Resume }) {
+  return (
+    <div>
+      {resume.education.map((item) => (
+        <EducationItem key={item.id} item={item} />
+      ))}
+    </div>
+  );
+}
+function EducationItem({ item }: { item: Resume['education'][number] }) {
+  return (
+    <div className="mb-2">
+      <div className="flex justify-between gap-3 text-sm font-bold">
+        <span>{item.school}</span>
+        <span className="shrink-0 text-xs font-normal text-neutral-600">
+          {item.startYear} – {item.endYear ?? 'Present'}
+        </span>
+      </div>
+      <div className="text-xs">
+        {item.degree}
+        {item.fieldOfStudy ? ` · ${item.fieldOfStudy}` : ''}
+      </div>
+      {item.description && <p className="mt-1 text-xs text-neutral-600">{item.description}</p>}
+    </div>
+  );
+}
+function CertificationBlock({ resume }: { resume: Resume }) {
+  return resume.certifications.length > 0 ? (
+    <Block title="Certifications">
+      <ul className="ml-4 list-disc text-sm">
+        {resume.certifications.map((item) => (
+          <li key={item.id}>
+            {item.name} — {item.issuer} ({item.issueYear})
+          </li>
+        ))}
+      </ul>
+    </Block>
+  ) : null;
+}
+function ContactList({ resume, compact = false }: { resume: Resume; compact?: boolean }) {
+  const values = [
+    resume.email,
+    resume.phone,
+    resume.city,
+    resume.website,
+    resume.linkedin,
+    resume.github,
+  ].filter(Boolean);
+  return (
+    <div className={cn('mt-3 space-y-1 text-[11px]', compact && 'max-w-48 text-right')}>
+      {values.map((item, index) => (
+        <div key={`${item}-${index}`}>{String(item).replace(/^https?:\/\//, '')}</div>
+      ))}
+    </div>
+  );
+}
+function SkillList({
+  resume,
+  dark = false,
+  pills = false,
+  grid = false,
+  accent,
+}: {
+  resume: Resume;
+  dark?: boolean;
+  pills?: boolean;
+  grid?: boolean;
+  accent?: string;
+}) {
+  if (resume.content.skills.length === 0) return null;
+  return (
+    <div className={cn('mt-4', dark && 'text-white', grid && 'grid grid-cols-2 gap-1')}>
+      {!pills && !grid && (
+        <h3
+          className={cn(
+            'mb-2 text-xs font-bold uppercase tracking-widest',
+            dark ? 'opacity-70' : 'text-neutral-500',
+          )}
+        >
+          Skills
+        </h3>
+      )}
+      <div className={cn('flex flex-wrap gap-1.5', grid && 'contents')}>
+        {resume.content.skills.map((skill) => (
+          <span
+            key={skill.name}
+            className={cn(
+              'text-xs',
+              pills && 'rounded-full px-2 py-1 font-semibold',
+              dark ? 'text-white/85' : 'text-neutral-700',
+              grid && 'border border-neutral-200 px-2 py-1',
+            )}
+            style={pills && accent ? { backgroundColor: `${accent}22`, color: accent } : undefined}
+          >
+            {skill.name}
+            {!pills && !grid && (
+              <span className="ml-1 text-[10px] text-neutral-400">{'●'.repeat(skill.level)}</span>
+            )}
+          </span>
+        ))}
       </div>
     </div>
   );
 }
-
-function MinimalTheme({ resume, name }: { resume: Resume; name: string }) {
+function AchievementBlock({ resume }: { resume: Resume }) {
+  return resume.content.achievements.length > 0 ? (
+    <Block title="Achievements">
+      <AchievementList resume={resume} />
+    </Block>
+  ) : null;
+}
+function AchievementList({ resume, accent }: { resume: Resume; accent?: string }) {
   return (
-    <div className="font-sans leading-relaxed">
-      <h1 className="text-4xl font-light tracking-tight">{name}</h1>
-      {resume.headline && <p className="mt-1 text-sm text-neutral-600">{resume.headline}</p>}
-      <p className="mt-3 text-xs text-neutral-500">
-        {[resume.email, resume.phone, resume.city, resume.website, resume.linkedin, resume.github]
-          .filter(Boolean).join(' · ')}
-      </p>
-      {resume.summary && (
-        <p className="mt-6 whitespace-pre-wrap text-sm">{resume.summary}</p>
+    <ul className="ml-4 list-disc space-y-1 text-sm">
+      {resume.content.achievements.map((item, index) => (
+        <li key={`${item}-${index}`} style={accent ? { color: accent } : undefined}>
+          <span className={accent ? 'text-black' : undefined}>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+function ProjectBlock({ resume, minimal = false }: { resume: Resume; minimal?: boolean }) {
+  return resume.content.projects.length > 0 ? (
+    <section className={minimal ? 'mt-6' : 'mt-4'}>
+      <h2
+        className={cn(
+          'mb-2 text-xs font-bold uppercase tracking-widest text-neutral-500',
+          minimal && 'border-b border-neutral-300 pb-1',
+        )}
+      >
+        Selected projects
+      </h2>
+      <ProjectList resume={resume} />
+    </section>
+  ) : null;
+}
+function ProjectList({
+  resume,
+  card = false,
+  accent,
+}: {
+  resume: Resume;
+  card?: boolean;
+  accent?: string;
+}) {
+  return (
+    <div className={cn('space-y-2', card && 'mt-3')}>
+      {resume.content.projects.map((project) => (
+        <ProjectCard
+          key={project.id ?? project.title}
+          project={project}
+          card={card}
+          accent={accent}
+        />
+      ))}
+    </div>
+  );
+}
+function ProjectCard({
+  project,
+  card = false,
+  accent,
+}: {
+  project: Resume['content']['projects'][number];
+  card?: boolean;
+  accent?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'resume-project-card',
+        card ? 'rounded-xl border border-neutral-200 p-3' : 'mb-3',
       )}
-      {resume.experiences.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">Experience</h2>
-          <hr className="mb-3 mt-1 border-neutral-300" />
-          {resume.experiences.map((e) => (
-            <div key={e.id} className="mb-4">
-              <div className="text-sm font-bold">{e.role} — {e.company}</div>
-              <div className="text-xs text-neutral-500">{periodLabel(e.startYear, e.startMonth, e.endYear, e.endMonth)}{e.location ? ` · ${e.location}` : ''}</div>
-              {e.description && <p className="mt-1 whitespace-pre-wrap text-sm">{e.description}</p>}
-            </div>
+      style={card && accent ? { borderLeft: `3px solid ${accent}` } : undefined}
+    >
+      <div className="flex justify-between gap-3 text-sm font-bold">
+        <span>{project.title}</span>
+        {project.role && (
+          <span className="text-xs font-normal text-neutral-600">{project.role}</span>
+        )}
+      </div>
+      {project.description && (
+        <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-700">{project.description}</p>
+      )}
+      {project.highlights.length > 0 && (
+        <ul className="ml-4 mt-1 list-disc text-xs text-neutral-600">
+          {project.highlights.map((item) => (
+            <li key={item}>{item}</li>
           ))}
-        </section>
+        </ul>
       )}
-      {resume.education.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">Education</h2>
-          <hr className="mb-3 mt-1 border-neutral-300" />
-          {resume.education.map((e) => (
-            <div key={e.id} className="mb-2 text-sm">
-              <span className="font-bold">{e.school}</span>{e.degree ? ` — ${e.degree}` : ''} <span className="text-xs text-neutral-500">({e.startYear}–{e.endYear ?? 'Present'})</span>
-            </div>
-          ))}
-        </section>
+      {project.technologies.length > 0 && (
+        <p className="mt-2 text-[10px] font-semibold text-neutral-500">
+          {project.technologies.join(' · ')}
+        </p>
       )}
-      {(resume.certifications.length > 0 || resume.languages.length > 0) && (
-        <section className="mt-6 grid grid-cols-2 gap-6">
-          {resume.certifications.length > 0 && (
-            <div>
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">Certifications</h2>
-              <ul className="mt-2 text-sm">{resume.certifications.map((c) => <li key={c.id}>{c.name}, {c.issuer}</li>)}</ul>
-            </div>
-          )}
-          {resume.languages.length > 0 && (
-            <div>
-              <h2 className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">Languages</h2>
-              <p className="mt-2 text-sm">{resume.languages.join(' · ')}</p>
-            </div>
-          )}
-        </section>
+      {project.url && (
+        <p className="mt-1 text-[10px] text-neutral-500">
+          {project.url.replace(/^https?:\/\//, '')}
+        </p>
       )}
     </div>
+  );
+}
+function SummaryHeading({ title, accent }: { title: string; accent: string }) {
+  return (
+    <h2
+      className="mb-2 mt-4 border-b pb-1 text-xs font-bold uppercase tracking-widest"
+      style={{ color: accent, borderColor: `${accent}55` }}
+    >
+      {title}
+    </h2>
+  );
+}
+function TechHeading({ title, accent }: { title: string; accent: string }) {
+  return (
+    <h2 className="mb-2 mt-5 text-xs font-bold" style={{ color: accent }}>
+      {title}
+    </h2>
+  );
+}
+
+function PortfolioAppendix({ resume }: { resume: Resume }) {
+  return (
+    <section className="mt-8 border-t-2 border-black pt-5">
+      <h2 className="text-lg font-extrabold">Portfolio highlights</h2>
+      <p className="mt-1 text-xs text-neutral-500">Selected work from Apex Resume Studio</p>
+      <ProjectList resume={resume} card accent={resume.accentColor ?? '#7c3aed'} />
+      <AchievementBlock resume={resume} />
+    </section>
   );
 }

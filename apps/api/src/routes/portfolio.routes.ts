@@ -48,6 +48,11 @@ router.post(
         description: body.description ?? null,
         imageUrl: body.imageUrl,
         externalUrl: body.externalUrl ?? null,
+        role: body.role ?? null,
+        tools: body.tools,
+        outcome: body.outcome ?? null,
+        tags: body.tags,
+        featured: body.featured ?? false,
         position: count, // append at end
       },
     });
@@ -72,6 +77,11 @@ router.patch(
         ...(body.description !== undefined ? { description: body.description ?? null } : {}),
         ...(body.externalUrl !== undefined ? { externalUrl: body.externalUrl ?? null } : {}),
         ...(body.imageUrl !== undefined ? { imageUrl: body.imageUrl } : {}),
+        ...(body.role !== undefined ? { role: body.role ?? null } : {}),
+        ...(body.tools !== undefined ? { tools: body.tools } : {}),
+        ...(body.outcome !== undefined ? { outcome: body.outcome ?? null } : {}),
+        ...(body.tags !== undefined ? { tags: body.tags } : {}),
+        ...(body.featured !== undefined ? { featured: body.featured } : {}),
       },
     });
     return success(res, updated);
@@ -94,7 +104,9 @@ router.post(
     });
     if (owned.length !== body.ids.length) throw new ForbiddenError();
     await prisma.$transaction(
-      body.ids.map((id, i) => prisma.portfolioItem.update({ where: { id }, data: { position: i } })),
+      body.ids.map((id, i) =>
+        prisma.portfolioItem.update({ where: { id }, data: { position: i } }),
+      ),
     );
     return success(res, { ok: true });
   }),

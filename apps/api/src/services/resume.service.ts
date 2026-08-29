@@ -7,6 +7,7 @@
  * touch someone else's records.
  */
 import { prisma } from '../lib/prisma.js';
+import { resumeContentSchema } from '@apex-work/shared';
 import type {
   ResumeInput,
   WorkExperienceInput,
@@ -14,6 +15,7 @@ import type {
   CertificationInput,
 } from '@apex-work/shared';
 import { NotFoundError } from '../lib/errors.js';
+import { assertUnlocked } from './resumeTemplates.service.js';
 
 async function ensureResume(userId: string) {
   return prisma.resume.upsert({
@@ -23,21 +25,18 @@ async function ensureResume(userId: string) {
   });
 }
 
-export async function getResume(userId: string) {
-  await ensureResume(userId);
-  return prisma.resume.findUnique({
-    where: { userId },
-    include: {
-      experiences: { orderBy: { position: 'asc' } },
-      education: { orderBy: { position: 'asc' } },
-      certifications: { orderBy: { position: 'asc' } },
-    },
-  });
+function parsedContent(value: unknown) {
+  const result = resumeContentSchema.safeParse(value ?? {});
+  return result.success ? result.data : resumeContentSchema.parse({});
 }
 
-/** Public read — used on the freelancer profile page. */
-export async function getPublicResume(userId: string) {
-  const r = await prisma.resume.findUnique({
+function withStudioContent<T extends { contentJson: unknown }>(resume: T) {
+  return { ...resume, content: parsedContent(resume.contentJson) };
+}
+
+export async function getResume(userId: string) {
+  await ensureResume(userId);
+  const resume = await prisma.resume.findUnique({
     where: { userId },
     include: {
       experiences: { orderBy: { position: 'asc' } },
@@ -45,11 +44,28 @@ export async function getPublicResume(userId: string) {
       certifications: { orderBy: { position: 'asc' } },
     },
   });
-  return r; // may be null — caller decides how to render
+  return resume ? withStudioContent(resume) : null;
+}
+
+/** Public read — used on the freelancer profile page and share links. */
+export async function getPublicResume(userId: string) {
+  const resume = await prisma.resume.findUnique({
+    where: { userId },
+    include: {
+      experiences: { orderBy: { position: 'asc' } },
+      education: { orderBy: { position: 'asc' } },
+      certifications: { orderBy: { position: 'asc' } },
+    },
+  });
+  if (!resume || !resume.isPublic) return null;
+  return withStudioContent(resume);
 }
 
 export async function updateResume(userId: string, input: ResumeInput) {
   await ensureResume(userId);
+  const selectedTemplate = input.templateId
+    ? await assertUnlocked(userId, input.templateId)
+    : undefined;
   return prisma.resume.update({
     where: { userId },
     data: {
@@ -61,8 +77,13 @@ export async function updateResume(userId: string, input: ResumeInput) {
       website: input.website ?? null,
       linkedin: input.linkedin ?? null,
       github: input.github ?? null,
+      targetRole: input.targetRole ?? null,
+      accentColor: input.accentColor ?? null,
+      templateId: selectedTemplate?.id ?? undefined,
+      theme: selectedTemplate?.id ?? input.theme ?? undefined,
+      contentJson: input.content ? (input.content as never) : undefined,
+      isPublic: input.isPublic ?? undefined,
       languages: input.languages,
-      theme: input.theme,
     },
   });
 }
@@ -70,7 +91,7 @@ export async function updateResume(userId: string, input: ResumeInput) {
 // ---------- experience ----------
 export async function addExperience(userId: string, input: WorkExperienceInput) {
   const resume = await ensureResume(userId);
-  const nextPos = (await prisma.workExperience.count({ where: { resumeId: resume.id } })) ;
+  const nextPos = await prisma.workExperience.count({ where: { resumeId: resume.id } });
   return prisma.workExperience.create({
     data: {
       resumeId: resume.id,
@@ -93,9 +114,13 @@ export async function updateExperience(userId: string, id: string, input: WorkEx
   return prisma.workExperience.update({
     where: { id },
     data: {
-      company: input.company, role: input.role, location: input.location ?? null,
-      startYear: input.startYear, startMonth: input.startMonth,
-      endYear: input.endYear ?? null, endMonth: input.endMonth ?? null,
+      company: input.company,
+      role: input.role,
+      location: input.location ?? null,
+      startYear: input.startYear,
+      startMonth: input.startMonth,
+      endYear: input.endYear ?? null,
+      endMonth: input.endMonth ?? null,
       description: input.description ?? null,
     },
   });
@@ -131,8 +156,11 @@ export async function updateEducation(userId: string, id: string, input: Educati
   return prisma.education.update({
     where: { id },
     data: {
-      school: input.school, degree: input.degree ?? null, fieldOfStudy: input.fieldOfStudy ?? null,
-      startYear: input.startYear, endYear: input.endYear ?? null,
+      school: input.school,
+      degree: input.degree ?? null,
+      fieldOfStudy: input.fieldOfStudy ?? null,
+      startYear: input.startYear,
+      endYear: input.endYear ?? null,
       description: input.description ?? null,
     },
   });
@@ -151,8 +179,10 @@ export async function addCertification(userId: string, input: CertificationInput
   return prisma.certification.create({
     data: {
       resumeId: resume.id,
-      name: input.name, issuer: input.issuer,
-      issueYear: input.issueYear, issueMonth: input.issueMonth ?? null,
+      name: input.name,
+      issuer: input.issuer,
+      issueYear: input.issueYear,
+      issueMonth: input.issueMonth ?? null,
       credentialUrl: input.credentialUrl ?? null,
       position: nextPos,
     },
@@ -165,8 +195,10 @@ export async function updateCertification(userId: string, id: string, input: Cer
   return prisma.certification.update({
     where: { id },
     data: {
-      name: input.name, issuer: input.issuer,
-      issueYear: input.issueYear, issueMonth: input.issueMonth ?? null,
+      name: input.name,
+      issuer: input.issuer,
+      issueYear: input.issueYear,
+      issueMonth: input.issueMonth ?? null,
       credentialUrl: input.credentialUrl ?? null,
     },
   });

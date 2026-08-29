@@ -68,6 +68,11 @@ router.get(
             description: true,
             imageUrl: true,
             externalUrl: true,
+            role: true,
+            tools: true,
+            outcome: true,
+            tags: true,
+            featured: true,
           },
         },
       },
@@ -103,7 +108,10 @@ router.get(
   '/:username/portfolio/:id',
   asyncHandler(async (req, res) => {
     const { username, id } = req.params as { username: string; id: string };
-    const user = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, fullName: true, avatarUrl: true, title: true } });
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true, username: true, fullName: true, avatarUrl: true, title: true },
+    });
     if (!user) throw new NotFoundError('User');
     const item = await prisma.portfolioItem.findFirst({
       where: { id, userId: user.id },
