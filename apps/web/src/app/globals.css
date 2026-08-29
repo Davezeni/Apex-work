@@ -136,25 +136,24 @@
     overflow: visible;
     pointer-events: auto;
   }
-  .mobile-bottom-nav__bar::before {
-    content: '';
-    position: absolute;
+  .mobile-bottom-nav__surface {
     z-index: 0;
-    inset: 0;
     pointer-events: none;
-    background: var(--mobile-nav-bg);
-    border: 1px solid var(--mobile-nav-border);
-    border-bottom: 0;
-    box-shadow: 0 -2px 10px rgb(0 0 0 / 0.08);
-    /* Clear the center instead of painting a second white layer behind the FAB. */
-    -webkit-mask: radial-gradient(ellipse 3.15rem 2.35rem at 50% 0, transparent 0 93%, #000 100%);
-    mask: radial-gradient(ellipse 3.15rem 2.35rem at 50% 0, transparent 0 93%, #000 100%);
+    overflow: visible;
+    filter: drop-shadow(0 -2px 10px rgb(0 0 0 / 0.08));
+  }
+  .mobile-bottom-nav__surface-path {
+    fill: var(--mobile-nav-bg);
+    stroke: var(--mobile-nav-border);
+    stroke-width: 0.45;
+    stroke-linejoin: round;
+    stroke-linecap: round;
   }
   .mobile-bottom-nav__create {
-    transform: translateY(-0.25rem);
+    transform: translateY(-0.5rem);
   }
   .mobile-bottom-nav__create-button {
-    filter: drop-shadow(0 0.35rem 0.3rem rgb(0 0 0 / 0.18));
+    filter: drop-shadow(0 0.45rem 0.4rem rgb(0 0 0 / 0.22));
   }
   .dark .mobile-bottom-nav {
     --mobile-nav-bg: hsl(var(--background));

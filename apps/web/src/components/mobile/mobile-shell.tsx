@@ -66,6 +66,18 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
       {showTabBar && (
         <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40">
           <div className="mobile-bottom-nav__bar mx-auto grid max-w-md grid-cols-5 items-center px-4 pb-1.5 pt-1">
+            <svg
+              aria-hidden="true"
+              className="mobile-bottom-nav__surface absolute inset-0 h-full w-full"
+              viewBox="0 0 100 20"
+              preserveAspectRatio="none"
+            >
+              <path
+                className="mobile-bottom-nav__surface-path"
+                d="M0 0H34C38 0 39 6 43 9C45 11 47 12 50 12C53 12 55 11 57 9C61 6 62 0 66 0H100V20H0Z"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
             {TABS.slice(0, 2).map((t) => (
               <TabButton key={t.id} tab={t} active={currentTab === t.id} onClick={haptic} />
             ))}
