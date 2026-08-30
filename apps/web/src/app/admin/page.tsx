@@ -30,6 +30,13 @@ import { canRole } from '@/components/admin/rbac';
 const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
 const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
 
+/**
+ * Build marker for the admin panel surface. Bump this on material admin UI
+ * changes so you can confirm the deployed build matches what you expect —
+ * handy when debugging a stale Vercel deployment.
+ */
+export const ADMIN_UI_BUILD = '2026-08-30.2';
+
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
   | 'moderation' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins';
@@ -160,7 +167,7 @@ function AdminShell({
           {!collapsed && (
             <div className="min-w-0">
               <div className="truncate text-sm font-extrabold">Admin</div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Staff</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Staff · {ADMIN_UI_BUILD}</div>
             </div>
           )}
         </div>
