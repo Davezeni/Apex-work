@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Money/community coverage + e2e verification (free OSS)
+
+### Added
+- **+15 unit tests** for the money service (refund: credit wallet + ledger +
+  cancel; over-refund/debt/overflow guards; wallet adjust credit/debit,
+  overdraw and missing-wallet; ledger filter combining) and community service
+  (role change, ID verify, suspend/restore, user list AND-filter, detail) —
+  88 → 103 tests.
+- E2E verified: **all 7 Playwright tests pass against the live deploy**,
+  including admin access-guards (unauthenticated `/admin` → login redirect,
+  login renders, `/admin/ops/*` → 401) and public API smoke (health, readiness,
+  search reachable).
+
 ## [Unreleased] — Test coverage expansion (free OSS)
 
 ### Added
