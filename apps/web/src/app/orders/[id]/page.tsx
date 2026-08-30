@@ -14,6 +14,7 @@ import {
   XCircle,
   Package,
   Download,
+  LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
@@ -158,6 +159,12 @@ export default function OrderDetailPage() {
             #{order.orderNumber.slice(0, 12)}
           </div>
         </div>
+        <Button asChild size="sm" variant="outline">
+          <Link href={`/orders/${order.id}/workspace`}>
+            <LayoutDashboard className="h-4 w-4" />{' '}
+            <span className="hidden sm:inline">Workspace</span>
+          </Link>
+        </Button>
         <Button size="sm" variant="outline" onClick={downloadInvoice} disabled={invoiceExporting}>
           {invoiceExporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

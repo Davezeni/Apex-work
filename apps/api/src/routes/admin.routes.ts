@@ -69,8 +69,29 @@ router.post('/users/:id/suspend', validate(suspendSchema),
   }),
 );
 
-// ---------------- certifications ----------------
+// ---------------- skill moderation ----------------
 import { prisma } from '../lib/prisma.js';
+
+router.get('/skills', asyncHandler(async (req, res) => {
+  const pending = String((req.query as { pending?: string }).pending ?? '') === '1';
+  const items = await prisma.skill.findMany({
+    where: pending ? { isApproved: false } : {},
+    orderBy: [{ isApproved: 'asc' }, { name: 'asc' }],
+    take: 200,
+    include: { createdBy: { select: { id: true, username: true, fullName: true } } },
+  });
+  return success(res, { items });
+}));
+
+const moderateSkillSchema = z.object({ approved: z.boolean() });
+router.post('/skills/:id/moderate', validate(moderateSkillSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params as { id: string };
+  const body = req.body as z.infer<typeof moderateSkillSchema>;
+  const skill = await prisma.skill.update({ where: { id }, data: { isApproved: body.approved } });
+  return success(res, skill);
+}));
+
+// ---------------- certifications ----------------
 
 router.get('/certifications', asyncHandler(async (req, res) => {
   const unverified = String((req.query as { unverified?: string }).unverified ?? '') === '1';

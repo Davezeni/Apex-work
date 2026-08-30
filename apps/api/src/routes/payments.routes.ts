@@ -6,6 +6,7 @@ import { confirmPaymentByTxRef } from '../services/orders.service.js';
 import { chapa } from '../services/chapa.service.js';
 import { env } from '../config/env.js';
 import * as resumeTemplates from '../services/resumeTemplates.service.js';
+import * as subscriptions from '../services/subscriptions.service.js';
 
 const router: Router = Router();
 
@@ -68,6 +69,8 @@ router.post(
     try {
       if (txRef.startsWith('apex-resume-')) {
         await resumeTemplates.confirmByTransactionRef(txRef);
+      } else if (txRef.startsWith('apex-pro-')) {
+        await subscriptions.confirmByTransactionRef(txRef);
       } else {
         await confirmPaymentByTxRef(txRef);
       }

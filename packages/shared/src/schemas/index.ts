@@ -18,6 +18,7 @@ export * from './job.js';
 export * from './moderation.js';
 export * from './resume.js';
 export * from './resume-versions.js';
+export * from './teams.js';
 export * from './ai.js';
 export * from './reactions.js';
 export * from './push.js';

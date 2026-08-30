@@ -2,11 +2,21 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, TrendingUp, Eye, Star, Package, Clock, MessageCircle, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  TrendingUp,
+  Eye,
+  Star,
+  Package,
+  Clock,
+  MessageCircle,
+  Loader2,
+} from 'lucide-react';
 import { useMe } from '@/hooks/use-me';
 import { useWallet } from '@/hooks/use-wallet';
 import { useI18n } from '@/i18n';
-import { formatEtb } from '@/lib/utils';
+import { formatEtb, formatCompact } from '@/lib/utils';
+import { useProfileAnalytics } from '@/hooks/use-profile-analytics';
 
 /**
  * Freelancer analytics dashboard — profile views, response rate, earnings
@@ -19,6 +29,7 @@ export default function StatsPage() {
   const { t } = useI18n();
   const { data: me, isLoading, isAuthed } = useMe();
   const { data: wallet } = useWallet();
+  const { data: analytics } = useProfileAnalytics();
 
   useEffect(() => {
     if (!isLoading && !isAuthed) router.replace('/login?next=/stats');
@@ -52,7 +63,11 @@ export default function StatsPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">Statistics</h1>
@@ -60,13 +75,64 @@ export default function StatsPage() {
 
       {/* KPI grid */}
       <div className="mx-3 mt-4 grid grid-cols-2 gap-2">
-        <KPI icon={<Eye className="h-4 w-4" />} label="Profile views" value="1,240" delta="+12%" trend="up" />
-        <KPI icon={<Star className="h-4 w-4" />} label="Rating" value={me.rating > 0 ? me.rating.toFixed(1) : '—'} delta={`${me.ratingCount} reviews`} />
-        <KPI icon={<Package className="h-4 w-4" />} label="Orders" value={String(me.completedOrders)} delta="Completed" />
-        <KPI icon={<Clock className="h-4 w-4" />} label="Response time" value="~2h" delta="Median" />
-        <KPI icon={<MessageCircle className="h-4 w-4" />} label="Response rate" value="94%" delta="Last 30 days" />
-        <KPI icon={<TrendingUp className="h-4 w-4" />} label="This week" value={formatEtb(series.reduce((s, n) => s + n, 0))} delta="Earnings" trend="up" />
+        <KPI
+          icon={<Eye className="h-4 w-4" />}
+          label="Profile views"
+          value={formatCompact(analytics?.totals.profileViews ?? 0)}
+          delta="Last 30 days"
+          trend="up"
+        />
+        <KPI
+          icon={<Star className="h-4 w-4" />}
+          label="Rating"
+          value={me.rating > 0 ? me.rating.toFixed(1) : '—'}
+          delta={`${me.ratingCount} reviews`}
+        />
+        <KPI
+          icon={<Package className="h-4 w-4" />}
+          label="Orders"
+          value={String(me.completedOrders)}
+          delta="Completed"
+        />
+        <KPI
+          icon={<Clock className="h-4 w-4" />}
+          label="Response time"
+          value="~2h"
+          delta="Median"
+        />
+        <KPI
+          icon={<MessageCircle className="h-4 w-4" />}
+          label="Response rate"
+          value="94%"
+          delta="Last 30 days"
+        />
+        <KPI
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="This week"
+          value={formatEtb(series.reduce((s, n) => s + n, 0))}
+          delta="Earnings"
+          trend="up"
+        />
       </div>
+
+      <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="text-sm font-bold">Career asset reach</div>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+          <AssetMetric label="CV views" value={formatCompact(analytics?.totals.cvViews ?? 0)} />
+          <AssetMetric
+            label="CV downloads"
+            value={formatCompact(analytics?.totals.cvDownloads ?? 0)}
+          />
+          <AssetMetric
+            label="Portfolio views"
+            value={formatCompact(analytics?.totals.portfolioViews ?? 0)}
+          />
+          <AssetMetric
+            label="Portfolio downloads"
+            value={formatCompact(analytics?.totals.portfolioDownloads ?? 0)}
+          />
+        </div>
+      </section>
 
       {/* Sparkline */}
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
@@ -91,7 +157,14 @@ export default function StatsPage() {
             return (
               <>
                 <path d={area} fill="url(#fill)" />
-                <path d={path} fill="none" stroke="rgb(139 92 246)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="rgb(139 92 246)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
                 {pts.map(([x, y], i) => (
                   <circle key={i} cx={x} cy={y} r="2.5" fill="rgb(139 92 246)" />
                 ))}
@@ -114,10 +187,29 @@ export default function StatsPage() {
   );
 }
 
+function AssetMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-background p-3">
+      <div className="text-lg font-black text-primary">{value}</div>
+      <div className="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function KPI({
-  icon, label, value, delta, trend,
+  icon,
+  label,
+  value,
+  delta,
+  trend,
 }: {
-  icon: React.ReactNode; label: string; value: string; delta?: string; trend?: 'up' | 'down';
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  delta?: string;
+  trend?: 'up' | 'down';
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-3">
@@ -127,7 +219,9 @@ function KPI({
       </div>
       <div className="mt-1 text-xl font-extrabold tracking-tight">{value}</div>
       {delta && (
-        <div className={`text-[10px] ${trend === 'up' ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+        <div
+          className={`text-[10px] ${trend === 'up' ? 'text-emerald-500' : 'text-muted-foreground'}`}
+        >
           {delta}
         </div>
       )}

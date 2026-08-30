@@ -66,6 +66,7 @@ router.get(
 
     if (!q) {
       const skills = await prisma.skill.findMany({
+        where: { isApproved: true },
         orderBy: { name: 'asc' },
         take: limit,
         select: { id: true, name: true, slug: true, category: true },
@@ -79,7 +80,7 @@ router.get(
     //   3) other substring matches
     // We fetch 2x limit then trim after sorting.
     const raw = await prisma.skill.findMany({
-      where: { name: { contains: q, mode: 'insensitive' } },
+      where: { isApproved: true, name: { contains: q, mode: 'insensitive' } },
       take: limit * 2,
       select: { id: true, name: true, slug: true, category: true },
     });
@@ -119,15 +120,15 @@ router.post(
     // Case-insensitive dedupe via the deterministic slug.
     const existing = await prisma.skill.findUnique({
       where: { slug },
-      select: { id: true, name: true, slug: true, category: true },
+      select: { id: true, name: true, slug: true, category: true, isApproved: true },
     });
     if (existing) {
       return success(res, { skill: existing, created: false });
     }
 
     const skill = await prisma.skill.create({
-      data: { name: canonical, slug },
-      select: { id: true, name: true, slug: true, category: true },
+      data: { name: canonical, slug, isApproved: false, createdById: req.user!.sub },
+      select: { id: true, name: true, slug: true, category: true, isApproved: true },
     });
     return success(res, { skill, created: true }, 201);
   }),

@@ -41,7 +41,7 @@ export async function addSkill(
     if (!input.name) throw new BadRequestError('skillId or name required');
     const skill = await prisma.skill.upsert({
       where: { name: input.name },
-      create: { name: input.name, slug: slug(input.name), category: 'general' },
+      create: { name: input.name, slug: slug(input.name), category: 'general', isApproved: false, createdById: userId },
       update: {},
     });
     skillId = skill.id;

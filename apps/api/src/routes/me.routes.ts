@@ -14,6 +14,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
+import * as profileAnalytics from '../services/profileAnalytics.service.js';
 
 const router: Router = Router();
 
@@ -58,6 +59,14 @@ router.get(
       isVerified: user.isPhoneVerified && user.isIdVerified,
       createdAt: user.createdAt.toISOString(),
     });
+  }),
+);
+
+/** GET /me/profile-analytics — aggregate views/downloads for the last 30 days. */
+router.get(
+  '/profile-analytics',
+  asyncHandler(async (req, res) => {
+    return success(res, await profileAnalytics.dashboard(req.user!.sub));
   }),
 );
 

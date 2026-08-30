@@ -23,6 +23,7 @@ import {
   Gift,
   FileText,
   Award,
+  Users,
   Search as SearchIcon,
   Bookmark,
   MapPin,
@@ -109,7 +110,9 @@ export default function ProfilePage() {
           <ShieldCheck className="h-5 w-5 shrink-0 text-amber-500" />
           <div className="min-w-0 flex-1">
             <div className="text-sm font-bold">Verify your phone</div>
-            <p className="text-[11px] text-muted-foreground">Required before messaging, ordering, posting, or withdrawing.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Required before messaging, ordering, posting, or withdrawing.
+            </p>
           </div>
           <Button asChild size="sm" variant="outline">
             <Link href="/settings/phone?next=/profile">Verify</Link>
@@ -192,6 +195,12 @@ export default function ProfilePage() {
             />
           </>
         )}
+        <MenuItem
+          icon={<Users className="h-4 w-4" />}
+          title="Teams & agencies"
+          subtitle="Collaborate on larger projects"
+          href="/teams"
+        />
         <MenuItem
           icon={<Gift className="h-4 w-4" />}
           title="Refer friends"
@@ -288,21 +297,19 @@ export default function ProfilePage() {
   );
 }
 
-function ProfileSavedGigs({
-  saved,
-  isLoading,
-}: {
-  saved: SavedGig[];
-  isLoading: boolean;
-}) {
+function ProfileSavedGigs({ saved, isLoading }: { saved: SavedGig[]; isLoading: boolean }) {
   return (
     <section className="mx-5 mt-5">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bookmark className="h-4 w-4 text-primary" />
-          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Saved gigs</h2>
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            Saved gigs
+          </h2>
         </div>
-        <Link href="/saved" className="text-xs font-semibold text-primary">View all</Link>
+        <Link href="/saved" className="text-xs font-semibold text-primary">
+          View all
+        </Link>
       </div>
       {isLoading ? (
         <div className="grid h-24 place-items-center rounded-2xl border border-border bg-card">
@@ -311,7 +318,9 @@ function ProfileSavedGigs({
       ) : saved.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
           <p className="text-xs font-semibold">You have not saved a gig yet.</p>
-          <Link href="/browse" className="mt-2 inline-block text-xs font-bold text-primary">Browse gigs</Link>
+          <Link href="/browse" className="mt-2 inline-block text-xs font-bold text-primary">
+            Browse gigs
+          </Link>
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-2">
@@ -319,11 +328,21 @@ function ProfileSavedGigs({
             <Link
               key={item.id}
               href={`/gigs/${item.gig.slug}`}
-              className={cn('overflow-hidden rounded-xl border border-border bg-card', item.gig.status !== 'ACTIVE' && 'opacity-70')}
+              className={cn(
+                'overflow-hidden rounded-xl border border-border bg-card',
+                item.gig.status !== 'ACTIVE' && 'opacity-70',
+              )}
             >
               <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-violet-500/25 to-emerald-500/20">
                 {item.gig.coverImageUrl ? (
-                  <Image src={item.gig.coverImageUrl} alt={item.gig.title} fill unoptimized sizes="120px" className="object-cover" />
+                  <Image
+                    src={item.gig.coverImageUrl}
+                    alt={item.gig.title}
+                    fill
+                    unoptimized
+                    sizes="120px"
+                    className="object-cover"
+                  />
                 ) : (
                   <div className="grid h-full place-items-center text-lg font-extrabold text-primary">
                     {item.gig.title.slice(0, 1).toUpperCase()}

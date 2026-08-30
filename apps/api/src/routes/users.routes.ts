@@ -6,6 +6,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { cache } from '../middleware/cache.js';
 import * as trust from '../services/trust.service.js';
+import * as profileAnalytics from '../services/profileAnalytics.service.js';
 
 const router: Router = Router();
 
@@ -80,6 +81,11 @@ router.get(
     });
 
     if (!user) throw new NotFoundError('User');
+    void profileAnalytics.recordEvent({
+      subjectUserId: user.id,
+      type: 'PROFILE_VIEW',
+      viewerId: req.user?.sub,
+    });
 
     const { isPhoneVerified, isIdVerified, skills, ...rest } = user;
     return success(res, {
@@ -94,12 +100,19 @@ router.get(
 /** GET /users/:username/resume — public read of the built CV. */
 router.get(
   '/:username/resume',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const { username } = req.params as { username: string };
     const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
     if (!user) throw new NotFoundError('User');
     const { getPublicResume } = await import('../services/resume.service.js');
     const r = await getPublicResume(user.id);
+    if (r)
+      void profileAnalytics.recordEvent({
+        subjectUserId: user.id,
+        type: 'CV_VIEW',
+        viewerId: req.user?.sub,
+      });
     return success(res, r);
   }),
 );
@@ -119,6 +132,7 @@ router.get(
 /** GET /users/:username/portfolio/:id — a single portfolio item (for /work/[id] page). */
 router.get(
   '/:username/portfolio/:id',
+  optionalAuth,
   asyncHandler(async (req, res) => {
     const { username, id } = req.params as { username: string; id: string };
     const user = await prisma.user.findUnique({
@@ -130,6 +144,12 @@ router.get(
       where: { id, userId: user.id },
     });
     if (!item) throw new NotFoundError('Portfolio item');
+    void profileAnalytics.recordEvent({
+      subjectUserId: user.id,
+      type: 'PORTFOLIO_VIEW',
+      viewerId: req.user?.sub,
+      targetId: item.id,
+    });
     return success(res, { ...item, owner: user });
   }),
 );

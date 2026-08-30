@@ -45,6 +45,26 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web Pro page',
+    url: 'https://apex-work-gold.vercel.app/pro',
+    expected: (res) => res.status === 200,
+  },
+  {
+    name: 'web teams page',
+    url: 'https://apex-work-gold.vercel.app/teams',
+    expected: (res) => res.status === 200,
+  },
+  {
+    name: 'web skill moderation page',
+    url: 'https://apex-work-gold.vercel.app/admin/skills',
+    expected: (res) => res.status === 200,
+  },
+  {
+    name: 'web project workspace page',
+    url: 'https://apex-work-gold.vercel.app/orders/demo/workspace',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'API health',
     url: 'https://apex-work-api.onrender.com/v1/health',
     expected: async (res) => res.status === 200 && (await res.json()).ok === true,
@@ -135,6 +155,26 @@ const checks = [
   {
     name: 'recommendations auth gate',
     url: 'https://apex-work-api.onrender.com/v1/recommendations',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'Pro subscription auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/me/subscription',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'teams auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/me/teams',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'skill moderation auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/admin/skills?pending=1',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'profile analytics auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/me/profile-analytics',
     expected: (res) => res.status === 401,
   },
   {
