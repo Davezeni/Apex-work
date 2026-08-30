@@ -29,6 +29,31 @@ function triggerDownload(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+/** Render an HTML document into a downloadable PDF in-browser. */
+export async function downloadHtmlPdf(
+  element: HTMLElement,
+  filename: string,
+  format: 'a4' | 'letter' = 'a4',
+): Promise<void> {
+  const html2pdfModule = await import('html2pdf.js');
+  const html2pdf = html2pdfModule.default;
+  await html2pdf()
+    .set({
+      margin: [8, 8, 8, 8],
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: {
+        scale: Math.min(2, window.devicePixelRatio || 1.5),
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      },
+      jsPDF: { unit: 'mm', format, orientation: 'portrait' },
+    })
+    .from(element)
+    .save();
+}
+
 /** Render the existing styled resume document into a downloadable PDF in-browser. */
 export async function downloadResumePdf(
   element: HTMLElement,

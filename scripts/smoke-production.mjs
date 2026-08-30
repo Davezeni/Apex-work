@@ -133,6 +133,11 @@ const checks = [
     expected: (res) => res.status === 401,
   },
   {
+    name: 'recommendations auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/recommendations',
+    expected: (res) => res.status === 401,
+  },
+  {
     name: 'custom-skill creation auth gate',
     url: 'https://apex-work-api.onrender.com/v1/skills',
     init: {

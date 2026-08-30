@@ -159,4 +159,19 @@
     --mobile-nav-bg: hsl(var(--background));
     --mobile-nav-border: hsl(var(--border));
   }
+
+  /* Low-bandwidth mode keeps content and interactions intact while reducing visual work. */
+  html[data-data-saver='true'] .grad-hero,
+  html[data-data-saver='true'] .grad-text {
+    animation: none !important;
+    background-position: 0 50%;
+  }
+  html[data-data-saver='true'] .backdrop-blur-xl,
+  html[data-data-saver='true'] .backdrop-blur-sm,
+  html[data-data-saver='true'] .backdrop-blur {
+    backdrop-filter: none !important;
+  }
+  html[data-data-saver='true'] .mesh-bg::before {
+    display: none;
+  }
 }

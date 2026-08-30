@@ -34,6 +34,7 @@ import savedGigsRoutes from './savedGigs.routes.js';
 import geoRoutes from './geo.routes.js';
 import cronRoutes from './cron.routes.js';
 import supportRoutes from './support.routes.js';
+import recommendationsRoutes from './recommendations.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -106,5 +107,6 @@ router.use('/me/saved-gigs', savedGigsRoutes);
 router.use('/geo', geoRoutes);
 router.use('/cron', cronRoutes);
 router.use('/support', supportRoutes);
+router.use('/recommendations', recommendationsRoutes);
 
 export default router;

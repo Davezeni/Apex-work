@@ -1,7 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, Bookmark, Star, MapPin, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  Search,
+  Bookmark,
+  Star,
+  MapPin,
+  CheckCircle2,
+  Loader2,
+  Sparkles,
+  ArrowRight,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,6 +21,7 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { useAuthStore } from '@/stores/auth-store';
+import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendations';
 import { toast } from 'sonner';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +43,14 @@ function gradientFor(id: string): string {
 }
 
 function initialsOf(name: string): string {
-  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  return (
+    name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 export function MobileHome() {
@@ -47,6 +64,7 @@ export function MobileHome() {
     category: activeCategory !== 'for-you' ? activeCategory : undefined,
     limit: 20,
   });
+  const recommendations = useRecommendations();
 
   const gigs = gigsData?.items ?? [];
   const firstName = me?.fullName.split(' ')[0] ?? t('nav.home');
@@ -79,8 +97,13 @@ export function MobileHome() {
       <div className="px-5 pb-4">
         <div className="flex h-12 items-center gap-2 rounded-2xl border border-border bg-card px-2 pl-4 text-sm text-muted-foreground">
           <Search className="h-4 w-4 shrink-0" />
-          <Link href="/search" className="flex-1 truncate">{t('home.searchPlaceholder')}</Link>
-          <VoiceSearch size="sm" onResult={(txt) => router.push(`/search?q=${encodeURIComponent(txt)}`)} />
+          <Link href="/search" className="flex-1 truncate">
+            {t('home.searchPlaceholder')}
+          </Link>
+          <VoiceSearch
+            size="sm"
+            onResult={(txt) => router.push(`/search?q=${encodeURIComponent(txt)}`)}
+          />
         </div>
       </div>
 
@@ -90,9 +113,11 @@ export function MobileHome() {
           href="/jobs"
           className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 to-primary/10 p-3 transition-transform active:scale-[0.98]"
         >
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-xl">📢</div>
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-xl">
+            📢
+          </div>
           <div className="text-xs font-extrabold">{t('jobs.title')}</div>
-          <div className="text-[10px] text-muted-foreground line-clamp-1">{t('jobs.subtitle')}</div>
+          <div className="line-clamp-1 text-[10px] text-muted-foreground">{t('jobs.subtitle')}</div>
         </Link>
         <Link
           href="/nearby"
@@ -100,9 +125,18 @@ export function MobileHome() {
         >
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">🗺</div>
           <div className="text-xs font-extrabold">Nearby</div>
-          <div className="text-[10px] text-muted-foreground line-clamp-1">Freelancers near you</div>
+          <div className="line-clamp-1 text-[10px] text-muted-foreground">Freelancers near you</div>
         </Link>
       </div>
+
+      {me?.role === 'FREELANCER' &&
+        recommendations.data?.kind === 'jobs' &&
+        recommendations.data.items.length > 0 && (
+          <RecommendedJobsSection
+            items={recommendations.data.items}
+            basedOn={recommendations.data.basedOn}
+          />
+        )}
 
       {/* Category chips */}
       <div className="mb-4 flex items-center justify-between px-5">
@@ -111,7 +145,7 @@ export function MobileHome() {
           {t('home.seeAll')}
         </Link>
       </div>
-      <div className="flex gap-2 overflow-x-auto px-5 pb-6 no-scrollbar">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-6">
         <CategoryChip
           label={t('home.forYou')}
           active={activeCategory === 'for-you'}
@@ -158,6 +192,77 @@ export function MobileHome() {
   );
 }
 
+function RecommendedJobsSection({
+  items,
+  basedOn,
+}: {
+  items: RecommendedJob[];
+  basedOn: string[];
+}) {
+  return (
+    <section className="mb-5">
+      <div className="mb-3 flex items-center justify-between px-5">
+        <div>
+          <h2 className="flex items-center gap-1.5 text-base font-bold tracking-tight">
+            <Sparkles className="h-4 w-4 text-primary" /> Jobs picked for you
+          </h2>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Based on {basedOn.slice(0, 3).join(', ') || 'your profile'}
+          </p>
+        </div>
+        <Link href="/jobs" className="text-xs font-semibold text-primary">
+          See all
+        </Link>
+      </div>
+      <div className="no-scrollbar flex gap-3 overflow-x-auto px-5 pb-1">
+        {items.slice(0, 5).map((job) => (
+          <RecommendedJobCard key={job.id} job={job} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecommendedJobCard({ job }: { job: RecommendedJob }) {
+  return (
+    <Link
+      href={`/jobs/${job.id}`}
+      className="block w-72 shrink-0 rounded-2xl border border-border bg-card p-4 transition-transform active:scale-[.98]"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600">
+          {job.matchScore}% match
+        </span>
+        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
+      <h3 className="mt-3 line-clamp-2 text-sm font-bold">{job.title}</h3>
+      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+        {job.description}
+      </p>
+      <div className="mt-3 flex items-center justify-between gap-2 text-[10px]">
+        <span className="font-semibold">
+          {job.budgetMinEtb || job.budgetMaxEtb
+            ? `${job.budgetMinEtb ?? '—'}–${job.budgetMaxEtb ?? '—'} ETB`
+            : 'Budget negotiable'}
+        </span>
+        <span className="text-muted-foreground">{job.isRemote ? 'Remote' : 'On-site'}</span>
+      </div>
+      {job.matchedSkills.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {job.matchedSkills.slice(0, 3).map((skill) => (
+            <span
+              key={skill}
+              className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-semibold"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
+    </Link>
+  );
+}
+
 function CategoryChip({
   label,
   active,
@@ -199,7 +304,14 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
       className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
       <div className="relative aspect-[16/9] w-full bg-muted">
-        <Image src={g.coverImageUrl!} alt={g.title} fill unoptimized sizes="400px" className="object-cover" />
+        <Image
+          src={g.coverImageUrl!}
+          alt={g.title}
+          fill
+          unoptimized
+          sizes="400px"
+          className="object-cover"
+        />
         {g.isFeatured ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
             ⚡ Featured

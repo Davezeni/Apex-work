@@ -5,6 +5,7 @@ import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import { cache } from '../middleware/cache.js';
+import * as trust from '../services/trust.service.js';
 
 const router: Router = Router();
 
@@ -100,6 +101,18 @@ router.get(
     const { getPublicResume } = await import('../services/resume.service.js');
     const r = await getPublicResume(user.id);
     return success(res, r);
+  }),
+);
+
+/** GET /users/:username/trust — explainable public trust signals. */
+router.get(
+  '/:username/trust',
+  cache({ ttlSeconds: 120, swrAfterSeconds: 60 }),
+  asyncHandler(async (req, res) => {
+    const { username } = req.params as { username: string };
+    const user = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+    if (!user) throw new NotFoundError('User');
+    return success(res, await trust.profile(user.id));
   }),
 );
 

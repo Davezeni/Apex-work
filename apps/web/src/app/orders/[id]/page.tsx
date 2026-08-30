@@ -13,6 +13,7 @@ import {
   AlertCircle,
   XCircle,
   Package,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
@@ -21,6 +22,8 @@ import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
 import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
 import { MilestonePanel } from '@/components/orders/milestone-panel';
+import { InvoiceDocument } from '@/components/orders/invoice-document';
+import { downloadHtmlPdf } from '@/lib/resume-export';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useState } from 'react';
 import { Star } from 'lucide-react';
@@ -48,6 +51,7 @@ export default function OrderDetailPage() {
   const verify = useVerifyPayment();
   const startConv = useStartConversation();
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [invoiceExporting, setInvoiceExporting] = useState(false);
   const myReview = useMyReviewForOrder(order?.status === 'COMPLETED' ? id : undefined);
 
   // If we just came back from Chapa's return URL (?paid=1), force a verify
@@ -100,6 +104,20 @@ export default function OrderDetailPage() {
   const status = STATUS_STYLE[order.status];
   const StatusIcon = status.icon;
 
+  const downloadInvoice = async () => {
+    const element = document.getElementById(`invoice-${order.id}`);
+    if (!element) return toast.error('Receipt is not ready yet');
+    setInvoiceExporting(true);
+    try {
+      await downloadHtmlPdf(element, `apex-work-receipt-${order.orderNumber}.pdf`);
+      toast.success('Receipt downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Receipt download failed');
+    } finally {
+      setInvoiceExporting(false);
+    }
+  };
+
   const doAction = async (input: Record<string, unknown>, successMsg: string) => {
     try {
       await action.mutateAsync(input);
@@ -140,7 +158,19 @@ export default function OrderDetailPage() {
             #{order.orderNumber.slice(0, 12)}
           </div>
         </div>
+        <Button size="sm" variant="outline" onClick={downloadInvoice} disabled={invoiceExporting}>
+          {invoiceExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">Receipt</span>
+        </Button>
       </header>
+
+      <div id={`invoice-${order.id}`} className="pointer-events-none fixed -left-[10000px] top-0">
+        <InvoiceDocument order={order} isSeller={isSeller} />
+      </div>
 
       {/* Status card */}
       <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-5">
@@ -197,11 +227,7 @@ export default function OrderDetailPage() {
           <PaymentRow k="Order total" v={formatEtb(order.amountEtb)} bold />
           {isSeller && (
             <>
-              <PaymentRow
-                k="Platform fee"
-                v={`− ${formatEtb(order.platformFeeEtb)}`}
-                muted
-              />
+              <PaymentRow k="Platform fee" v={`− ${formatEtb(order.platformFeeEtb)}`} muted />
               <div className="border-t border-border pt-2">
                 <PaymentRow k="Your net" v={formatEtb(order.sellerNetEtb)} bold />
               </div>
@@ -211,8 +237,7 @@ export default function OrderDetailPage() {
             <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
               <span className="mr-2">Method:</span>
               <span className="font-semibold text-foreground">
-                {order.payments[0].method ?? 'Chapa'} ·{' '}
-                {order.payments[0].status.toLowerCase()}
+                {order.payments[0].method ?? 'Chapa'} · {order.payments[0].status.toLowerCase()}
               </span>
             </div>
           )}
@@ -242,7 +267,7 @@ export default function OrderDetailPage() {
       {/* Requirements */}
       {order.requirements && (
         <Section title="Requirements from client">
-          <div className="rounded-2xl border border-border bg-card p-4 text-sm whitespace-pre-line">
+          <div className="whitespace-pre-line rounded-2xl border border-border bg-card p-4 text-sm">
             {order.requirements}
           </div>
         </Section>
@@ -259,12 +284,7 @@ export default function OrderDetailPage() {
               <ul className="mt-2 flex flex-col gap-1">
                 {order.deliverables.files.map((f) => (
                   <li key={f}>
-                    <a
-                      href={f}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline"
-                    >
+                    <a href={f} target="_blank" rel="noreferrer" className="text-primary underline">
                       Download attachment
                     </a>
                   </li>
@@ -297,9 +317,7 @@ export default function OrderDetailPage() {
                     )}
                   />
                 ))}
-                <span className="ml-1 text-sm font-semibold">
-                  {myReview.data.review.rating}/5
-                </span>
+                <span className="ml-1 text-sm font-semibold">{myReview.data.review.rating}/5</span>
               </div>
               {myReview.data.review.comment && (
                 <p className="mt-2 whitespace-pre-line text-sm text-foreground/90">
@@ -388,12 +406,7 @@ function PaymentRow({
   return (
     <div className="flex items-center justify-between">
       <span className={muted ? 'text-muted-foreground' : ''}>{k}</span>
-      <span
-        className={cn(
-          bold && 'text-base font-extrabold',
-          muted && 'text-muted-foreground',
-        )}
-      >
+      <span className={cn(bold && 'text-base font-extrabold', muted && 'text-muted-foreground')}>
         {v}
       </span>
     </div>
@@ -504,7 +517,10 @@ function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
   }
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs font-bold text-red-500 underline">
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1 text-xs font-bold text-red-500 underline"
+      >
         Open a dispute →
       </button>
     );
@@ -515,18 +531,33 @@ function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
         <AlertTriangle className="h-4 w-4" /> Open a dispute
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
-        Only use this if you can&rsquo;t resolve it in chat. Escrow stays frozen until an admin rules.
+        Only use this if you can&rsquo;t resolve it in chat. Escrow stays frozen until an admin
+        rules.
       </p>
       <textarea
-        value={reason} onChange={(e) => setReason(e.target.value)}
-        rows={4} maxLength={4000}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={4}
+        maxLength={4000}
         placeholder="Describe what went wrong — dates, deliverables, screenshots links…"
         className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/20"
       />
       <div className="mt-2 flex gap-2">
-        <Button size="sm" variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
-        <Button size="sm" variant="destructive" className="flex-1" onClick={submit} disabled={openDispute.isPending}>
-          {openDispute.isPending ? <SpinnerIcon className="h-3.5 w-3.5 animate-spin" /> : 'Open dispute'}
+        <Button size="sm" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          variant="destructive"
+          className="flex-1"
+          onClick={submit}
+          disabled={openDispute.isPending}
+        >
+          {openDispute.isPending ? (
+            <SpinnerIcon className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            'Open dispute'
+          )}
         </Button>
       </div>
     </div>

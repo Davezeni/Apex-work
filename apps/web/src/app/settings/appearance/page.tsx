@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Moon, Sun, Monitor, Type } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Monitor, Type, WifiOff } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
@@ -18,11 +18,15 @@ export default function AppearancePage() {
   const { t } = useI18n();
   const { theme, setTheme } = useTheme();
   const [textSize, setTextSize] = useState<'sm' | 'md' | 'lg'>('md');
+  const [dataSaver, setDataSaver] = useState(false);
 
   useEffect(() => {
     const s = (localStorage.getItem('apex-text-size') ?? 'md') as 'sm' | 'md' | 'lg';
     setTextSize(s);
     document.documentElement.style.fontSize = SIZES.find((x) => x.id === s)!.px;
+    const savedDataSaver = localStorage.getItem('apex-data-saver') === '1';
+    setDataSaver(savedDataSaver);
+    document.documentElement.dataset.dataSaver = savedDataSaver ? 'true' : 'false';
   }, []);
 
   const chooseSize = (id: 'sm' | 'md' | 'lg') => {
@@ -31,17 +35,29 @@ export default function AppearancePage() {
     document.documentElement.style.fontSize = SIZES.find((x) => x.id === id)!.px;
   };
 
+  const chooseDataSaver = (enabled: boolean) => {
+    setDataSaver(enabled);
+    localStorage.setItem('apex-data-saver', enabled ? '1' : '0');
+    document.documentElement.dataset.dataSaver = enabled ? 'true' : 'false';
+  };
+
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">{t('settings.appearance')}</h1>
       </header>
 
       <section className="mx-3 mt-4">
-        <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Theme</h2>
+        <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          Theme
+        </h2>
         <div className="grid grid-cols-3 gap-2">
           {[
             { id: 'light', icon: <Sun className="h-5 w-5" />, label: 'Light' },
@@ -53,7 +69,9 @@ export default function AppearancePage() {
               onClick={() => setTheme(opt.id)}
               className={cn(
                 'flex flex-col items-center gap-2 rounded-2xl border-2 p-4 transition-colors',
-                theme === opt.id ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card',
+                theme === opt.id
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border bg-card',
               )}
             >
               {opt.icon}
@@ -83,6 +101,48 @@ export default function AppearancePage() {
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="mx-3 mt-6">
+        <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          <WifiOff className="mr-1 inline h-3 w-3" /> Data saver
+        </h2>
+        <button
+          type="button"
+          onClick={() => chooseDataSaver(!dataSaver)}
+          className={cn(
+            'flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left transition-colors',
+            dataSaver ? 'border-primary bg-primary/10' : 'border-border bg-card',
+          )}
+        >
+          <div
+            className={cn(
+              'grid h-10 w-10 shrink-0 place-items-center rounded-xl',
+              dataSaver ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground',
+            )}
+          >
+            <WifiOff className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold">Use less data</div>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Reduces decorative animations and effects for faster loading on mobile data.
+            </p>
+          </div>
+          <span
+            className={cn(
+              'relative h-6 w-11 rounded-full transition-colors',
+              dataSaver ? 'bg-primary' : 'bg-muted',
+            )}
+          >
+            <span
+              className={cn(
+                'absolute top-1 h-4 w-4 rounded-full bg-white transition-transform',
+                dataSaver ? 'translate-x-6' : 'translate-x-1',
+              )}
+            />
+          </span>
+        </button>
       </section>
     </div>
   );

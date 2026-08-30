@@ -18,6 +18,7 @@ import {
   MoreVertical,
   Flag,
   ShieldOff,
+  ShieldCheck,
   FileText,
   Video,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
 import { usePublicUserStats } from '@/hooks/use-public-stats';
+import { usePublicTrust, type TrustProfile } from '@/hooks/use-trust';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
@@ -61,6 +63,7 @@ export default function PublicProfilePage() {
   const router = useRouter();
   const { data: user, isLoading, error } = usePublicUser(username);
   const { data: stats } = usePublicUserStats(username);
+  const { data: trust } = usePublicTrust(username);
   const { data: me } = useMe();
   const startConversation = useStartConversation();
   const blockUser = useBlockUser();
@@ -330,6 +333,9 @@ export default function PublicProfilePage() {
         </Section>
       )}
 
+      {/* Explainable trust signals */}
+      {user.role === 'FREELANCER' && trust && <TrustCard trust={trust} />}
+
       {/* Availability */}
       {user.role === 'FREELANCER' && stats?.availability?.hours && (
         <Section title="Availability">
@@ -451,6 +457,44 @@ function PortfolioTile({
         )}
       </div>
     </a>
+  );
+}
+
+function TrustCard({ trust }: { trust: TrustProfile }) {
+  const complete = trust.checks.filter((check) => check.complete);
+  return (
+    <Section title="Apex Trust">
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-primary/20 bg-primary/5 text-lg font-black text-primary">
+            {trust.score}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 text-sm font-extrabold">
+              <ShieldCheck className="h-4 w-4 text-emerald-500" /> {trust.level} trust
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              An explainable score built from verification, delivery, reviews and portfolio proof.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {complete.slice(0, 6).map((check) => (
+            <span
+              key={check.key}
+              className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-600"
+            >
+              <CheckCircle2 className="h-3 w-3" /> {check.label}
+            </span>
+          ))}
+          {complete.length === 0 && (
+            <span className="text-xs text-muted-foreground">
+              Complete profile signals to build trust.
+            </span>
+          )}
+        </div>
+      </div>
+    </Section>
   );
 }
 
