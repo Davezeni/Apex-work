@@ -3,6 +3,17 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Test coverage expansion (free OSS)
+
+### Added
+- **+10 unit tests** for the validation middleware, response helpers and the
+  moderation service (gig unflag, job pin/open toggle, review hide/restore) —
+  78 → 88 tests.
+- **Admin UI e2e guards** (`apps/web/e2e/admin.spec.ts`): verifies the admin
+  route is gated (unauthenticated → login redirect), the login page renders,
+  and unauthenticated API access to `/admin/ops/*` returns 401. Authenticated
+  admin actions are opt-in behind `E2E_ADMIN_PHONE`/`E2E_ADMIN_OTP`.
+
 ## [Unreleased] — Security & quality hardening (free OSS)
 
 ### Added

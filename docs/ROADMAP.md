@@ -145,7 +145,7 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - Real test tooling: `test:coverage` + `test:e2e` (Playwright) + CI job.
 - Secrets scan (gitleaks) + Dependabot dependency automation.
 - Test coverage on the new admin surface (settings, audit, pagination, RBAC) —
-  78 unit tests.
+  88 unit tests, + admin UI e2e access-guard specs.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
