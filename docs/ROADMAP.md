@@ -143,6 +143,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   `20260822180000_perf_search_indexes`; service uses trigram ranking.
 - Cursor pagination, audit log, settings store, RBAC.
 - Real test tooling: `test:coverage` + `test:e2e` (Playwright) + CI job.
+- Secrets scan (gitleaks) + Dependabot dependency automation.
+- Test coverage on the new admin surface (settings, audit, pagination, RBAC) —
+  78 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

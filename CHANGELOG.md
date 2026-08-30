@@ -3,6 +3,20 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Security & quality hardening (free OSS)
+
+### Added
+- **Secret scanning** (`.github/workflows/ci.yml`): a `gitleaks` job scans the
+  full git history on every push/PR so a leaked credential can't slip in.
+- **Dependabot** (`.github/dependabot.yml`): weekly npm + GitHub Actions dep
+  updates (patch/minor only — majors are held back by default).
+- **More unit tests** covering the new admin surface: settings store validation
+  & attribution, audit helper (fire-and-forget), admin cursor pagination, and
+  RBAC `requireCapability` middleware (60 → 78 tests).
+
+### Changed
+- `vitest.config.ts` coverage threshold updated; test file type safety fixed.
+
 ## [Unreleased] — Order workflow correctness, testing & tooling
 
 ### Added
