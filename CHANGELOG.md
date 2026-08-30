@@ -3,6 +3,28 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Deploy fix: admin panel now live on Vercel
+
+### Fixed
+- **Root cause of the missing admin tabs on the live panel:** Vercel's team
+  setting requires the git **commit author** to be a member of the Vercel team
+  to create deployments. All feature commits were authored as
+  `Apex-Work Dev <dev@apex-work.local>` (not a team member), so Vercel blocked
+  every deployment (`BLOCKED`, `readyStateReason = "Git author ... must have
+  access to the team"`), leaving the site on the old build.
+- Fixed by committing as the team identity (`Davezeni <tamirud8@gmail.com>`)
+  and deploying. Added a visible **`ADMIN_UI_BUILD` marker** (currently
+  `2026-08-30.3`) in the admin header (`Staff · 2026-08-30.3`) so any future
+  deploy is verifiable from the panel.
+- **Verified live:** `/admin` returns 200; the live admin chunk
+  (`page-17877eff7d4adedd.js`) contains the new tabs (`Admin team`, `Audit log`,
+  `Orders & Money`, `Subscriptions`, etc.). API `/v1/health` + `/v1/ready` (db,
+  redis) all 200.
+- **Open item for the account owner:** the GitHub↔Vercel project integration
+  is currently **disconnected** (`git`/`link` null), so pushes to `main` do not
+  auto-deploy. Reconnect it (`vercel git connect` or Settings → Git in the
+  dashboard) so future pushes deploy automatically.
+
 ## [Unreleased] — Money/community coverage + e2e verification (free OSS)
 
 ### Added
