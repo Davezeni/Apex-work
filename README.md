@@ -67,10 +67,10 @@ apex-work/  (npm workspaces monorepo)
 
 **Infrastructure (Zero-cost tier)**
 - Frontend: Vercel (free)
-- Backend: Koyeb / Fly.io (free)
+- Backend: Render (free, frankfurt) — note: free dynos sleep after idle
 - Database: Neon (Postgres, 3GB free)
 - Cache: Upstash Redis (10K cmd/day free)
-- Storage: Cloudflare R2 (10GB free)
+- Storage: Supabase Storage (free)
 - Email: Resend (3K/mo free)
 - SMS: AfroMessage (pay-per-SMS)
 - Payments: Chapa (2.5% fee, no setup)
@@ -129,11 +129,12 @@ This starts:
 |---------|-------------|
 | `npm run dev` | Start web + api in parallel |
 | `npm run build` | Build all packages for production |
-| `npm run test` | Run API unit tests |
+| `npm run test` | Run API unit tests (Vitest) |
 | `npm run smoke:prod` | Check live web/API/payment endpoints |
 | `npm run lint` | Lint all packages |
 | `npm run typecheck` | Type-check all packages |
 | `npm run format` | Format code with Prettier |
+| `npm run db:migrate:deploy` | Apply pending migrations to the DB |
 | `npm run db:migrate` | Apply Prisma migrations |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run db:seed` | Seed the database |
@@ -189,28 +190,24 @@ Routes:
 
 ```bash
 npm run test           # unit tests (Vitest)
-npm run test:e2e       # end-to-end (Playwright)
-npm run test:coverage  # coverage report
 ```
+> E2E (Playwright) is not wired up yet — only unit tests are in the repo today.
 
 ---
 
 ## 🚢 Deployment
 
-**Frontend (Vercel)** — auto-deploys on push to `main`:
-1. Import the repo on vercel.com
-2. Set `apps/web` as the root
-3. Add env vars from `.env.example`
-4. Deploy
+Both services auto-deploy on push to `main`. See `docs/DEPLOY.md` for the full guide.
 
-**Backend (Koyeb / Fly.io)** — free tier:
-```bash
-# Fly.io
-cd apps/api && fly launch
+**Frontend (Vercel)** — `https://apex-work-gold.vercel.app`
+- Repo root (the root `vercel.json` drives the monorepo build — do NOT set a sub-folder root).
+- Env vars (must be set in the Vercel dashboard; `NEXT_PUBLIC_*` are baked in at build time):
+  `NEXT_PUBLIC_API_URL` (→ `https://apex-work-api.onrender.com`), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_APP_NAME`, `NEXT_PUBLIC_CHAPA_PUBLIC_KEY`.
 
-# Koyeb
-git push koyeb main
-```
+**Backend (Render)** — `https://apex-work-api.onrender.com`
+- The tracked `render.yaml` blueprint drives provisioning + deploy.
+- Prisma migrations are applied automatically on every deploy via `preDeployCommand`.
+- Secrets (DB URL, Redis, JWT, Chapa, AfroMessage, OAuth, Supabase, Groq, VAPID, CRON_TOKEN, METERED) live in the Render dashboard, never in the repo.
 
 ---
 

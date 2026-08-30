@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import pinoHttp from 'pino-http';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
+import { ForbiddenError } from './lib/errors.js';
 import routes from './routes/index.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -48,7 +49,10 @@ export const createApp = (): Express => {
       origin: (origin, cb) => {
         if (!origin) return cb(null, true); // same-origin, curl, mobile apps
         if (allowedOrigins.includes(origin)) return cb(null, true);
-        return cb(new Error('CORS: origin not allowed'));
+        // Deny with a proper 4xx instead of hitting the generic 500 handler, so
+        // rejected origins get a clean Forbidden (browser still blocks the call)
+        // and we don't inflate server error logs with expected rejections.
+        return cb(new ForbiddenError('Origin not allowed by CORS'));
       },
       credentials: true,
     }),

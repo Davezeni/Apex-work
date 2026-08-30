@@ -3,6 +3,30 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Deployment & hardening
+
+### Changed
+
+- **Render:** `render.yaml` now runs Prisma migrations automatically on every
+  deploy via `preDeployCommand` (`npm run db:migrate:deploy`, using the direct
+  `DATABASE_URL_UNPOOLED` when present). Previously migrations were only applied
+  manually, so a build could ship a new schema against a stale DB.
+- **Rate limiting:** auth/OTP/PIN/API limiters now fall back to a local
+  in-memory counter during a Redis outage instead of silently disabling limits.
+  This keeps brute-force throttling alive even when Redis is down (per-instance
+  while degraded); limits return to the shared store automatically on reconnect.
+- **CORS:** rejected origins now return a clean `403 Forbidden` instead of a
+  generic `500`, so expected cross-origin rejections stop polluting server-error
+  logs.
+- **Docs & env:** `.env.example` regenerated to exactly match
+  `apps/api/src/config/env.ts` (shipped Supabase Storage instead of the dead
+  Cloudflare R2 keys, and added the previously missing WebAuthn, VAPID,
+  CRON_TOKEN and METERED vars). `README.md` and `docs/DEPLOY.md` reconciled with
+  the real Render + Vercel + Supabase architecture (they previously described
+  Koyeb + Cloudflare R2).
+- **Docs:** README no longer advertises `test:e2e`/`test:coverage` scripts that
+  did not exist.
+
 ## [0.3.1] — 2026-08-28 — OAuth phone step-up
 
 ### Changed

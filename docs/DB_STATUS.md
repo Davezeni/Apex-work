@@ -30,7 +30,7 @@ The schema now has **17 tables** covering identity, marketplace, chat, payments,
 20260821191243_trusted_devices_and_passkeys  — adds User.pinHash, TrustedDevice, Passkey
 ```
 
-Migrations are versioned in `apps/api/prisma/migrations/*`. To apply the latest to production, `npx prisma migrate deploy` — but Render auto-runs this on every build (see `render.yaml`).
+Migrations are versioned in `apps/api/prisma/migrations/*`. Render now auto-applies them on every deploy via the `preDeployCommand` in `render.yaml` (runs `npm run db:migrate:deploy` against the direct/unpooled connection when provided).
 
 ## Indexes
 
