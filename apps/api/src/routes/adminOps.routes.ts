@@ -1,0 +1,464 @@
+/**
+ * Admin operations routes — the expanded admin-panel control surface.
+ * Mounted at `/admin/ops`. Every endpoint requires staff auth + the relevant
+ * RBAC capability; every mutation is audited via `adminAudit`.
+ */
+import { Router } from 'express';
+import { z } from 'zod';
+import { asyncHandler } from '../lib/asyncHandler.js';
+import { validate } from '../middleware/validate.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireAdmin, requireCapability } from '../middleware/adminOnly.js';
+import { success } from '../lib/response.js';
+import { paginate } from '../lib/adminPage.js';
+import { loadActor, adminAudit } from '../lib/audit.js';
+import { prisma } from '../lib/prisma.js';
+import {
+  gigModerateSchema, jobModerateSchema, reviewModerateSchema, orderRefundSchema,
+  walletAdjustSchema, featuredSchema, broadcastSchema, userRoleSchema,
+  ticketReplySchema, ticketStatusSchema, settingUpsertSchema,
+} from '@apex-work/shared';
+
+import * as mod from '../services/admin/moderation.service.js';
+import * as money from '../services/admin/money.service.js';
+import * as community from '../services/admin/community.service.js';
+import * as support from '../services/admin/support.service.js';
+import * as ops from '../services/admin/ops.service.js';
+import * as settings from '../services/admin/settings.service.js';
+
+const router: Router = Router();
+router.use(requireAuth, requireAdmin);
+
+// ================= DASHBOARD / ANALYTICS =================
+
+router.get(
+  '/analytics',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    return success(res, await ops.analyticsSummary(days));
+  }),
+);
+
+// ================= MODERATION: GIGS =================
+
+router.get(
+  '/gigs',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { status, flagged, featured } = req.query as Record<string, string | undefined>;
+    const q = await paginate(req, {
+      fetch: (p) =>
+        mod.adminListGigs({
+          status: status as never,
+          flagged: flagged === undefined ? undefined : flagged === '1',
+          featured: featured === undefined ? undefined : featured === '1',
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
+        }),
+    });
+    return success(res, q);
+  }),
+);
+
+router.post(
+  '/gigs/:id/moderate',
+  requireCapability('moderation:content'),
+  validate(gigModerateSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof gigModerateSchema>;
+    const actor = await loadActor(req);
+    const result = await mod.moderateGig(id, body);
+    await adminAudit({
+      ...actor, ip: req.ip, action: 'GIG.MODERATE', resourceType: 'GIG', resourceId: id,
+      before: result.before ? { status: result.before.status, isFlagged: result.before.isFlagged } : undefined,
+      after: { status: result.status, isFlagged: result.isFlagged, isFeatured: result.isFeatured },
+    });
+    delete (result as { before?: unknown }).before;
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/gigs/:id/feature',
+  requireCapability('promotions:manage'),
+  validate(featuredSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof featuredSchema>;
+    const actor = await loadActor(req);
+    const result = await ops.featureGig(id, body.days);
+    await adminAudit({ ...actor, ip: req.ip, action: 'GIG.FEATURE', resourceType: 'GIG', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/gigs/:id/unfeature',
+  requireCapability('promotions:manage'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await ops.unfeatureGig(id);
+    await adminAudit({ ...actor, ip: req.ip, action: 'GIG.UNFEATURE', resourceType: 'GIG', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= MODERATION: JOBS =================
+
+router.get(
+  '/jobs',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { open } = req.query as Record<string, string | undefined>;
+    const q = await paginate(req, {
+      fetch: (p) =>
+        mod.adminListJobs({ open: open === undefined ? undefined : open === '1', limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, q);
+  }),
+);
+
+router.post(
+  '/jobs/:id/moderate',
+  requireCapability('moderation:content'),
+  validate(jobModerateSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await mod.moderateJob(id, req.body as z.infer<typeof jobModerateSchema>);
+    await adminAudit({ ...actor, ip: req.ip, action: 'JOB.MODERATE', resourceType: 'JOB', resourceId: id, after: { isOpen: result.isOpen, pinnedAt: result.pinnedAt } });
+    return success(res, result);
+  }),
+);
+
+// ================= MODERATION: REVIEWS =================
+
+router.get(
+  '/reviews',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { hidden, subjectId } = req.query as Record<string, string | undefined>;
+    return success(res, {
+      items: await mod.adminListReviews({
+        hidden: hidden === undefined ? undefined : hidden === '1',
+        subjectId,
+        limit: 100,
+      }),
+    });
+  }),
+);
+
+router.post(
+  '/reviews/:id/moderate',
+  requireCapability('moderation:content'),
+  validate(reviewModerateSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof reviewModerateSchema>;
+    const actor = await loadActor(req);
+    const result = await mod.moderateReview(id, body.action, actor.adminId, body.reason);
+    await adminAudit({ ...actor, ip: req.ip, action: 'REVIEW.MODERATE', resourceType: 'REVIEW', resourceId: id, after: { hiddenAt: result.hiddenAt, hiddenReason: result.hiddenReason } });
+    return success(res, result);
+  }),
+);
+
+// ================= MONEY: ORDERS / REFUNDS =================
+
+router.get(
+  '/orders',
+  requireCapability('money:orders'),
+  asyncHandler(async (req, res) => {
+    const { status, q } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => money.adminListOrders({ status: status as never, q, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/orders/:id/refund',
+  requireCapability('money:orders'),
+  validate(orderRefundSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof orderRefundSchema>;
+    const actor = await loadActor(req);
+    const result = await money.refundOrder(id, body.amountEtb, body.reason);
+    await adminAudit({ ...actor, ip: req.ip, action: 'ORDER.REFUND', resourceType: 'ORDER', resourceId: id, after: { refundedEtb: result.refundedEtb, reason: body.reason } });
+    return success(res, result);
+  }),
+);
+
+// ================= MONEY: LEDGER & ADJUSTMENTS =================
+
+router.get(
+  '/ledger',
+  requireCapability('money:orders'),
+  asyncHandler(async (req, res) => {
+    const { userId, type } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => money.adminLedger({ userId, type, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/wallet/:userId/adjust',
+  requireCapability('money:orders'),
+  validate(walletAdjustSchema),
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params as { userId: string };
+    const body = req.body as z.infer<typeof walletAdjustSchema>;
+    const actor = await loadActor(req);
+    const result = await money.adjustWallet(userId, body.type, body.amountEtb, body.description);
+    await adminAudit({ ...actor, ip: req.ip, action: 'WALLET.ADJUST', resourceType: 'WALLET', resourceId: userId, after: { type: body.type, amountEtb: body.amountEtb, description: body.description } });
+    return success(res, result);
+  }),
+);
+
+// ================= MONEY: WITHDRAWALS =================
+
+router.get(
+  '/withdrawals',
+  requireCapability('money:withdrawals'),
+  asyncHandler(async (req, res) => {
+    const { status } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => money.adminListWithdrawals({ status: status as never, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+const withdrawStatusSchema = z.object({
+  status: z.enum(['PROCESSING', 'SUCCESS', 'FAILED', 'CANCELLED']),
+  providerRef: z.string().max(200).optional(),
+  failureReason: z.string().max(500).optional(),
+});
+router.post(
+  '/withdrawals/:id/status',
+  requireCapability('money:withdrawals'),
+  validate(withdrawStatusSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof withdrawStatusSchema>;
+    const actor = await loadActor(req);
+    const result = await money.markWithdrawalStatus(id, body.status, { providerRef: body.providerRef, failureReason: body.failureReason });
+    await adminAudit({ ...actor, ip: req.ip, action: 'WITHDRAWAL.STATUS', resourceType: 'WITHDRAWAL', resourceId: id, after: { status: body.status, providerRef: body.providerRef } });
+    return success(res, result);
+  }),
+);
+
+// ================= COMMUNITY: USERS =================
+
+router.get(
+  '/users',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const { q, role, suspended, unverified } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) =>
+        community.adminListUsers({
+          q, role: role as never,
+          suspended: suspended === undefined ? undefined : suspended === '1',
+          unverified: unverified === '1',
+          limit: p.limit, cursorWhere: p.cursorWhere,
+        }),
+    });
+    return success(res, result);
+  }),
+);
+
+router.get(
+  '/users/:id',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await community.getUserDetail(id));
+  }),
+);
+
+router.post(
+  '/users/:id/role',
+  requireCapability('users:manage'),
+  validate(userRoleSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof userRoleSchema>;
+    const actor = await loadActor(req);
+    const result = await community.setUserRole(id, body.role);
+    await adminAudit({ ...actor, ip: req.ip, action: 'USER.ROLE', resourceType: 'USER', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/users/:id/suspend',
+  requireCapability('users:suspend'),
+  validate(z.object({ suspend: z.boolean() })),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as { suspend: boolean };
+    const actor = await loadActor(req);
+    const result = await community.suspendUser(id, body.suspend);
+    await adminAudit({ ...actor, ip: req.ip, action: 'USER.SUSPEND', resourceType: 'USER', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/users/:id/verify-id',
+  requireCapability('users:verify'),
+  validate(z.object({ verify: z.boolean() })),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as { verify: boolean };
+    const actor = await loadActor(req);
+    const result = await community.verifyIdentity(id, body.verify);
+    await adminAudit({ ...actor, ip: req.ip, action: 'USER.VERIFY_ID', resourceType: 'USER', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= COMMUNITY: ADMIN ROLES =================
+
+router.get(
+  '/admins',
+  requireCapability('audit:view'),
+  asyncHandler(async (_req, res) => {
+    return success(res, { items: await ops.listAdminRoles() });
+  }),
+);
+
+// ================= COMMUNITY: AGENCIES / SUBSCRIPTIONS =================
+
+router.get(
+  '/agencies',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(100, Number((req.query as { limit?: string }).limit) || 50);
+    return success(res, { items: await community.adminListAgencies(limit) });
+  }),
+);
+
+router.get(
+  '/subscriptions',
+  requireCapability('subscriptions:manage'),
+  asyncHandler(async (req, res) => {
+    const { status } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => ops.adminListSubscriptions({ status, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+// ================= SUPPORT =================
+
+router.get(
+  '/tickets',
+  requireCapability('support:tickets'),
+  asyncHandler(async (req, res) => {
+    const { status } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => support.adminListTickets({ status: status as never, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+router.get(
+  '/tickets/:id',
+  requireCapability('support:tickets'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await support.getTicket(id));
+  }),
+);
+
+router.post(
+  '/tickets/:id/reply',
+  requireCapability('support:tickets'),
+  validate(ticketReplySchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof ticketReplySchema>;
+    const actor = await loadActor(req);
+    const result = await support.replyToTicket(id, actor.adminId, body.body);
+    await adminAudit({ ...actor, ip: req.ip, action: 'TICKET.REPLY', resourceType: 'TICKET', resourceId: id, after: { status: result.status } });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/tickets/:id/status',
+  requireCapability('support:tickets'),
+  validate(ticketStatusSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof ticketStatusSchema>;
+    const actor = await loadActor(req);
+    const result = await support.setTicketStatus(id, body.status);
+    await adminAudit({ ...actor, ip: req.ip, action: 'TICKET.STATUS', resourceType: 'TICKET', resourceId: id, after: { status: result.status } });
+    return success(res, result);
+  }),
+);
+
+// ================= PROMOTIONS / BROADCAST =================
+
+router.post(
+  '/broadcast',
+  requireCapability('broadcast:send'),
+  validate(broadcastSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof broadcastSchema>;
+    const actor = await loadActor(req);
+    const result = await ops.broadcast({ title: body.title, body: body.body, scope: body.scope });
+    await adminAudit({ ...actor, ip: req.ip, action: 'BROADCAST.SEND', resourceType: 'SYSTEM', after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= SETTINGS =================
+
+router.get(
+  '/settings',
+  requireCapability('settings:manage'),
+  asyncHandler(async (_req, res) => {
+    return success(res, { items: await settings.listSettings() });
+  }),
+);
+
+router.post(
+  '/settings',
+  requireCapability('settings:manage'),
+  validate(settingUpsertSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof settingUpsertSchema>;
+    const actor = await loadActor(req);
+    const result = await settings.upsertSetting(body.key, body.value, actor.adminId, body.description);
+    await adminAudit({ ...actor, ip: req.ip, action: 'SETTING.UPSERT', resourceType: 'SETTING', resourceId: body.key, after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= AUDIT LOG =================
+
+router.get(
+  '/audit',
+  requireCapability('audit:view'),
+  asyncHandler(async (req, res) => {
+    const { adminId, resourceType } = req.query as Record<string, string | undefined>;
+    const result = await paginate(req, {
+      fetch: (p) => ops.listAudit({ adminId, resourceType, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+export default router;

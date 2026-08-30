@@ -21,6 +21,44 @@ export const LOCALE_LABELS: Record<Locale, string> = {
 export const USER_ROLES = ['CLIENT', 'FREELANCER', 'ADMIN'] as const;
 export type UserRole = (typeof USER_ROLES)[number];
 
+/** Staff roles with admin-panel access (RBAC). Mirrors the Prisma enum. */
+export const ADMIN_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'] as const;
+export type AdminRole = (typeof ADMIN_ROLES)[number];
+
+/**
+ * Capabilities map for RBAC. An admin can perform an action only if their
+ * role is listed for that capability. `ADMIN` (super-admin) has everything.
+ * New admin capabilities should be added here and enforced via
+ * `requireCapability()` (apps/api/src/lib/adminRbac.ts).
+ */
+export const ADMIN_CAPABILITIES = {
+  /** View the ops dashboard + read farmost scopes. */
+  'dashboard:view': ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'],
+  /** Moderate gigs, jobs, reviews, portfolio, reports, skills, certs. */
+  'moderation:content': ['ADMIN', 'MODERATOR'],
+  'moderation:reports': ['ADMIN', 'MODERATOR'],
+  'moderation:skills': ['ADMIN', 'MODERATOR'],
+  'moderation:certs': ['ADMIN', 'MODERATOR'],
+  /** Money: orders, refunds, wallet ledger, withdrawals, fee config. */
+  'money:orders': ['ADMIN', 'FINANCE'],
+  'money:withdrawals': ['ADMIN', 'FINANCE'],
+  'money:fees': ['ADMIN'],
+  /** Users & trust: suspend/unsuspend, verify ID, change roles. */
+  'users:manage': ['ADMIN'],
+  'users:verify': ['ADMIN', 'MODERATOR'],
+  'users:suspend': ['ADMIN'],
+  /** Support tickets. */
+  'support:tickets': ['ADMIN', 'SUPPORT', 'MODERATOR'],
+  /** Promotions, broadcast, subscriptions, settings. */
+  'promotions:manage': ['ADMIN'],
+  'broadcast:send': ['ADMIN'],
+  'subscriptions:manage': ['ADMIN', 'FINANCE'],
+  'settings:manage': ['ADMIN'],
+  'artifacts:view': ['ADMIN'],
+  'audit:view': ['ADMIN'],
+} as const;
+export type AdminCapability = keyof typeof ADMIN_CAPABILITIES;
+
 /** Currencies */
 export const CURRENCIES = ['ETB', 'USD'] as const;
 export type Currency = (typeof CURRENCIES)[number];

@@ -24,6 +24,7 @@ import resumeRoutes from './resume.routes.js';
 import draftsRoutes from './drafts.routes.js';
 import searchRoutes from './search.routes.js';
 import adminRoutes from './admin.routes.js';
+import adminOpsRoutes from './adminOps.routes.js';
 import reactionsRoutes from './reactions.routes.js';
 import milestonesRoutes from './milestones.routes.js';
 import groupsRoutes from './groups.routes.js';
@@ -99,6 +100,7 @@ router.use('/me/resume', resumeRoutes);
 router.use('/me/drafts', draftsRoutes);
 router.use('/search', searchRoutes);
 router.use('/admin', adminRoutes);
+router.use('/admin/ops', adminOpsRoutes);
 router.use('/messages', reactionsRoutes);
 router.use('/', milestonesRoutes); // mounts /orders/:id/milestones + /milestones/:id/...
 router.use('/groups', groupsRoutes);

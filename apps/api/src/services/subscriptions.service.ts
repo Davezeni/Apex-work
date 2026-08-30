@@ -1,4 +1,4 @@
-import { PRO_PLANS, type ProPlanId, type UserRole } from '@apex-work/shared';
+import { PRO_PLANS, type ProPlanId } from '@apex-work/shared';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, NotFoundError } from '../lib/errors.js';
 import { randomToken } from '../lib/hash.js';
@@ -9,7 +9,9 @@ const PASS_DAYS = 30;
 
 export interface SubscriptionActor {
   id: string;
-  role: UserRole;
+  // `role` may be any Prisma UserRole (incl. staff roles); only the
+  // FREELANCER/CLIENT split matters here.
+  role: string;
   fullName: string;
   email: string | null;
   phone: string | null;

@@ -16,8 +16,23 @@ import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
+import { ModerationTab } from '@/components/admin/moderation-tab';
+import { MoneyTab } from '@/components/admin/money-tab';
+import { SupportTab } from '@/components/admin/support-tab';
+import { PromotionsTab } from '@/components/admin/promotions-tab';
+import { SubscriptionsTab } from '@/components/admin/subscriptions-tab';
+import { SettingsTab } from '@/components/admin/settings-tab';
+import { AuditTab } from '@/components/admin/audit-tab';
+import { AdminsTab } from '@/components/admin/admins-tab';
+import { canRole } from '@/components/admin/rbac';
 
-type Tab = 'summary' | 'reports' | 'withdrawals' | 'users' | 'certs' | 'disputes' | 'diagnostics';
+/** Staff roles that may access the admin panel (mirrors @apex-work/shared). */
+const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
+const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
+
+type Tab =
+  | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
+  | 'moderation' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -34,7 +49,7 @@ export default function AdminPage() {
       router.replace('/login?next=/admin');
       return;
     }
-    if (me && me.role !== 'ADMIN') {
+    if (me && !isStaffRole(me.role)) {
       router.replace('/');
     }
   }, [isLoading, isAuthed, me, router]);
@@ -46,7 +61,7 @@ export default function AdminPage() {
       </div>
     );
   }
-  if (me.role !== 'ADMIN') {
+  if (!isStaffRole(me.role)) {
     // Show a friendly explanation while the redirect happens — beats a blank screen.
     return (
       <div className="grid min-h-dvh place-items-center bg-background p-6 text-center">
@@ -66,12 +81,20 @@ export default function AdminPage() {
   }
 
   return (
-    <AdminShell tab={tab} onChange={setTab} onBack={() => router.back()}>
+    <AdminShell role={me.role} tab={tab} onChange={setTab} onBack={() => router.back()}>
       {tab === 'summary' && <SummaryTab />}
+      {tab === 'moderation' && <ModerationTab />}
       {tab === 'reports' && <ReportsTab />}
+      {tab === 'money' && <MoneyTab />}
       {tab === 'disputes' && <DisputesTab />}
       {tab === 'withdrawals' && <WithdrawalsTab />}
       {tab === 'users' && <UsersTab />}
+      {tab === 'support' && <SupportTab />}
+      {tab === 'promotions' && <PromotionsTab />}
+      {tab === 'subscriptions' && <SubscriptionsTab />}
+      {tab === 'settings' && <SettingsTab />}
+      {tab === 'audit' && <AuditTab />}
+      {tab === 'admins' && <AdminsTab />}
       {tab === 'certs' && <CertsTab />}
       {tab === 'diagnostics' && <DiagnosticsTab />}
     </AdminShell>
@@ -81,21 +104,31 @@ export default function AdminPage() {
 // -----------------------------------------------------------------------------
 // ADMIN SHELL — collapsible sidebar on desktop, drawer on mobile
 // -----------------------------------------------------------------------------
-const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'summary',     label: 'Summary',      icon: <BarChart3 className="h-4 w-4" /> },
-  { id: 'reports',     label: 'Reports',      icon: <Flag className="h-4 w-4" /> },
-  { id: 'disputes',    label: 'Disputes',     icon: <AlertTri className="h-4 w-4" /> },
-  { id: 'withdrawals', label: 'Withdrawals',  icon: <WalletIcon className="h-4 w-4" /> },
-  { id: 'users',       label: 'Users',        icon: <Users className="h-4 w-4" /> },
-  { id: 'certs',       label: 'Certifications', icon: <AwardIcon className="h-4 w-4" /> },
-  { id: 'diagnostics', label: 'Diagnostics',  icon: <Cpu className="h-4 w-4" /> },
+const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; cap: string }[] = [
+  { id: 'summary',       label: 'Summary',        icon: <BarChart3 className="h-4 w-4" />, cap: 'dashboard:view' },
+  { id: 'moderation',    label: 'Moderation',     icon: <ShieldOff className="h-4 w-4" />, cap: 'moderation:content' },
+  { id: 'reports',       label: 'Reports',        icon: <Flag className="h-4 w-4" />, cap: 'moderation:reports' },
+  { id: 'money',         label: 'Orders & Money', icon: <WalletIcon className="h-4 w-4" />, cap: 'money:orders' },
+  { id: 'disputes',      label: 'Disputes',       icon: <AlertTri className="h-4 w-4" />, cap: 'moderation:reports' },
+  { id: 'withdrawals',   label: 'Withdrawals',    icon: <WalletIcon className="h-4 w-4" />, cap: 'money:withdrawals' },
+  { id: 'users',         label: 'Users',          icon: <Users className="h-4 w-4" />, cap: 'dashboard:view' },
+  { id: 'support',       label: 'Support',        icon: <Briefcase className="h-4 w-4" />, cap: 'support:tickets' },
+  { id: 'promotions',    label: 'Promotions',     icon: <TrendingUp className="h-4 w-4" />, cap: 'promotions:manage' },
+  { id: 'subscriptions', label: 'Subscriptions',  icon: <Package className="h-4 w-4" />, cap: 'subscriptions:manage' },
+  { id: 'settings',      label: 'Settings',       icon: <ShieldCheck className="h-4 w-4" />, cap: 'settings:manage' },
+  { id: 'audit',         label: 'Audit log',      icon: <BarChart3 className="h-4 w-4" />, cap: 'audit:view' },
+  { id: 'admins',        label: 'Admin team',     icon: <Users className="h-4 w-4" />, cap: 'audit:view' },
+  { id: 'certs',         label: 'Certifications', icon: <AwardIcon className="h-4 w-4" />, cap: 'moderation:certs' },
+  { id: 'diagnostics',   label: 'Diagnostics',    icon: <Cpu className="h-4 w-4" />, cap: 'artifacts:view' },
 ];
 
 const SIDEBAR_KEY = 'apex-admin-sidebar-collapsed';
 
 function AdminShell({
-  tab, onChange, onBack, children,
-}: { tab: Tab; onChange: (t: Tab) => void; onBack: () => void; children: React.ReactNode }) {
+  role, tab, onChange, onBack, children,
+}: { role: string; tab: Tab; onChange: (t: Tab) => void; onBack: () => void; children: React.ReactNode }) {
+  // Show only the nav items the caller's role is permitted to use.
+  const visibleItems = NAV_ITEMS.filter((n) => canRole(role, n.cap));
   // Persisted collapsed state so pros keep their layout across sessions.
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -109,7 +142,7 @@ function AdminShell({
     });
   };
   const [mobileOpen, setMobileOpen] = useState(false);
-  const active = NAV_ITEMS.find((n) => n.id === tab)!;
+  const active = visibleItems.find((n) => n.id === tab) ?? visibleItems[0]!;
 
   return (
     <div className="flex min-h-dvh bg-background">
@@ -132,7 +165,7 @@ function AdminShell({
           )}
         </div>
         <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-          {NAV_ITEMS.map((n) => (
+          {visibleItems.map((n) => (
             <button
               key={n.id}
               onClick={() => onChange(n.id)}
@@ -177,7 +210,7 @@ function AdminShell({
               </button>
             </div>
             <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-              {NAV_ITEMS.map((n) => (
+              {visibleItems.map((n) => (
                 <button
                   key={n.id}
                   onClick={() => { onChange(n.id); setMobileOpen(false); }}

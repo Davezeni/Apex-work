@@ -16,10 +16,16 @@ datasource db {
 
 // ================= ENUMS =================
 
+// RBAC: ADMIN is the legacy super-admin. MODERATOR/SUPPORT/FINANCE are
+// scoped staff roles enforced by the admin capabilities map (see
+// apps/api/src/lib/adminRbac.ts). Assignment happens only via the admin panel.
 enum UserRole {
   CLIENT
   FREELANCER
   ADMIN
+  MODERATOR
+  SUPPORT
+  FINANCE
 }
 
 enum OtpPurpose {
@@ -65,6 +71,7 @@ enum TransactionType {
   WITHDRAWAL
   PLATFORM_FEE
   REFERRAL_BONUS
+  MANUAL_ADJUSTMENT   // Admin adjustment (audit-traced)
 }
 
 enum NotificationType {
@@ -143,6 +150,9 @@ model User {
   ordersAsSeller Order[]              @relation("OrderSeller")
   reviewsWritten Review[]             @relation("ReviewAuthor")
   reviewsAbout   Review[]             @relation("ReviewSubject")
+  reviewsHidden  Review[]             @relation("ReviewHiddenBy")
+  adminActions   AdminAuditLog[]      @relation("AdminActor")
+  settingsUpdated AppSetting[]        @relation("SettingUpdatedBy")
   refreshTokens  RefreshToken[]
   sessions       Session[]
   trustedDevices TrustedDevice[]
@@ -324,6 +334,12 @@ model Gig {
   isFeatured     Boolean      @default(false)
   featuredUntil  DateTime?
 
+  /// Moderation / promotion. Admin can flag a gig for review, pin it to the
+  /// top of a feed, or set it to be featured manually.
+  isFlagged      Boolean      @default(false)
+  flaggedReason  String?      @db.Text
+  pinnedAt       DateTime?
+
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -368,6 +384,8 @@ model Job {
   requiredSkills String[] @default([])
   isRemote      Boolean   @default(true)
   isOpen        Boolean   @default(true)
+  /// Admin can pin a job to the top of the jobs feed.
+  pinnedAt      DateTime?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -547,8 +565,16 @@ model Review {
   author      User     @relation("ReviewAuthor", fields: [authorId], references: [id])
   subject     User     @relation("ReviewSubject", fields: [subjectId], references: [id])
 
+  /// Moderation — hidden reviews are removed from the public list but kept
+  /// for audit. `hiddenBy` is the staff member who hid it.
+  hiddenAt    DateTime?
+  hiddenById  String?
+  hiddenReason String?  @db.Text
+  hiddenBy    User?     @relation("ReviewHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+
   @@unique([orderId, authorId])
   @@index([subjectId, createdAt(sort: Desc)])
+  @@index([hiddenAt])
 }
 
 // ================= CHAT =================
@@ -1272,4 +1298,45 @@ model EmailQueue {
   sentAt     DateTime?
 
   @@index([status, createdAt])
+}
+
+// ================= ADMIN / OPS =================
+
+/// Append-only log of every admin mutation. Every state-changing admin
+/// endpoint must call `adminAudit()` (apps/api/src/lib/audit.ts) so the
+/// platform can answer "who changed what and when".
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  adminId      String
+  adminName    String
+  adminRole    String
+  action       String   // e.g. "GIG.MODERATE", "USER.SUSPEND", "MONEY.CREDIT"
+  resourceType String   // e.g. "GIG", "ORDER"
+  resourceId   String?
+  before       Json?
+  after        Json?
+  meta         Json?
+  ip           String?
+  createdAt    DateTime @default(now())
+
+  admin        User     @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([resourceType, resourceId])
+  @@index([action, createdAt(sort: Desc)])
+}
+
+/// Typed key/value store for runtime-tunable platform settings, feature flags
+/// and per-category fees. Read once and cached by the app; edited only via
+/// the admin panel. `value` is JSON so rows are typed per key.
+model AppSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedAt])
 }

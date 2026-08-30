@@ -31,3 +31,4 @@ export * from './support.js';
 export * from './notifications.js';
 export * from './oauth.js';
 export * from './featured.js';
+export * from './adminOps.js';

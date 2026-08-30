@@ -3,6 +3,44 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Admin control surface (RBAC, moderation, money, ops)
+
+### Added
+- **RBAC** (`lib/adminRbac.ts` + `middleware/adminOnly.ts`): admin capabilities
+  map with `ADMIN` (super), `MODERATOR`, `SUPPORT`, `FINANCE`. Staff roles are
+  enforced server-side via `requireCapability()`; the admin UI filters its nav
+  and only shows tabs a role may use. `UserRole` extended with the three staff
+  roles.
+- **New admin endpoints** under `/admin/ops`, each capability-guarded:
+  - Moderation: gigs (`moderate`/`feature`/`unfeature`), jobs, reviews
+    (hide/restore), agencies.
+  - Money: orders board + refunds, wallet ledger + manual adjustment,
+    withdrawals (status ops).
+  - Community: users (list/detail, suspend, role change, ID verify), admin
+    roles list.
+  - Support: ticket queue (list/detail/reply/status).
+  - Promotions: broadcast announcement, featured gigs.
+  - Subscriptions: list. Settings: typed key/value platform config + feature
+    flags. Ops: analytics summary, audit log.
+- **Audit trail**: every admin mutation is recorded to `AdminAuditLog`
+  (who/what/before/after/when/ip) via `lib/audit.ts`. The admin panel exposes it
+  under the "Audit log" tab.
+- **Cursor pagination** (`lib/cursor.ts`, `lib/adminPage.ts`): keyset pagination
+  for all admin list endpoints (opaque, base64url, index-friendly).
+- **Settings store** (`AppSetting`): runtime-tunable platform fee, limits and
+  feature flags, edited only by admins.
+- **Schema** (`20260830100000_admin_ops`): `AdminAuditLog`, `AppSetting`,
+  `Review` moderation fields, `Gig` flag/pin fields, `Job.pinnedAt`, extra
+  `UserRole` + `TransactionType` enum values.
+- Admin tabs: Moderation, Orders & Money, Support, Promotions, Subscriptions,
+  Settings, Audit log, Admin team (replacing the previous 7-tab surface).
+- Unit tests for RBAC and cursor pagination (39 → 49 tests).
+
+### Changed
+- Legacy `admin.routes.ts` endpoints are now capability-scoped (reports,
+  withdrawals, users, skills, certs, diagnostics, disputes) so a non-super
+  staff role can't reach money or user-suspend by accident.
+
 ## [Unreleased] — Deployment & hardening
 
 ### Changed

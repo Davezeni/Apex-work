@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
-import { requireAdmin } from '../middleware/adminOnly.js';
+import { requireAdmin, requireCapability } from '../middleware/adminOnly.js';
 import { success } from '../lib/response.js';
 import * as admin from '../services/admin.service.js';
 import * as resumeTemplates from '../services/resumeTemplates.service.js';
@@ -13,6 +13,7 @@ router.use(requireAuth, requireAdmin);
 
 router.get(
   '/summary',
+  requireCapability('dashboard:view'),
   asyncHandler(async (_req, res) => {
     return success(res, await admin.dashboardSummary());
   }),
@@ -24,12 +25,14 @@ const resumeTemplateAdminSchema = z.object({
 });
 router.get(
   '/resume-templates',
+  requireCapability('settings:manage'),
   asyncHandler(async (_req, res) => {
     return success(res, { items: await resumeTemplates.adminList() });
   }),
 );
 router.patch(
   '/resume-templates/:templateId',
+  requireCapability('settings:manage'),
   validate(resumeTemplateAdminSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof resumeTemplateAdminSchema>;
@@ -41,6 +44,7 @@ router.patch(
 // ---------------- reports ----------------
 router.get(
   '/reports',
+  requireCapability('moderation:reports'),
   asyncHandler(async (req, res) => {
     const status = String((req.query as { status?: string }).status ?? '').toUpperCase();
     const valid = ['OPEN', 'REVIEWED', 'DISMISSED', 'ACTIONED'];
@@ -54,6 +58,7 @@ router.get(
 const resolveSchema = z.object({ action: z.enum(['REVIEWED', 'DISMISSED', 'ACTIONED']) });
 router.post(
   '/reports/:id/resolve',
+  requireCapability('moderation:reports'),
   validate(resolveSchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
@@ -65,6 +70,7 @@ router.post(
 // ---------------- withdrawals ----------------
 router.get(
   '/withdrawals',
+  requireCapability('money:withdrawals'),
   asyncHandler(async (req, res) => {
     const status = String((req.query as { status?: string }).status ?? '').toUpperCase();
     const valid = ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED', 'CANCELLED'];
@@ -82,6 +88,7 @@ const withdrawStatusSchema = z.object({
 });
 router.post(
   '/withdrawals/:id/status',
+  requireCapability('money:withdrawals'),
   validate(withdrawStatusSchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
@@ -99,6 +106,7 @@ router.post(
 // ---------------- users ----------------
 router.get(
   '/users',
+  requireCapability('dashboard:view'),
   asyncHandler(async (req, res) => {
     const q = String((req.query as { q?: string }).q ?? '').trim() || undefined;
     return success(res, { items: await admin.listUsers(q) });
@@ -108,6 +116,7 @@ router.get(
 const suspendSchema = z.object({ suspend: z.boolean() });
 router.post(
   '/users/:id/suspend',
+  requireCapability('users:suspend'),
   validate(suspendSchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
@@ -121,6 +130,7 @@ import { prisma } from '../lib/prisma.js';
 
 router.get(
   '/skills',
+  requireCapability('moderation:skills'),
   asyncHandler(async (req, res) => {
     const pending = String((req.query as { pending?: string }).pending ?? '') === '1';
     const items = await prisma.skill.findMany({
@@ -136,6 +146,7 @@ router.get(
 const moderateSkillSchema = z.object({ approved: z.boolean() });
 router.post(
   '/skills/:id/moderate',
+  requireCapability('moderation:skills'),
   validate(moderateSkillSchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
@@ -149,6 +160,7 @@ router.post(
 
 router.get(
   '/certifications',
+  requireCapability('moderation:certs'),
   asyncHandler(async (req, res) => {
     const unverified = String((req.query as { unverified?: string }).unverified ?? '') === '1';
     const items = await prisma.certification.findMany({
@@ -170,6 +182,7 @@ router.get(
 const verifySchema = z.object({ verify: z.boolean() });
 router.post(
   '/certifications/:id/verify',
+  requireCapability('moderation:certs'),
   validate(verifySchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
@@ -191,6 +204,7 @@ router.post(
 
 router.get(
   '/diagnostics',
+  requireCapability('artifacts:view'),
   asyncHandler(async (_req, res) => {
     const { turnDebug } = await import('../services/turn.service.js');
     const { isEmailConfigured, emailDebug } = await import('../services/email.service.js');
@@ -215,6 +229,7 @@ router.get(
 
 router.post(
   '/turn/refresh',
+  requireCapability('artifacts:view'),
   asyncHandler(async (_req, res) => {
     const { invalidateTurnCache, getIceServers, turnDebug } =
       await import('../services/turn.service.js');
@@ -230,6 +245,7 @@ const testEmailSchema = z.object({
 });
 router.post(
   '/email/test',
+  requireCapability('artifacts:view'),
   validate(testEmailSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof testEmailSchema>;
@@ -264,6 +280,7 @@ import * as disputes from '../services/disputes.service.js';
 
 router.get(
   '/disputes',
+  requireCapability('moderation:reports'),
   asyncHandler(async (req, res) => {
     const status = String((req.query as { status?: string }).status ?? '').toUpperCase();
     const valid = [
@@ -281,6 +298,7 @@ router.get(
 
 router.post(
   '/disputes/:id/resolve',
+  requireCapability('moderation:reports'),
   validate(resolveDisputeSchema),
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
