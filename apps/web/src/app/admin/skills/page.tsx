@@ -70,9 +70,14 @@ export default function AdminSkillsPage() {
             Review freelancer-created catalog skills before public discovery.
           </p>
         </div>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/admin">Admin</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/admin/templates">Templates</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/admin">Admin</Link>
+          </Button>
+        </div>
       </header>
       <main className="mx-auto max-w-3xl px-3 py-5 sm:px-6">
         <section className="rounded-2xl border border-border bg-card p-4">

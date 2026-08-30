@@ -30,6 +30,11 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web Resume import page',
+    url: 'https://apex-work-gold.vercel.app/resume/import',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'web Resume Studio templates page',
     url: 'https://apex-work-gold.vercel.app/resume/templates',
     expected: (res) => res.status === 200,

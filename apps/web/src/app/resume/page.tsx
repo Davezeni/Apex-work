@@ -23,6 +23,7 @@ import {
   BarChart3,
   WandSparkles,
   X,
+  FileInput,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -252,6 +253,11 @@ export default function ResumeBuilderPage() {
           <div className="text-[10px] text-muted-foreground">Build once — export or share</div>
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/resume/import">
+              <FileInput className="h-4 w-4" /> Import
+            </Link>
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href={`/u/${me.username}/resume`}>
               <Share2 className="h-4 w-4" /> Share

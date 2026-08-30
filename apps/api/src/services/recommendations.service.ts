@@ -1,11 +1,27 @@
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 
+const SKILL_ALIASES: Record<string, string> = {
+  reactjs: 'react',
+  'react-js': 'react',
+  nextjs: 'next-js',
+  next: 'next-js',
+  nodejs: 'node-js',
+  node: 'node-js',
+  js: 'javascript',
+  ts: 'typescript',
+  ux: 'ui-ux',
+  'ui-ux-design': 'ui-ux',
+  'graphic-design': 'design',
+  'social-media-marketing': 'social-media',
+};
+
 function normalized(value: string): string {
-  return value
+  const base = value
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-');
+  return SKILL_ALIASES[base] ?? base;
 }
 
 function score(
