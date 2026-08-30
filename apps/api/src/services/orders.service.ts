@@ -20,7 +20,8 @@
  */
 import type { OrderStatus, PackageTier, Prisma, User } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { PLATFORM_FEE_PERCENT } from '@apex-work/shared';
+import { computeOrderSplit } from '@apex-work/shared';
+import { assertOrderTransition, type OrderAction, type OrderState } from '@apex-work/shared';
 import {
   BadRequestError,
   ConflictError,
@@ -28,6 +29,19 @@ import {
   NotFoundError,
 } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
+
+/**
+ * Guard that an order may take `action` from `current.status`, translating the
+ * state-machine error into our typed ConflictError. This keeps every mutation
+ * aligned with the single transition map (see shared/domain/orderState.ts).
+ */
+function transitionGuard(current: OrderStatus, action: OrderAction, orderId?: string): OrderState {
+  try {
+    return assertOrderTransition(current, action, { orderId });
+  } catch (err) {
+    throw new ConflictError((err as Error).message);
+  }
+}
 import { chapa, ChapaService } from './chapa.service.js';
 import { env } from '../config/env.js';
 
@@ -69,8 +83,7 @@ export async function createOrderAndInitiatePayment(
   const pkg = gig.packages.find((p) => p.tier === packageTier);
   if (!pkg) throw new BadRequestError('That package is not available for this gig');
 
-  const feeEtb = Math.round((pkg.priceEtb * PLATFORM_FEE_PERCENT) / 100);
-  const sellerNetEtb = pkg.priceEtb - feeEtb;
+  const { feeEtb, sellerNetEtb } = computeOrderSplit(pkg.priceEtb);
 
   const order = await prisma.order.create({
     data: {
@@ -218,7 +231,7 @@ export async function confirmPaymentByTxRef(txRef: string) {
         userId: order.sellerId,
         type: 'PLATFORM_FEE',
         amountEtb: -order.platformFeeEtb,
-        description: `Platform fee (${PLATFORM_FEE_PERCENT}%) on ${order.title}`,
+        description: `Platform fee on ${order.title}`,
         relatedId: order.id,
       },
     });
@@ -253,9 +266,7 @@ export async function acceptDelivery(orderId: string, clientId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== clientId) throw new ForbiddenError();
-  if (order.status !== 'IN_REVIEW' && order.status !== 'ACTIVE') {
-    throw new ConflictError('Order is not awaiting acceptance');
-  }
+  const next = transitionGuard(order.status, 'ACCEPT_DELIVERY', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
     await tx.wallet.update({
@@ -281,7 +292,7 @@ export async function acceptDelivery(orderId: string, clientId: string) {
     });
     return tx.order.update({
       where: { id: order.id },
-      data: { status: 'COMPLETED', completedAt: new Date() },
+      data: { status: next, completedAt: new Date() },
     });
   });
 
@@ -305,14 +316,12 @@ export async function markDelivered(
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.sellerId !== sellerId) throw new ForbiddenError();
-  if (order.status !== 'ACTIVE') {
-    throw new ConflictError('Order cannot be delivered from its current state');
-  }
+  const next = transitionGuard(order.status, 'MARK_DELIVERED', order.id);
 
   const updated = await prisma.order.update({
     where: { id: order.id },
     data: {
-      status: 'IN_REVIEW',
+      status: next,
       deliveredAt: new Date(),
       deliverables: {
         notes: deliverables.notes ?? '',
@@ -337,12 +346,10 @@ export async function requestRevision(orderId: string, clientId: string, notes: 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== clientId) throw new ForbiddenError();
-  if (order.status !== 'IN_REVIEW') {
-    throw new ConflictError('Cannot request revision at this stage');
-  }
+  const next = transitionGuard(order.status, 'REQUEST_REVISION', order.id);
   const updated = await prisma.order.update({
     where: { id: order.id },
-    data: { status: 'ACTIVE' },
+    data: { status: next },
   });
   await notify({
     userId: order.sellerId,
@@ -359,12 +366,9 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== userId && order.sellerId !== userId) throw new ForbiddenError();
-  if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
-    throw new ConflictError('Order is already finalized');
-  }
-  if (order.status === 'IN_REVIEW' || order.status === 'DELIVERED') {
-    throw new ConflictError('Cannot cancel an order under review; request revision or dispute');
-  }
+  // The transition map only permits CANCEL from PENDING/ACTIVE, so an
+  // IN_REVIEW/DELIVERED/COMPLETED/CANCELLED order is rejected uniformly.
+  const next = transitionGuard(order.status, 'CANCEL', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
     // Refund pending funds to seller wallet ledger (if payment was captured).
@@ -385,7 +389,7 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
     }
     return tx.order.update({
       where: { id: order.id },
-      data: { status: 'CANCELLED', cancelledAt: new Date() },
+      data: { status: next, cancelledAt: new Date() },
     });
   });
 

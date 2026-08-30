@@ -13,6 +13,8 @@
     "dev:api": "npm --workspace @apex-work/api run dev",
     "build": "npm-run-all build:shared build:web build:api",
     "test": "npm run build:shared && npm --workspace @apex-work/api run db:generate && npm --workspace @apex-work/api run test",
+    "test:coverage": "npm run build:shared && npm --workspace @apex-work/api run db:generate && npm --workspace @apex-work/api run test:coverage",
+    "test:e2e": "npm --workspace @apex-work/web run test:e2e",
     "smoke:prod": "node scripts/smoke-production.mjs",
     "build:shared": "npm --workspace @apex-work/shared run build",
     "build:web": "npm --workspace @apex-work/web run build",

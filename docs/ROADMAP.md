@@ -132,7 +132,29 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 
 ---
 
-## 5. Immediate action list (this sprint)
+## 5. Progress tracker
+
+**✅ Done (shipped):**
+- Admin control surface (RBAC + audit + moderation + money + support + ops) —
+  see Changelog & `adminOps.routes.ts`.
+- Order state machine as a DAG (`shared/domain/orderState.ts`).
+- Money helper (`shared/domain/money.ts`).
+- Full-text search (pg_trgm + similarity) — already shipped in
+  `20260822180000_perf_search_indexes`; service uses trigram ranking.
+- Cursor pagination, audit log, settings store, RBAC.
+- Real test tooling: `test:coverage` + `test:e2e` (Playwright) + CI job.
+
+**⏳ Deferred (needs external accounts/keys to be useful):**
+- **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
+  env vars are declared; wiring the SDKs without keys is a no-op, so it's left
+  until the project has accounts. Add `@sentry/nextjs` + a `sentry.ts` init keyed
+  off `SENTRY_DSN`, and PostHog's `posthog-js` keyed off `POSTHOG_KEY`.
+
+**🕓 Stretch (free but large):**
+- Aggressive coverage growth on the new admin services.
+- Live custom-domain plumbing (DNS + WebAuthn RP update).
+
+## 6. Immediate action list (this sprint)
 
 1. **🔒 Revoke the GitHub token** you pasted in chat (both the original and the replacement). Treat as compromised.
 2. Wire the **audit log** (`AdminAuditLog`) + `adminAudit()` helper (O1) — do this before expanding any admin endpoint.

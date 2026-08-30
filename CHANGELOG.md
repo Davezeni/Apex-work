@@ -3,6 +3,29 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Order workflow correctness, testing & tooling
+
+### Added
+- **Order state machine** (`shared/domain/orderState.ts`): a single, tested DAG
+  of legal transitions (`PENDING → ACTIVE → IN_REVIEW → COMPLETED`, with
+  revision, cancel and dispute edges). `orders.service.ts` now routes every
+  mutation through `assertOrderTransition`, so illegal moves are rejected
+  consistently (previously scattered `if/else` checks).
+- **Money** (`shared/domain/money.ts`): `computeOrderSplit` + `isValidGigPrice`
+  are the single source of truth for platform economics (integer-ETB fee split,
+  seller always gets gross − fee). `orders.service.ts` uses it.
+- **Real test tooling** (all open-source):
+  - `npm run test:coverage` (Vitest v8 coverage) with a CI floor threshold.
+  - `npm run test:e2e` (Playwright) — installs a browser, checks the live web +
+    API smoke surface, and runs on CI pushes to catch a broken deploy.
+- CI job (`.github/workflows/ci.yml`) e2e smoke against the live deploy.
+- 11 new unit tests for the order state machine + money split (49 → 60 tests).
+
+### Changed
+- `orders.service.ts` guards now emit the reason from the transition map, and
+  fee math delegates to `computeOrderSplit`.
+- README documents the real `test:coverage` / `test:e2e` scripts.
+
 ## [Unreleased] — Admin control surface (RBAC, moderation, money, ops)
 
 ### Added

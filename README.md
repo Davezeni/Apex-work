@@ -189,9 +189,12 @@ Routes:
 ## 🧪 Testing
 
 ```bash
-npm run test           # unit tests (Vitest)
+npm run test            # unit tests (Vitest)
+npm run test:coverage   # unit tests with coverage report (v8)
+npm run test:e2e        # smoke Playwright tests against the live deploy
 ```
-> E2E (Playwright) is not wired up yet — only unit tests are in the repo today.
+
+E2E is open-source Playwright and runs against the live web + API on CI pushes (catches a broken deploy). Install browsers once with `npm --workspace @apex-work/web run test:e2e:install`.
 
 ---
 

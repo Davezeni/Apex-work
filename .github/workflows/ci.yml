@@ -41,6 +41,23 @@ jobs:
       - run: npm ci
       - run: npm run test
 
+  e2e:
+    name: E2E smoke (live deploy)
+    runs-on: ubuntu-latest
+    # Runs against the live web + API on CI push. Optional — won't fail the
+    # pipeline if the free Render dyno is cold-starting (it may take >60s).
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm --workspace @apex-work/web run test:e2e:install
+      - run: npm run test:e2e
+        env:
+          E2E_WEB_URL: https://apex-work-gold.vercel.app
+
   build:
     name: Build
     runs-on: ubuntu-latest
