@@ -25,10 +25,27 @@ export interface ResumeTemplatePurchaseResult {
   checkoutUrl?: string | null;
 }
 
-function templateOrThrow(templateId: string): ResumeTemplateDefinition {
+function baseTemplateOrThrow(templateId: string): ResumeTemplateDefinition {
   const template = resumeTemplateById(templateId);
   if (!template) throw new NotFoundError('Resume template');
   return template;
+}
+
+interface EffectiveTemplate extends ResumeTemplateDefinition {
+  available: boolean;
+}
+
+async function templateOrThrow(templateId: string): Promise<EffectiveTemplate> {
+  const base = baseTemplateOrThrow(templateId);
+  const config = await prisma.resumeTemplateConfig.findUnique({
+    where: { templateId: base.id },
+    select: { priceEtb: true, isAvailable: true },
+  });
+  return {
+    ...base,
+    priceEtb: config?.priceEtb ?? base.priceEtb,
+    available: config?.isAvailable ?? true,
+  };
 }
 
 function isFree(template: ResumeTemplateDefinition): boolean {
@@ -44,21 +61,34 @@ export function publicTemplate(template: ResumeTemplateDefinition) {
 
 /** Return the catalog and the current user's unlocked template IDs. */
 export async function listForUser(userId: string) {
-  const [resume, purchases] = await Promise.all([
+  const [resume, purchases, configs] = await Promise.all([
     prisma.resume.findUnique({ where: { userId }, select: { templateId: true, theme: true } }),
     prisma.resumeTemplatePurchase.findMany({
       where: { userId, status: 'PAID' },
       select: { templateId: true },
     }),
+    prisma.resumeTemplateConfig.findMany({
+      select: { templateId: true, priceEtb: true, isAvailable: true },
+    }),
   ]);
   const purchased = new Set(purchases.map((purchase) => purchase.templateId));
+  const byId = new Map(configs.map((config) => [config.templateId, config]));
   const activeTemplateId = resume?.templateId || resume?.theme || 'classic';
   return {
-    templates: RESUME_TEMPLATES.map((template) => ({
-      ...publicTemplate(template),
-      owned: isFree(template) || purchased.has(template.id),
-      active: template.id === activeTemplateId,
-    })),
+    templates: RESUME_TEMPLATES.map((base) => {
+      const config = byId.get(base.id);
+      const template: EffectiveTemplate = {
+        ...base,
+        priceEtb: config?.priceEtb ?? base.priceEtb,
+        available: config?.isAvailable ?? true,
+      };
+      return {
+        ...publicTemplate(template),
+        available: template.available,
+        owned: isFree(template) || purchased.has(template.id),
+        active: template.id === activeTemplateId,
+      };
+    }),
     activeTemplateId,
   };
 }
@@ -67,7 +97,9 @@ export async function assertUnlocked(
   userId: string,
   templateId: string,
 ): Promise<ResumeTemplateDefinition> {
-  const template = templateOrThrow(templateId);
+  const template = await templateOrThrow(templateId);
+  if (!template.available)
+    throw new ConflictError('This resume template is temporarily unavailable');
   if (isFree(template)) return template;
   const purchase = await prisma.resumeTemplatePurchase.findUnique({
     where: { userId_templateId: { userId, templateId: template.id } },
@@ -98,7 +130,9 @@ export async function startPurchase(
   actor: ResumeActor,
   templateId: string,
 ): Promise<ResumeTemplatePurchaseResult> {
-  const template = templateOrThrow(templateId);
+  const template = await templateOrThrow(templateId);
+  if (!template.available)
+    throw new ConflictError('This resume template is temporarily unavailable');
   if (isFree(template)) {
     return { owned: true, templateId: template.id };
   }
@@ -229,4 +263,36 @@ export async function confirmForUser(userId: string, purchaseId: string) {
 export async function confirmByTransactionRef(txRef: string) {
   if (!txRef.startsWith('apex-resume-')) return null;
   return confirmByProviderRef(txRef);
+}
+
+export async function adminList() {
+  const configs = await prisma.resumeTemplateConfig.findMany({
+    select: { templateId: true, priceEtb: true, isAvailable: true, updatedAt: true },
+  });
+  const byId = new Map(configs.map((config) => [config.templateId, config]));
+  return RESUME_TEMPLATES.map((base) => ({
+    ...publicTemplate(base),
+    priceEtb: byId.get(base.id)?.priceEtb ?? base.priceEtb,
+    available: byId.get(base.id)?.isAvailable ?? true,
+    updatedAt: byId.get(base.id)?.updatedAt ?? null,
+  }));
+}
+
+export async function adminUpdate(
+  templateId: string,
+  input: { priceEtb: number; isAvailable: boolean },
+) {
+  const base = baseTemplateOrThrow(templateId);
+  const priceEtb = Math.max(0, Math.min(100_000, Math.round(input.priceEtb)));
+  const config = await prisma.resumeTemplateConfig.upsert({
+    where: { templateId: base.id },
+    create: { templateId: base.id, priceEtb, isAvailable: input.isAvailable },
+    update: { priceEtb, isAvailable: input.isAvailable },
+  });
+  return {
+    ...publicTemplate(base),
+    priceEtb: config.priceEtb,
+    available: config.isAvailable,
+    updatedAt: config.updatedAt,
+  };
 }

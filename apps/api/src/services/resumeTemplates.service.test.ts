@@ -6,6 +6,11 @@ const { prismaMock, chapaMock } = vi.hoisted(() => ({
       findUnique: vi.fn(),
       upsert: vi.fn(),
     },
+    resumeTemplateConfig: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
     resumeTemplatePurchase: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
@@ -44,6 +49,14 @@ describe('Resume Studio templates', () => {
     prismaMock.resume.upsert.mockImplementation(({ create }: { create: { templateId: string } }) =>
       Promise.resolve({ templateId: create.templateId }),
     );
+    prismaMock.resumeTemplateConfig.findMany.mockResolvedValue([]);
+    prismaMock.resumeTemplateConfig.findUnique.mockResolvedValue(null);
+    prismaMock.resumeTemplateConfig.upsert.mockResolvedValue({
+      templateId: 'creative',
+      priceEtb: 199,
+      isAvailable: true,
+      updatedAt: new Date(),
+    });
     prismaMock.resumeTemplatePurchase.findMany.mockResolvedValue([]);
     prismaMock.resumeTemplatePurchase.findUnique.mockResolvedValue(null);
     prismaMock.resumeTemplatePurchase.findFirst.mockResolvedValue(null);

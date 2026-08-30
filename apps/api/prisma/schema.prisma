@@ -889,6 +889,17 @@ enum ResumeTemplatePurchaseStatus {
   FAILED
 }
 
+model ResumeTemplateConfig {
+  id          String   @id @default(cuid())
+  templateId  String   @unique
+  priceEtb    Int
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isAvailable])
+}
+
 model ResumeTemplatePurchase {
   id          String                       @id @default(cuid())
   userId      String

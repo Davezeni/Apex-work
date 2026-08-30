@@ -4,7 +4,12 @@ export const PRO_PLANS = [
     name: 'Freelancer Pro',
     priceEtb: 199,
     audience: 'Freelancers',
-    features: ['Advanced AI tools', 'Profile analytics', 'Priority recommendations', 'More portfolio visibility'],
+    features: [
+      'Advanced AI tools',
+      'Profile analytics',
+      'Priority recommendations',
+      'More portfolio visibility',
+    ],
   },
   {
     id: 'CLIENT_PRO',

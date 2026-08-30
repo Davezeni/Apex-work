@@ -60,6 +60,11 @@ const checks = [
     expected: (res) => res.status === 200,
   },
   {
+    name: 'web template controls page',
+    url: 'https://apex-work-gold.vercel.app/admin/templates',
+    expected: (res) => res.status === 200,
+  },
+  {
     name: 'web project workspace page',
     url: 'https://apex-work-gold.vercel.app/orders/demo/workspace',
     expected: (res) => res.status === 200,
@@ -170,6 +175,11 @@ const checks = [
   {
     name: 'skill moderation auth gate',
     url: 'https://apex-work-api.onrender.com/v1/admin/skills?pending=1',
+    expected: (res) => res.status === 401,
+  },
+  {
+    name: 'template controls auth gate',
+    url: 'https://apex-work-api.onrender.com/v1/admin/resume-templates',
     expected: (res) => res.status === 401,
   },
   {

@@ -14,6 +14,7 @@ export interface ResumeTemplate {
   emoji: string;
   bestFor: string;
   features: string[];
+  available: boolean;
   owned: boolean;
   active: boolean;
 }

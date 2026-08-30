@@ -168,7 +168,7 @@ export default function ResumeTemplatesPage() {
           {items.map((template) => (
             <article
               key={template.id}
-              className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg ${template.active ? 'border-primary shadow-md shadow-primary/10' : 'border-border'}`}
+              className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg ${!template.available ? 'opacity-60 grayscale' : ''} ${template.active ? 'border-primary shadow-md shadow-primary/10' : 'border-border'}`}
             >
               <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-card to-accent/10">
                 <div className="absolute inset-x-5 top-5 h-2 rounded-full bg-foreground/10" />
@@ -192,11 +192,15 @@ export default function ResumeTemplatesPage() {
                     </>
                   )}
                 </span>
-                {template.active && (
+                {!template.available ? (
+                  <span className="absolute bottom-2 left-2 rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+                    Temporarily unavailable
+                  </span>
+                ) : template.active ? (
                   <span className="absolute bottom-2 left-2 rounded-full bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground">
                     Current
                   </span>
-                )}
+                ) : null}
               </div>
               <div className="flex flex-1 flex-col p-4">
                 <h3 className="font-extrabold">{template.name}</h3>
@@ -221,10 +225,12 @@ export default function ResumeTemplatesPage() {
                     className="w-full"
                     variant={template.owned ? 'outline' : 'brand'}
                     size="sm"
-                    disabled={busy}
+                    disabled={busy || !template.available}
                     onClick={() => choose(template.id, template.owned)}
                   >
-                    {template.owned ? (
+                    {!template.available ? (
+                      'Unavailable'
+                    ) : template.owned ? (
                       <>
                         <Check className="h-4 w-4" /> {template.active ? 'Applied' : 'Use template'}
                       </>
