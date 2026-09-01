@@ -11,7 +11,7 @@
  * their balance while an operator is processing. If the withdrawal fails,
  * mark it FAILED and re-credit the wallet (see markStatus()).
  */
-import type { WithdrawalStatus } from '@prisma/client';
+import type { Prisma, WithdrawalStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
@@ -221,7 +221,7 @@ export async function markStatus(
   next: WithdrawalStatus,
   meta?: { providerRef?: string; failureReason?: string },
 ) {
-  return prisma.$transaction(async (tx) => {
+  return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const wd = await tx.withdrawal.findUnique({ where: { id: withdrawalId } });
     if (!wd) throw new NotFoundError('Withdrawal');
     if (wd.status === next) return wd;

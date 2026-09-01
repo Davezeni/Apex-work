@@ -15,7 +15,7 @@ import { useMe } from '@/hooks/use-me';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { formatEtb, timeAgo, cn } from '@/lib/utils';
+import { formatEtb, formatCompact, timeAgo, cn } from '@/lib/utils';
 import { ModerationTab } from '@/components/admin/moderation-tab';
 import { MoneyTab } from '@/components/admin/money-tab';
 import { SupportTab } from '@/components/admin/support-tab';
@@ -25,6 +25,7 @@ import { SettingsTab } from '@/components/admin/settings-tab';
 import { AuditTab } from '@/components/admin/audit-tab';
 import { AdminsTab } from '@/components/admin/admins-tab';
 import { canRole } from '@/components/admin/rbac';
+import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
 
 /** Staff roles that may access the admin panel (mirrors @apex-work/shared). */
 const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
@@ -35,7 +36,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-08-30.3';
+export const ADMIN_UI_BUILD = '2026-09-01.1';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -275,6 +276,18 @@ interface Summary {
   revenueEtb: number;
   pending: { reports: number; withdrawals: number };
 }
+interface AnalyticsSeriesResp {
+  days: number;
+  start: string;
+  end: string;
+  metrics: {
+    signups: SeriesPoint[];
+    ordersCreated: SeriesPoint[];
+    ordersCompleted: SeriesPoint[];
+    gmvEtb: SeriesPoint[];
+    revenueEtb: SeriesPoint[];
+  };
+}
 function SummaryTab() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery<Summary>({
@@ -282,7 +295,16 @@ function SummaryTab() {
     queryFn: () => apiFetch('/admin/summary', { token }),
     enabled: !!token,
   });
+  const [seriesDays, setSeriesDays] = useState(30);
+  const { data: series } = useQuery<AnalyticsSeriesResp>({
+    queryKey: ['admin', 'analytics-series', seriesDays],
+    queryFn: () => apiFetch<AnalyticsSeriesResp>(`/admin/ops/analytics/series?days=${seriesDays}`, { token }),
+    enabled: !!token,
+  });
   if (isLoading || !data) return <div className="grid h-40 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  const m = series?.metrics;
+  const gmvTotal = m?.gmvEtb.reduce((s, p) => s + (p.value ?? 0), 0) ?? 0;
+  const revTotal = m?.revenueEtb.reduce((s, p) => s + (p.value ?? 0), 0) ?? 0;
   return (
     <div className="mx-3 mt-4 space-y-3">
       <div className="grad-hero rounded-2xl p-4 text-white shadow-xl shadow-primary/40">
@@ -298,8 +320,49 @@ function SummaryTab() {
         <KPI icon={<Flag className="h-4 w-4 text-red-500" />} label="Reports open" value={String(data.pending.reports)} sub="Needs review" />
         <KPI icon={<WalletIcon className="h-4 w-4 text-amber-500" />} label="Withdrawals" value={String(data.pending.withdrawals)} sub="Pending" />
       </div>
+
+      {series && (
+        <div className="space-y-3">
+          <SectionHead2>Activity · last {seriesDays}d</SectionHead2>
+          <div className="grid grid-cols-2 gap-2">
+            <MiniStat label={`GMV (${seriesDays}d)`} value={formatEtb(gmvTotal)} tone="ok" />
+            <MiniStat label={`Revenue (${seriesDays}d)`} value={formatEtb(revTotal)} tone="info" />
+          </div>
+          <TrendChart
+            metric={{ key: 'gmv', label: 'GMV (ETB)', color: '#6366f1', format: (v) => formatCompact(Math.round(v)), series: m!.gmvEtb, useValue: true }}
+            days={seriesDays}
+            onDaysChange={setSeriesDays}
+          />
+          <TrendChart
+            metric={{ key: 'signups', label: 'Signups', color: '#10b981', format: (v) => String(Math.round(v)), series: m!.signups, useValue: false }}
+            days={seriesDays}
+            onDaysChange={setSeriesDays}
+          />
+          <TrendChart
+            metric={{ key: 'orders', label: 'Orders created', color: '#0ea5e9', format: (v) => String(Math.round(v)), series: m!.ordersCreated, useValue: false }}
+            days={seriesDays}
+            onDaysChange={setSeriesDays}
+          />
+          <TrendChart
+            metric={{ key: 'completed', label: 'Orders completed', color: '#f59e0b', format: (v) => String(Math.round(v)), series: m!.ordersCompleted, useValue: false }}
+            days={seriesDays}
+            onDaysChange={setSeriesDays}
+          />
+        </div>
+      )}
     </div>
   );
+}
+function MiniStat({ label, value, tone }: { label: string; value: string; tone: 'ok' | 'info' }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-extrabold tracking-tight">{value}</div>
+    </div>
+  );
+}
+function SectionHead2({ children }: { children: React.ReactNode }) {
+  return <div className="pt-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{children}</div>;
 }
 function KPI({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (

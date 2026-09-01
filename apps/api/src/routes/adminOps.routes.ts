@@ -25,6 +25,7 @@ import * as community from '../services/admin/community.service.js';
 import * as support from '../services/admin/support.service.js';
 import * as ops from '../services/admin/ops.service.js';
 import * as settings from '../services/admin/settings.service.js';
+import * as analytics from '../services/admin/analytics.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -37,6 +38,15 @@ router.get(
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
     return success(res, await ops.analyticsSummary(days));
+  }),
+);
+
+router.get(
+  '/analytics/series',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    return success(res, await analytics.analyticsSeries(days));
   }),
 );
 

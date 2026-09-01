@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Admin time-series analytics (feature #1 of the power push)
+
+### Added
+- **Time-series analytics on the admin Summary tab**: daily GMV, revenue,
+  signups, orders created and orders completed, rendered as interactive SVG
+  line charts with 7/30/90-day window switch and hover tooltips. No chart
+  library — hand-rolled SVG stays free/OSS and tiny.
+- **`GET /admin/ops/analytics/series`** API (RBAC `dashboard:view`) that
+  aggregates per-day buckets at the database (`date_trunc` + raw SQL) so we
+  never load full tables into Node, then folds them into a gap-free series.
+- **Pure series lib `apps/api/src/lib/series.ts`** — `buildDailySeries`,
+  `startDateForDays`, `deltaOfSeries`, `maxSeriesValue` (unit-tested without a
+  DB).
+- **+14 unit tests** (series bucketing + analytics helpers) — 103 → 117 tests.
+- Build marker bumped to `2026-09-01.1` (visible in the admin header).
+- Fixed a latent `withdrawals.service.ts` implicit-`any` that would have
+  failed a strict production typecheck.
+
 ## [Unreleased] — Deploy fix: admin panel now live on Vercel
 
 ### Fixed
