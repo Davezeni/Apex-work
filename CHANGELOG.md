@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Proactive moderation auto-flag scan (power push #6)
+
+### Added
+- **Moderation rules engine** (`apps/api/src/lib/moderationRules.ts`): pure,
+  testable `analyzeContent` / `maxSeverity` / `summarizeFlags` against a
+  declarative rule-set (off-platform + scam, prohibited items, off-platform
+  contact, PII/doxxing, adult, spam) — case/whitespace-insensitive substring
+  matching. Conservative by design to limit false positives.
+- **`POST /admin/ops/moderation/scan`** (RBAC `moderation:content`, audited):
+  scans recent gigs (auto-sets `isFlagged`/`flaggedReason`), jobs and reviews,
+  returning a scanned/flagged summary + the flagged items (gigs, jobs, reviews).
+- **"Run auto-flag scan" button** on the Moderation tab (SectionHead action);
+  invalidates the gigs/reports queries on success.
+- **+9 unit tests** — 128 → 137 tests.
+
 ## [Unreleased] — Power push #2–#4: CSV exports, privacy/data export
 
 ### Added

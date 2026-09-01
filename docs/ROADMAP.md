@@ -156,6 +156,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - Gig/profile analytics (#3) and recommendations/discovery (#5) already existed
   on the app side (`/me/profile-analytics`, gig analytics page, `GET
   /recommendations`).
+- **Proactive moderation auto-flag scan** (#6): `lib/moderationRules.ts` rules
+  engine + `POST /admin/ops/moderation/scan` + "Run auto-flag scan" button.
+  137 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

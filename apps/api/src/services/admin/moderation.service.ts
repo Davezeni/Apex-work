@@ -5,7 +5,8 @@
  */
 import { prisma } from '../../lib/prisma.js';
 import type { GigStatus } from '@prisma/client';
-import { NotFoundError } from '../../lib/errors.js';
+import { NotFoundError, BadRequestError } from '../../lib/errors.js';
+import { analyzeContent, summarizeFlags } from '../../lib/moderationRules.js';
 
 // ---------------- GIGS ----------------
 
@@ -155,4 +156,64 @@ export async function moderateReview(
       ? { hiddenAt: new Date(), hiddenById: adminId, hiddenReason: reason ?? null }
       : { hiddenAt: null, hiddenById: null, hiddenReason: null };
   return prisma.review.update({ where: { id: reviewId }, data });
+}
+
+// ---------------- PROACTIVE SCAN ----------------
+
+export interface ScanItem {
+  id: string;
+  kind: 'GIG' | 'JOB' | 'REVIEW';
+  title: string;
+  matches: { category: string; ruleId: string; matched: string; severity: string }[];
+  summary?: string;
+}
+
+export interface ScanSummary {
+  scanned: number;
+  flagged: number;
+  items: ScanItem[];
+}
+
+/**
+ * Run the moderation rules engine over the most recent N items of each kind,
+ * auto-flagging content via the existing `isFlagged`/`flaggedReason` fields.
+ * Returns a summary (plus the flagged items) so the UI shows what was hit.
+ */
+export async function contentScan(limit = 50): Promise<ScanSummary> {
+  if (limit < 1 || limit > 500) throw new BadRequestError('limit must be 1..500');
+
+  const [gigs, jobs, reviews] = await Promise.all([
+    prisma.gig.findMany({ where: { isFlagged: false }, orderBy: { createdAt: 'desc' }, take: limit, select: { id: true, title: true, description: true } }),
+    prisma.job.findMany({ where: { isOpen: true }, orderBy: { createdAt: 'desc' }, take: limit, select: { id: true, title: true, description: true } }),
+    prisma.review.findMany({ where: { hiddenAt: null }, orderBy: { createdAt: 'desc' }, take: limit, select: { id: true, comment: true } }),
+  ]);
+
+  const items: ScanItem[] = [];
+  let flagged = 0;
+
+  for (const g of gigs) {
+    const flags = analyzeContent(`${g.title} ${g.description ?? ''}`);
+    if (flags.length) {
+      flagged += 1;
+      await prisma.gig.update({ where: { id: g.id }, data: { isFlagged: true, flaggedReason: summarizeFlags(flags) } });
+      items.push({ id: g.id, kind: 'GIG', title: g.title, matches: flags.map((f) => ({ category: f.category, ruleId: f.ruleId, matched: f.matched, severity: f.severity })), summary: summarizeFlags(flags) });
+    }
+  }
+
+  for (const j of jobs) {
+    const flags = analyzeContent(`${j.title} ${j.description ?? ''}`);
+    if (flags.length) {
+      // Jobs have no flag column; surface via the review route summary only.
+      items.push({ id: j.id, kind: 'JOB', title: j.title, matches: flags.map((f) => ({ category: f.category, ruleId: f.ruleId, matched: f.matched, severity: f.severity })), summary: summarizeFlags(flags) });
+    }
+  }
+
+  for (const r of reviews) {
+    const flags = analyzeContent(r.comment ?? '');
+    if (flags.length) {
+      items.push({ id: r.id, kind: 'REVIEW', title: r.comment ?? '', matches: flags.map((f) => ({ category: f.category, ruleId: f.ruleId, matched: f.matched, severity: f.severity })), summary: summarizeFlags(flags) });
+    }
+  }
+
+  return { scanned: gigs.length + jobs.length + reviews.length, flagged, items };
 }

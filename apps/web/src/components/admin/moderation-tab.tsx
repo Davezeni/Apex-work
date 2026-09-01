@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ScanSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
@@ -17,9 +18,29 @@ const gigStatusTone: Record<string, 'ok' | 'warn' | 'neutral' | 'bad'> = {
 
 export function ModerationTab() {
   const [sub, setSub] = useState<Sub>('gigs');
+  const token = useToken();
+  const qc = useQueryClient();
+  const scan = useMutation({
+    mutationFn: () => apiFetch<{ scanned: number; flagged: number; items: { id: string; kind: string; title: string; summary: string }[] }>('/admin/ops/moderation/scan', { method: 'POST', token }),
+    onSuccess: (r) => {
+      toast.success(`Scanned ${r.scanned} items — flagged ${r.flagged}`);
+      qc.invalidateQueries({ queryKey: ['admin/gigs'] });
+      qc.invalidateQueries({ queryKey: ['admin/reports'] });
+    },
+    onError: (e) => toast.error((e as Error).message ?? 'Scan failed'),
+  });
   return (
     <div className="space-y-5">
-      <SectionHead title="Moderation" subtitle="Review and act on gigs, jobs and reviews" />
+      <SectionHead
+        title="Moderation"
+        subtitle="Review and act on gigs, jobs and reviews"
+        actions={
+          <button onClick={() => scan.mutate()} disabled={scan.isPending} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-bold text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50">
+            <ScanSearch className="h-3.5 w-3.5" />
+            {scan.isPending ? 'Scanning…' : 'Run auto-flag scan'}
+          </button>
+        }
+      />
       <div className="flex gap-1 rounded-xl bg-muted p-1">
         {(['gigs', 'jobs', 'reviews'] as Sub[]).map((s) => (
           <button

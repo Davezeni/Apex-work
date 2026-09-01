@@ -112,6 +112,21 @@ router.get(
 );
 
 router.post(
+  '/moderation/scan',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const actor = await loadActor(req);
+    const limit = Math.min(500, Math.max(1, Number((req.query as { limit?: string }).limit) || 50));
+    const result = await mod.contentScan(limit);
+    await adminAudit({
+      ...actor, ip: req.ip, action: 'MODERATION.SCAN', resourceType: 'SYSTEM', resourceId: `scan-${Date.now()}`,
+      after: { scanned: result.scanned, flagged: result.flagged },
+    });
+    return success(res, result);
+  }),
+);
+
+router.post(
   '/gigs/:id/moderate',
   requireCapability('moderation:content'),
   validate(gigModerateSchema),
