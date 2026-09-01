@@ -3,6 +3,18 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Wallet reconciliation report (power push #7)
+
+### Added
+- **Wallet reconciliation report** — `lib/reconcile.ts` (pure: build
+  reconciliation over wallet balances + ledger sums, computes signed drift,
+  surface worst offenders first) + `GET /admin/ops/reconcile` (RBAC
+  `money:orders`) that aggregates at the DB via a LEFT JOIN + GROUP BY (never
+  loads whole tables).
+- **"Reconcile" sub-view** on the Orders & Money tab: wallets/in-sync/drifted
+  counters, net-drift warning banner, and a drift list sorted by magnitude.
+- **+5 unit tests** — 137 → 142 tests.
+
 ## [Unreleased] — Proactive moderation auto-flag scan (power push #6)
 
 ### Added

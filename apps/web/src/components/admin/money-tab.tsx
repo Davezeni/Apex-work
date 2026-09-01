@@ -10,7 +10,7 @@ import { formatEtb, cn } from '@/lib/utils';
 import { SectionHead, Badge, Spinner, Empty, TableShell, Th, Td, inputCls, Field } from './admin-ui';
 import { ExportButton } from './export-button';
 
-type Sub = 'orders' | 'ledger' | 'withdrawals';
+type Sub = 'orders' | 'ledger' | 'withdrawals' | 'reconcile';
 
 const orderTone: Record<string, 'ok' | 'warn' | 'neutral' | 'bad' | 'info'> = {
   COMPLETED: 'ok', ACTIVE: 'info', IN_REVIEW: 'warn', DELIVERED: 'ok', PENDING: 'neutral', CANCELLED: 'bad', DISPUTED: 'bad',
@@ -22,13 +22,14 @@ export function MoneyTab() {
     <div className="space-y-5">
       <SectionHead title="Orders & Money" subtitle="Orders, refunds, wallet ledger and payouts" />
       <div className="flex gap-1 rounded-xl bg-muted p-1">
-        {(['orders', 'ledger', 'withdrawals'] as Sub[]).map((s) => (
+        {(['orders', 'ledger', 'withdrawals', 'reconcile'] as Sub[]).map((s) => (
           <button key={s} onClick={() => setSub(s)} className={cn('flex-1 rounded-lg px-3 py-2 text-sm font-bold capitalize transition-colors', sub === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')}>{s}</button>
         ))}
       </div>
       {sub === 'orders' && <Orders />}
       {sub === 'ledger' && <Ledger />}
       {sub === 'withdrawals' && <Withdrawals />}
+      {sub === 'reconcile' && <Reconcile />}
     </div>
   );
 }
@@ -202,6 +203,60 @@ function Withdrawals() {
           </tbody>
         </TableShell>
       )}
+    </div>
+  );
+}
+
+interface ReconRow { userId: string; walletBalanceEtb: number; ledgerEtb: number; driftEtb: number; matches: boolean }
+function Reconcile() {
+  const token = useToken();
+  const { data, isLoading, refetch } = useQuery<{ wallets: number; reconciled: number; drifted: number; netDriftEtb: number; rows: ReconRow[] }>({
+    queryKey: ['admin/reconcile'],
+    queryFn: () => apiFetch('/admin/ops/reconcile', { token }),
+    enabled: !!token,
+  });
+  const drifts = (data?.rows ?? []).filter((r) => !r.matches);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Verifies every wallet balance equals the signed sum of its ledger transactions.</p>
+        <button onClick={() => refetch()} disabled={isLoading} className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-50">Recheck</button>
+      </div>
+      {isLoading ? <Spinner label="Reconciling…" /> : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Mini tx={data?.wallets ?? 0} label="Wallets" />
+            <Mini tx={data?.reconciled ?? 0} label="In sync" />
+            <Mini tx={data?.drifted ?? 0} label="Drifted" warn={(data?.drifted ?? 0) > 0} />
+          </div>
+          {data && data.netDriftEtb !== 0 && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-600">Net ledger vs wallet drift: {formatEtb(data.netDriftEtb)}</div>
+          )}
+          {drifts.length === 0 ? <Empty message="All wallets reconcile ✓" /> : (
+            <TableShell>
+              <thead><tr><Th>User</Th><Th>Wallet</Th><Th>Ledger</Th><Th>Drift</Th></tr></thead>
+              <tbody>
+                {drifts.slice(0, 100).map((r) => (
+                  <tr key={r.userId} className="border-b border-border/50">
+                    <Td className="text-muted-foreground">@{r.userId.slice(0, 8)}…</Td>
+                    <Td className="font-semibold">{formatEtb(r.walletBalanceEtb)}</Td>
+                    <Td className="font-semibold">{formatEtb(r.ledgerEtb)}</Td>
+                    <Td><Badge tone="bad">{formatEtb(r.driftEtb)}</Badge></Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableShell>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+function Mini({ tx, label, warn }: { tx: number; label: string; warn?: boolean }) {
+  return (
+    <div className={`rounded-2xl border border-border bg-card p-3 ${warn ? 'border-amber-500/40' : ''}`}>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xl font-extrabold tracking-tight">{tx.toLocaleString()}</div>
     </div>
   );
 }

@@ -159,6 +159,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Proactive moderation auto-flag scan** (#6): `lib/moderationRules.ts` rules
   engine + `POST /admin/ops/moderation/scan` + "Run auto-flag scan" button.
   137 unit tests.
+- **Wallet reconciliation report** (#7): `lib/reconcile.ts` +
+  `GET /admin/ops/reconcile` + "Reconcile" sub-view on Orders & Money.
+  142 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

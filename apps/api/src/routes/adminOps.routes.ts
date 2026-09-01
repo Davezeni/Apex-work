@@ -28,6 +28,7 @@ import * as ops from '../services/admin/ops.service.js';
 import * as settings from '../services/admin/settings.service.js';
 import * as analytics from '../services/admin/analytics.service.js';
 import * as exporter from '../services/admin/export.service.js';
+import * as reconcile from '../services/admin/reconcile.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -59,6 +60,15 @@ const exportCaps: Record<string, string> = {
   orders: 'money:orders',
   users: 'dashboard:view',
 };
+
+router.get(
+  '/reconcile',
+  requireCapability('money:orders'),
+  asyncHandler(async (req, res) => {
+    const report = await reconcile.reconcileWallets();
+    return success(res, report);
+  }),
+);
 
 router.get(
   '/export/:kind',
