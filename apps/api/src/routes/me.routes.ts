@@ -16,6 +16,7 @@ import * as authService from '../services/auth.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import * as profileAnalytics from '../services/profileAnalytics.service.js';
 import { dataExport } from '../services/data-export.service.js';
+import { referralDashboard } from '../services/referrals.service.js';
 
 const router: Router = Router();
 
@@ -68,6 +69,14 @@ router.get(
   '/profile-analytics',
   asyncHandler(async (req, res) => {
     return success(res, await profileAnalytics.dashboard(req.user!.sub));
+  }),
+);
+
+/** GET /me/referrals — referral stats + shareable link + referred list. */
+router.get(
+  '/referrals',
+  asyncHandler(async (req, res) => {
+    return success(res, await referralDashboard(req.user!.sub));
   }),
 );
 

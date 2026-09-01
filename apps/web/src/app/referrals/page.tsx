@@ -8,11 +8,27 @@ import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { formatEtb } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { useAuthStore } from '@/stores/auth-store';
+import { apiFetch } from '@/lib/api';
+
+interface ReferralResp {
+  referralCode: string;
+  shareUrl: string;
+  stats: { total: number; pending: number; active: number; attributedGmvEtb: number; commissionEtb: number; topBySpend: { username: string; fullName: string; spentEtb: number } | null };
+  referred: { userId: string; username: string; fullName: string; joinedAt: string; completedOrders: number; spentEtb: number }[];
+}
 
 export default function ReferralsPage() {
   const router = useRouter();
   const { t } = useI18n();
   const { data: me, isLoading, isAuthed } = useMe();
+  const token = useAuthStore((s) => s.accessToken);
+  const { data: ref } = useQuery<ReferralResp>({
+    queryKey: ['me', 'referrals'],
+    queryFn: () => apiFetch('/me/referrals', { token }),
+    enabled: !!token,
+  });
   const [origin, setOrigin] = useState('https://apex-work-gold.vercel.app');
 
   useEffect(() => {
@@ -90,10 +106,27 @@ export default function ReferralsPage() {
       </section>
 
       <section className="mx-3 mt-4 grid grid-cols-3 gap-2">
-        <Stat icon={<Users className="h-4 w-4" />} label="Referred" value="0" />
-        <Stat icon={<Sparkles className="h-4 w-4" />} label="Active" value="0" />
-        <Stat icon={<Gift className="h-4 w-4" />} label="Earned" value={formatEtb(0)} />
+        <Stat icon={<Users className="h-4 w-4" />} label="Referred" value={String(ref?.stats.total ?? 0)} />
+        <Stat icon={<Sparkles className="h-4 w-4" />} label="Active" value={String(ref?.stats.active ?? 0)} />
+        <Stat icon={<Gift className="h-4 w-4" />} label="Earned" value={formatEtb(ref?.stats.commissionEtb ?? 0)} />
       </section>
+
+      {ref && ref.referred.length > 0 && (
+        <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
+          <div className="text-sm font-bold">Your referrals</div>
+          <div className="mt-2 space-y-2">
+            {ref.referred.slice(0, 20).map((r) => (
+              <div key={r.userId} className="flex items-center justify-between gap-2 text-xs">
+                <div className="min-w-0 truncate font-semibold">{r.fullName} <span className="text-muted-foreground">@{r.username}</span></div>
+                <div className="shrink-0 text-right">
+                  <div className="font-bold">{formatEtb(r.spentEtb)}</div>
+                  <div className="text-muted-foreground">{r.completedOrders > 0 ? `${r.completedOrders} order(s)` : 'no orders yet'}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
         <div className="text-sm font-bold">How it works</div>

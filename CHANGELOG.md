@@ -3,6 +3,18 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Referral programme analytics (power push #8)
+
+### Added
+- **Referral dashboard** — `lib/referralStats.ts` (pure `buildReferralStats`
+  mapping referred users → total/active/pending cohorts, attributed GMV and
+  commission at a configurable reward rate, top referral) +
+  `GET /me/referrals` returns shareable `ref` link/code, stats and the referred
+  list with completed-order aggregates.
+- **Referrals page** now shows real numbers (Referred / Active / Earned) and a
+  live "Your referrals" list instead of hard-coded zeros.
+- **+4 unit tests** — 142 → 146 tests.
+
 ## [Unreleased] — Wallet reconciliation report (power push #7)
 
 ### Added

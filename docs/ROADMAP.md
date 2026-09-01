@@ -162,6 +162,8 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Wallet reconciliation report** (#7): `lib/reconcile.ts` +
   `GET /admin/ops/reconcile` + "Reconcile" sub-view on Orders & Money.
   142 unit tests.
+- **Referral programme analytics** (#8): `lib/referralStats.ts` +
+  `GET /me/referrals` + live stats/list on the Referrals page. 146 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
