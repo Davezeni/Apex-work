@@ -148,6 +148,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   money, community) — 103 unit tests.
 - E2E suite validated against the live deploy: 7/7 Playwright tests pass
   (admin access-guards + public API smoke).
+- **Admin time-series analytics** (feature #1 of the "power push"): per-day
+  GMV / revenue / signups / orders-created / orders-completed charts on the
+  Summary tab (`GET /admin/ops/analytics/series`, `lib/series.ts`, 117 tests).
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
