@@ -151,6 +151,11 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Admin time-series analytics** (feature #1 of the "power push"): per-day
   GMV / revenue / signups / orders-created / orders-completed charts on the
   Summary tab (`GET /admin/ops/analytics/series`, `lib/series.ts`, 117 tests).
+- **Admin CSV exports** (#2) + **privacy/data export** (#4, GDPR-style
+  `GET /me/data-export` + Settings → Security UI). 128 unit tests.
+- Gig/profile analytics (#3) and recommendations/discovery (#5) already existed
+  on the app side (`/me/profile-analytics`, gig analytics page, `GET
+  /recommendations`).
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

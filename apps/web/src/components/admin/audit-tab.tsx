@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { SectionHead, Badge, Spinner, Empty, TableShell, Th, Td, inputCls } from './admin-ui';
+import { ExportButton } from './export-button';
 
 export function AuditTab() {
   const token = useAuthStore((s) => s.accessToken);
@@ -17,7 +18,11 @@ export function AuditTab() {
   const items: any[] = data?.items ?? [];
   return (
     <div className="space-y-4">
-      <SectionHead title="Audit log" subtitle="Every admin mutation, who/what/when" />
+      <SectionHead
+        title="Audit log"
+        subtitle="Every admin mutation, who/what/when"
+        actions={<ExportButton kind="audit" params={resourceType ? { resourceType } : {}} />}
+      />
       <select value={resourceType} onChange={(e) => setResourceType(e.target.value)} className={cn(inputCls, 'w-auto')}>
         <option value="">All resource types</option>
         {['GIG', 'JOB', 'REVIEW', 'ORDER', 'WALLET', 'WITHDRAWAL', 'USER', 'TICKET', 'SETTING', 'SYSTEM'].map((t) => <option key={t} value={t}>{t}</option>)}

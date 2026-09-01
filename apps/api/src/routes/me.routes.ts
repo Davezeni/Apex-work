@@ -15,6 +15,7 @@ import { NotFoundError } from '../lib/errors.js';
 import * as authService from '../services/auth.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import * as profileAnalytics from '../services/profileAnalytics.service.js';
+import { dataExport } from '../services/data-export.service.js';
 
 const router: Router = Router();
 
@@ -67,6 +68,16 @@ router.get(
   '/profile-analytics',
   asyncHandler(async (req, res) => {
     return success(res, await profileAnalytics.dashboard(req.user!.sub));
+  }),
+);
+
+/** GET /me/data-export — GDPR-style bundle of everything the user owns. */
+router.get(
+  '/data-export',
+  asyncHandler(async (req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="apex-work-data-export-${req.user!.sub.slice(0, 8)}.json"`);
+    res.send(JSON.stringify(await dataExport(req.user!.sub), null, 2));
   }),
 );
 

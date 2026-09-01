@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Power push #2–#4: CSV exports, privacy/data export
+
+### Added
+- **Admin CSV exports** — `GET /admin/ops/export/{audit|orders|users}` (RBAC per
+  kind + download headers). "Export CSV" buttons on the Audit, Orders & Money
+  and Users tabs; fetches with the Bearer token and downloads from a blob (token
+  never appears in a URL). Pure `lib/csv.ts` (RFC-4180) is unit-tested.
+- **One-click data export (GDPR-style)** — `GET /me/data-export` streams a JSON
+  bundle of everything a user owns (profile, gigs + base package price, jobs,
+  client/seller orders with counterpart, reviews given/received, counts). New
+  "Data & privacy" section in Settings → Security with an Export button and a
+  link to account deletion.
+- **+11 unit tests** (CSV serialisation + export payload builder) — 117 → 128
+  tests.
+
 ## [Unreleased] — Admin time-series analytics (feature #1 of the power push)
 
 ### Added

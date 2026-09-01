@@ -9,6 +9,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdmin, requireCapability } from '../middleware/adminOnly.js';
+import { can } from '../lib/adminRbac.js';
 import { success } from '../lib/response.js';
 import { paginate } from '../lib/adminPage.js';
 import { loadActor, adminAudit } from '../lib/audit.js';
@@ -26,6 +27,7 @@ import * as support from '../services/admin/support.service.js';
 import * as ops from '../services/admin/ops.service.js';
 import * as settings from '../services/admin/settings.service.js';
 import * as analytics from '../services/admin/analytics.service.js';
+import * as exporter from '../services/admin/export.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -47,6 +49,44 @@ router.get(
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
     return success(res, await analytics.analyticsSeries(days));
+  }),
+);
+
+// ================= EXPORTS (CSV) =================
+
+const exportCaps: Record<string, string> = {
+  audit: 'audit:view',
+  orders: 'money:orders',
+  users: 'dashboard:view',
+};
+
+router.get(
+  '/export/:kind',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const kind = (req.params as { kind: string }).kind;
+    const cap = exportCaps[kind];
+    if (!cap) {
+      res.status(404).json({ ok: false, error: 'Unknown export kind' });
+      return;
+    }
+    // Per-kind RBAC (broader than the route-wide dashboard:view guard).
+    if (!req.userRole || !can(req.userRole as never, cap as never)) {
+      res.status(403).json({ ok: false, error: 'Forbidden' });
+      return;
+    }
+
+    const q = req.query as Record<string, string | undefined>;
+    const result =
+      kind === 'audit'
+        ? await exporter.exportAudit({ adminId: q.adminId, resourceType: q.resourceType })
+        : kind === 'orders'
+          ? await exporter.exportOrders({ status: q.status, q: q.q })
+          : await exporter.exportUsers({ role: q.role, q: q.q, suspended: q.suspended ? q.suspended === '1' : undefined });
+
+    res.setHeader('Content-Type', `${result.mime}; charset=utf-8`);
+    res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
+    res.send(result.csv);
   }),
 );
 

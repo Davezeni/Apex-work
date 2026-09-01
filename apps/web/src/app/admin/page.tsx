@@ -26,6 +26,7 @@ import { AuditTab } from '@/components/admin/audit-tab';
 import { AdminsTab } from '@/components/admin/admins-tab';
 import { canRole } from '@/components/admin/rbac';
 import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
+import { ExportButton } from '@/components/admin/export-button';
 
 /** Staff roles that may access the admin panel (mirrors @apex-work/shared). */
 const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
@@ -36,7 +37,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-01.1';
+export const ADMIN_UI_BUILD = '2026-09-01.2';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -532,7 +533,10 @@ function UsersTab() {
   });
   return (
     <div className="mx-3 mt-4">
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users…" className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+      <div className="mb-2 flex items-center gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users…" className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+        <ExportButton kind="users" params={q ? { q } : {}} />
+      </div>
       {isLoading && <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />}
       <div className="mt-3 space-y-2">
         {(data?.items ?? []).map((u) => (

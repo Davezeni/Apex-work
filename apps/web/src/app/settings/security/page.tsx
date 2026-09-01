@@ -17,6 +17,7 @@ import {
   LogOut,
   ShieldAlert,
   ChevronRight,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -126,6 +127,41 @@ export default function SecuritySettingsPage() {
       </Section>
 
       {/* Danger zone */}
+      <Section title="Data & privacy">
+        <SettingRow
+          icon={<Download className="h-4 w-4 text-primary" />}
+          title="Export my data"
+          subtitle="Download a JSON bundle of everything tied to your account — profile, gigs, jobs, orders, reviews."
+          onClick={async () => {
+            const token = useAuthStore.getState().accessToken;
+            if (!token) return;
+            try {
+              const res = await fetch('/me/data-export', { headers: { Authorization: `Bearer ${token}` } });
+              if (!res.ok) throw new Error(`Export failed (${res.status})`);
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'apex-work-data-export.json';
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+              toast.success('Your data is being downloaded');
+            } catch (e) {
+              toast.error((e as Error).message ?? 'Export failed');
+            }
+          }}
+          cta="Export"
+        />
+        <SettingRow
+          icon={<ShieldAlert className="h-4 w-4 text-muted-foreground" />}
+          title="GDPR rights"
+          subtitle="You can request deletion of your account and associated data at any time."
+          href="/settings/delete"
+          cta="Manage"
+        />
+      </Section>
       <Section title={t('security.dangerZone')}>
         <SettingRow
           icon={<ShieldAlert className="h-4 w-4 text-destructive" />}

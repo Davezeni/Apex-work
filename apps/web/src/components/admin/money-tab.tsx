@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
 import { formatEtb, cn } from '@/lib/utils';
 import { SectionHead, Badge, Spinner, Empty, TableShell, Th, Td, inputCls, Field } from './admin-ui';
+import { ExportButton } from './export-button';
 
 type Sub = 'orders' | 'ledger' | 'withdrawals';
 
@@ -61,6 +62,7 @@ function Orders() {
           {Object.keys(orderTone).map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title / order #" className={cn(inputCls, 'w-64')} />
+        <ExportButton kind="orders" params={{ status: status || undefined, q: q || undefined }} />
       </div>
       {isLoading ? <Spinner label="Loading orders…" /> : items.length === 0 ? <Empty message="No orders found" /> : (
         <TableShell>
