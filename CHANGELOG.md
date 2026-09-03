@@ -3,6 +3,18 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Pro-monetization analytics (power push #9)
+
+### Added
+- **Pro revenue analytics** — `lib/subscriptionAnalytics.ts` (pure
+  `buildSubscriptionStats`: active subscribers, active/total revenue, trailing
+  window revenue + purchases, avg price, by-plan revenue/share ranked, top
+  plan) + `GET /admin/ops/subscriptions/analytics` (RBAC `subscriptions:manage`).
+- **List / Revenue toggle** on the Subscriptions tab: revenue cards (Pro subs,
+  active value, avg price, window revenue + purchases) and a by-plan revenue
+  bar chart (hand-rolled, no chart lib).
+- **+4 unit tests** — 146 → 150 tests.
+
 ## [Unreleased] — Referral programme analytics (power push #8)
 
 ### Added

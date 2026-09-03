@@ -164,6 +164,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   142 unit tests.
 - **Referral programme analytics** (#8): `lib/referralStats.ts` +
   `GET /me/referrals` + live stats/list on the Referrals page. 146 unit tests.
+- **Pro-monetization analytics** (#9): `lib/subscriptionAnalytics.ts` +
+  `GET /admin/ops/subscriptions/analytics` + List/Revenue toggle on
+  Subscriptions tab. 150 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

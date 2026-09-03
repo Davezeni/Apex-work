@@ -29,6 +29,7 @@ import * as settings from '../services/admin/settings.service.js';
 import * as analytics from '../services/admin/analytics.service.js';
 import * as exporter from '../services/admin/export.service.js';
 import * as reconcile from '../services/admin/reconcile.service.js';
+import * as subscriptions from '../services/admin/subscriptions.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -60,6 +61,15 @@ const exportCaps: Record<string, string> = {
   orders: 'money:orders',
   users: 'dashboard:view',
 };
+
+router.get(
+  '/subscriptions/analytics',
+  requireCapability('subscriptions:manage'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    return success(res, await subscriptions.subscriptionAnalytics(days));
+  }),
+);
 
 router.get(
   '/reconcile',
