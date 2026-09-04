@@ -19,6 +19,7 @@ export function SupportTab() {
   const [status, setStatus] = useState('');
   const [open, setOpen] = useState<any>(null);
   const [reply, setReply] = useState('');
+  const [view, setView] = useState<'queue' | 'sla'>('queue');
 
   const { data, isLoading } = useQuery<any>({
     queryKey: ['admin/tickets', status],
@@ -38,7 +39,15 @@ export function SupportTab() {
   const items: any[] = data?.items ?? [];
   return (
     <div className="space-y-5">
-      <SectionHead title="Support" subtitle="Customer support ticket queue" />
+      <SectionHead title="Support" subtitle="Customer support ticket queue" actions={
+        <div className="flex gap-1">
+          {(['queue', 'sla'] as const).map((v) => (
+            <button key={v} onClick={() => setView(v)} className={cn('rounded-full px-3 py-1 text-[11px] font-bold capitalize', view === v ? 'bg-primary text-white' : 'border border-border text-muted-foreground')}>{v}</button>
+          ))}
+        </div>
+      } />
+      {view === 'sla' ? <SupportAnalytics token={token} /> : (
+      <>
       <select value={status} onChange={(e) => setStatus(e.target.value)} className={cn(inputCls, 'w-auto')}>
         <option value="">All statuses</option>
         {Object.keys(tone).map((s) => <option key={s} value={s}>{s}</option>)}
@@ -58,6 +67,8 @@ export function SupportTab() {
             ))}
           </tbody>
         </TableShell>
+      )}
+      </>
       )}
 
       {open && (
@@ -86,6 +97,66 @@ export function SupportTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface SLA {
+  openTickets: number; breachedOpen: number; unattendedOpen: number; oldestOpenMin: number;
+  resolvedWindow: number; avgTimeToFirstResponseMin: number;
+  byAdmin: { adminId: string; handled: number; avgFirstResponseMin: number }[];
+  asOf: string;
+}
+function SupportAnalytics({ token }: { token: string | null }) {
+  const { data, isLoading, refetch } = useQuery<SLA>({
+    queryKey: ['admin/support/analytics'],
+    queryFn: () => apiFetch('/admin/ops/support/analytics', { token }),
+    enabled: !!token,
+  });
+  if (isLoading || !data) return <Spinner label="Building SLA…" />;
+  const fmtMin = (m: number) => m >= 120 ? `${Math.round(m / 60)}h ${m % 60}m` : `${m}m`;
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="Open tickets" value={String(data.openTickets)} />
+        <Stat label="Unattended" value={String(data.unattendedOpen)} warn={data.unattendedOpen > 0} />
+        <Stat label="SLA breached" value={String(data.breachedOpen)} warn={data.breachedOpen > 0} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Stat label="Resolved (7d)" value={String(data.resolvedWindow)} />
+        <Stat label="Avg first reply" value={data.avgTimeToFirstResponseMin ? fmtMin(data.avgTimeToFirstResponseMin) : '—'} />
+      </div>
+      {data.oldestOpenMin > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-600">
+          Oldest open ticket: {fmtMin(data.oldestOpenMin)}
+        </div>
+      )}
+      {data.byAdmin.length > 0 && (
+        <TableShell>
+          <thead><tr><Th>Admin</Th><Th>Handled</Th><Th>Avg first reply</Th></tr></thead>
+          <tbody>
+            {data.byAdmin.map((a) => (
+              <tr key={a.adminId} className="border-b border-border/50">
+                <Td className="text-muted-foreground">@{a.adminId.slice(0, 8)}…</Td>
+                <Td className="font-semibold">{a.handled}</Td>
+                <Td className="text-muted-foreground">{a.avgFirstResponseMin ? fmtMin(a.avgFirstResponseMin) : '—'}</Td>
+              </tr>
+            ))}
+          </tbody>
+        </TableShell>
+      )}
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>SLA window: 24h to first response</span>
+        <button onClick={() => refetch()} className="font-bold underline decoration-dotted">Refresh</button>
+      </div>
+    </div>
+  );
+}
+function Stat({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  return (
+    <div className={`rounded-2xl border border-border bg-card p-3 ${warn ? 'border-red-500/40' : ''}`}>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xl font-extrabold tracking-tight">{value}</div>
     </div>
   );
 }

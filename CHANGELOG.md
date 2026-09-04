@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Support SLA & team dashboard (power push #10)
+
+### Added
+- **Support SLA analytics** — `lib/supportAnalytics.ts` (pure
+  `buildSupportAnalytics`: open/aging queue, unattended + SLA-breached counts,
+  oldest-open age, resolved-in-7d, avg first-response time, per-admin
+  throughput ranked) + `GET /admin/ops/support/analytics` (RBAC
+  `support:tickets`).
+- **Queue / SLA toggle** on the Support tab: SLA stat cards (open, unattended,
+  breached, resolved, avg first reply, oldest-open banner) and a per-admin
+  handled + first-response table. SLA window = 24h to first response.
+- **+5 unit tests** — 150 → 155 tests.
+
 ## [Unreleased] — Pro-monetization analytics (power push #9)
 
 ### Added

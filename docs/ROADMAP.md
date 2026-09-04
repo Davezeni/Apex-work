@@ -167,6 +167,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Pro-monetization analytics** (#9): `lib/subscriptionAnalytics.ts` +
   `GET /admin/ops/subscriptions/analytics` + List/Revenue toggle on
   Subscriptions tab. 150 unit tests.
+- **Support SLA & team dashboard** (#10): `lib/supportAnalytics.ts` +
+  `GET /admin/ops/support/analytics` + Queue/SLA toggle with SLA cards and
+  per-admin throughput. 155 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

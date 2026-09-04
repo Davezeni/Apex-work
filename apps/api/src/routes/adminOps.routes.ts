@@ -30,6 +30,7 @@ import * as analytics from '../services/admin/analytics.service.js';
 import * as exporter from '../services/admin/export.service.js';
 import * as reconcile from '../services/admin/reconcile.service.js';
 import * as subscriptions from '../services/admin/subscriptions.service.js';
+import * as supportStats from '../services/admin/supportAnalytics.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -68,6 +69,14 @@ router.get(
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
     return success(res, await subscriptions.subscriptionAnalytics(days));
+  }),
+);
+
+router.get(
+  '/support/analytics',
+  requireCapability('support:tickets'),
+  asyncHandler(async (_req, res) => {
+    return success(res, await supportStats.supportAnalytics());
   }),
 );
 
