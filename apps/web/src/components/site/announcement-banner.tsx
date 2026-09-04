@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Megaphone, X } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 interface Announcement {
   id: string;
@@ -30,7 +31,7 @@ export function AnnouncementBanner() {
 
   useEffect(() => {
     let active = true;
-    fetch('/v1/content/announcement')
+    fetch(`${API_BASE}/v1/content/announcement`)
       .then((r) => r.json())
       .then((d) => { if (active) setAnn(d?.announcement ?? null); })
       .catch(() => { if (active) setAnn(null); })

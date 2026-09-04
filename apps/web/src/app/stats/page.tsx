@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useMe } from '@/hooks/use-me';
 import { useWallet } from '@/hooks/use-wallet';
 import { useI18n } from '@/i18n';
+import { API_BASE } from '@/lib/api';
 import { formatEtb, formatCompact } from '@/lib/utils';
 import { useProfileAnalytics } from '@/hooks/use-profile-analytics';
 import { useAuthStore } from '@/stores/auth-store';
@@ -271,7 +272,7 @@ function EarningsStatement() {
   const loadJson = async (m: string) => {
     setLoadingSummary(true);
     try {
-      const res = await fetch(`/v1/me/earnings/statement.json?month=${m}`, {
+      const res = await fetch(`${API_BASE}/v1/me/earnings/statement.json?month=${m}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       const j = (await res.json()) as { ok?: boolean; data?: typeof summary };

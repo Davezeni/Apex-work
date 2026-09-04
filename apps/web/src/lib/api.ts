@@ -6,6 +6,9 @@ const API_URL =
     ? 'https://apex-work-api.onrender.com'
     : 'http://localhost:4000');
 
+/** Base origin of the Apex-Work API (public, constant across the app). */
+export const API_BASE = API_URL;
+
 export class ApiError extends Error {
   code: string;
   status: number;
