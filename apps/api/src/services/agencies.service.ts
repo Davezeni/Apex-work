@@ -38,7 +38,7 @@ export async function listMine(userId: string) {
     orderBy: { createdAt: 'desc' },
     include: {
       owner: { select: { id: true, username: true, fullName: true } },
-      members: { include: memberSelect, orderBy: { createdAt: 'asc' } },
+      members: { select: memberSelect, orderBy: { createdAt: 'asc' } },
     },
   });
 }
@@ -58,7 +58,7 @@ export async function create(
       logoUrl: input.logoUrl || null,
       members: { create: { userId, role: 'OWNER' } },
     },
-    include: { members: { include: memberSelect } },
+    include: { members: { select: memberSelect } },
   });
 }
 
