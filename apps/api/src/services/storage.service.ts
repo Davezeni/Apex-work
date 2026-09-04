@@ -352,7 +352,7 @@ export class StorageService {
     return {
       uploadUrl: '',
       token: '',
-      publicUrl: `${this.publicBase()}/v1/files/${row.id}`,
+      publicUrl: `${this.publicBase()}/v1/uploads/files/${row.id}`,
       path: `${bucket}/${path}`,
       contentType,
       sizeBytes,
