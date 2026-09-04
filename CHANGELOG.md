@@ -655,3 +655,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   sign-in/sign-up pages. Now normalises to the `.default` export when it
   exposes `.init`, and `initPosthog()` is fully try/catch-guarded so analytics
   can never take the app down. Marker `.18`.
+
+## [Fix] — Announcement banner + earnings statement pointed at the web origin
+
+### Fixed
+- `AnnouncementBanner` and the earnings-statement download used a relative
+  `fetch('/v1/...')` URL, which resolved to the Vercel origin and 404'd (the
+  API lives on Render). They now use the exported `API_BASE` so the admin-set
+  announcement banner and statement download actually load. (Pre-existing; did
+  not affect sign-in/sign-up.)
