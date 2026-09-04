@@ -60,7 +60,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <main className={cn('min-h-dvh', showTabBar && 'safe-b-nav')}>{children}</main>
+      <main className={cn('min-h-dvh safe-head-room', showTabBar && 'safe-b-nav')}>{children}</main>
       <PwaInstall />
 
       {showTabBar && (

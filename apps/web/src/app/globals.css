@@ -117,7 +117,13 @@
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
   .safe-b-nav {
-    padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0));
+  }
+
+  /* A little breathing room at the top and bottom of every screen so the
+     content never sits flush against the viewport edge or the bottom nav. */
+  .safe-head-room {
+    padding-top: 0.5rem;
   }
 
   /*

@@ -296,6 +296,57 @@ export class StorageService {
 
 export const storage = new StorageService();
 
+/**
+ * Ensure the required Storage buckets exist. Runs once at boot. Idempotent:
+ * creating a bucket that already exists returns 409, which we treat as OK.
+ * This removes the manual Supabase-dashboard setup step that otherwise makes
+ * every signed/proxy upload 404 ("bucket not found").
+ */
+export async function ensureStorageBuckets(): Promise<void> {
+  if (!storage.isConfigured()) return;
+  const existing: string[] = [];
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/storage/v1/bucket`, {
+      headers: {
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+      },
+    });
+    if (res.ok) {
+      const list = (await res.json()) as { name?: string }[];
+      for (const b of list) if (b.name) existing.push(b.name);
+    }
+  } catch (err) {
+    logger.warn({ err: (err as Error).message }, 'Storage bucket listing failed (non-fatal)');
+    return;
+  }
+
+  for (const bucket of Object.keys(MAX_MB_PER_BUCKET) as StorageBucket[]) {
+    if (existing.includes(bucket)) continue;
+    try {
+      const res = await fetch(`${env.SUPABASE_URL}/storage/v1/bucket`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: bucket,
+          name: bucket,
+          public: true,
+          file_size_limit: MAX_MB_PER_BUCKET[bucket] * 1024 * 1024,
+          allowed_mime_types: null,
+        }),
+      });
+      const created = res.ok || res.status === 409;
+      logger.info({ bucket, status: res.status }, created ? 'Storage bucket ensured' : 'Storage bucket create failed');
+    } catch (err) {
+      logger.warn({ bucket, err: (err as Error).message }, 'Storage bucket create skipped (non-fatal)');
+    }
+  }
+}
+
 // Log status once at boot so a broken config is visible in Render logs
 // without having to hit an upload endpoint first.
 if (storage.isConfigured()) {
@@ -303,3 +354,5 @@ if (storage.isConfigured()) {
 } else {
   logger.warn('Storage: Supabase NOT configured — upload routes will 409');
 }
+
+void ensureStorageBuckets();
