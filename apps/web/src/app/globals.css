@@ -80,6 +80,14 @@
     -ms-overflow-style: none;
   }
 
+  /* Chat thread background: subtle ambient tint so bubbles read as a sheet */
+  .chat-bg {
+    background-color: var(--background);
+    background-image:
+      radial-gradient(900px 500px at 50% -10%, oklch(0.62 0.23 293 / 0.06), transparent 60%),
+      radial-gradient(700px 400px at 100% 100%, oklch(0.62 0.19 149 / 0.05), transparent 55%);
+  }
+
   /* Chat typing indicator dots */
   .typing-dot {
     display: inline-block;

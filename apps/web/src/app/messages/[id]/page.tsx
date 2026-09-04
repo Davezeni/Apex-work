@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -42,6 +42,20 @@ function gradientFor(id: string): string {
 }
 function initialsOf(name: string): string {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+}
+
+function dateKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+function dateLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(Date.now() - 86_400_000);
+  const same = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  if (same(d, today)) return 'Today';
+  if (same(d, yesterday)) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined });
 }
 
 export default function ConversationPage() {
@@ -115,6 +129,7 @@ export default function ConversationPage() {
   const [reactingId, setReactingId] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
+  const [actionMsg, setActionMsg] = useState<ChatMessage | null>(null);
   const { data: convs } = useConversations();
   const { data: savedConv } = useSavedMessages();
   const forwardTo = (m: ChatMessage) => setForwardMsg(m);
@@ -208,7 +223,7 @@ export default function ConversationPage() {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-background">
+    <div className="chat-bg flex h-dvh flex-col">
       {/* Header */}
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
@@ -476,31 +491,37 @@ export default function ConversationPage() {
             </div>
           </div>
         )}
-        {messages.map((m, i) => (
-          <MessageBubble
-            key={m.id}
-            m={m}
-            isMine={m.senderId === me?.id}
-            isGroup={!!conv?.isGroup}
-            showAvatar={
-              m.senderId !== me?.id &&
-              (i === 0 || messages[i - 1]?.senderId !== m.senderId)
-            }
-            onImageClick={setViewerUrl}
-            onReply={() => setReplyTo(m)}
-            onReactOpen={() => setReactingId(m.id)}
-            reactingOpen={reactingId === m.id}
-            onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
-            onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
-            onReactClose={() => setReactingId(null)}
-          onEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
-          onDelete={() => deleteMessage.mutate(m.id)}
-            onPin={() => pinMessage.mutate({ messageId: m.id, pinned: !m.pinnedAt })}
-            onForward={() => forwardTo(m)}
-            onSave={() => saveMessage(m)}
-            isSavedConv={conv?.isSaved}
-          />
-        ))}
+        {messages.map((m, i) => {
+          const prev = messages[i - 1];
+          const showDate = !prev || dateKey(prev.createdAt) !== dateKey(m.createdAt);
+          return (
+            <div key={m.id} className="flex flex-col">
+              {showDate && (
+                <div className="my-3 flex justify-center">
+                  <span className="rounded-full bg-card px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-sm">
+                    {dateLabel(m.createdAt)}
+                  </span>
+                </div>
+              )}
+              <MessageBubble
+                m={m}
+                isMine={m.senderId === me?.id}
+                isGroup={!!conv?.isGroup}
+                showAvatar={
+                  m.senderId !== me?.id &&
+                  (i === 0 || messages[i - 1]?.senderId !== m.senderId)
+                }
+                onImageClick={setViewerUrl}
+                onReactOpen={() => setReactingId(m.id)}
+                reactingOpen={reactingId === m.id}
+                onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
+                onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
+                onReactClose={() => setReactingId(null)}
+                onOpenActions={() => setActionMsg(m)}
+              />
+            </div>
+          );
+        })}
 
         {/* Live typing indicator */}
         {activeTypers > 0 && (
@@ -760,6 +781,43 @@ export default function ConversationPage() {
         </div>
       )}
 
+      {/* Message actions sheet (labeled) */}
+      {actionMsg && (
+        <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setActionMsg(null)}>
+          <div className="w-full max-w-md rounded-t-3xl border border-b-0 border-border bg-card py-3" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Message actions">
+            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="mx-5 mb-3 flex items-center gap-2 rounded-xl border-l-2 border-primary bg-muted/40 px-3 py-2">
+              <div className="flex-1">
+                <div className="text-[11px] font-bold text-primary">{actionMsg.senderId === me?.id ? 'You' : actionMsg.sender?.fullName}</div>
+                <div className="max-h-12 overflow-hidden truncate text-sm text-foreground">{actionMsg.body ?? (actionMsg.attachmentType === 'image' ? '🖼️ Photo' : actionMsg.attachmentType === 'audio' ? '🎤 Voice message' : '📎 Attachment')}</div>
+              </div>
+              <span className="shrink-0 text-[11px] text-muted-foreground">{timeAgo(actionMsg.createdAt)}</span>
+            </div>
+            <div className="mx-2">
+              <ActionRow icon={<Reply className="h-4 w-4" />} label="Reply" onClick={() => { setReplyTo(actionMsg); setActionMsg(null); }} />
+              <ActionRow icon={<SmilePlus className="h-4 w-4" />} label="React" onClick={() => { setReactingId(actionMsg.id); setActionMsg(null); }} />
+              <ActionRow icon={<Forward className="h-4 w-4" />} label="Forward" onClick={() => { forwardTo(actionMsg); setActionMsg(null); }} />
+              <ActionRow icon={<Pin className="h-4 w-4" />} label={actionMsg.pinnedAt ? 'Unpin' : 'Pin'} onClick={() => { pinMessage.mutate({ messageId: actionMsg.id, pinned: !actionMsg.pinnedAt }); setActionMsg(null); }} />
+              {!conv?.isSaved && (
+                <ActionRow icon={<Bookmark className="h-4 w-4" />} label="Save to Saved Messages" onClick={() => { saveMessage(actionMsg); setActionMsg(null); }} />
+              )}
+              {actionMsg.body && (
+                <ActionRow icon={<Copy className="h-4 w-4" />} label="Copy text" onClick={() => { void navigator.clipboard?.writeText(actionMsg.body ?? ''); toast.success('Copied'); setActionMsg(null); }} />
+              )}
+              {actionMsg.senderId === me?.id && (
+                <>
+                  <ActionRow icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={() => { const next = window.prompt('Edit message', actionMsg.body ?? ''); if (next !== null && next.trim() && next !== actionMsg.body) editMessage.mutate({ messageId: actionMsg.id, body: next.trim() }); setActionMsg(null); }} />
+                  <ActionRow icon={<Trash2 className="h-4 w-4" />} label="Delete for me" danger onClick={() => { if (window.confirm('Delete this message?')) deleteMessage.mutate(actionMsg.id); setActionMsg(null); }} />
+                </>
+              )}
+            </div>
+            <button onClick={() => setActionMsg(null)} className="mx-5 mt-2 w-[calc(100%-2.5rem)] rounded-2xl border border-border py-3 text-sm font-semibold active:bg-muted">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Media gallery */}
       {galleryOpen && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-lg">
@@ -797,36 +855,24 @@ function MessageBubble({
   isGroup,
   showAvatar,
   onImageClick,
-  onReply,
+  onOpenActions,
   onReactOpen,
   reactingOpen,
   onReactPick,
   onReactionTap,
   onReactClose,
-  onEdit,
-  onDelete,
-  onPin,
-  onForward,
-  onSave,
-  isSavedConv,
 }: {
   m: ChatMessage;
   isMine: boolean;
   isGroup?: boolean;
-  isSavedConv?: boolean;
   showAvatar: boolean;
   onImageClick?: (url: string) => void;
-  onReply?: () => void;
+  onOpenActions?: () => void;
   onReactOpen?: () => void;
   reactingOpen?: boolean;
   onReactPick?: (e: ReactionEmoji) => void;
   onReactionTap?: (emoji: string) => void;
   onReactClose?: () => void;
-  onEdit?: (body: string) => void;
-  onDelete?: () => void;
-  onPin?: () => void;
-  onForward?: () => void;
-  onSave?: () => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
@@ -869,88 +915,21 @@ function MessageBubble({
           )}
         </div>
       )}
-      <div className={cn('group relative flex items-end gap-1', isMine ? 'flex-row-reverse' : '')}>
-        {/* Hover / focus quick actions — react + reply */}
-        <div className={cn('flex flex-col gap-1 opacity-0 transition-opacity group-hover:opacity-100', isMine && 'items-end')}>
-          <button
-            onClick={onReactOpen}
-            aria-label="React"
-            className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
-          >
-            <SmilePlus className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onReply}
-            aria-label="Reply"
-            className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
-          >
-            <Reply className="h-3.5 w-3.5" />
-          </button>
-          {isMine && (
-            <>
-              <button
-                onClick={() => {
-                  const next = window.prompt('Edit message', m.body ?? '');
-                  if (next !== null && next.trim() && next !== m.body) onEdit?.(next.trim());
-                }}
-                aria-label="Edit"
-                className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => {
-                  if (window.confirm('Delete this message?')) onDelete?.();
-                }}
-                aria-label="Delete"
-                className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-red-500 hover:text-red-600 active:scale-90"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </>
+      <div className="group relative flex items-end gap-1">
+        {!isMine && <ActionTrigger onOpen={onOpenActions} />}
+        <div
+          onTouchStart={startPress}
+          onTouchEnd={cancelPress}
+          onTouchMove={cancelPress}
+          className={cn(
+            'relative max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
+            // Image bubbles are edge-to-edge; text/file bubbles keep padding.
+            isImage ? 'p-0' : 'px-3.5 py-2',
+            isMine
+              ? 'grad-hero rounded-br-md text-white shadow-md shadow-primary/30'
+              : 'rounded-bl-md bg-card text-foreground',
           )}
-          {!isMine && (
-            <button
-              onClick={onForward}
-              aria-label="Forward"
-              className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
-            >
-              <Forward className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <button
-            onClick={onPin}
-            aria-label={m.pinnedAt ? 'Unpin' : 'Pin'}
-            className={cn(
-              'grid h-7 w-7 place-items-center rounded-full border border-border bg-card hover:text-foreground active:scale-90',
-              m.pinnedAt ? 'text-primary' : 'text-muted-foreground',
-            )}
-          >
-            <Pin className="h-3.5 w-3.5" />
-          </button>
-          {!isSavedConv && (
-            <button
-              onClick={onSave}
-              aria-label="Save to Saved Messages"
-              className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
-            >
-              <Bookmark className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      <div
-        onTouchStart={startPress}
-        onTouchEnd={cancelPress}
-        onTouchMove={cancelPress}
-        className={cn(
-          'relative max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
-          // Image bubbles are edge-to-edge; text/file bubbles keep padding.
-          isImage ? 'p-0' : 'px-3.5 py-2',
-          isMine
-            ? 'grad-hero rounded-br-md text-white shadow-md shadow-primary/30'
-            : 'rounded-bl-md bg-card text-foreground',
-        )}
-      >
+        >
         <ReactionPicker open={!!reactingOpen} onSelect={(e) => onReactPick?.(e)} onClose={() => onReactClose?.()} />
         {(m.attachmentMeta as any)?.forwarded && (
           <div className={cn('mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide', isMine ? 'text-white/70' : 'text-primary')}>
@@ -1058,6 +1037,7 @@ function MessageBubble({
           </div>
         )}
       </div>
+      {isMine && <ActionTrigger onOpen={onOpenActions} />}
       {m.reactions && m.reactions.length > 0 && (
         <div className={cn('mt-1 flex flex-wrap gap-1', isMine ? 'justify-end' : 'justify-start')}>
           {m.reactions.map((r) => (
@@ -1076,6 +1056,34 @@ function MessageBubble({
         </div>
       )}
       </div>
+    </div>
+  );
+}
+
+/** A labeled row in the message actions sheet. */
+function ActionRow({ icon, label, onClick, danger }: { icon: ReactNode; label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn('flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium active:bg-muted', danger && 'text-red-500')}
+    >
+      <span className={cn('grid h-8 w-8 place-items-center rounded-full', danger ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary')}>{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/** Subtle "more" trigger shown beside each message bubble. Opens a labeled menu. */
+function ActionTrigger({ onOpen }: { onOpen?: () => void }) {
+  return (
+    <div className="flex w-6 shrink-0 items-end pb-1">
+      <button
+        onClick={onOpen}
+        aria-label="Message actions"
+        className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground active:scale-90"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
     </div>
   );
 }
