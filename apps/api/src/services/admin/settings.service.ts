@@ -14,6 +14,7 @@ export const SETTING_KEYS = {
   publicSignup: 'features.publicSignup',
   enablePayouts: 'features.enablePayouts',
   disableSignups: 'features.disableSignups',
+  siteAnnouncement: 'content.siteAnnouncement',
 } as const;
 
 const plural = 'Unable to persist settings';
@@ -47,6 +48,15 @@ const SETTING_DEFS: Record<string, { schema: z.ZodType; description: string }> =
   [SETTING_KEYS.disableSignups]: {
     schema: z.boolean(),
     description: 'Emergency switch — block all new signups.',
+  },
+  [SETTING_KEYS.siteAnnouncement]: {
+    schema: z.object({
+      text: z.string().max(240),
+      href: z.string().max(300).optional(),
+      cta: z.string().max(40).optional(),
+      tone: z.enum(['info', 'promo', 'urgent']).optional(),
+    }),
+    description: 'Site-wide announcement banner shown above the header.',
   },
 };
 

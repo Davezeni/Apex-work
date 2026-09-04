@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Admin content CMS: site-wide announcement (power push #12)
+
+### Added
+- **Admin-managed site announcement banner** stored as a typed value in the
+  existing `AppSetting` store (`content.siteAnnouncement`) — no DB migration.
+  `lib/announcement.ts` sanitises/normalises `{text, tone, href, cta}` (clamps
+  lengths, rejects unsafe `javascript:` hrefs) and is unit-tested.
+- **Public `GET /v1/content/announcement`** (no auth) returns the current
+  announcement (`{announcement: ... | null}`).
+- **Settings tab**: a dedicated editor for the announcement (text, tone
+  Info/Promo/Urgent, optional CTA + link).
+- **`AnnouncementBanner`** mounted in the root layout → dismissible site-wide
+  bar with an optional CTA/link, loading via the public endpoint.
+- **+4 unit tests** — 159 → 163 tests.
+
 ## [Unreleased] — Top-performer leaderboard (power push #11)
 
 ### Added

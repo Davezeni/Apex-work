@@ -172,6 +172,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   per-admin throughput. 155 unit tests.
 - **Top-performer leaderboard** (#11): `lib/leaderboard.ts` +
   `GET /admin/ops/leaderboard` + Top performers/risers on Summary. 159 unit tests.
+- **Admin content CMS: site announcement** (#12): typed `content.siteAnnouncement`
+  AppSetting key + `GET /v1/content/announcement` + Settings editor +
+  `AnnouncementBanner` site-wide. 163 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

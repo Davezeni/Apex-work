@@ -40,13 +40,32 @@ export function SettingsTab() {
             const value = draft[it.key];
             const isBool = typeof it.value === 'boolean';
             const isNum = typeof it.value === 'number' || (value != null && typeof value === 'number');
+            const isAnnouncement = it.key === 'content.siteAnnouncement';
+            const ann = (value && typeof value === 'object') ? value as Record<string, string> : {};
             return (
               <div key={it.key} className="space-y-2 rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div><div className="text-sm font-extrabold">{it.key}</div><div className="text-[11px] text-muted-foreground">{it.description}</div></div>
                   {it.updatedByName && <Badge tone="info">{it.updatedByName}</Badge>}
                 </div>
-                {isBool ? (
+                {isAnnouncement ? (
+                  <div className="space-y-2">
+                    <input type="text" placeholder="Announcement text (empty = off)" value={ann.text ?? ''} className={inputCls}
+                      onChange={(e) => setDraft({ ...draft, [it.key]: { ...ann, text: e.target.value } })} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={ann.tone ?? 'info'} className={inputCls}
+                        onChange={(e) => setDraft({ ...draft, [it.key]: { ...ann, tone: e.target.value } })}>
+                        <option value="info">Info</option>
+                        <option value="promo">Promo</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                      <input type="text" placeholder="CTA (optional)" value={ann.cta ?? ''} className={inputCls}
+                        onChange={(e) => setDraft({ ...draft, [it.key]: { ...ann, cta: e.target.value } })} />
+                    </div>
+                    <input type="text" placeholder="Link (e.g. /browse or https://…)" value={ann.href ?? ''} className={inputCls}
+                      onChange={(e) => setDraft({ ...draft, [it.key]: { ...ann, href: e.target.value } })} />
+                  </div>
+                ) : isBool ? (
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={!!value} disabled={save.isPending}
                       onChange={(e) => setDraft({ ...draft, [it.key]: e.target.checked })} />
