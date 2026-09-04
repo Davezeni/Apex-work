@@ -3,6 +3,22 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Review replies (seller rebuttal) (power push #24)
+
+### Added
+- **DB** — `Review.sellerReply` / `sellerRepliedAt` / `sellerReplyEditedAt`;
+  new `NotificationType.REVIEW_REPLY`; migration `20260904110000_review_reply`
+  (applied via Render `preDeploy` `db:migrate:deploy`).
+- **API** — `PUT /reviews/:id/reply` (only the subject/seller of a review can
+  post or edit their response; idempotent; notifies the reviewer on first
+  reply) and `DELETE /reviews/:id/reply` (remove). `listReviewsFor` now returns
+  `subjectId` + the reply fields. `REVIEW_REPLY` maps to the `reviews`
+  notification preference.
+- **Web** — the reviews page shows the seller's response under each review and
+  gives the signed-in seller `Reply` / `Edit` / `Remove` controls (inline
+  editor, 2000 chars); `useUpsertReviewReply` + `useDeleteReviewReply` hooks;
+  en + am strings; notifications icon; marker `.15`.
+
 ## [Unreleased] — PostHog consent banner + high-signal events (power push #23)
 
 ### Added
