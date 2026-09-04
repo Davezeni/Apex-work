@@ -3,6 +3,23 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Messenger power-up + Saved Messages (power push #28)
+
+### Added
+- **Online presence** — live online/offline dots on the conversation list, chat
+  header and group member sheet (Socket.io heartbeat + `presence` service).
+- **Mute / unmute** a conversation; **mark as unread** (badge returns).
+- **Forward any message** to another chat (mini forward picker).
+- **In-conversation message search** (`GET /conversations/:id/messages/search`).
+- **Pin / unpin messages** (`Message.pinnedAt` + live pin banner). 
+- **Saved Messages** — a private 1-member self-chat: bookmark any message,
+  voice note or file. New `GET /conversations/saved`; "Save" button on any
+  message; pinned entry in the messages list.
+
+### Polish
+- Live typing + presence socket events merged into the client; admin build
+  marker bumped to `2026-09-05.22`.
+
 ## [Unreleased] — Trust, messaging & product polish (power push #27)
 
 ### Fixed
