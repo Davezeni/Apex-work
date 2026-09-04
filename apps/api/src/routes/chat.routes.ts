@@ -44,6 +44,14 @@ router.post(
   }),
 );
 
+/** GET /conversations/saved — the user's personal "Saved Messages" chat. */
+router.get(
+  '/saved',
+  asyncHandler(async (req, res) => {
+    return success(res, await chat.getSavedMessages(req.user!.sub));
+  }),
+);
+
 /** GET /conversations/:id — full detail (members, unread, group flag). */
 router.get(
   '/:id',

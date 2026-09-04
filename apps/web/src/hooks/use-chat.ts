@@ -19,6 +19,8 @@ export interface ChatPeer {
 export interface ChatSummary {
   id: string;
   isGroup: boolean;
+  isSaved?: boolean;
+  memberCount?: number;
   title: string | null;
   peer: ChatPeer | null;
   lastMessage: {
@@ -156,6 +158,7 @@ export function useSendMessage(conversationId: string | undefined) {
 }
 
 export interface ConversationDetail extends ChatSummary {
+  isSaved?: boolean;
   createdAt: string;
   members: { userId: string; isAdmin: boolean; joinedAt: string; lastReadAt: string | null; online?: boolean | null; fullName: string; username: string; avatarUrl: string | null }[];
   me: { isMuted: boolean; isAdmin: boolean };
@@ -339,6 +342,17 @@ export function useStartConversation() {
         body: { peerUserId },
         token,
       }),
+  });
+}
+
+/** The user's personal "Saved Messages" chat (created on first call). */
+export function useSavedMessages() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useQuery<ChatSummary>({
+    queryKey: ['saved-messages'],
+    queryFn: () => apiFetch('/conversations/saved', { token }),
+    enabled: !!token,
+    staleTime: 60_000,
   });
 }
 

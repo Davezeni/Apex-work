@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, type ChatMessage } from '@/hooks/use-chat';
+import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useSavedMessages, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
@@ -116,7 +116,15 @@ export default function ConversationPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const { data: convs } = useConversations();
+  const { data: savedConv } = useSavedMessages();
   const forwardTo = (m: ChatMessage) => setForwardMsg(m);
+  const saveMessage = (m: ChatMessage) => {
+    if (!savedConv?.id) { toast.error('Could not load Saved Messages'); return; }
+    forwardMessage.mutate(
+      { messageId: m.id, targetConversationId: savedConv.id },
+      { onSuccess: () => toast.success('Saved to Saved Messages'), onError: (e) => toast.error((e as Error).message) },
+    );
+  };
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   const blockUser = useBlockUser();
@@ -236,7 +244,7 @@ export default function ConversationPage() {
         )}
         <div className="min-w-0 flex-1">
           <h4 className="truncate text-sm font-semibold">
-            {conv?.isGroup ? conv.title : peer?.fullName ?? 'Conversation'}
+            {conv?.isGroup ? conv.title : peer?.fullName ?? conv?.title ?? 'Conversation'}
           </h4>
           {conv?.isGroup ? (
             <p className="text-[11px] text-muted-foreground">{conv.members.length} members{activeTypers > 0 ? ` · ${activeTypers} typing…` : ''}</p>
@@ -487,8 +495,10 @@ export default function ConversationPage() {
             onReactClose={() => setReactingId(null)}
           onEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
           onDelete={() => deleteMessage.mutate(m.id)}
-          onPin={() => pinMessage.mutate({ messageId: m.id, pinned: !m.pinnedAt })}
-          onForward={() => forwardTo(m)}
+            onPin={() => pinMessage.mutate({ messageId: m.id, pinned: !m.pinnedAt })}
+            onForward={() => forwardTo(m)}
+            onSave={() => saveMessage(m)}
+            isSavedConv={conv?.isSaved}
           />
         ))}
 
@@ -797,10 +807,13 @@ function MessageBubble({
   onDelete,
   onPin,
   onForward,
+  onSave,
+  isSavedConv,
 }: {
   m: ChatMessage;
   isMine: boolean;
   isGroup?: boolean;
+  isSavedConv?: boolean;
   showAvatar: boolean;
   onImageClick?: (url: string) => void;
   onReply?: () => void;
@@ -813,6 +826,7 @@ function MessageBubble({
   onDelete?: () => void;
   onPin?: () => void;
   onForward?: () => void;
+  onSave?: () => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
@@ -914,6 +928,15 @@ function MessageBubble({
           >
             <Pin className="h-3.5 w-3.5" />
           </button>
+          {!isSavedConv && (
+            <button
+              onClick={onSave}
+              aria-label="Save to Saved Messages"
+              className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
+            >
+              <Bookmark className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       <div
         onTouchStart={startPress}

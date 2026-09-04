@@ -84,6 +84,31 @@ export async function assertMember(conversationId: string, userId: string) {
   if (!membership) throw new ForbiddenError('You are not a member of this conversation');
 }
 
+/**
+ * Get-or-create the user's personal "Saved Messages" chat — a 1-member
+ * conversation (only you). Used to bookmark messages, voice notes and files.
+ */
+export async function getSavedMessages(userId: string) {
+  const existing = await prisma.conversation.findFirst({
+    where: { isGroup: false, members: { every: { userId } } },
+    include: conversationInclude(userId),
+  });
+  if (existing) {
+    // shapeConversation treats it as a DM with no peer; give it a title + flag.
+    const shaped = shapeConversation(existing, userId, existing.members.find((m: { userId: string }) => m.userId === userId)?.lastReadAt ?? null);
+    return { ...shaped, isSaved: true, memberCount: 1 };
+  }
+  const created = await prisma.conversation.create({
+    data: {
+      isGroup: false,
+      title: 'Saved Messages',
+      members: { create: { userId } },
+    },
+    include: conversationInclude(userId),
+  });
+  return { ...shapeConversation(created, userId, null), isSaved: true, memberCount: 1 };
+}
+
 export async function listConversations(userId: string) {
   const memberships = await prisma.conversationMember.findMany({
     where: { userId },
@@ -141,6 +166,7 @@ export async function getConversation(conversationId: string, userId: string) {
   const shaped = shapeConversation(conv, userId, membership?.lastReadAt ?? null);
   return {
     ...shaped,
+    isSaved: !conv.isGroup && conv.members.length === 1,
     createdAt: conv.createdAt,
     members: conv.members.map((m) => ({
       userId: m.userId,

@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Search, Edit3, Loader2, MessageCircleOff } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
-import { useConversations, type ChatSummary } from '@/hooks/use-chat';
+import { useConversations, useSavedMessages, type ChatSummary } from '@/hooks/use-chat';
+import { Bookmark } from 'lucide-react';
 import { useMe } from '@/hooks/use-me';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
@@ -29,6 +30,7 @@ function initialsOf(name: string): string {
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
   const { data, isLoading, error } = useConversations();
+  const { data: saved } = useSavedMessages();
   const { t } = useI18n();
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -118,6 +120,20 @@ export default function MessagesPage() {
       )}
 
       <div className="px-2 pb-4">
+        {!searchOpen && saved?.id && (
+          <Link
+            href={`/messages/${saved.id}`}
+            className="flex items-center gap-3 rounded-2xl p-3 active:bg-card"
+          >
+            <div className="grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#22c55e)' }}>
+              <Bookmark className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="text-[15px] font-semibold">Saved Messages</h4>
+              <p className="truncate text-[13px] text-muted-foreground">Bookmark your notes, voice mutes &amp; files</p>
+            </div>
+          </Link>
+        )}
         {searchOpen && query.trim() && filteredItems.length === 0 && (
           <p className="px-4 py-8 text-center text-xs text-muted-foreground">No conversations found.</p>
         )}
