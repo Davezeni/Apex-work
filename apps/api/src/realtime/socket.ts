@@ -5,6 +5,7 @@ import { redisPub, redisSub } from '../lib/redis.js';
 import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
 import { assertMember, markAsRead } from '../services/chat.service.js';
+import { markOnline, markOffline, maybePersistLastSeen } from '../services/presence.service.js';
 
 interface AuthedSocket extends Socket {
   userId?: string;
@@ -77,6 +78,15 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
     // (e.g. "you got a new message in conversation X" fired from a background job).
     socket.join(`user:${socket.userId}`);
     logger.debug({ userId: socket.userId, sid: socket.id }, 'Socket connected');
+    markOnline(socket.userId);
+    maybePersistLastSeen(socket.userId);
+
+    // Presence heartbeat: clients ping this every ~15s so peers see an online
+    // dot. The in-process tracker expires stale entries automatically.
+    socket.on('presence:heartbeat', () => {
+      markOnline(socket.userId!);
+      maybePersistLastSeen(socket.userId!);
+    });
 
     // Join a conversation room — with server-side authorization.
     socket.on('conversation:join', async (conversationId: string, ack?: (ok: boolean) => void) => {
@@ -87,6 +97,8 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
         }
         await assertMember(conversationId, socket.userId!);
         socket.join(`conv:${conversationId}`);
+        // Tell the room this member just came online (open threads update live).
+        socket.to(`conv:${conversationId}`).emit('presence:update', { userId: socket.userId!, online: true });
         ack?.(true);
       } catch {
         ack?.(false);
@@ -94,7 +106,10 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
     });
 
     socket.on('conversation:leave', (conversationId: string) => {
-      if (typeof conversationId === 'string') socket.leave(`conv:${conversationId}`);
+      if (typeof conversationId === 'string') {
+        socket.to(`conv:${conversationId}`).emit('presence:update', { userId: socket.userId!, online: false });
+        socket.leave(`conv:${conversationId}`);
+      }
     });
 
     socket.on('conversation:read', async (conversationId: string) => {
@@ -183,6 +198,10 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
     });
 
     socket.on('disconnect', (reason) => {
+      if (socket.userId) {
+        markOffline(socket.userId);
+        maybePersistLastSeen(socket.userId);
+      }
       logger.debug({ userId: socket.userId, reason }, 'Socket disconnected');
     });
   });

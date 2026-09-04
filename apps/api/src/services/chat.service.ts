@@ -6,6 +6,7 @@ import type { Message } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
+import { isOnline } from './presence.service.js';
 
 /** OAuth-created accounts can browse first, but must verify phone before trust-sensitive chat actions. */
 export async function assertPhoneVerified(userId: string) {
@@ -146,6 +147,7 @@ export async function getConversation(conversationId: string, userId: string) {
       isAdmin: m.isAdmin,
       joinedAt: m.joinedAt,
       lastReadAt: m.lastReadAt,
+      online: isOnline(m.userId),
       ...m.user,
     })),
     me: { isMuted: membership?.isMuted ?? false, isAdmin: membership?.isAdmin ?? false },
@@ -436,6 +438,109 @@ export async function deleteMessage(conversationId: string, messageId: string, u
   });
 }
 
+/** Mute / unmute a conversation for the current user. */
+export async function setConversationMuted(conversationId: string, userId: string, muted: boolean) {
+  await assertMember(conversationId, userId);
+  return prisma.conversationMember.update({
+    where: { conversationId_userId: { conversationId, userId } },
+    data: { isMuted: muted },
+    select: { isMuted: true },
+  });
+}
+
+/** Mark a conversation as unread (resets lastReadAt so unread badge returns). */
+export async function markUnread(conversationId: string, userId: string) {
+  await assertMember(conversationId, userId);
+  return prisma.conversationMember.update({
+    where: { conversationId_userId: { conversationId, userId } },
+    data: { lastReadAt: null },
+    select: { lastReadAt: true },
+  });
+}
+
+/** Forward a message from one conversation to another (as the sender's own message). */
+export async function forwardMessage(fromId: string, messageId: string, senderId: string, targetId: string) {
+  await assertMember(fromId, senderId);
+  if (fromId !== targetId) await assertMember(targetId, senderId);
+  const source = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { conversationId: true, body: true, attachmentUrl: true, attachmentType: true, attachmentMeta: true },
+  });
+  if (!source || source.conversationId !== fromId) throw new NotFoundError('Message');
+  const message = await prisma.$transaction(async (tx) => {
+    const m = await tx.message.create({
+      data: {
+        conversationId: targetId,
+        senderId,
+        body: source.body,
+        attachmentUrl: source.attachmentUrl,
+        attachmentType: source.attachmentType,
+        // Tag forwarded messages so the UI can show "Forwarded".
+        attachmentMeta: { ...(source.attachmentMeta as Record<string, unknown> | undefined), forwarded: true, forwardedFrom: fromId } as never,
+      },
+      include: { sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } } },
+    });
+    await tx.conversation.update({ where: { id: targetId }, data: { lastMessageAt: m.createdAt } });
+    return m;
+  });
+  // Notify the target's other members (reuses sendMessage broadcast helper).
+  const others = await prisma.conversationMember.findMany({
+    where: { conversationId: targetId, userId: { not: senderId } },
+    select: { userId: true },
+  });
+  const previewBody = (message.body ?? '').slice(0, 140) || '📎 Forwarded message';
+  const { sendPush } = await import('./push.service.js');
+  await Promise.all(
+    others.map(async (m) => {
+      await notify({
+        userId: m.userId,
+        type: 'NEW_MESSAGE',
+        title: `New message from ${message.sender.fullName}`,
+        body: previewBody,
+        payload: { conversationId: targetId, messageId: message.id },
+      });
+      void sendPush(m.userId, { title: message.sender.fullName, body: previewBody, url: `/messages/${targetId}`, tag: `conv-${targetId}` });
+    }),
+  );
+  return message;
+}
+
+/** Search text within a conversation. Newest-first, capped. */
+export async function searchMessages(conversationId: string, userId: string, query: string) {
+  await assertMember(conversationId, userId);
+  const q = query.trim();
+  if (!q) return { items: [] };
+  const items = await prisma.message.findMany({
+    where: {
+      conversationId,
+      deletedAt: null,
+      body: { contains: q, mode: 'insensitive' },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    select: {
+      id: true, body: true, senderId: true, attachmentType: true, createdAt: true,
+      sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+    },
+  });
+  return { items };
+}
+
+/** Pin / unpin a message in a conversation. */
+export async function setPinned(conversationId: string, messageId: string, userId: string, pinned: boolean) {
+  await assertMember(conversationId, userId);
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { conversationId: true },
+  });
+  if (!message || message.conversationId !== conversationId) throw new NotFoundError('Message');
+  return prisma.message.update({
+    where: { id: messageId },
+    data: { pinnedAt: pinned ? new Date() : null },
+    select: { id: true, pinnedAt: true },
+  });
+}
+
 // ==========================
 // Helpers
 // ==========================
@@ -475,7 +580,7 @@ function shapeConversation(conv: any, selfId: string, lastReadAt: Date | null) {
     id: conv.id,
     isGroup: conv.isGroup,
     title: conv.title,
-    peer: peer ?? null,
+    peer: peer ? { ...peer, online: isOnline(peer.id) } : null,
     lastMessage,
     lastMessageAt: conv.lastMessageAt,
     unread,

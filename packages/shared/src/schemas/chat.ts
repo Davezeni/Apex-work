@@ -60,3 +60,19 @@ export const editMessageSchema = z.object({
   body: z.string().trim().min(1, 'Message cannot be empty').max(4000),
 });
 export type EditMessageInput = z.infer<typeof editMessageSchema>;
+
+/** Mute / unmute a conversation. */
+export const muteConversationSchema = z.object({ muted: z.boolean() });
+export type MuteConversationInput = z.infer<typeof muteConversationSchema>;
+
+/** Pin / unpin a message. */
+export const pinMessageSchema = z.object({ pinned: z.boolean() });
+export type PinMessageInput = z.infer<typeof pinMessageSchema>;
+
+/** Forward a message into another conversation. */
+export const forwardMessageSchema = z.object({ targetConversationId: z.string().min(1).max(40) });
+export type ForwardMessageInput = z.infer<typeof forwardMessageSchema>;
+
+/** Search messages. */
+export const searchMessagesQuerySchema = z.object({ q: z.string().trim().min(1).max(200) });
+export type SearchMessagesQuery = z.infer<typeof searchMessagesQuerySchema>;

@@ -4,12 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { useMessages, useSendMessage, useChatSocket, useConversation, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, type ChatMessage } from '@/hooks/use-chat';
+import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
@@ -51,13 +51,34 @@ export default function ConversationPage() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading, error } = useMessages(id);
   const { data: conv } = useConversation(id);
+  const messages = data?.items ?? [];
+  const peer = messages.find((m) => m.senderId !== me?.id)?.sender ?? null;
   const send = useSendMessage(id);
   const addMembers = useAddGroupMembers(id);
   const leaveGroup = useLeaveGroup();
   const renameGroup = useUpdateGroup(id);
   const editMessage = useEditMessage(id);
   const deleteMessage = useDeleteMessage(id);
+  const muteConversation = useMuteConversation(id);
+  const markUnread = useMarkUnread();
+  const forwardMessage = useForwardMessage(id);
+  const pinMessage = usePinMessage(id);
+  const searchMessages = useSearchMessages(id);
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
+  const [presence, setPresence] = useState<Record<string, boolean>>({});
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [searchResults, setSearchResults] = useState<ChatMessage[]>([]);
+  useEffect(() => {
+    if (!searchOpen || searchQ.trim().length < 2) { setSearchResults([]); return; }
+    const timer = setTimeout(() => {
+      searchMessages.mutate(searchQ.trim(), {
+        onSuccess: (r) => setSearchResults(r.items ?? []),
+        onError: () => setSearchResults([]),
+      });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQ, searchOpen, searchMessages]);
   const socket = useChatSocket(id, {
     onIncomingCall: (from, mode) => setIncoming({ from, mode }),
     onTyping: (status, userId) => {
@@ -71,7 +92,15 @@ export default function ConversationPage() {
         return next;
       });
     },
+    onPresence: (userId, online) => setPresence((prev) => ({ ...prev, [userId]: online })),
   });
+  // Seed presence from the fetched conversation, then keep it live.
+  useEffect(() => {
+    const map: Record<string, boolean> = {};
+    conv?.members?.forEach((m) => { if (typeof m.online === 'boolean') map[m.userId] = m.online; });
+    if (peer) map[peer.id] = !!peer.online;
+    setPresence((prev) => ({ ...prev, ...map }));
+  }, [conv, peer]);
   const { t } = useI18n();
   const draft = useMessageDraft(id);
   const text = draft.text;
@@ -85,6 +114,9 @@ export default function ConversationPage() {
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [reactingId, setReactingId] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
+  const { data: convs } = useConversations();
+  const forwardTo = (m: ChatMessage) => setForwardMsg(m);
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   const blockUser = useBlockUser();
@@ -119,9 +151,6 @@ export default function ConversationPage() {
   }, []);
   const activeTypers = Object.keys(typingUsers).filter((uid) => uid !== me?.id).length;
   const typingNames = conv?.members?.filter((m) => typingUsers[m.userId] && m.userId !== me?.id).map((m) => m.fullName.split(' ')[0]) ?? [];
-
-  const messages = data?.items ?? [];
-  const peer = messages.find((m) => m.senderId !== me?.id)?.sender ?? null;
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -212,9 +241,21 @@ export default function ConversationPage() {
           {conv?.isGroup ? (
             <p className="text-[11px] text-muted-foreground">{conv.members.length} members{activeTypers > 0 ? ` · ${activeTypers} typing…` : ''}</p>
           ) : peer ? (
-            <p className="text-[11px] text-muted-foreground">@{peer.username}</p>
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              {presence[peer.id] !== undefined && (
+                <span className={cn('inline-block h-2 w-2 rounded-full', presence[peer.id] ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
+              )}
+              @{peer.username}{presence[peer.id] ? ' · online' : ''}{conv?.me?.isMuted ? ' · muted' : ''}
+            </p>
           ) : null}
         </div>
+        <button
+          onClick={() => { setSearchOpen((v) => !v); setSearchQ(''); }}
+          aria-label="Search messages"
+          className={cn('grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90', searchOpen && 'text-primary')}
+        >
+          <Search className="h-5 w-5" />
+        </button>
         {imageUrls.length > 0 && (
           <button
             onClick={() => setGalleryOpen(true)}
@@ -289,6 +330,22 @@ export default function ConversationPage() {
                 <button
                   onClick={() => {
                     setMenuOpen(false);
+                    muteConversation.mutate(!conv?.me?.isMuted);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                >
+                  {conv?.me?.isMuted ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                  {conv?.me?.isMuted ? 'Unmute' : 'Mute'}
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); markUnread.mutate(id, { onSuccess: () => router.push('/messages') }); }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                >
+                  <Mail className="h-4 w-4" /> Mark as unread
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
                     setReportOpen(true);
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
@@ -321,6 +378,62 @@ export default function ConversationPage() {
           )}
         </div>
       </header>
+
+      {/* Search-in-conversation panel */}
+      {searchOpen && (
+        <div className="z-20 border-b border-border bg-background/95 px-3 py-2 backdrop-blur-xl">
+          <input
+            autoFocus
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="Search in this conversation…"
+            aria-label="Search in this conversation"
+            className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+          />
+          {searchQ.trim().length >= 2 && (
+            <div className="mt-2 max-h-64 overflow-y-auto">
+              {searchMessages.isPending ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">Searching…</div>
+              ) : searchResults.length === 0 ? (
+                <div className="py-4 text-center text-xs text-muted-foreground">No matching messages.</div>
+              ) : searchResults.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => { setSearchOpen(false); setReplyTo(r); }}
+                  className="flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left active:bg-muted"
+                >
+                  <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br text-[10px] font-bold text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#22c55e)' }}>
+                    {initialsOf(r.sender?.fullName ?? '?')}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-bold">{r.sender?.fullName ?? 'Unknown'}</div>
+                    <div className="truncate text-xs text-muted-foreground">{r.body ?? (r.attachmentType === 'image' ? '🖼️ Photo' : '📎 Attachment')}</div>
+                  </div>
+                  <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Pinned message strip */}
+      {(() => {
+        const pinned = messages.filter((m) => m.pinnedAt);
+        if (pinned.length === 0) return null;
+        const top = pinned[pinned.length - 1]!;
+        return (
+          <button
+            onClick={() => { setReplyTo(top); }}
+            className="z-10 flex w-full items-center gap-2 border-b border-border bg-primary/5 px-3 py-1.5 text-left"
+          >
+            <Pin className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
+              <span className="font-bold text-foreground">Pinned</span> · {top.body ?? (top.attachmentType === 'image' ? '🖼️ Photo' : '📎 Attachment')}
+            </span>
+          </button>
+        );
+      })()}
 
       {/* Offline / queued-message indicator */}
       {(!online || pending > 0) && (
@@ -372,8 +485,10 @@ export default function ConversationPage() {
             onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
             onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
             onReactClose={() => setReactingId(null)}
-            onEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
-            onDelete={() => deleteMessage.mutate(m.id)}
+          onEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
+          onDelete={() => deleteMessage.mutate(m.id)}
+          onPin={() => pinMessage.mutate({ messageId: m.id, pinned: !m.pinnedAt })}
+          onForward={() => forwardTo(m)}
           />
         ))}
 
@@ -579,12 +694,57 @@ export default function ConversationPage() {
                       <div className="flex items-center gap-1.5 text-sm font-semibold">
                         {m.fullName} {m.userId === me?.id && <span className="text-[10px] text-muted-foreground">(you)</span>}
                         {m.isAdmin && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">admin</span>}
+                        {!m.isAdmin && typeof presence[m.userId] === 'boolean' && (
+                          <span className={cn('inline-block h-1.5 w-1.5 rounded-full', presence[m.userId] ? 'bg-emerald-500' : 'bg-muted-foreground/40')} />
+                        )}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">@{m.username}{typing ? ' · typing…' : ''}</div>
+                      <div className="text-[11px] text-muted-foreground">@{m.username}{typing ? ' · typing…' : ''}{!typing && presence[m.userId] ? ' · online' : ''}</div>
                     </div>
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forward picker */}
+      {forwardMsg && (
+        <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setForwardMsg(null)}>
+          <div className="max-h-[75dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-extrabold">Forward to</h2>
+              <button onClick={() => setForwardMsg(null)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="mb-3 rounded-lg border-l-2 border-primary bg-muted/50 px-3 py-2">
+              <div className="truncate text-xs text-muted-foreground">{forwardMsg.body ?? '📎 Attachment'}</div>
+            </div>
+            <div className="space-y-1">
+              {(convs?.items ?? []).filter((c) => c.id !== id).map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    forwardMessage.mutate({ messageId: forwardMsg.id, targetConversationId: c.id }, {
+                      onSuccess: () => { toast.success('Forwarded'); setForwardMsg(null); },
+                      onError: (e) => { toast.error((e as Error).message); setForwardMsg(null); },
+                    });
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-muted/50"
+                >
+                  <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(c.id))}>
+                    {initialsOf(c.peer?.fullName ?? c.title ?? 'C')}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{c.peer?.fullName ?? c.title ?? 'Conversation'}</div>
+                    <div className="truncate text-[11px] text-muted-foreground">{c.peer ? `@${c.peer.username}` : `${(c as any).members?.length ?? ''} members`}</div>
+                  </div>
+                  <Forward className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              ))}
+              {(convs?.items ?? []).filter((c) => c.id !== id).length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">No other chats to forward to.</p>
+              )}
             </div>
           </div>
         </div>
@@ -635,6 +795,8 @@ function MessageBubble({
   onReactClose,
   onEdit,
   onDelete,
+  onPin,
+  onForward,
 }: {
   m: ChatMessage;
   isMine: boolean;
@@ -649,6 +811,8 @@ function MessageBubble({
   onReactClose?: () => void;
   onEdit?: (body: string) => void;
   onDelete?: () => void;
+  onPin?: () => void;
+  onForward?: () => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
@@ -731,6 +895,25 @@ function MessageBubble({
               </button>
             </>
           )}
+          {!isMine && (
+            <button
+              onClick={onForward}
+              aria-label="Forward"
+              className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
+            >
+              <Forward className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            onClick={onPin}
+            aria-label={m.pinnedAt ? 'Unpin' : 'Pin'}
+            className={cn(
+              'grid h-7 w-7 place-items-center rounded-full border border-border bg-card hover:text-foreground active:scale-90',
+              m.pinnedAt ? 'text-primary' : 'text-muted-foreground',
+            )}
+          >
+            <Pin className="h-3.5 w-3.5" />
+          </button>
         </div>
       <div
         onTouchStart={startPress}
@@ -746,6 +929,16 @@ function MessageBubble({
         )}
       >
         <ReactionPicker open={!!reactingOpen} onSelect={(e) => onReactPick?.(e)} onClose={() => onReactClose?.()} />
+        {(m.attachmentMeta as any)?.forwarded && (
+          <div className={cn('mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide', isMine ? 'text-white/70' : 'text-primary')}>
+            <Forward className="h-3 w-3" /> Forwarded
+          </div>
+        )}
+        {m.pinnedAt && (
+          <div className={cn('mb-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold', isMine ? 'bg-white/15 text-white' : 'bg-primary/15 text-primary')}>
+            <Pin className="h-3 w-3" /> Pinned
+          </div>
+        )}
         {m.replyTo && (
           <div className={cn(
             'mb-1 rounded-md border-l-2 px-2 py-1 text-[11px] leading-tight',

@@ -159,6 +159,12 @@ function ConvRow({ c, selfId: _selfId }: { c: ChatSummary; selfId: string }) {
         >
           {initialsOf(name)}
         </div>
+        {!c.isGroup && peer?.online && (
+          <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" title="Online" />
+        )}
+        {c.isGroup && (
+          <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-background bg-primary text-[9px] font-bold text-white">G</span>
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">

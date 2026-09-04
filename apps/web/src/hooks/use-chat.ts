@@ -13,6 +13,7 @@ export interface ChatPeer {
   username: string;
   fullName: string;
   avatarUrl: string | null;
+  online?: boolean | null;
 }
 
 export interface ChatSummary {
@@ -59,6 +60,7 @@ export interface ChatMessage {
   readByTotal?: number;
   editedAt?: string | null;
   deletedAt?: string | null;
+  pinnedAt?: string | null;
   createdAt: string;
   sender: ChatPeer;
 }
@@ -155,7 +157,7 @@ export function useSendMessage(conversationId: string | undefined) {
 
 export interface ConversationDetail extends ChatSummary {
   createdAt: string;
-  members: { userId: string; isAdmin: boolean; joinedAt: string; lastReadAt: string | null; fullName: string; username: string; avatarUrl: string | null }[];
+  members: { userId: string; isAdmin: boolean; joinedAt: string; lastReadAt: string | null; online?: boolean | null; fullName: string; username: string; avatarUrl: string | null }[];
   me: { isMuted: boolean; isAdmin: boolean };
 }
 
@@ -269,6 +271,65 @@ export function useDeleteMessage(conversationId: string) {
   });
 }
 
+export function useMuteConversation(conversationId: string) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (muted: boolean) =>
+      apiFetch(`/conversations/${conversationId}/mute`, { method: 'POST', body: { muted }, token }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversation', conversationId] });
+    },
+  });
+}
+
+export function useMarkUnread() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (conversationId: string) =>
+      apiFetch(`/conversations/${conversationId}/unread`, { method: 'POST', token }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
+export function useForwardMessage(conversationId: string) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { messageId: string; targetConversationId: string }) =>
+      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/forward`, {
+        method: 'POST', body: { targetConversationId: vars.targetConversationId }, token,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conversations'] });
+      qc.invalidateQueries({ queryKey: ['messages', conversationId] });
+    },
+  });
+}
+
+export function usePinMessage(conversationId: string) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { messageId: string; pinned: boolean }) =>
+      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/pin`, {
+        method: 'PATCH', body: { pinned: vars.pinned }, token,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['messages', conversationId] });
+      qc.invalidateQueries({ queryKey: ['conversation', conversationId] });
+    },
+  });
+}
+
+export function useSearchMessages(conversationId: string | undefined) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<{ items: ChatMessage[] }, Error, string>({
+    mutationFn: (q: string) => apiFetch(`/conversations/${conversationId}/messages/search?q=${encodeURIComponent(q)}`, { token }),
+  });
+}
+
 export function useStartConversation() {
   const token = useAuthStore((s) => s.accessToken);
   return useMutation({
@@ -291,11 +352,13 @@ export function useChatSocket(
   handlers: {
     onIncomingCall?: (from: string, mode: 'audio' | 'video') => void;
     onTyping?: (status: 'start' | 'stop', userName: string) => void;
+    onPresence?: (userId: string, online: boolean) => void;
   } = {},
 ): {
   typingStart: () => void;
   typingStop: () => void;
   markRead: () => void;
+  presenceHeartbeat: () => void;
 } {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
@@ -303,11 +366,13 @@ export function useChatSocket(
   const typingRef = useRef<{ [uid: string]: number }>({});
   const incomingCallRef = useRef(handlers.onIncomingCall);
   const typingCbRef = useRef(handlers.onTyping);
+  const presenceCbRef = useRef(handlers.onPresence);
 
   useEffect(() => {
     incomingCallRef.current = handlers.onIncomingCall;
     typingCbRef.current = handlers.onTyping;
-  }, [handlers.onIncomingCall, handlers.onTyping]);
+    presenceCbRef.current = handlers.onPresence;
+  }, [handlers.onIncomingCall, handlers.onTyping, handlers.onPresence]);
 
   useEffect(() => {
     if (!token || !conversationId) return;
@@ -405,6 +470,26 @@ export function useChatSocket(
       patchMessage({ ...d.message, body: null, attachmentUrl: null, deletedAt: new Date().toISOString() });
     });
 
+    // Live presence: peer came online / offline.
+    socket.on('presence:update', (d: { userId: string; online: boolean }) => {
+      presenceCbRef.current?.(d.userId, d.online);
+    });
+
+    // Live pin/unpin.
+    socket.on('message:pin', (d: { conversationId: string; message: ChatMessage }) => {
+      if (d.conversationId !== conversationId) return;
+      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
+        ['messages', conversationId],
+        (old) => {
+          if (!old) return old;
+          return { ...old, items: old.items.map((m) => (m.id === d.message.id ? { ...m, pinnedAt: d.message.pinnedAt } : m)) };
+        },
+      );
+    });
+
+    // Presence heartbeat so peers see the online dot. Also auto-closes socket on 'close'.
+    const heartbeat = setInterval(() => socket.emit('presence:heartbeat'), 15000);
+
     // Group updates + read receipts refresh the list.
     socket.on('conversation:updated', () => qc.invalidateQueries({ queryKey: ['conversations'] }));
     socket.on('conversation:read', () => {
@@ -413,6 +498,7 @@ export function useChatSocket(
     });
 
     return () => {
+      clearInterval(heartbeat);
       socket.emit('conversation:leave', conversationId);
       socket.disconnect();
       socketRef.current = null;
@@ -425,6 +511,7 @@ export function useChatSocket(
       typingStart: () => socketRef.current?.emit('typing:start', conversationId),
       typingStop: () => socketRef.current?.emit('typing:stop', conversationId),
       markRead: () => socketRef.current?.emit('conversation:read', conversationId),
+      presenceHeartbeat: () => socketRef.current?.emit('presence:heartbeat'),
     }),
     [conversationId],
   );

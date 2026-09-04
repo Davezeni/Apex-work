@@ -8,6 +8,10 @@ import {
   groupMembersSchema,
   updateChatGroupSchema,
   editMessageSchema,
+  muteConversationSchema,
+  pinMessageSchema,
+  forwardMessageSchema,
+  searchMessagesQuerySchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -198,6 +202,65 @@ router.delete(
     const io = getIo();
     if (io) io.to(`conv:${id}`).emit('message:delete', { conversationId: id, message });
     return success(res, message);
+  }),
+);
+
+/** POST /conversations/:id/messages/:messageId/forward — forward into another chat. */
+router.post(
+  '/:id/messages/:messageId/forward',
+  validate(forwardMessageSchema),
+  asyncHandler(async (req, res) => {
+    const { id, messageId } = req.params as { id: string; messageId: string };
+    const body = req.body as import('@apex-work/shared').ForwardMessageInput;
+    const message = await chat.forwardMessage(id, messageId, req.user!.sub, body.targetConversationId);
+    const io = getIo();
+    if (io) io.to(`conv:${body.targetConversationId}`).emit('message:new', message);
+    return success(res, message, 201);
+  }),
+);
+
+/** PATCH /conversations/:id/messages/:messageId/pin — pin / unpin. */
+router.patch(
+  '/:id/messages/:messageId/pin',
+  validate(pinMessageSchema),
+  asyncHandler(async (req, res) => {
+    const { id, messageId } = req.params as { id: string; messageId: string };
+    const body = req.body as import('@apex-work/shared').PinMessageInput;
+    const message = await chat.setPinned(id, messageId, req.user!.sub, body.pinned);
+    const io = getIo();
+    if (io) io.to(`conv:${id}`).emit('message:pin', { conversationId: id, message });
+    return success(res, message);
+  }),
+);
+
+/** GET /conversations/:id/messages/search?q=… — search within the conversation. */
+router.get(
+  '/:id/messages/search',
+  validate(searchMessagesQuerySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const q = (req.query as { q?: string }).q ?? '';
+    return success(res, await chat.searchMessages(id, req.user!.sub, q));
+  }),
+);
+
+/** POST /conversations/:id/mute — mute / unmute for me. */
+router.post(
+  '/:id/mute',
+  validate(muteConversationSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').MuteConversationInput;
+    return success(res, await chat.setConversationMuted(id, req.user!.sub, body.muted));
+  }),
+);
+
+/** POST /conversations/:id/unread — mark as unread. */
+router.post(
+  '/:id/unread',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await chat.markUnread(id, req.user!.sub));
   }),
 );
 
