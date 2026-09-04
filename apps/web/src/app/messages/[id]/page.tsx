@@ -4,12 +4,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useSavedMessages, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, type ChatMessage } from '@/hooks/use-chat';
+import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useSavedMessages, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, useLoadOlder, useGroupInvite, useSavedReplies, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
@@ -85,6 +85,11 @@ export default function ConversationPage() {
   const forwardMessage = useForwardMessage(id);
   const pinMessage = usePinMessage(id);
   const searchMessages = useSearchMessages(id);
+  const { older, hasMore, loading, loadOlder } = useLoadOlder(id);
+  const groupInvite = useGroupInvite(id);
+  const { replies, addReply, removeReply } = useSavedReplies();
+  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const [presence, setPresence] = useState<Record<string, boolean>>({});
   const [searchOpen, setSearchOpen] = useState(false);
@@ -214,6 +219,10 @@ export default function ConversationPage() {
     }
   };
 
+  // Combine paginated older messages + live loaded messages (oldest → newest).
+  const renderedMessages = [...older, ...messages];
+  const effectiveMessages = renderedMessages;
+
   // Collect all image URLs so we can drive a media-gallery lightbox.
   const imageUrls: string[] = messages
     .filter((m) => m.attachmentType === 'image' && m.attachmentUrl)
@@ -333,6 +342,23 @@ export default function ConversationPage() {
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                     >
                       <Users className="h-4 w-4" /> Members
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        groupInvite.mutate(undefined, {
+                          onSuccess: (r) => {
+                            const link = `https://apex-work-gold.vercel.app/messages/join/${r.token}`;
+                            setInviteLink(link);
+                            void navigator.clipboard?.writeText(link).catch(() => {});
+                            toast.success('Invite link copied');
+                          },
+                          onError: (e) => toast.error((e as Error).message),
+                        });
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                    >
+                      <Link2 className="h-4 w-4" /> Invite via link
                     </button>
                     {conv.me?.isAdmin && (
                       <button
@@ -491,7 +517,7 @@ export default function ConversationPage() {
             Could not load messages.
           </div>
         )}
-        {!isLoading && messages.length === 0 && (
+        {!isLoading && effectiveMessages.length === 0 && (
           <div className="grid h-full place-items-center text-center text-muted-foreground">
             <div>
               <div className="text-3xl">👋</div>
@@ -499,8 +525,20 @@ export default function ConversationPage() {
             </div>
           </div>
         )}
-        {messages.map((m, i) => {
-          const prev = messages[i - 1];
+        {hasMore && effectiveMessages.length > 0 && (
+          <div className="flex justify-center py-2">
+            <button
+              onClick={() => void loadOlder()}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-[11px] font-semibold text-muted-foreground active:scale-95 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowLeft className="h-3 w-3" />}
+              Load older messages
+            </button>
+          </div>
+        )}
+        {effectiveMessages.map((m, i) => {
+          const prev = effectiveMessages[i - 1];
           const showDate = !prev || dateKey(prev.createdAt) !== dateKey(m.createdAt);
           return (
             <div key={m.id} className="flex flex-col">
@@ -599,6 +637,56 @@ export default function ConversationPage() {
                   <Package className="h-5 w-5" />
                 </button>
               )}
+              <div className="relative">
+                <button
+                  onClick={() => setQuickRepliesOpen((v) => !v)}
+                  aria-label="Quick replies"
+                  aria-pressed={quickRepliesOpen}
+                  className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground', quickRepliesOpen && 'text-foreground')}
+                >
+                  <Zap className={cn('h-5 w-5', quickRepliesOpen && 'text-primary')} />
+                </button>
+                {quickRepliesOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setQuickRepliesOpen(false)} />
+                    <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Quick replies</div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {replies.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">No saved replies yet. Type a message, then tap “+ Save reply”.</p>}
+                        {replies.map((r) => (
+                          <div key={r.id} className="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-muted">
+                            <button
+                              onClick={() => { setText(r.body); setQuickRepliesOpen(false); }}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <div className="truncate text-xs font-semibold">{r.title}</div>
+                              <div className="truncate text-[11px] text-muted-foreground">{r.body}</div>
+                            </button>
+                            <button
+                              onClick={() => removeReply(r.id)}
+                              aria-label="Delete reply"
+                              className="text-muted-foreground opacity-0 hover:text-red-500 group-hover:opacity-100"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => {
+                          const body = text.trim();
+                          if (!body) { toast.error('Type a message first'); return; }
+                          const title = window.prompt('Name this reply', body.slice(0, 40) || 'Reply');
+                          if (title) { addReply(title, body); setQuickRepliesOpen(false); }
+                        }}
+                        className="mx-2 mb-1 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-primary active:bg-muted"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Save current text as reply
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <div className="relative">
                 <button
                   onClick={() => setEmojiOpen((v) => !v)}
@@ -838,6 +926,17 @@ export default function ConversationPage() {
               )}
               {actionMsg.body && (
                 <ActionRow icon={<Copy className="h-4 w-4" />} label="Copy text" onClick={() => { void navigator.clipboard?.writeText(actionMsg.body ?? ''); toast.success('Copied'); setActionMsg(null); }} />
+              )}
+              {actionMsg.senderId === me?.id && (actionMsg.readByTotal ?? 0) > 0 && conv?.members && (
+                <div className="mx-3 my-1 rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Read receipts</div>
+                  <div className="mt-1 text-xs text-foreground">
+                    {(actionMsg.readBy ?? 0) > 0
+                      ? `Seen by ${conv.members.filter((m) => actionMsg.readByUserIds?.includes(m.userId)).map((m) => m.fullName.split(' ')[0]).join(', ') || 'some members'}`
+                      : 'Not yet seen'}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">{actionMsg.readBy}/{actionMsg.readByTotal} read</div>
+                </div>
               )}
               {actionMsg.senderId === me?.id && (
                 <>

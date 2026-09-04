@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { io, type Socket } from 'socket.io-client';
 import { apiFetch } from '@/lib/api';
@@ -60,6 +60,7 @@ export interface ChatMessage {
   reactions?: { emoji: string; count: number; mine: boolean }[];
   readBy?: number;
   readByTotal?: number;
+  readByUserIds?: string[];
   editedAt?: string | null;
   deletedAt?: string | null;
   pinnedAt?: string | null;
@@ -331,6 +332,81 @@ export function useSearchMessages(conversationId: string | undefined) {
   return useMutation<{ items: ChatMessage[] }, Error, string>({
     mutationFn: (q: string) => apiFetch(`/conversations/${conversationId}/messages/search?q=${encodeURIComponent(q)}`, { token }),
   });
+}
+
+/** Load older messages (before the current oldest) and prepend them. */
+export function useLoadOlder(conversationId: string | undefined) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  const [older, setOlder] = useState<ChatMessage[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [cursor, setCursor] = useState<string | null>(null);
+
+  // Reset when conversation changes.
+  useEffect(() => { setOlder([]); setHasMore(false); setCursor(null); }, [conversationId]);
+
+  const loadOlder = async () => {
+    if (!token || !conversationId) return;
+    const current = qc.getQueryData<{ items: ChatMessage[]; nextCursor: string | null; hasMore: boolean }>(['messages', conversationId]);
+    const c = cursor ?? current?.nextCursor ?? null;
+    if (!c || loading) return;
+    setLoading(true);
+    try {
+      const res = await apiFetch<{ items: ChatMessage[]; nextCursor: string | null; hasMore: boolean }>(`/conversations/${conversationId}/messages?limit=40&cursor=${c}`, { token });
+      setOlder((prev) => [...res.items, ...prev]);
+      setCursor(res.nextCursor);
+      setHasMore(res.hasMore);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { older, hasMore, loading, loadOlder };
+}
+
+export function useGroupInvite(conversationId: string | undefined) {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<{ conversationId: string; title: string | null; token: string }, Error, void>({
+    mutationFn: () => apiFetch(`/conversations/${conversationId}/invite`, { token }),
+  });
+}
+
+export function useJoinGroup() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation<{ conversationId: string; title: string | null }, Error, string>({
+    mutationFn: (tokenStr: string) => apiFetch('/conversations/join', { method: 'POST', body: { token: tokenStr }, token }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
+  });
+}
+
+/** Saved replies (quick phrases) reused often — stored client-side. */
+export function useSavedReplies() {
+  const [replies, setReplies] = useState<{ id: string; title: string; body: string }[]>([]);
+  const load = () => {
+    try {
+      setReplies(JSON.parse(localStorage.getItem('saved-replies') ?? '[]'));
+    } catch { /* ignore */ }
+  };
+  useEffect(load, []);
+  const addReply = (title: string, body: string) => {
+    setReplies((prev) => {
+      const next = [...prev, { id: `r_${Date.now()}`, title, body }].slice(-50);
+      localStorage.setItem('saved-replies', JSON.stringify(next));
+      return next;
+    });
+  };
+  const removeReply = (id: string) => {
+    setReplies((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      localStorage.setItem('saved-replies', JSON.stringify(next));
+      return next;
+    });
+  };
+  return { replies, addReply, removeReply, reload: load };
 }
 
 export function useStartConversation() {

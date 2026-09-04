@@ -611,6 +611,7 @@ model Conversation {
   title       String?             // groups
   avatarUrl   String?             // group avatar
   createdById String?             // set for groups; null for direct chats
+  inviteToken String?             @unique // group join link token
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   lastMessageAt DateTime?

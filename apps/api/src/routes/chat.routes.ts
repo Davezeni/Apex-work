@@ -12,6 +12,7 @@ import {
   pinMessageSchema,
   forwardMessageSchema,
   searchMessagesQuerySchema,
+  joinGroupSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -269,6 +270,28 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
     return success(res, await chat.markUnread(id, req.user!.sub));
+  }),
+);
+
+/** GET /conversations/:id/invite — fetch/refresh a group join link. */
+router.get(
+  '/:id/invite',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await chat.getGroupInvite(id, req.user!.sub));
+  }),
+);
+
+/** POST /conversations/join — join a group via an invite token. */
+router.post(
+  '/join',
+  validate(joinGroupSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').JoinGroupInput;
+    const result = await chat.joinGroupByInvite(body.token, req.user!.sub, 'api');
+    const io = getIo();
+    if (io) io.to(`conv:${result.conversationId}`).emit('conversation:updated', result);
+    return success(res, result);
   }),
 );
 

@@ -221,8 +221,8 @@ export async function listMessages(
       b.count++;
       if (r.userId === userId) b.mine = true;
     }
-    const readBy = readTimes.filter((rt) => rt.lastReadAt && rt.lastReadAt >= m.createdAt).length;
-    return { ...m, reactions: Object.values(buckets), readBy, readByTotal: readTimes.length };
+    const readers = readTimes.filter((rt) => rt.lastReadAt && rt.lastReadAt >= m.createdAt).map((rt) => rt.userId);
+    return { ...m, reactions: Object.values(buckets), readBy: readers.length, readByTotal: readTimes.length, readByUserIds: readers };
   });
 
   return {
@@ -565,6 +565,39 @@ export async function setPinned(conversationId: string, messageId: string, userI
     data: { pinnedAt: pinned ? new Date() : null },
     select: { id: true, pinnedAt: true },
   });
+}
+
+/** Generate (or return) a join link for a group. Anyone with the link can join. */
+export async function getGroupInvite(conversationId: string, userId: string) {
+  const conv = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    select: { isGroup: true, title: true, id: true, inviteToken: true },
+  });
+  if (!conv.isGroup) throw new BadRequestError('Invite links are for groups only');
+  await assertMember(conversationId, userId);
+  let token = conv.inviteToken;
+  if (!token) {
+    const { randomBytes } = await import('node:crypto');
+    token = randomBytes(9).toString('base64url');
+    await prisma.conversation.update({ where: { id: conversationId }, data: { inviteToken: token } });
+  }
+  return { conversationId, title: conv.title, token };
+}
+
+/** Join a group via an invite token. */
+export async function joinGroupByInvite(token: string, userId: string, route: 'api' | 'web') {
+  await assertPhoneVerified(userId);
+  const mapping = await prisma.conversation.findUnique({
+    where: { inviteToken: token },
+    select: { id: true, title: true },
+  });
+  if (!mapping) throw new NotFoundError('Invite');
+  await prisma.conversationMember.upsert({
+    where: { conversationId_userId: { conversationId: mapping.id, userId } },
+    create: { conversationId: mapping.id, userId },
+    update: {},
+  });
+  return { conversationId: mapping.id, title: mapping.title, route };
 }
 
 // ==========================

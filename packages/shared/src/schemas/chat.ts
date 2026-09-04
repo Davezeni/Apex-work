@@ -76,3 +76,6 @@ export type ForwardMessageInput = z.infer<typeof forwardMessageSchema>;
 /** Search messages. */
 export const searchMessagesQuerySchema = z.object({ q: z.string().trim().min(1).max(200) });
 export type SearchMessagesQuery = z.infer<typeof searchMessagesQuerySchema>;
+
+export const joinGroupSchema = z.object({ token: z.string().trim().min(8).max(64) });
+export type JoinGroupInput = z.infer<typeof joinGroupSchema>;
