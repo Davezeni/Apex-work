@@ -8,6 +8,7 @@ import { I18nProvider } from '@/i18n';
 import { ServiceWorkerRegister } from './sw-register';
 import { AIAssistant } from './ai-assistant';
 import { PostHogInit } from './posthog-provider';
+import { ConsentBanner } from './site/consent-banner';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -46,6 +47,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <Toaster richColors position="top-center" />
           <ServiceWorkerRegister />
           <PostHogInit />
+          <ConsentBanner />
           <AIAssistant />
         </I18nProvider>
       </QueryClientProvider>

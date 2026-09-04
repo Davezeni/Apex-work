@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles, Chrome, Github } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { apiFetch, ApiError } from '@/lib/api';
+import { track } from '@/lib/analytics';
 import { OtpInput } from '@/components/auth/otp-input';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH, type UserRole } from '@apex-work/shared';
 import { useAuthStore } from '@/stores/auth-store';
@@ -111,6 +112,7 @@ function SignupInner() {
       });
       setSession(result.tokens, phone);
       toast.success(t('auth.welcomeUser', { name: fullName.split(' ')[0] ?? '' }));
+      track('signup', { role, oauth: !!oauthToken });
       // Offer to set a PIN so the next login skips the SMS step. OAuth keeps
       // the callback's safe destination when the user was sent here from it.
       const next = result.next ?? params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/');

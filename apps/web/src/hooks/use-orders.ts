@@ -84,8 +84,9 @@ export function useCreateOrder() {
         '/orders',
         { method: 'POST', body: input, token },
       ),
-    onSuccess: () => {
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['orders'] });
+      track('order_request', { gigId: vars.gigId, packageTier: vars.packageTier, checkoutUrl: !!data.checkoutUrl, devSkipped: !!data.devSkipped });
     },
   });
 }
