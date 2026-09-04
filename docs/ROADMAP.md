@@ -222,6 +222,13 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   `/reviews/:id/reply`).
 - **#25 Deferred batch** — CSAT post-ticket, referral tracked links + share
   card, PWA offline indicator, admin `⌘K` command palette.
+- **OPS (Render DB migrations):** the Render web service was created manually
+  (not from the blueprint), so its `preDeployCommand` is `none` and `prisma
+  migrate deploy` is NOT auto-run on deploy. DB migrations are applied by hand
+  using the Render API token to read `DATABASE_URL`/`DATABASE_URL_UNPOOLED` and
+  running `prisma migrate deploy`. Applied so far: `20260904110000_review_reply`
+  and `20260904120000_csat_and_referral_clicks` (plus the pending earlier ones).
+  On a NEW DB change, add a migration and apply it the same way.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
