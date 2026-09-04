@@ -193,8 +193,29 @@ export default function GigDetailPage() {
     }
   };
 
+  // JSON-LD structured data (Product + Offer) for search/social — injected
+  // in-DOM so JS-rendering crawlers see it. Only safe, typed fields used.
+  const ld = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: gig.title,
+    description: gig.description,
+    image: gig.coverImageUrl ?? undefined,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'ETB',
+      price: String(gig.startingPriceEtb),
+      availability: 'https://schema.org/InStock',
+    },
+    brand: { '@type': 'Organization', name: gig.owner.fullName },
+    aggregateRating: gig.owner.ratingCount > 0
+      ? { '@type': 'AggregateRating', ratingValue: String(gig.owner.rating), reviewCount: String(gig.owner.ratingCount) }
+      : undefined,
+  });
+
   return (
     <div className="min-h-dvh pb-32">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ld }} />
       {/*
         Header/hero. Two shapes:
           A) With cover image → tall visual hero + floating card that lifts.

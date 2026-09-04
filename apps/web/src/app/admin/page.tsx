@@ -38,7 +38,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.11';
+export const ADMIN_UI_BUILD = '2026-09-04.12';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -329,6 +329,17 @@ interface RetentionResp {
     weeklyCohorts: { week: string; signups: number; activated: number; activationRate: number }[];
   };
 }
+interface HealthScoreResp {
+  windowDays: number;
+  health: {
+    score: number; grade: string; status: 'healthy' | 'watch' | 'critical';
+    components: { key: string; label: string; score: number; status: 'good' | 'warn' | 'bad'; weight: number; detail: string }[];
+  };
+}
+interface FraudWatchResp {
+  windowDays: number;
+  items: { userId: string; username: string; fullName: string; role: string; newOrders: number; completedOrders: number; disputedOrders: number; cancelledOrders: number; withdrawnAmountEtb: number; withdrawalsCount: number; reviewsWritten: number; accountAgeDays: number; score: number; priority: 'high' | 'medium' | 'low' | 'clear'; reasons: string[] }[];
+}
 function SummaryTab() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery<Summary>({
@@ -355,6 +366,16 @@ function SummaryTab() {
   const { data: ret } = useQuery<RetentionResp>({
     queryKey: ['admin', 'retention'],
     queryFn: () => apiFetch<RetentionResp>('/admin/ops/retention?days=90', { token }),
+    enabled: !!token,
+  });
+  const { data: hs } = useQuery<HealthScoreResp>({
+    queryKey: ['admin', 'health-score'],
+    queryFn: () => apiFetch<HealthScoreResp>('/admin/ops/health-score?days=30', { token }),
+    enabled: !!token,
+  });
+  const { data: fw } = useQuery<FraudWatchResp>({
+    queryKey: ['admin', 'fraud-watchlist'],
+    queryFn: () => apiFetch<FraudWatchResp>('/admin/ops/fraud-watchlist?days=30&limit=6', { token }),
     enabled: !!token,
   });
   if (isLoading || !data) return <div className="grid h-40 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -449,6 +470,55 @@ function SummaryTab() {
           <div className="rounded-2xl border border-border bg-card p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weekly activation · signups vs activated</div>
             <RetentionBars cohorts={ret.stats.weeklyCohorts} />
+          </div>
+        </div>
+      )}
+      {hs && (
+        <div className="space-y-3">
+          <SectionHead2>Marketplace health · {hs.windowDays}d</SectionHead2>
+          <div className="rounded-2xl border border-border bg-card p-3">
+            <div className="flex items-center gap-3">
+              <div className={`grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-2xl font-black ${hs.health.status === 'healthy' ? 'bg-emerald-500/15 text-emerald-600' : hs.health.status === 'watch' ? 'bg-amber-500/15 text-amber-600' : 'bg-red-500/15 text-red-600'}`}>
+                {hs.health.score}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 text-sm font-extrabold capitalize">
+                  {hs.health.status}
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">Grade {hs.health.grade}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground">Weighted 0–100 composite of activation, churn, disputes, delivery, support SLA, liquidity and quality.</div>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {hs.health.components.map((c) => (
+                <div key={c.key} className="flex items-center gap-2">
+                  <span className="w-24 shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{c.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <div className={`h-full ${c.status === 'good' ? 'bg-emerald-500' : c.status === 'warn' ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${c.score}%` }} />
+                  </div>
+                  <span className="w-8 shrink-0 text-right text-[11px] font-bold">{c.score}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {fw && fw.items.length > 0 && (
+        <div className="space-y-3">
+          <SectionHead2>Fraud / abuse watchlist</SectionHead2>
+          <div className="rounded-2xl border border-red-500/30 bg-card p-3">
+            <div className="space-y-2">
+              {fw.items.map((w) => (
+                <Link key={w.userId} href={`/u/${w.username}`} className="flex items-center gap-2">
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${w.priority === 'high' ? 'bg-red-500/15 text-red-600' : w.priority === 'medium' ? 'bg-amber-500/15 text-amber-600' : 'bg-muted text-muted-foreground'}`}>{w.priority.toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{w.fullName}</div>
+                    <div className="truncate text-[10px] text-muted-foreground">@{w.username} · {w.reasons.join(' · ')}</div>
+                  </div>
+                  <span className="shrink-0 text-xs font-black">{w.score}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}

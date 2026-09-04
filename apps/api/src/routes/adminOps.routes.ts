@@ -37,6 +37,7 @@ import * as orderHealth from '../services/admin/orderHealth.service.js';
 import * as proRoi from '../services/admin/proRoi.service.js';
 import * as retention from '../services/admin/retention.service.js';
 import * as emailQueue from '../services/admin/emailQueue.service.js';
+import * as opsHealth from '../services/admin/opsHealth.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -138,6 +139,27 @@ router.get(
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 60));
     return success(res, await retention.retention(days));
+  }),
+);
+
+// ================= OPERATIONS HEALTH =================
+
+router.get(
+  '/health-score',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(120, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    return success(res, await opsHealth.healthScore(days));
+  }),
+);
+
+router.get(
+  '/fraud-watchlist',
+  requireCapability('users:manage'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(120, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 25));
+    return success(res, await opsHealth.fraudWatchlist(days, limit));
   }),
 );
 

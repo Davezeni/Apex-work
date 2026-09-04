@@ -252,6 +252,11 @@ export default function OrderDetailPage() {
         </Link>
       </Section>
 
+      {/* Escrow status timeline — where the money is right now */}
+      <Section title="Funds">
+        <EscrowTimeline status={order.status} />
+      </Section>
+
       {/* Payment summary */}
       <Section title="Payment">
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
@@ -591,6 +596,44 @@ function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
           )}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Escrow / funds status timeline — reassures both parties where the money is.
+function EscrowTimeline({ status }: { status: string }) {
+  // Stage order: money goes from client → held in escrow → released to seller.
+  // Reject/Cancelled leaves it clear. DISPUTED = held pending admin ruling.
+  const stages: { key: string; label: string; done: boolean; active: boolean }[] = [];
+  const paid = status !== 'PENDING';
+  const released = status === 'COMPLETED';
+  const held = paid && !released && status !== 'CANCELLED';
+  stages.push({ key: 'client', label: 'Client pays', done: paid, active: !paid });
+  stages.push({ key: 'held', label: 'Held in escrow', done: held, active: paid && !held });
+  stages.push({ key: 'released', label: 'Released to seller', done: released, active: !released && !held });
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="flex items-center">
+        {stages.map((s, i) => (
+          <div key={s.key} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${
+                s.done ? 'bg-emerald-500 text-white' : s.active ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+              }`}>
+                {s.done ? '✓' : i + 1}
+              </div>
+              <span className={`text-center text-[9px] font-semibold leading-tight ${s.done ? 'text-emerald-600' : s.active ? 'text-foreground' : 'text-muted-foreground'}`}>
+                {s.label}
+              </span>
+            </div>
+            {i < stages.length - 1 && <div className={`mx-1 mb-4 h-0.5 flex-1 rounded ${s.done ? 'bg-emerald-500/60' : 'bg-muted'}`} />}
+          </div>
+        ))}
+      </div>
+      {status === 'DISPUTED' && (
+        <p className="mt-2 text-center text-[11px] text-amber-600">Funds are held while this order is disputed.</p>
+      )}
     </div>
   );
 }
