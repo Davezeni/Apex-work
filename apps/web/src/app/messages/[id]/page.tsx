@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -43,6 +43,13 @@ function gradientFor(id: string): string {
 function initialsOf(name: string): string {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 }
+
+const EMOJI_QUICK = [
+  '😀','😄','😂','🤣','😊','😍','😘','😎','🤔','😅',
+  '👍','👎','👏','🙏','💪','🤝','✌️','🙌','👌','🤙',
+  '❤️','🔥','🎉','✅','⭐','💯','😢','😡','🤯','🥳',
+  '🚀','💡','📌','📈','💰','🌍','🤗','😇','🥰','😴',
+];
 
 function dateKey(iso: string): string {
   const d = new Date(iso);
@@ -120,6 +127,7 @@ export default function ConversationPage() {
   const text = draft.text;
   const setText = draft.setText;
   const [composerMode, setComposerMode] = useState<'text' | 'voice'>('text');
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [offerSheetOpen, setOfferSheetOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
@@ -591,6 +599,33 @@ export default function ConversationPage() {
                   <Package className="h-5 w-5" />
                 </button>
               )}
+              <div className="relative">
+                <button
+                  onClick={() => setEmojiOpen((v) => !v)}
+                  aria-label="Emoji"
+                  aria-pressed={emojiOpen}
+                  className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground', emojiOpen && 'text-foreground')}
+                >
+                  <Smile className={cn('h-5 w-5', emojiOpen && 'text-primary')} />
+                </button>
+                {emojiOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setEmojiOpen(false)} />
+                    <div className="absolute bottom-14 left-0 z-40 grid w-64 grid-cols-8 gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                      {EMOJI_QUICK.map((e) => (
+                        <button
+                          key={e}
+                          onClick={() => { setText(text + e); setEmojiOpen(false); }}
+                          className="grid h-7 w-7 place-items-center rounded-lg text-lg hover:bg-muted active:scale-90"
+                          aria-label={`Insert ${e}`}
+                        >
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <textarea
                 value={text}
                 onChange={(e) => handleTextChange(e.target.value)}
