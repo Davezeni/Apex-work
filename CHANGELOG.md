@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Messaging depth (power push #29)
+
+### Added
+- **Load older messages** — cursor pagination in the thread with a "Load older
+  messages" button (prepends prior pages; `GET /conversations/:id/messages?cursor=`).
+- **Read-receipts breakdown** — per-message `readBy`, `readByTotal`,
+  `readByUserIds`; the message action sheet shows who has read it.
+- **Group invite links** — `GET /conversations/:id/invite` issues a stable
+  `inviteToken` (`Conversation.inviteToken`); `POST /conversations/join`
+  adds the caller to the group; new `/messages/join/[token]` page.
+- **Quick replies (saved phrases)** — composer ⚡ picker; save the current
+  draft as a reusable reply, insert it with one tap.
+
 ## [Unreleased] — Messenger power-up + Saved Messages (power push #28)
 
 ### Added
