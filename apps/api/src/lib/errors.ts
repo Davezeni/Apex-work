@@ -67,3 +67,9 @@ export class InternalError extends AppError {
     super(message, 500, 'INTERNAL_ERROR');
   }
 }
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Service temporarily unavailable', details?: unknown) {
+    super(message, 503, 'SERVICE_UNAVAILABLE', details);
+  }
+}

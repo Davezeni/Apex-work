@@ -17,7 +17,7 @@
 import type { IncomingMessage } from 'node:http';
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
-import { BadRequestError } from '../lib/errors.js';
+import { BadRequestError, ServiceUnavailableError } from '../lib/errors.js';
 import { randomToken } from '../lib/hash.js';
 
 export type StorageBucket = 'portfolio' | 'chat-attachments' | 'avatars';
@@ -183,15 +183,24 @@ export class StorageService {
       `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
 
     const sign = async (): Promise<{ status: number; body: string }> => {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
+      let res: Response;
+      try {
+        res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        });
+      } catch (err) {
+        // e.g. DNS failure because SUPABASE_URL points at a deleted/nonexistent
+        // project. Surface a meaningful 503 instead of a generic 500.
+        const reason = (err as Error)?.message ?? 'network error';
+        logger.error({ reason, url: env.SUPABASE_URL }, 'Supabase unreachable');
+        throw new ServiceUnavailableError(`Upload storage is unreachable (${reason})`);
+      }
       return { status: res.status, body: await res.text().catch(() => '') };
     };
 
