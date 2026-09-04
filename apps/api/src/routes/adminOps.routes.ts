@@ -34,6 +34,7 @@ import * as supportStats from '../services/admin/supportAnalytics.service.js';
 import * as leaderboard from '../services/admin/leaderboard.service.js';
 import * as insights from '../services/admin/insights.service.js';
 import * as orderHealth from '../services/admin/orderHealth.service.js';
+import * as proRoi from '../services/admin/proRoi.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -113,6 +114,17 @@ router.post(
   asyncHandler(async (req, res) => {
     const actor = await loadActor(req);
     return success(res, await orderHealth.sendDigest(actor));
+  }),
+);
+
+// ================= PRO-SUBSCRIPTION ROI =================
+
+router.get(
+  '/subscriptions/roi',
+  requireCapability('subscriptions:manage'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
+    return success(res, await proRoi.proRoi(limit));
   }),
 );
 

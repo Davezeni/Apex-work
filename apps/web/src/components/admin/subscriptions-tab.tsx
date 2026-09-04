@@ -14,7 +14,7 @@ const subTone: Record<string, 'ok' | 'warn' | 'neutral' | 'bad'> = {
 export function SubscriptionsTab() {
   const token = useAuthStore((s) => s.accessToken);
   const [status, setStatus] = useState('');
-  const [view, setView] = useState<'list' | 'revenue'>('list');
+  const [view, setView] = useState<'list' | 'revenue' | 'roi'>('list');
   const { data, isLoading } = useQuery<any>({
     queryKey: ['admin/subscriptions', status],
     queryFn: () => apiFetch(`/admin/ops/subscriptions?limit=30${status ? `&status=${status}` : ''}`, { token }),
@@ -24,12 +24,12 @@ export function SubscriptionsTab() {
     <div className="space-y-4">
       <SectionHead title="Subscriptions" subtitle="Pro passes & monetization" actions={
         <div className="flex gap-1">
-          {(['list', 'revenue'] as const).map((v) => (
+          {(['list', 'revenue', 'roi'] as const).map((v) => (
             <button key={v} onClick={() => setView(v)} className={cn('rounded-full px-3 py-1 text-[11px] font-bold capitalize', view === v ? 'bg-primary text-white' : 'border border-border text-muted-foreground')}>{v}</button>
           ))}
         </div>
       } />
-      {view === 'revenue' ? <RevenueView token={token} /> : (
+      {view === 'revenue' ? <RevenueView token={token} /> : view === 'roi' ? <RoiView token={token} /> : (
         <>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={cn(inputCls, 'w-auto')}>
             <option value="">All plans</option>
@@ -116,6 +116,89 @@ function RevStat({ label, value }: { label: string; value: string }) {
     <div className="rounded-2xl border border-border bg-card p-3">
       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-1 text-lg font-extrabold tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+interface RoiRow {
+  userId: string; username: string; fullName: string; role: string;
+  costEtb: number; valueEtb: number; purchases: number; lastStatus: string;
+  netEtb: number; roiMultiple: number; profitable: boolean;
+}
+interface RoiData {
+  subscribers: number; totalCostEtb: number; totalValueEtb: number; netEtb: number;
+  roiMultiple: number; repurchaseRate: number; profitableCount: number; profitablePct: number;
+  avgRoi: number; topRoi: RoiRow[]; worstRoi: RoiRow[];
+}
+function RoiView({ token }: { token: string | null }) {
+  const { data, isLoading } = useQuery<RoiData>({
+    queryKey: ['admin/subscriptions/roi'],
+    queryFn: () => apiFetch<RoiData>('/admin/ops/subscriptions/roi?limit=6', { token }),
+    enabled: !!token,
+  });
+  if (isLoading || !data) return <Spinner label="Loading ROI…" />;
+  const pct = (n: number) => `${(n * 100).toFixed(0)}%`;
+  const roiLabel = (m: number) => `${m.toFixed(2)}×`;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-border bg-card p-3">
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <RoiCell label="ROI" value={roiLabel(data.roiMultiple)} big tone={data.roiMultiple >= 1} />
+          <RoiCell label="Net value" value={formatEtb(data.netEtb)} tone={data.netEtb > 0} />
+          <RoiCell label="Subscribers" value={String(data.subscribers)} />
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="rounded-xl bg-muted/50 p-2 text-[11px]">
+            <span className="text-muted-foreground">Invested </span>
+            <b>{formatEtb(data.totalCostEtb)}</b> · <span className="text-muted-foreground">Returned </span>
+            <b>{formatEtb(data.totalValueEtb)}</b>
+          </div>
+          <div className="rounded-xl bg-muted/50 p-2 text-[11px]">
+            <span className="text-muted-foreground">Avg ROI </span><b>{roiLabel(data.avgRoi)}</b> · <span className="text-muted-foreground">Repeat </span>
+            <b>{pct(data.repurchaseRate)}</b>
+          </div>
+        </div>
+        <div className="mt-2 text-[11px] text-muted-foreground">
+          {data.profitableCount}/{data.subscribers} profitable ({pct(data.profitablePct)}) · Pro pass pays for itself when freelancer earnings / client spend exceeds its cost.
+        </div>
+      </div>
+      {data.topRoi.length > 0 && (
+        <RoiTable title="Best ROI" rows={data.topRoi} />
+      )}
+      {data.worstRoi.length > 0 && (
+        <RoiTable title="Lowest ROI" rows={data.worstRoi} />
+      )}
+    </div>
+  );
+}
+function RoiCell({ label, value, big, tone }: { label: string; value: string; big?: boolean; tone?: boolean }) {
+  return (
+    <div>
+      <div className={`${big ? 'text-2xl' : 'text-xl'} font-extrabold tracking-tight ${tone ? 'text-emerald-600' : ''}`}>{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+function RoiTable({ title, rows }: { title: string; rows: RoiRow[] }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="mt-2 space-y-2">
+        {rows.map((r) => (
+          <div key={r.userId} className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{r.fullName}</div>
+              <div className="text-[10px] text-muted-foreground">
+                @{r.username} · {r.role} · cost {formatEtb(r.costEtb)}
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <div className={`text-sm font-extrabold ${r.profitable ? 'text-emerald-600' : 'text-red-500'}`}>{r.roiMultiple.toFixed(2)}×</div>
+              <div className="text-[10px] text-muted-foreground">{r.netEtb >= 0 ? '+' : ''}{formatEtb(r.netEtb)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
