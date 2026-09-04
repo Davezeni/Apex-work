@@ -204,6 +204,13 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   Settings "email" sub-view with flush. Completes Y5 (email queue).
 - **Agencies admin tab** (#20): `GET /agencies/:id` + member role update
   (audited) + Agencies tab with expandable members. Completes C3.
+- **Marketplace health score** (#21): `lib/healthScore.ts` weighted 0–100
+  composite + `GET /admin/ops/health-score` + Summary health card. A single
+  number that captures the whole operation.
+- **Fraud/abuse velocity watchlist** (#21): `lib/fraudWatch.ts` transparent
+  rules + `GET /admin/ops/fraud-watchlist` + Summary watchlist. (No ML.)
+- **Escrow timeline** (#21) on order page + **gig SEO JSON-LD** (#21).
+- **#4–#21 admin + user-app feature run is substantially complete.**
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

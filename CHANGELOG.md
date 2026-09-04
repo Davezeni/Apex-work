@@ -3,6 +3,25 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Marketplace health score, fraud watchlist, escrow timeline, gig SEO (power push #21)
+
+### Added
+- **Marketplace health score** — `lib/healthScore.ts` (pure `buildHealthScore`: a
+  weighted 0–100 composite of activation, churn, disputes, delivery SLA,
+  support SLA, liquidity and quality, each as a 0–100 contributor) +
+  `GET /admin/ops/health-score` + Summary tab health card with per-component
+  bars and a grade.
+- **Fraud/abuse watchlist** — `lib/fraudWatch.ts` (pure
+  `scoreWatchlistUser`/`rankWatchlist`: transparent velocity rules — young
+  account + high volume, high dispute rate, cancellation churn, early
+  withdrawals, review velocity — scoring to high/medium/low/clear) +
+  `GET /admin/ops/fraud-watchlist` + Summary tab watchlist.
+- **Escrow timeline** on the order page (client pays → held → released,
+  disputed note) — reassures both parties where the funds are.
+- **Gig SEO structured data** — JSON-LD `Product` + `Offer` (price, availability,
+  brand, aggregate rating) injected on the gig detail page for search/social.
+- **+9 unit tests** — 195 → 204 tests.
+
 ## [Unreleased] — Retention & churn analytics + email-queue monitor + Agencies tab (power push #19)
 
 ### Added
