@@ -211,6 +211,11 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   rules + `GET /admin/ops/fraud-watchlist` + Summary watchlist. (No ML.)
 - **Escrow timeline** (#21) on order page + **gig SEO JSON-LD** (#21).
 - **#4–#21 admin + user-app feature run is substantially complete.**
+- **Sentry + PostHog wiring (#22)** — API `@sentry/node`, web `@sentry/nextjs`
+  (instrumentation + global-error), PostHog `posthog-js` client with a
+  `track`/`identify` helper. No-op without env keys; Diagnostics shows
+  `sentry: configured`. **Pending activation:** set `SENTRY_DSN` (Render),
+  `NEXT_PUBLIC_SENTRY_DSN` + `NEXT_PUBLIC_POSTHOG_KEY` (Vercel).
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

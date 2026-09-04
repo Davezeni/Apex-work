@@ -3,6 +3,29 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Sentry + PostHog observability wiring (power push #22)
+
+### Added
+- **Sentry (API / Node)** — `config/sentry.ts` (`initSentry`, `captureException`,
+  `captureMessage`), no-op without `SENTRY_DSN`; `captureException` wired into
+  the global error handler; Diagnostics reports `sentry: configured`.
+- **Sentry (web / Next.js)** — `@sentry/nextjs` with the modern App Router
+  setup: `src/instrumentation.ts` (server/edge `register()` + `onRequestError`),
+  `src/instrumentation-client.ts` (`onLoad` + `onRouterTransitionStart`),
+  `app/global-error.tsx` (React render errors), and `withSentryConfig` in
+  `next.config`. Sourcemap *source-generation* disabled so the free-tier build
+  stays under memory limits (Vercel still produces `.map` files for traces).
+- **PostHog (web)** — `lib/analytics.ts` (`initPosthog`, `track`, `identify`),
+  a `PostHogInit` provider in the Providers tree, `identifyUser` on `/me`,
+  and a `track('order_action', { action, status })` on order lifecycle events.
+- **Env** — `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` / `NEXT_PUBLIC_POSTHOG_KEY`
+  documented in `.env.example`; real values live only in gitignored `.env`
+  files (never committed).
+
+> NOTE: to capture in production, add the env vars to Render (API) and Vercel
+> (web) — see README/OBSERVABILITY notes. Without them the SDKs no-op safely.
+
+## [Unreleased] — Marketplace health score, fraud watchlist, escrow timeline, gig SEO (power push #21)
 ## [Unreleased] — Marketplace health score, fraud watchlist, escrow timeline, gig SEO (power push #21)
 
 ### Added
