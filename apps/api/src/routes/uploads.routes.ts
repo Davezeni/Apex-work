@@ -9,6 +9,31 @@ import { storage } from '../services/storage.service.js';
 
 const router: Router = Router();
 
+/**
+ * GET /files/:id — stream a self-hosted file back to the client.
+ * Public (unguessable cuid id) so <img>/<audio> tags load without auth, like a
+ * public storage bucket. Served from the Postgres object store.
+ */
+router.get(
+  '/files/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const { prisma } = await import('../lib/prisma.js');
+    const row = await prisma.upload.findUnique({ where: { id }, select: { data: true, contentType: true, bucket: true, sizeBytes: true } });
+    if (!row) throw new BadRequestError('File not found');
+    res.setHeader('Content-Type', row.contentType);
+    res.setHeader('Content-Length', String(row.sizeBytes));
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Inline images/audio, attach otherwise.
+    if (row.contentType.startsWith('image/') || row.contentType.startsWith('audio/') || row.contentType.startsWith('video/')) {
+      res.setHeader('Content-Disposition', 'inline');
+    } else {
+      res.setHeader('Content-Disposition', 'attachment');
+    }
+    return res.send(Buffer.isBuffer(row.data) ? row.data : Buffer.from(row.data));
+  }),
+);
+
 router.use(requireAuth);
 
 /**

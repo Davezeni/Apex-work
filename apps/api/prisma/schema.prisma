@@ -698,6 +698,28 @@ model Notification {
   @@index([userId, readAt, createdAt(sort: Desc)])
 }
 
+// ================= FILE STORAGE (self-hosted fallback) =================
+//
+// A Postgres-backed object store used when the external storage provider
+// (Supabase) is unavailable/not configured. Uploaded bytes live in `data`
+// (bytea/TOAST) and are streamed out by GET /v1/files/:id. `path` is unique
+// so the same logical key maps to one object.
+model Upload {
+  id          String   @id @default(cuid())
+  ownerId     String
+  bucket      String
+  path        String   @unique
+  filename    String
+  contentType String
+  sizeBytes   Int
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@index([ownerId])
+  @@index([bucket])
+}
+
+
 // ================= TRUSTED DEVICES =================
 
 /// A device the user has verified once via OTP. Presenting a valid device

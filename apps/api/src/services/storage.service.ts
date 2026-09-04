@@ -252,13 +252,15 @@ export class StorageService {
    * Fallback for clients that cannot complete a cross-origin PUT. The body is
    * the raw file, not multipart/form-data, so Express never buffers it in a
    * JSON parser and Render does not need a temporary disk file.
+   *
+   * Gateway selection: try Supabase Storage when it's configured and
+   * reachable; otherwise fall back to the self-hosted Postgres object store so
+   * uploads keep working even when the external provider is unavailable.
    */
   async uploadProxy(
     req: IncomingMessage,
     input: Omit<SignedUploadRequest, 'sizeBytes'> & { declaredSizeBytes?: number },
   ): Promise<SignedUploadResult> {
-    if (!this.isConfigured()) throw new Error('Storage is not configured');
-
     const contentType = this.normalizeContentType(input.contentType, input.filename);
     const typeCheck = this.validate({
       bucket: input.bucket,
@@ -288,35 +290,78 @@ export class StorageService {
     if (total <= 0) throw new BadRequestError('The selected file is empty.');
 
     const path = this.buildPath(input.ownerId, input.filename);
-    const res = await fetch(this.objectEndpoint(input.bucket, path), {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
-        'Content-Type': contentType,
-        'x-upsert': 'false',
-        'Content-Length': String(total),
-      },
-      body: Buffer.concat(chunks),
-    });
+    const bytes = Buffer.concat(chunks);
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      logger.error(
-        { status: res.status, text: text.slice(0, 500), bucket: input.bucket },
-        'Supabase proxy upload failed',
-      );
-      throw new Error(`Storage upload failed (${res.status})`);
+    if (this.isConfigured()) {
+      try {
+        const res = await fetch(this.objectEndpoint(input.bucket, path), {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+            'Content-Type': contentType,
+            'x-upsert': 'false',
+            'Content-Length': String(total),
+          },
+          body: bytes,
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          logger.error(
+            { status: res.status, text: text.slice(0, 500), bucket: input.bucket },
+            'Supabase proxy upload failed',
+          );
+          throw new Error(`Storage upload failed (${res.status})`);
+        }
+
+        return {
+          uploadUrl: '',
+          token: '',
+          publicUrl: this.publicUrl(input.bucket, path),
+          path,
+          contentType,
+          sizeBytes: total,
+        };
+      } catch (err) {
+        // Supabase unreachable (e.g. project was deleted / DNS fails) → fall
+        // through to the self-hosted store instead of surfacing a 500.
+        logger.warn({ err: (err as Error).message, bucket: input.bucket }, 'Supabase upload failed — storing locally');
+      }
     }
 
+    return this.storeLocal(input.ownerId, input.bucket, path, input.filename, contentType, total, bytes);
+  }
+
+  /** Persist bytes in the Postgres-backed object store and return an API-served URL. */
+  private async storeLocal(
+    ownerId: string,
+    bucket: StorageBucket,
+    path: string,
+    filename: string,
+    contentType: string,
+    sizeBytes: number,
+    bytes: Buffer,
+  ): Promise<SignedUploadResult> {
+    const { prisma } = await import('../lib/prisma.js');
+    const row = await prisma.upload.create({
+      data: { ownerId, bucket, path, filename, contentType, sizeBytes, data: bytes },
+      select: { id: true },
+    });
+    logger.info({ bucket, id: row.id, sizeBytes }, 'File stored in local object store');
     return {
       uploadUrl: '',
       token: '',
-      publicUrl: this.publicUrl(input.bucket, path),
-      path,
+      publicUrl: `${this.publicBase()}/v1/files/${row.id}`,
+      path: `${bucket}/${path}`,
       contentType,
-      sizeBytes: total,
+      sizeBytes,
     };
+  }
+
+  /** Public base URL for the self-hosted file endpoint. */
+  private publicBase(): string {
+    return (env.API_URL ?? '').replace(/\/$/, '');
   }
 }
 
