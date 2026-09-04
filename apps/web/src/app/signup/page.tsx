@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -36,7 +36,18 @@ function SignupInner() {
   const oauthName = params.get('oauthName');
   const [step, setStep] = useState<Step>(oauthToken || phoneFromQuery ? 'phone' : 'role');
   const roleFromQuery = params.get('role');
+  const refFromQuery = params.get('ref');
   const [role, setRole] = useState<UserRole>(roleFromQuery === 'FREELANCER' ? 'FREELANCER' : 'CLIENT');
+
+  // Track a referral-link click when someone arrives at signup via a share link.
+  useEffect(() => {
+    if (!refFromQuery) return;
+    const t = setTimeout(() => {
+      void apiFetch('/referrals/track', { method: 'POST', body: { refCode: refFromQuery, source: 'link' } }).catch(() => undefined);
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refFromQuery]);
   const [phone, setPhone] = useState(phoneFromQuery ?? '+251');
   const [code, setCode] = useState('');
   const [otpToken, setOtpToken] = useState('');
@@ -108,7 +119,7 @@ function SignupInner() {
         method: 'POST',
         body: oauthToken
           ? { oauthToken, phone, otpToken, fullName: fullName.trim(), role }
-          : { phone, otpToken, fullName: fullName.trim(), role },
+          : { phone, otpToken, fullName: fullName.trim(), role, ...(refFromQuery ? { referralCode: refFromQuery } : {}) },
       });
       setSession(result.tokens, phone);
       toast.success(t('auth.welcomeUser', { name: fullName.split(' ')[0] ?? '' }));

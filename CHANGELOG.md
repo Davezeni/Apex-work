@@ -3,6 +3,26 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — CSAT, referral tracking, offline indicator, admin palette (power push #25)
+
+### Added
+- **CSAT post-ticket** — `SupportTicket` gains `csatRating` / `csatComment` /
+  `csatScoredAt` (migration `20260904120000_csat_and_referral_clicks`); API
+  `POST /support/:id/csat` (owner-only, once per resolved/closed ticket);
+  web shows a one-time star prompt on resolved tickets; admin support table
+  surfaces the CSAT score + comment.
+- **Referral tracked links + share card** — new `ReferralClick` append-only
+  log + `POST /referrals/track` (public). Signup page now passes the `?ref=`
+  code to `/auth/signup` so attribution actually persists, and tracks a click
+  when someone lands via a share link. Referrals page gets a share-card
+  preview + a live "Link clicks" stat.
+- **PWA offline indicator** — the chat page now shows an amber banner when the
+  browser is offline (and counts queued messages waiting in the IndexedDB
+  outbox). The outbox flusher already existed; this surfaces its state.
+- **Admin command palette** — `⌘K` / `Ctrl+K` (and a search button) opens a
+  fuzzy search over the visible admin sections with arrow-key navigation,
+  Enter to run, Esc to close.
+
 ## [Unreleased] — Review replies (seller rebuttal) (power push #24)
 
 ### Added

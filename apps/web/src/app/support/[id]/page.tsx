@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, CheckCircle2, Star, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
-import { useTicket, useReplyTicket, useSetTicketStatus } from '@/hooks/use-support';
+import { useTicket, useReplyTicket, useSetTicketStatus, useSubmitCsat } from '@/hooks/use-support';
 import { cn, timeAgo } from '@/lib/utils';
 
 export default function TicketPage() {
@@ -16,6 +16,7 @@ export default function TicketPage() {
   const { data: t, isLoading } = useTicket(id);
   const reply = useReplyTicket(id);
   const setStatus = useSetTicketStatus(id);
+  const submitCsat = useSubmitCsat(id);
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -55,6 +56,10 @@ export default function TicketPage() {
           </Button>
         )}
       </header>
+
+      {closed && t.csatRating === null && (
+        <CsatPrompt onRate={(rating, comment) => submitCsat.mutate({ rating, comment })} pending={submitCsat.isPending} />
+      )}
 
       <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
         {(t.messages ?? []).map((m) => {
@@ -97,6 +102,57 @@ export default function TicketPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** One-time satisfaction prompt shown when a ticket is resolved/closed and
+ *  the user hasn't rated it yet. Un-rating closes the card for the session. */
+function CsatPrompt({ onRate, pending }: { onRate: (rating: number, comment?: string) => void; pending: boolean }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState('');
+  const [dismissed, setDismissed] = useState(false);
+
+  if (dismissed) return null;
+
+  return (
+    <div className="mx-3 mt-3 rounded-2xl border border-border bg-card p-4">
+      <button onClick={() => setDismissed(true)} aria-label="Close" className="float-right grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-muted">
+        <X className="h-4 w-4" />
+      </button>
+      <div className="text-sm font-bold">How was our support?</div>
+      <div className="mt-1 text-xs text-muted-foreground">Your feedback helps us improve. It only takes a moment.</div>
+      <div className="mt-3 flex gap-1.5">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            onClick={() => setRating(n)}
+            onMouseEnter={() => setHover(n)}
+            onMouseLeave={() => setHover(0)}
+            aria-label={`${n} star${n > 1 ? 's' : ''}`}
+            className="active:scale-90"
+          >
+            <Star className={cn('h-8 w-8 transition-colors', n <= (hover || rating) ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30')} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        maxLength={2000}
+        rows={2}
+        placeholder="Anything we could do better? (optional)"
+        className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-xs outline-none focus:border-primary"
+      />
+      <Button
+        size="sm"
+        disabled={rating === 0 || pending}
+        onClick={() => onRate(rating, comment.trim() || undefined)}
+        className="mt-2 w-full"
+      >
+        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : `Submit ${rating ? `${rating}★` : ''}`}
+      </Button>
     </div>
   );
 }

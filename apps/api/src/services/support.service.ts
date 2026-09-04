@@ -4,7 +4,7 @@
  * ("waiting user" vs "waiting staff").
  */
 import { prisma } from '../lib/prisma.js';
-import { ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
 import { sendPush } from './push.service.js';
 
@@ -88,6 +88,27 @@ export async function setStatus(ticketId: string, viewerId: string, isAdmin: boo
       status,
       resolvedAt: status === 'RESOLVED' || status === 'CLOSED' ? new Date() : null,
     },
+  });
+}
+
+/**
+ * CSAT — the ticket owner rates their support experience once a ticket is
+ * resolved/closed. One-time (re-submitting returns a conflict). Persists and
+ * the admin support panel surfaces the score via `adminList`.
+ */
+export async function submitCsat(ticketId: string, userId: string, rating: number, comment?: string) {
+  if (rating < 1 || rating > 5) throw new BadRequestError('Rating must be between 1 and 5');
+  const t = await prisma.supportTicket.findUnique({ where: { id: ticketId }, select: { userId: true, status: true, csatRating: true } });
+  if (!t) throw new NotFoundError('Ticket');
+  if (t.userId !== userId) throw new ForbiddenError();
+  if (t.csatRating !== null) throw new ConflictError('You already rated this ticket');
+  if (t.status !== 'RESOLVED' && t.status !== 'CLOSED') {
+    throw new ConflictError('You can only rate a resolved ticket');
+  }
+  return prisma.supportTicket.update({
+    where: { id: ticketId },
+    data: { csatRating: rating, csatComment: comment ?? null, csatScoredAt: new Date() },
+    select: { id: true, csatRating: true, csatComment: true, csatScoredAt: true },
   });
 }
 

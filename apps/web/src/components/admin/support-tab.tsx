@@ -54,13 +54,14 @@ export function SupportTab() {
       </select>
       {isLoading ? <Spinner label="Loading tickets…" /> : items.length === 0 ? <Empty message="No tickets" /> : (
         <TableShell>
-          <thead><tr><Th>Subject</Th><Th>User</Th><Th>Status</Th><Th>Messages</Th><Th>Open</Th></tr></thead>
+          <thead><tr><Th>Subject</Th><Th>User</Th><Th>Status</Th><Th>CSAT</Th><Th>Messages</Th><Th>Open</Th></tr></thead>
           <tbody>
             {items.map((t) => (
               <tr key={t.id} className="border-b border-border/50">
                 <Td className="max-w-[240px]"><div className="truncate font-bold">{t.subject}</div><div className="text-[11px] text-muted-foreground">{t.category}</div></Td>
                 <Td className="text-muted-foreground">@{t.user?.username}</Td>
                 <Td><Badge tone={tone[t.status] ?? 'neutral'}>{t.status}</Badge></Td>
+                <Td>{t.csatRating ? <span className="font-semibold text-amber-500">{'★'.repeat(t.csatRating)}<span className="text-muted-foreground/60">{'☆'.repeat(5 - t.csatRating)}</span></span> : <span className="text-muted-foreground/40">—</span>}</Td>
                 <Td className="text-muted-foreground">{t._count?.messages ?? 0}</Td>
                 <Td><Button size="sm" variant="outline" onClick={() => { setOpen(t); setReply(''); }}>Open</Button></Td>
               </tr>

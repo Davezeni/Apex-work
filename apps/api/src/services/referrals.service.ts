@@ -11,6 +11,8 @@ import { buildReferralStats, type ReferralStats } from '../lib/referralStats.js'
 export interface ReferralDashboard {
   referralCode: string;
   shareUrl: string;
+  /** Total tracked link clicks for this referrer. */
+  linkClicks: number;
   /** a social short link (single source of truth lives in web). */
   stats: ReferralStats;
   referred: {
@@ -30,7 +32,8 @@ export async function referralDashboard(userId: string): Promise<ReferralDashboa
   });
   if (!user) throw new NotFoundError('User');
 
-  const [referredUsers, attributed] = await Promise.all([
+  const [clicks, referredUsers, attributed] = await Promise.all([
+    prisma.referralClick.count({ where: { referrerId: userId } }),
     prisma.user.findMany({
       where: { referredById: userId },
       select: { id: true, username: true, fullName: true, createdAt: true },
@@ -72,7 +75,29 @@ export async function referralDashboard(userId: string): Promise<ReferralDashboa
   return {
     referralCode: user.referralCode,
     shareUrl: `https://apex-work-gold.vercel.app/signup?ref=${user.referralCode}`,
+    linkClicks: clicks,
     stats,
     referred,
   };
+}
+
+/**
+ * Record a referral-link click (public). Optionally resolves the referrer so
+ * the click rolls up into their dashboard. Always succeeds — if the ref code
+ * is unknown, the click is still logged with null referrer so nothing breaks
+ * the redirect flow.
+ */
+export async function trackReferralClick(input: { refCode: string; source: string }) {
+  const referrer = await prisma.user.findUnique({
+    where: { referralCode: input.refCode },
+    select: { id: true },
+  });
+  await prisma.referralClick.create({
+    data: {
+      refCode: input.refCode,
+      source: input.source,
+      referrerId: referrer?.id ?? null,
+    },
+  });
+  return { ok: true };
 }

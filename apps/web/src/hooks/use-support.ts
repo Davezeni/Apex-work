@@ -9,6 +9,9 @@ export interface SupportTicket {
   id: string; subject: string; category: string;
   status: 'OPEN' | 'WAITING_USER' | 'WAITING_STAFF' | 'RESOLVED' | 'CLOSED';
   createdAt: string; updatedAt: string;
+  csatRating?: number | null;
+  csatComment?: string | null;
+  csatScoredAt?: string | null;
   user?: { id: string; username: string; fullName: string; avatarUrl: string | null };
   messages?: { id: string; ticketId: string; senderId: string; body: string; isStaff: boolean; createdAt: string }[];
 }
@@ -59,5 +62,18 @@ export function useSetTicketStatus(id: string | undefined) {
   return useMutation<unknown, Error, SupportTicket['status']>({
     mutationFn: (status) => apiFetch(`/support/${id}/status`, { method: 'POST', token, body: { status } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['support', id] }),
+  });
+}
+
+/** Submit CSAT (rate the support experience) for a resolved/closed ticket. */
+export function useSubmitCsat(id: string | undefined) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation<unknown, Error, { rating: number; comment?: string }>({
+    mutationFn: (input) => apiFetch(`/support/${id}/csat`, { method: 'POST', token, body: input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['support', id] });
+      qc.invalidateQueries({ queryKey: ['support', 'me'] });
+    },
   });
 }

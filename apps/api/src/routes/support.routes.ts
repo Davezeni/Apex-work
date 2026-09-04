@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { createTicketSchema, addTicketMessageSchema } from '@apex-work/shared';
+import { createTicketSchema, addTicketMessageSchema, submitCsatSchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -40,6 +40,13 @@ router.post('/:id/status', validate(statusSchema), asyncHandler(async (req, res)
   const body = req.body as z.infer<typeof statusSchema>;
   const me = await prisma.user.findUnique({ where: { id: req.user!.sub }, select: { role: true } });
   return success(res, await s.setStatus(id, req.user!.sub, me?.role === 'ADMIN', body.status));
+}));
+
+/** POST /support/:id/csat — the ticket owner rates the support experience. */
+router.post('/:id/csat', validate(submitCsatSchema), asyncHandler(async (req, res) => {
+  const { id } = req.params as { id: string };
+  const body = req.body as import('@apex-work/shared').SubmitCsatInput;
+  return success(res, await s.submitCsat(id, req.user!.sub, body.rating, body.comment));
 }));
 
 export default router;

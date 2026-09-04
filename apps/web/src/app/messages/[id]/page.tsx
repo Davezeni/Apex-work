@@ -67,7 +67,16 @@ export default function ConversationPage() {
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   const blockUser = useBlockUser();
   const toggleReaction = useToggleReaction(id);
-  useOutboxSync(); // flush queued messages when we come back online
+  const { pending } = useOutboxSync(); // flush queued messages when we come back online
+  // Track live connection for the offline/sync indicator.
+  const [online, setOnline] = useState(navigator?.onLine ?? true);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -221,6 +230,15 @@ export default function ConversationPage() {
           )}
         </div>
       </header>
+
+      {/* Offline / queued-message indicator */}
+      {(!online || pending > 0) && (
+        <div className="z-10 border-b border-border bg-amber-500/10 px-3 py-1.5 text-center text-[11px] font-semibold text-amber-700 dark:text-amber-500">
+          {!online
+            ? 'You\'re offline — messages will send when you reconnect'
+            : `${pending} queued message${pending === 1 ? '' : 's'} — sending…`}
+        </div>
+      )}
 
       {/* Message list */}
       <div

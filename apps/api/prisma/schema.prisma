@@ -142,6 +142,7 @@ model User {
   referredById   String?
   referredBy     User?    @relation("Referrals", fields: [referredById], references: [id])
   referrals      User[]   @relation("Referrals")
+  referralClicks ReferralClick[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -1237,11 +1238,17 @@ model SupportTicket {
   updatedAt  DateTime            @updatedAt
   resolvedAt DateTime?
 
+  /// CSAT — the user rates their support experience after resolution (1-5).
+  csatRating   Int?
+  csatComment  String?  @db.Text
+  csatScoredAt DateTime?
+
   user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages   SupportMessage[]
 
   @@index([status, updatedAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([csatScoredAt])
 }
 
 model SupportMessage {
@@ -1360,4 +1367,23 @@ model AppSetting {
   updatedBy   User?    @relation("SettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@index([updatedAt])
+}
+
+// ================= REFERRALS =================
+
+/// Append-only log of referral-link clicks (used for tracked-link analytics
+/// and to show "link clicks" on the referrals page). `refCode` is the
+/// referrer's `referralCode`; `source` is the share surface the click came
+/// from (link / whatsapp / telegram / etc).
+model ReferralClick {
+  id        String   @id @default(cuid())
+  refCode   String
+  source    String   @default("link")
+  referrerId String?
+  clickedAt DateTime @default(now())
+
+  referrer  User?    @relation(fields: [referrerId], references: [id], onDelete: SetNull)
+
+  @@index([refCode, clickedAt(sort: Desc)])
+  @@index([referrerId, clickedAt(sort: Desc)])
 }

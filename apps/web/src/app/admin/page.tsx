@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import {
   ArrowLeft, Users, ShoppingBag, Briefcase, Package, Wallet as WalletIcon, Flag,
   ShieldOff, ShieldCheck, Loader2, CheckCircle, XCircle, TrendingUp,
-  BarChart3, AlertTriangle as AlertTri, Award as AwardIcon, Cpu, Menu, X as CloseIcon,
+  BarChart3, AlertTriangle as AlertTri, Award as AwardIcon, Cpu, Menu, X as CloseIcon, Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -28,6 +28,7 @@ import { AgenciesTab } from '@/components/admin/agencies-tab';
 import { canRole } from '@/components/admin/rbac';
 import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
 import { ExportButton } from '@/components/admin/export-button';
+import { CommandPalette, type PaletteAction } from '@/components/admin/command-palette';
 
 /** Staff roles that may access the admin panel (mirrors @apex-work/shared). */
 const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
@@ -38,7 +39,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.15';
+export const ADMIN_UI_BUILD = '2026-09-04.16';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -154,7 +155,28 @@ function AdminShell({
     });
   };
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const active = visibleItems.find((n) => n.id === tab) ?? visibleItems[0]!;
+
+  // ⌘K / Ctrl+K opens the command palette; Esc closes it (handled inside).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const actions: PaletteAction[] = visibleItems.map((n) => ({
+    id: n.id,
+    label: n.label,
+    hint: 'Go to section',
+    icon: n.icon,
+    onSelect: () => onChange(n.id),
+  }));
 
   return (
     <div className="flex min-h-dvh bg-background">
@@ -262,10 +284,19 @@ function AdminShell({
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Admin</div>
             <h1 className="truncate text-lg font-extrabold tracking-tight">{active.label}</h1>
           </div>
+          <button
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Command palette"
+            className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
+          >
+            <Search className="h-4 w-4" />
+          </button>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">STAFF</span>
         </header>
         <div className="pb-24">{children}</div>
       </main>
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={actions} />
     </div>
   );
 }

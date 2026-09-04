@@ -215,7 +215,13 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   (instrumentation + global-error), PostHog `posthog-js` client with a
   `track`/`identify` helper. No-op without env keys; Diagnostics shows
   `sentry: configured`. **Pending activation:** set `SENTRY_DSN` (Render),
-  `NEXT_PUBLIC_SENTRY_DSN` + `NEXT_PUBLIC_POSTHOG_KEY` (Vercel).
+  `NEXT_PUBLIC_SENTRY_DSN` + `NEXT_PUBLIC_POSTHOG_KEY` (Vercel). (User has
+  confirmed both are set + redeployed — live.)
+- **#23 PostHog consent + events** — consent banner + `signup`/`order_request`.
+- **#24 Review replies** — seller rebuttal to a review (PUT/DELETE
+  `/reviews/:id/reply`).
+- **#25 Deferred batch** — CSAT post-ticket, referral tracked links + share
+  card, PWA offline indicator, admin `⌘K` command palette.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

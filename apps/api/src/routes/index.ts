@@ -39,6 +39,7 @@ import supportRoutes from './support.routes.js';
 import recommendationsRoutes from './recommendations.routes.js';
 import subscriptionsRoutes from './subscriptions.routes.js';
 import agenciesRoutes from './agencies.routes.js';
+import referralsRoutes from './referrals.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 
@@ -114,6 +115,7 @@ router.use('/cron', cronRoutes);
 router.use('/support', supportRoutes);
 router.use('/content', contentRoutes);
 router.use('/recommendations', recommendationsRoutes);
+router.use('/referrals', referralsRoutes);
 router.use('/me/subscription', subscriptionsRoutes);
 router.use('/me/teams', agenciesRoutes);
 

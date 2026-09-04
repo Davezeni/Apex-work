@@ -2,19 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Copy, Share2, Gift, Users, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Copy, Share2, Gift, Users, Sparkles, Loader2, MousePointerClick } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { formatEtb } from '@/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { apiFetch } from '@/lib/api';
 
 interface ReferralResp {
   referralCode: string;
   shareUrl: string;
+  linkClicks: number;
   stats: { total: number; pending: number; active: number; attributedGmvEtb: number; commissionEtb: number; topBySpend: { username: string; fullName: string; spentEtb: number } | null };
   referred: { userId: string; username: string; fullName: string; joinedAt: string; completedOrders: number; spentEtb: number }[];
 }
@@ -29,6 +30,7 @@ export default function ReferralsPage() {
     queryFn: () => apiFetch('/me/referrals', { token }),
     enabled: !!token,
   });
+  const qc = useQueryClient();
   const [origin, setOrigin] = useState('https://apex-work-gold.vercel.app');
 
   useEffect(() => {
@@ -49,9 +51,16 @@ export default function ReferralsPage() {
   const code = (me as unknown as { referralCode?: string }).referralCode ?? me.username;
   const link = `${origin}/signup?ref=${code}`;
 
+  const trackClick = (source: string) => {
+    // Fire-and-forget; never block the share action on the tracker.
+    void apiFetch('/referrals/track', { method: 'POST', body: { refCode: code, source } }).catch(() => undefined);
+    qc.invalidateQueries({ queryKey: ['me', 'referrals'] });
+  };
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(link);
+      trackClick('link');
       toast.success('Referral link copied');
     } catch {
       toast.error('Copy failed');
@@ -62,6 +71,7 @@ export default function ReferralsPage() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({ title: 'Join Apex-Work', text: 'Join me on Apex-Work — Ethiopia\'s freelance marketplace.', url: link });
+        trackClick('share');
       } catch { /* user cancelled */ }
     } else {
       copy();
@@ -105,10 +115,23 @@ export default function ReferralsPage() {
         </div>
       </section>
 
-      <section className="mx-3 mt-4 grid grid-cols-3 gap-2">
+      {/* Share card preview */}
+      <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="grad-hero overflow-hidden rounded-2xl p-5 text-white shadow-lg shadow-primary/30">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/70">
+            <Gift className="h-4 w-4" /> Apex-Work
+          </div>
+          <div className="mt-3 text-2xl font-extrabold tracking-tight">Earn 100 ETB per friend 🎉</div>
+          <p className="mt-1 text-xs text-white/80">Share your link — when a friend completes their first order, you both get a bonus.</p>
+          <div className="mt-4 rounded-xl bg-white/15 px-3 py-2 text-xs font-mono backdrop-blur">{code}</div>
+        </div>
+      </section>
+
+      <section className="mx-3 mt-4 grid grid-cols-2 gap-2">
         <Stat icon={<Users className="h-4 w-4" />} label="Referred" value={String(ref?.stats.total ?? 0)} />
         <Stat icon={<Sparkles className="h-4 w-4" />} label="Active" value={String(ref?.stats.active ?? 0)} />
         <Stat icon={<Gift className="h-4 w-4" />} label="Earned" value={formatEtb(ref?.stats.commissionEtb ?? 0)} />
+        <Stat icon={<MousePointerClick className="h-4 w-4" />} label="Link clicks" value={String(ref?.linkClicks ?? 0)} />
       </section>
 
       {ref && ref.referred.length > 0 && (
