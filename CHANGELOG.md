@@ -3,6 +3,17 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — PostHog consent banner + high-signal events (power push #23)
+
+### Added
+- **Analytics consent** — `lib/analytics.ts` got `hasConsent()` / `setConsent()`
+  (backed by `apx-consent` in localStorage); PostHog init opts out when the
+  user declined; a `ConsentBanner` shows once on first visit when PostHog is
+  configured.
+- **High-signal events** — `track('signup', { role, oauth })` on signup and
+  `track('order_request', { gigId, packageTier, checkoutUrl })` when an order
+  is created, plus the existing `order_action` and `identify_user`.
+
 ## [Unreleased] — Sentry + PostHog observability wiring (power push #22)
 
 ### Added
