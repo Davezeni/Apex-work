@@ -10,8 +10,10 @@ import { ForbiddenError } from './lib/errors.js';
 import routes from './routes/index.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { initSentry } from './config/sentry.js';
 
 export const createApp = (): Express => {
+  initSentry();
   const app = express();
 
   // Trust proxy — needed for correct req.ip behind reverse proxies (Koyeb, Fly, Cloudflare)

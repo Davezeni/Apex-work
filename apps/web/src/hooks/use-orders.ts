@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { track } from '@/lib/analytics';
 
 export type OrderStatus =
   | 'PENDING'
@@ -99,9 +100,12 @@ export function useOrderAction(orderId: string | undefined) {
         body: input,
         token,
       }),
-    onSuccess: () => {
+    onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['order', orderId] });
       qc.invalidateQueries({ queryKey: ['orders'] });
+      const action = (vars as { action?: string })?.action;
+      const status = data.status;
+      track('order_action', { action, status, orderId });
     },
   });
 }

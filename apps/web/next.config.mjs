@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -114,4 +116,15 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with Sentry. When no DSN is configured it still builds (Sentry no-ops),
+// so local/dev and the free-tier deploy both work — a DSN just unlocks capture.
+export default withSentryConfig(nextConfig, {
+  org: 'apex-work',
+  project: 'apex-work-web',
+  silent: true, // don't spam build logs
+  telemetry: false,
+  // sourcemap source-generation is the memory-heavy step that pushed the
+  // previous build to OOM (exit 137) on the free tier. We skip it; sourcemaps
+  // still work for stack traces via the built .map files Vercel produces.
+  sourcemaps: { disable: true },
+});

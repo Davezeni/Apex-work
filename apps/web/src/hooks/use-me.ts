@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
+import { identifyUser } from '@/lib/observability';
 import { useAuthStore } from '@/stores/auth-store';
 
 export interface Me {
@@ -59,6 +60,11 @@ export function useMe() {
       clear();
     }
   }, [query.error, clear]);
+
+  // Identify the signed-in user to Sentry/PostHog once the profile is known.
+  useEffect(() => {
+    if (query.data) identifyUser(query.data);
+  }, [query.data]);
 
   return {
     ...query,

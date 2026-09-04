@@ -5,6 +5,7 @@ import { AppError, NotFoundError, ValidationError } from '../lib/errors.js';
 import { logger } from '../config/logger.js';
 import { failure } from '../lib/response.js';
 import { isProd } from '../config/env.js';
+import { captureException } from '../config/sentry.js';
 
 /** 404 for unmatched routes */
 export const notFoundHandler: RequestHandler = (_req, _res, next) => {
@@ -56,6 +57,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     },
     'Unhandled error',
   );
+  captureException(err);
   return failure(
     res,
     'INTERNAL_ERROR',
