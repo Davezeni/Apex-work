@@ -120,3 +120,27 @@ export async function adminListSubscriptions(opts: {
     include: { user: { select: { id: true, username: true, fullName: true } } },
   });
 }
+
+// ---------------- AGENCIES ----------------
+
+export async function adminGetAgency(id: string) {
+  const agency = await prisma.agency.findUnique({
+    where: { id },
+    include: {
+      owner: { select: { id: true, username: true, fullName: true, email: true } },
+      members: {
+        include: { user: { select: { id: true, username: true, fullName: true, role: true, rating: true, completedOrders: true } } },
+      },
+    },
+  });
+  if (!agency) throw new NotFoundError('Agency');
+  return agency;
+}
+
+export async function adminUpdateAgencyMember(agencyId: string, userId: string, role: string) {
+  const member = await prisma.agencyMember.update({
+    where: { agencyId_userId: { agencyId, userId } },
+    data: { role },
+  });
+  return member;
+}

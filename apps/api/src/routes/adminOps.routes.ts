@@ -586,6 +586,36 @@ router.get(
 );
 
 router.get(
+  '/agencies/:id',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await community.adminGetAgency(id));
+  }),
+);
+
+router.post(
+  '/agencies/:id/members/:userId',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { id, userId } = req.params as { id: string; userId: string };
+    const body = (req.body ?? {}) as { role?: string };
+    const actor = await loadActor(req);
+    const member = await community.adminUpdateAgencyMember(id, userId, body.role ?? 'MEMBER');
+    await adminAudit({
+      adminId: actor.adminId,
+      adminName: actor.adminName,
+      adminRole: actor.adminRole,
+      action: 'AGENCY.MEMBER_UPDATE',
+      resourceType: 'AGENCY',
+      resourceId: id,
+      meta: { userId, role: member.role },
+    });
+    return success(res, member);
+  }),
+);
+
+router.get(
   '/subscriptions',
   requireCapability('subscriptions:manage'),
   asyncHandler(async (req, res) => {

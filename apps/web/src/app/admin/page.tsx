@@ -24,6 +24,7 @@ import { SubscriptionsTab } from '@/components/admin/subscriptions-tab';
 import { SettingsTab } from '@/components/admin/settings-tab';
 import { AuditTab } from '@/components/admin/audit-tab';
 import { AdminsTab } from '@/components/admin/admins-tab';
+import { AgenciesTab } from '@/components/admin/agencies-tab';
 import { canRole } from '@/components/admin/rbac';
 import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
 import { ExportButton } from '@/components/admin/export-button';
@@ -37,11 +38,11 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.10';
+export const ADMIN_UI_BUILD = '2026-09-04.11';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
-  | 'moderation' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins';
+  | 'moderation' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins' | 'agencies';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -104,6 +105,7 @@ export default function AdminPage() {
       {tab === 'settings' && <SettingsTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'admins' && <AdminsTab />}
+      {tab === 'agencies' && <AgenciesTab />}
       {tab === 'certs' && <CertsTab />}
       {tab === 'diagnostics' && <DiagnosticsTab />}
     </AdminShell>
@@ -127,6 +129,7 @@ const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; cap: string }[
   { id: 'settings',      label: 'Settings',       icon: <ShieldCheck className="h-4 w-4" />, cap: 'settings:manage' },
   { id: 'audit',         label: 'Audit log',      icon: <BarChart3 className="h-4 w-4" />, cap: 'audit:view' },
   { id: 'admins',        label: 'Admin team',     icon: <Users className="h-4 w-4" />, cap: 'audit:view' },
+  { id: 'agencies',      label: 'Agencies',       icon: <Users className="h-4 w-4" />, cap: 'moderation:content' },
   { id: 'certs',         label: 'Certifications', icon: <AwardIcon className="h-4 w-4" />, cap: 'moderation:certs' },
   { id: 'diagnostics',   label: 'Diagnostics',    icon: <Cpu className="h-4 w-4" />, cap: 'artifacts:view' },
 ];
