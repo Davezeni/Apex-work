@@ -175,6 +175,11 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Admin content CMS: site announcement** (#12): typed `content.siteAnnouncement`
   AppSetting key + `GET /v1/content/announcement` + Settings editor +
   `AnnouncementBanner` site-wide. 163 unit tests.
+- **Flag-queue moderation triage** (#13): `lib/moderationQueue.ts` +
+  ModerationStatus enum + 4 Gig columns (DB migration) +
+  `GET /admin/ops/flagged` + `POST /flagged/:id/triage` + `POST /flagged/bulk` +
+  Flagged sub-view with status filter / select-all / per-item + bulk resolve.
+  168 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

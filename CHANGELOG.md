@@ -3,6 +3,27 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Flag-queue moderation triage (power push #13)
+
+### Added
+- **Moderation triage for flagged gigs** — `lib/moderationQueue.ts` (pure
+  `buildQueueSummary`: bucket counts via `[groupBy, _count]` + open items
+  oldest-first; `canBulkResolve` narrows the target to `RESOLVED | DISMISSED`)
+  with a small DB migration adding `ModerationStatus` (QUEUED/IN_REVIEW/
+  RESOLVED/DISMISSED) and four Gig columns (`moderationStatus`,
+  `moderationAssignee`, `moderatorNotes`, `moderatedAt`).
+- **`GET /v1/admin/ops/flagged`** — paginated list filtered by status
+  (`QUEUED|IN_REVIEW|RESOLVED|DISMISSED`), RBAC `moderation:content`.
+- **`POST /v1/admin/ops/flagged/:id/triage`** — set status / assignee / notes on
+  a flagged gig.
+- **`POST /v1/admin/ops/flagged/bulk`** — bulk resolve or dismiss up to 200
+  flagged gigs at once.
+- **Flagged sub-view** on the Moderation tab: status filter chips, select-all,
+  per-item Start-review / Resolve / Dismiss / Assign, and bulk resolve/dismiss.
+- **Migration** `20260904100000_gig_moderation_triage` (hand-written, one enum
+  value per `ALTER TYPE` for Postgres 11 safety) + `prisma generate` on 5.22.0.
+- **+5 unit tests** — 163 → 168 tests.
+
 ## [Unreleased] — Admin content CMS: site-wide announcement (power push #12)
 
 ### Added
