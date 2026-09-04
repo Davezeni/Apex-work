@@ -3,6 +3,31 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Trust, messaging & product polish (power push #27)
+
+### Fixed
+- **Create/List team → "invalid database query"** — Prisma `include` was fed a
+  mixed scalar+relation object (`memberSelect`) causing a
+  `PrismaClientValidationError`. Both memberships now use `select`.
+- **File uploads broken** — Supabase storage buckets were never created. New
+  `ensureStorageBuckets()` auto-creates `avatars`, `portfolio` and
+  `chat-attachments` (with per-bucket size limits) at API boot; idempotent
+  (exists → 409 treated as OK).
+
+### Added
+- **Admins: add staff** — Admins can now search any user and assign a staff
+  role (ADMIN/MODERATOR/SUPPORT/FINANCE) directly from the admin console.
+- **Chat upgrade (Telegram-grade)** — group rooms (+ create/add/remove/rename/
+  leave + member list + admins), reaction toggle, edit &amp; soft-delete of own
+  messages, per-message read receipts (✓/✓✓ + counts), live typing indicators,
+  realtime reaction/edit/delete/group-update broadcasts.
+- **Investor proposal deck** — `docs/deck/investor-deck.html` with live product
+  screenshots, user flows, security, performance, tech &amp; financial sections.
+
+### Polish
+- Vertical head/bottom room on mobile shell + bottom-nav clearance; typing-dot
+  animation; admin build marker bumped to `2026-09-05.20`.
+
 ## [Unreleased] — Per-category fees + KPI threshold watcher (power push #26)
 
 ### Added
