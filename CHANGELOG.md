@@ -9,10 +9,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Create/List team → "invalid database query"** — Prisma `include` was fed a
   mixed scalar+relation object (`memberSelect`) causing a
   `PrismaClientValidationError`. Both memberships now use `select`.
-- **File uploads broken** — Supabase storage buckets were never created. New
-  `ensureStorageBuckets()` auto-creates `avatars`, `portfolio` and
-  `chat-attachments` (with per-bucket size limits) at API boot; idempotent
-  (exists → 409 treated as OK).
+- **File uploads broken** — Supabase storage buckets were never created and the
+  signed-upload response field was mis-read. New `ensureStorageBuckets()`
+  auto-creates `avatars`, `portfolio` and `chat-attachments` (with per-bucket
+  size limits) at API boot; idempotent (exists → 409 treated as OK); the sign
+  reader now accepts `signedURL`/`url`; a missing bucket is self-healed on
+  400/404. **Plus a self-hosted Postgres object-store fallback** (`Upload`
+  table + `GET /v1/uploads/files/:id`) so uploads keep working when Supabase
+  is unavailable — verified live via Supabase (primary) and locally (fallback).
 
 ### Added
 - **Admins: add staff** — Admins can now search any user and assign a staff
