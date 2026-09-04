@@ -222,6 +222,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   `/reviews/:id/reply`).
 - **#25 Deferred batch** — CSAT post-ticket, referral tracked links + share
   card, PWA offline indicator, admin `⌘K` command palette.
+- **#26 Per-category fees + KPI watcher** — `Category` table with per-category
+  fee override (wired into order + job creation); `KpiThreshold`/`KpiAlert`
+  watcher running in the cron tick with an admin Settings UI.
 - **OPS (Render DB migrations):** the Render web service was created manually
   (not from the blueprint), so its `preDeployCommand` is `none` and `prisma
   migrate deploy` is NOT auto-run on deploy. DB migrations are applied by hand

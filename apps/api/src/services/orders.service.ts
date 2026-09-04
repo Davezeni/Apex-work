@@ -21,6 +21,7 @@
 import type { OrderStatus, PackageTier, Prisma, User } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { computeOrderSplit } from '@apex-work/shared';
+import { getCategoryFeePercent } from './categories.service.js';
 import { assertOrderTransition, type OrderAction, type OrderState } from '@apex-work/shared';
 import {
   BadRequestError,
@@ -83,7 +84,9 @@ export async function createOrderAndInitiatePayment(
   const pkg = gig.packages.find((p) => p.tier === packageTier);
   if (!pkg) throw new BadRequestError('That package is not available for this gig');
 
-  const { feeEtb, sellerNetEtb } = computeOrderSplit(pkg.priceEtb);
+  // Per-category fee override (falls back to global platform fee).
+  const feePercent = await getCategoryFeePercent(gig.categoryId);
+  const { feeEtb, sellerNetEtb } = computeOrderSplit(pkg.priceEtb, feePercent);
 
   const order = await prisma.order.create({
     data: {

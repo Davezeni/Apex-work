@@ -4,7 +4,6 @@
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { PLATFORM_FEE_PERCENT } from '@apex-work/shared';
 import {
   BadRequestError,
   ConflictError,
@@ -14,6 +13,7 @@ import {
 import { notify } from './notifications.service.js';
 import { ChapaService, chapa } from './chapa.service.js';
 import { env } from '../config/env.js';
+import { getCategoryFeePercent } from './categories.service.js';
 
 // ---------------- Jobs ----------------
 
@@ -225,7 +225,9 @@ export async function acceptBid(bidId: string, clientId: string) {
     throw new ConflictError('Verify your phone number before accepting a proposal');
   }
 
-  const platformFee = Math.round((bid.priceEtb * PLATFORM_FEE_PERCENT) / 100);
+  // Per-category fee override (falls back to global platform fee).
+  const feePercent = await getCategoryFeePercent(bid.job.categoryId);
+  const platformFee = Math.round((bid.priceEtb * feePercent) / 100);
   const sellerNet = bid.priceEtb - platformFee;
 
   const order = await prisma.$transaction(async (tx) => {

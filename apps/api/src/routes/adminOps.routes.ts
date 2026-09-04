@@ -26,6 +26,8 @@ import * as community from '../services/admin/community.service.js';
 import * as support from '../services/admin/support.service.js';
 import * as ops from '../services/admin/ops.service.js';
 import * as settings from '../services/admin/settings.service.js';
+import * as categories from '../services/categories.service.js';
+import * as kpi from '../services/kpiWatcher.service.js';
 import * as analytics from '../services/admin/analytics.service.js';
 import * as exporter from '../services/admin/export.service.js';
 import * as reconcile from '../services/admin/reconcile.service.js';
@@ -734,6 +736,101 @@ router.post(
     const actor = await loadActor(req);
     const result = await settings.upsertSetting(body.key, body.value, actor.adminId, body.description);
     await adminAudit({ ...actor, ip: req.ip, action: 'SETTING.UPSERT', resourceType: 'SETTING', resourceId: body.key, after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= CATEGORY FEES =================
+
+router.get(
+  '/categories',
+  requireCapability('settings:manage'),
+  asyncHandler(async (_req, res) => {
+    return success(res, { items: await categories.listCategories() });
+  }),
+);
+
+const categoryUpdateSchema = z.object({
+  feePercent: z.number().int().min(0).max(50).nullable().optional(),
+  label: z.string().trim().min(1).max(80).optional(),
+  icon: z.string().trim().min(1).max(8).optional(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+});
+router.patch(
+  '/categories/:id',
+  requireCapability('settings:manage'),
+  validate(categoryUpdateSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof categoryUpdateSchema>;
+    const actor = await loadActor(req);
+    const result = await categories.updateCategory(id, body, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'CATEGORY.UPDATE', resourceType: 'CATEGORY', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/categories/:id/reset-fee',
+  requireCapability('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await categories.resetCategoryFee(id, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'CATEGORY.RESET_FEE', resourceType: 'CATEGORY', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+// ================= KPI WATCHER =================
+
+router.get(
+  '/kpi/thresholds',
+  requireCapability('settings:manage'),
+  asyncHandler(async (_req, res) => {
+    return success(res, { items: await kpi.listKpiThresholds() });
+  }),
+);
+
+const thresholdUpdateSchema = z.object({
+  value: z.number().min(0).optional(),
+  operator: z.enum(['lt', 'gt']).optional(),
+  enabled: z.boolean().optional(),
+  severity: z.enum(['info', 'warn', 'critical']).optional(),
+});
+router.put(
+  '/kpi/thresholds/:id',
+  requireCapability('settings:manage'),
+  validate(thresholdUpdateSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof thresholdUpdateSchema>;
+    const actor = await loadActor(req);
+    const result = await kpi.updateKpiThreshold(id, body, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'KPI.THRESHOLD_UPDATE', resourceType: 'KPI', resourceId: id, after: result });
+    return success(res, result);
+  }),
+);
+
+router.get(
+  '/kpi/alerts',
+  requireCapability('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const status = String((req.query as { status?: string }).status ?? '');
+    const limit = Number((req.query as { limit?: string }).limit ?? 50);
+    return success(res, { items: await kpi.listKpiAlerts(status, limit) });
+  }),
+);
+
+router.post(
+  '/kpi/alerts/:id/acknowledge',
+  requireCapability('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await kpi.acknowledgeKpiAlert(id, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'KPI.ALERT_ACK', resourceType: 'KPI', resourceId: id, after: result });
     return success(res, result);
   }),
 );

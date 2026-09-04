@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Per-category fees + KPI threshold watcher (power push #26)
+
+### Added
+- **Per-category fee editor** — new `Category` table (seeded with the 8
+  catalog categories; `id` = slug) carrying an optional `feePercent` override.
+  Order creation (gig purchase + job proposal acceptance) now looks up the
+  gig/job's category and uses its override, falling back to the global
+  `platform.feePercent`. Admin Settings → Categories lets admins set/edit/
+  reset the fee per category (blank = inherit global). Migration
+  `20260904130000_categories_and_kpi_watcher`.
+- **KPI threshold watcher + alerting** — new `KpiThreshold` (configurable
+  key/operator/value/window/severity) + `KpiAlert` (fired alerts with
+  acknowledge/resolve). `checkKpiThresholds()` runs in the cron `/tick` and
+  `/cron/kpi` job, computing signups/GMV/revenue/orders/disputes/withdrawals
+  over a window and firing a deduped alert on breach, auto-resolving when the
+  metric recovers. Admin Settings → KPI shows live values, editable
+  thresholds, and an alert inbox with acknowledge.
+
 ## [Unreleased] — CSAT, referral tracking, offline indicator, admin palette (power push #25)
 
 ### Added

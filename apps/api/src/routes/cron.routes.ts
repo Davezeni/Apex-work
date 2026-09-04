@@ -8,6 +8,7 @@ import { autoReleaseEscrow } from '../services/orders.service.js';
 import { expireFeatured } from '../services/featured.service.js';
 import { flushPending as flushEmails } from '../services/email.service.js';
 import { syncProcessingWithdrawals } from '../services/withdrawals.service.js';
+import { checkKpiThresholds } from '../services/kpiWatcher.service.js';
 
 const router: Router = Router();
 
@@ -53,17 +54,23 @@ router.all('/withdrawals', asyncHandler(async (req, res) => {
   return success(res, await syncProcessingWithdrawals());
 }));
 
+router.all('/kpi', asyncHandler(async (req, res) => {
+  gate(req);
+  return success(res, await checkKpiThresholds());
+}));
+
 /** Fan-out entrypoint: run every scheduled worker. Called by one cron. */
 router.all('/tick', asyncHandler(async (req, res) => {
   gate(req);
-  const [saved, escrow, featured, emails, withdrawals] = await Promise.all([
+  const [saved, escrow, featured, emails, withdrawals, kpi] = await Promise.all([
     checkAllSavedSearches().catch((e) => ({ error: (e as Error).message })),
     autoReleaseEscrow().catch((e) => ({ error: (e as Error).message })),
     expireFeatured().catch((e) => ({ error: (e as Error).message })),
     flushEmails().catch((e) => ({ error: (e as Error).message })),
     syncProcessingWithdrawals().catch((e) => ({ error: (e as Error).message })),
+    checkKpiThresholds().catch((e) => ({ error: (e as Error).message })),
   ]);
-  return success(res, { saved, escrow, featured, emails, withdrawals });
+  return success(res, { saved, escrow, featured, emails, withdrawals, kpi });
 }));
 
 export default router;
