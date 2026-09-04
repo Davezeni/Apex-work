@@ -33,6 +33,7 @@ import * as subscriptions from '../services/admin/subscriptions.service.js';
 import * as supportStats from '../services/admin/supportAnalytics.service.js';
 import * as leaderboard from '../services/admin/leaderboard.service.js';
 import * as insights from '../services/admin/insights.service.js';
+import * as orderHealth from '../services/admin/orderHealth.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -92,6 +93,26 @@ router.get(
     const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
     const minOrders = Math.min(50, Math.max(1, Number((req.query as { minOrders?: string }).minOrders) || 3));
     return success(res, await insights.conversionInsights(days, limit, minOrders));
+  }),
+);
+
+// ================= ORDER HEALTH =================
+
+router.get(
+  '/order-health',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 20));
+    return success(res, await orderHealth.orderHealth(limit));
+  }),
+);
+
+router.post(
+  '/order-health/digest',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const actor = await loadActor(req);
+    return success(res, await orderHealth.sendDigest(actor));
   }),
 );
 

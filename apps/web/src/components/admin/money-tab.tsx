@@ -10,7 +10,7 @@ import { formatEtb, cn } from '@/lib/utils';
 import { SectionHead, Badge, Spinner, Empty, TableShell, Th, Td, inputCls, Field } from './admin-ui';
 import { ExportButton } from './export-button';
 
-type Sub = 'orders' | 'ledger' | 'withdrawals' | 'reconcile';
+type Sub = 'orders' | 'ledger' | 'withdrawals' | 'reconcile' | 'health';
 
 const orderTone: Record<string, 'ok' | 'warn' | 'neutral' | 'bad' | 'info'> = {
   COMPLETED: 'ok', ACTIVE: 'info', IN_REVIEW: 'warn', DELIVERED: 'ok', PENDING: 'neutral', CANCELLED: 'bad', DISPUTED: 'bad',
@@ -22,7 +22,7 @@ export function MoneyTab() {
     <div className="space-y-5">
       <SectionHead title="Orders & Money" subtitle="Orders, refunds, wallet ledger and payouts" />
       <div className="flex gap-1 rounded-xl bg-muted p-1">
-        {(['orders', 'ledger', 'withdrawals', 'reconcile'] as Sub[]).map((s) => (
+        {(['orders', 'ledger', 'withdrawals', 'reconcile', 'health'] as Sub[]).map((s) => (
           <button key={s} onClick={() => setSub(s)} className={cn('flex-1 rounded-lg px-3 py-2 text-sm font-bold capitalize transition-colors', sub === s ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground')}>{s}</button>
         ))}
       </div>
@@ -30,6 +30,7 @@ export function MoneyTab() {
       {sub === 'ledger' && <Ledger />}
       {sub === 'withdrawals' && <Withdrawals />}
       {sub === 'reconcile' && <Reconcile />}
+      {sub === 'health' && <OrderHealth />}
     </div>
   );
 }
@@ -257,6 +258,94 @@ function Mini({ tx, label, warn }: { tx: number; label: string; warn?: boolean }
     <div className={`rounded-2xl border border-border bg-card p-3 ${warn ? 'border-amber-500/40' : ''}`}>
       <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-1 text-xl font-extrabold tracking-tight">{tx.toLocaleString()}</div>
+    </div>
+  );
+}
+
+// ---------- ORDER HEALTH ----------
+interface HealthItem {
+  orderId: string; orderNumber: string; title: string; status: string; amountEtb: number;
+  clientName: string; sellerName: string; category: string; severity: 'high' | 'medium' | 'low';
+  ageDays: number; note: string;
+}
+interface HealthResp {
+  total: number; high: number; medium: number; low: number;
+  counts: Record<string, number>;
+  inbox: HealthItem[];
+}
+const severityTone: Record<string, 'bad' | 'warn' | 'neutral'> = { high: 'bad', medium: 'warn', low: 'neutral' };
+const catLabel: Record<string, string> = {
+  OVERDUE_DELIVERY: 'Overdue delivery',
+  STALE_DISPUTE: 'Stale dispute',
+  STALE_REVIEW: 'Stale review',
+  UNRESOLVED_ORDER: 'Unresolved order',
+  ABANDONED_ORDER: 'Abandoned order',
+};
+function OrderHealth() {
+  const token = useToken();
+  const qc = useQueryClient();
+  const { data, isLoading, refetch } = useQuery<HealthResp>({
+    queryKey: ['admin/order-health'],
+    queryFn: () => apiFetch('/admin/ops/order-health?limit=30', { token }),
+    enabled: !!token,
+  });
+  const digest = useMutation({
+    mutationFn: () => apiFetch('/admin/ops/order-health/digest', { method: 'POST', token }),
+    onSuccess: (r: any) => {
+      toast.success(`Digest queued for ${r.recipients?.length ?? 0} staff member(s)`);
+      qc.invalidateQueries({ queryKey: ['admin/order-health'] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">Orders breaching an SLA or stuck in the flow. Highest severity first.</p>
+        <div className="flex shrink-0 gap-1.5">
+          <button onClick={() => refetch()} disabled={isLoading} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-50">Refresh</button>
+          <button onClick={() => digest.mutate()} disabled={digest.isPending} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50">Send daily digest</button>
+        </div>
+      </div>
+      {isLoading ? <Spinner label="Checking order health…" /> : (
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Mini tx={data?.total ?? 0} label="Attention" warn={(data?.total ?? 0) > 0} />
+            <Mini tx={data?.high ?? 0} label="High" warn={(data?.high ?? 0) > 0} />
+            <Mini tx={(data?.medium ?? 0) + (data?.low ?? 0)} label="Med + Low" />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(data?.counts ?? {}).map(([k, v]) => (
+              <span key={k} className="rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-bold text-muted-foreground">
+                {catLabel[k] ?? k}: {v}
+              </span>
+            ))}
+          </div>
+          {(data?.inbox ?? []).length === 0 ? <Empty message="No orders currently need attention ✓" /> : (
+            <TableShell>
+              <thead><tr><Th>Order</Th><Th>Issue</Th><Th>Parties</Th><Th>Amount</Th><Th>Age</Th></tr></thead>
+              <tbody>
+                {(data?.inbox ?? []).map((it) => (
+                  <tr key={it.orderId} className="border-b border-border/50">
+                    <Td>
+                      <div className="font-semibold">{it.orderNumber}</div>
+                      <div className="text-[10px] text-muted-foreground">{it.title}</div>
+                    </Td>
+                    <Td>
+                      <Badge tone={severityTone[it.severity]}>{catLabel[it.category] ?? it.category}</Badge>
+                      <div className="mt-0.5 text-[10px] text-muted-foreground">{it.note}</div>
+                    </Td>
+                    <Td className="text-[11px] text-muted-foreground">
+                      <div>{it.clientName} → {it.sellerName}</div>
+                    </Td>
+                    <Td className="font-semibold">{formatEtb(it.amountEtb)}</Td>
+                    <Td className="text-[11px] text-muted-foreground">{it.ageDays}d</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableShell>
+          )}
+        </>
+      )}
     </div>
   );
 }
