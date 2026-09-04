@@ -224,7 +224,9 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   card, PWA offline indicator, admin `⌘K` command palette.
 - **#26 Per-category fees + KPI watcher** — `Category` table with per-category
   fee override (wired into order + job creation); `KpiThreshold`/`KpiAlert`
-  watcher running in the cron tick with an admin Settings UI.
+  watcher running in the cron tick (`/v1/cron/kpi` + `/tick`) with an admin
+  Settings UI. Migration applied to live DB; first check fired 4 alerts on the
+  small live marketplace (expected).
 - **OPS (Render DB migrations):** the Render web service was created manually
   (not from the blueprint), so its `preDeployCommand` is `none` and `prisma
   migrate deploy` is NOT auto-run on deploy. DB migrations are applied by hand
