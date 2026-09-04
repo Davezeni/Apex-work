@@ -196,6 +196,14 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Pro-subscription ROI analytics** (#17): `lib/proRoi.ts` (ROI multiple, net,
   repurchase rate, best/lowest) + `GET /admin/ops/subscriptions/roi` +
   Subscriptions tab ROI view. 191 unit tests.
+- **Retention & churn analytics** (#19): `lib/retention.ts` (activation,
+  D7/D14/D30, churn, weekly cohorts) + `GET /admin/ops/retention` + Summary
+  tab Retention section. Marks the O2 observability item complete.
+- **Email-queue monitor** (#19): `services/admin/emailQueue.service.ts` +
+  `GET /admin/ops/email-queue` + `POST /email-queue/flush` (audited) +
+  Settings "email" sub-view with flush. Completes Y5 (email queue).
+- **Agencies admin tab** (#20): `GET /agencies/:id` + member role update
+  (audited) + Agencies tab with expandable members. Completes C3.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

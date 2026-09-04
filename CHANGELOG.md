@@ -3,6 +3,25 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Retention & churn analytics + email-queue monitor + Agencies tab (power push #19)
+
+### Added
+- **Retention & churn analytics** — `lib/retention.ts` (pure `buildRetention`:
+  activation, D7/D14/D30 activation rate, churn, weekly activation cohorts) +
+  `services/admin/retention.service.ts` (DB groupBy on signups + first/last
+  order per role) + `GET /admin/ops/retention` (`dashboard:view`).
+  Summary tab: Retention section (activation/churn/D7–D30 cards + weekly bars).
+- **Email-queue monitor** — `services/admin/emailQueue.service.ts` (queued /
+  sent / failed buckets, delivery rate, top failures, recent rows) +
+  `GET /admin/ops/email-queue` + `POST /admin/ops/email-queue/flush`
+  (`settings:manage`, audited). Settings tab "email" sub-view with a flush
+  action.
+- **Agencies admin tab** — `adminGetAgency` (detail + members) +
+  `adminUpdateAgencyMember` + `GET /agencies/:id` +
+  `POST /agencies/:id/members/:userId` (`moderation:content`, audited) +
+  Agencies tab with expandable member view and role updates.
+- **+4 unit tests** — 191 → 195 tests.
+
 ## [Unreleased] — Pro-subscription ROI analytics (power push #16)
 
 ### Added
