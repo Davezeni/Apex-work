@@ -182,35 +182,52 @@ export class StorageService {
     const endpoint =
       `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
-    });
+    const sign = async (): Promise<{ status: number; body: string }> => {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      });
+      return { status: res.status, body: await res.text().catch(() => '') };
+    };
 
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      logger.error({ status: res.status, text }, 'Supabase signed URL failed');
+    // On a 400/404 the bucket simply doesn't exist yet (fresh project, or it
+    // was deleted). Provision it, then retry the sign once. Keeps uploads
+    // working even if boot-time provisioning was skipped or a bucket is gone.
+    let res = await sign();
+    if (res.status === 400 || res.status === 404) {
+      logger.warn({ status: res.status, bucket: req.bucket }, 'Supabase sign 404/400 — ensuring bucket, retrying');
+      await ensureStorageBuckets();
+      res = await sign();
+    }
+
+    if (res.status !== 200) {
+      logger.error({ status: res.status, text: res.body.slice(0, 300) }, 'Supabase signed URL failed');
       throw new Error(`Storage sign failed (${res.status})`);
     }
 
-    const data = (await res.json()) as { url?: string; token?: string };
-    if (!data.url || !data.token) throw new Error('Malformed sign response');
+    // `createSignedUploadUrl` returns `{ signedURL, token, path }` in modern
+    // supabase-js; older releases used `url`. Accept both, plus the raw string.
+    let data: { url?: string; signedURL?: string; signedUrl?: string; token?: string };
+    try {
+      data = JSON.parse(res.body);
+    } catch {
+      throw new Error('Malformed sign response');
+    }
+    const rawUrl = data.url ?? data.signedURL ?? data.signedUrl;
+    if (!rawUrl || !data.token) throw new Error('Malformed sign response');
 
-    // Storage returns `/object/...` relative to its `/storage/v1` API base.
-    // Joining it directly to the project URL produces `supabase.co/object`
-    // (404 requested path is invalid), which the browser reports only as a
-    // generic network/CORS failure. Normalize both relative response shapes.
-    const relativeUrl = data.url.startsWith('/') ? data.url : `/${data.url}`;
-    const uploadUrl = data.url.startsWith('http')
-      ? data.url
-      : data.url.startsWith('/storage/v1')
-        ? `${env.SUPABASE_URL}${data.url}`
-        : `${env.SUPABASE_URL}/storage/v1${relativeUrl}`;
+    // Storage returns an absolute URL in modern releases, or a relative
+    // `/object/...` path in others. Normalize both.
+    const uploadUrl = rawUrl.startsWith('http')
+      ? rawUrl
+      : rawUrl.startsWith('/storage/v1')
+        ? `${env.SUPABASE_URL}${rawUrl}`
+        : `${env.SUPABASE_URL}/storage/v1/${rawUrl.replace(/^\//, '')}`;
 
     return {
       uploadUrl,
@@ -355,4 +372,5 @@ if (storage.isConfigured()) {
   logger.warn('Storage: Supabase NOT configured — upload routes will 409');
 }
 
+// Fire the bucket provisioning at boot, but never block startup on it.
 void ensureStorageBuckets();
