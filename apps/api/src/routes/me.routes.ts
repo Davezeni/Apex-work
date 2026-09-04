@@ -12,6 +12,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
+import * as earnings from '../services/earnings.service.js';
 import * as authService from '../services/auth.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import * as profileAnalytics from '../services/profileAnalytics.service.js';
@@ -200,6 +201,28 @@ router.patch(
       select: { availabilityJson: true },
     });
     return success(res, updated);
+  }),
+);
+
+/** GET /me/earnings/statement?month=YYYY-MM — downloadable monthly earnings statement. */
+router.get(
+  '/earnings/statement',
+  asyncHandler(async (req, res) => {
+    const month = ((req.query as { month?: string }).month ?? '').trim();
+    const { html, filename, summary } = await earnings.monthlyStatement(req.user!.sub, month);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(html);
+  }),
+);
+
+/** GET /me/earnings/statement.json?month=YYYY-MM — machine-readable summary. */
+router.get(
+  '/earnings/statement.json',
+  asyncHandler(async (req, res) => {
+    const month = ((req.query as { month?: string }).month ?? '').trim();
+    const { summary } = await earnings.monthlyStatement(req.user!.sub, month);
+    return success(res, summary);
   }),
 );
 

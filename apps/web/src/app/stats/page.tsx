@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -11,12 +11,16 @@ import {
   Clock,
   MessageCircle,
   Loader2,
+  Download,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useMe } from '@/hooks/use-me';
 import { useWallet } from '@/hooks/use-wallet';
 import { useI18n } from '@/i18n';
 import { formatEtb, formatCompact } from '@/lib/utils';
 import { useProfileAnalytics } from '@/hooks/use-profile-analytics';
+import { useAuthStore } from '@/stores/auth-store';
+import { downloadViaAuth } from '@/lib/api';
 
 /**
  * Freelancer analytics dashboard — profile views, response rate, earnings
@@ -72,6 +76,10 @@ export default function StatsPage() {
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">Statistics</h1>
       </header>
+
+      <div className="mx-3 mt-4">
+        <EarningsStatement />
+      </div>
 
       {/* KPI grid */}
       <div className="mx-3 mt-4 grid grid-cols-2 gap-2">
@@ -237,4 +245,93 @@ function PipelineRow({ label, count, color }: { label: string; count: number; co
       <span className="font-bold">{count}</span>
     </div>
   );
+}
+
+// Monthly earnings statement download (freelancer-facing).
+const inputCls = 'rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30';
+function EarningsStatement() {
+  const token = useAuthStore((s) => s.accessToken);
+  const [month, setMonth] = useState(defaultMonth());
+  const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState<{ grossEtb: number; feesEtb: number; netEtb: number; orders: number } | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+
+  const download = async (m: string) => {
+    setBusy(true);
+    try {
+      await downloadViaAuth(`/me/earnings/statement?month=${m}`, token, `apex-work-earnings-${m}.html`);
+      toast.success('Statement downloaded');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not download statement');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loadJson = async (m: string) => {
+    setLoadingSummary(true);
+    try {
+      const res = await fetch(`/v1/me/earnings/statement.json?month=${m}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      const j = (await res.json()) as { ok?: boolean; data?: typeof summary };
+      setSummary(j.ok !== false && j.data ? j.data : null);
+    } catch {
+      setSummary(null);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Monthly earnings statement</div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => setMonth(e.target.value || defaultMonth())}
+          className={inputCls}
+          aria-label="Statement month"
+        />
+        <button
+          onClick={() => download(month)}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          Download
+        </button>
+        <button
+          onClick={() => loadJson(month)}
+          disabled={loadingSummary}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-muted-foreground disabled:opacity-50"
+        >
+          {loadingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+          Show totals
+        </button>
+      </div>
+      {summary && (
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatSheet label="Orders" value={String(summary.orders)} />
+          <StatSheet label="Gross" value={formatEtb(summary.grossEtb)} />
+          <StatSheet label="Fees" value={formatEtb(summary.feesEtb)} />
+          <StatSheet label="Net" value={formatEtb(summary.netEtb)} tone />
+        </div>
+      )}
+      <p className="mt-2 text-[11px] text-muted-foreground">Statement covers completed orders in the selected month. Open it in a browser to also print or save as PDF.</p>
+    </div>
+  );
+}
+function StatSheet({ label, value, tone }: { label: string; value: string; tone?: boolean }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-2.5">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`mt-0.5 text-lg font-extrabold tracking-tight ${tone ? 'text-emerald-600' : ''}`}>{value}</div>
+    </div>
+  );
+}
+function defaultMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }

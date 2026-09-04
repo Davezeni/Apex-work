@@ -15,6 +15,7 @@ import {
   Package,
   Download,
   LayoutDashboard,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
@@ -23,6 +24,8 @@ import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
 import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
 import { MilestonePanel } from '@/components/orders/milestone-panel';
+import { useAuthStore } from '@/stores/auth-store';
+import { downloadViaAuth } from '@/lib/api';
 import { InvoiceDocument } from '@/components/orders/invoice-document';
 import { downloadHtmlPdf } from '@/lib/resume-export';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
@@ -53,6 +56,7 @@ export default function OrderDetailPage() {
   const startConv = useStartConversation();
   const [reviewOpen, setReviewOpen] = useState(false);
   const [invoiceExporting, setInvoiceExporting] = useState(false);
+  const token = useAuthStore((s) => s.accessToken);
   const myReview = useMyReviewForOrder(order?.status === 'COMPLETED' ? id : undefined);
 
   // If we just came back from Chapa's return URL (?paid=1), force a verify
@@ -119,6 +123,18 @@ export default function OrderDetailPage() {
     }
   };
 
+  const downloadServerReceipt = async () => {
+    setInvoiceExporting(true);
+    try {
+      await downloadViaAuth(`/orders/${order.id}/receipt`, token);
+      toast.success('Receipt downloaded');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Receipt download failed');
+    } finally {
+      setInvoiceExporting(false);
+    }
+  };
+
   const doAction = async (input: Record<string, unknown>, successMsg: string) => {
     try {
       await action.mutateAsync(input);
@@ -172,6 +188,14 @@ export default function OrderDetailPage() {
             <Download className="h-4 w-4" />
           )}
           <span className="hidden sm:inline">Receipt</span>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={downloadServerReceipt} disabled={invoiceExporting}>
+          {invoiceExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <FileText className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">HTML</span>
         </Button>
       </header>
 

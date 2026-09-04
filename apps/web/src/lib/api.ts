@@ -57,3 +57,37 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
 
   return (json as ApiSuccess<T>).data;
 }
+
+/**
+ * Fetch an authenticated attachment (e.g. an HTML receipt / statement served
+ * with Content-Disposition) and trigger a browser download. Throws ApiError on
+ * a non-2xx response.
+ */
+export async function downloadViaAuth(path: string, token: string | null | undefined, filename?: string): Promise<void> {
+  const res = await fetch(`${API_URL}/v1${path}`, {
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    let msg = `Request failed (${res.status})`;
+    try {
+      const json = (await res.json()) as ApiFailure;
+      msg = json.error?.message ?? msg;
+    } catch {
+      /* not json */
+    }
+    throw new ApiError(res.status, 'DOWNLOAD', msg);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition') ?? '';
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+  const name = filename ?? match?.[1] ?? 'download';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

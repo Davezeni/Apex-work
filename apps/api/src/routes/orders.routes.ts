@@ -7,6 +7,7 @@ import { success } from '../lib/response.js';
 import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import * as orders from '../services/orders.service.js';
+import { receiptForOrder } from '../services/earnings.service.js';
 
 const router: Router = Router();
 
@@ -47,6 +48,28 @@ router.get(
 /** GET /orders/:id — order detail with role check. */
 router.get(
   '/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const order = await orders.getOrder(id, req.user!.sub);
+    return success(res, order);
+  }),
+);
+
+/** GET /orders/:id/receipt — downloadable printable HTML receipt for an order party. */
+router.get(
+  '/:id/receipt',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const { html, filename } = await receiptForOrder(id, req.user!.sub);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(html);
+  }),
+);
+
+/** GET /orders/:id/receipt.json — machine-readable receipt summary. */
+router.get(
+  '/:id/receipt.json',
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
     const order = await orders.getOrder(id, req.user!.sub);
