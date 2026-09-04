@@ -37,7 +37,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.9';
+export const ADMIN_UI_BUILD = '2026-09-04.10';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -316,6 +316,16 @@ interface GigMetric {
   completedOrders: number; revenueEtb: number; startingPriceEtb: number; rating: number;
   conversionRate: number; winRate: number; conversionPerMille: number;
 }
+interface RetentionResp {
+  windowDays: number;
+  stats: {
+    totalNewUsers: number; activated: number; activationRate: number;
+    d7: number; d14: number; d30: number;
+    activeUsers: number; inactiveUsers: number; churnRate: number;
+    avgOrders: number;
+    weeklyCohorts: { week: string; signups: number; activated: number; activationRate: number }[];
+  };
+}
 function SummaryTab() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery<Summary>({
@@ -337,6 +347,11 @@ function SummaryTab() {
   const { data: conv } = useQuery<ConversionInsightsResp>({
     queryKey: ['admin', 'conversion-insights'],
     queryFn: () => apiFetch<ConversionInsightsResp>('/admin/ops/insights/conversion?days=30&limit=5&minOrders=2', { token }),
+    enabled: !!token,
+  });
+  const { data: ret } = useQuery<RetentionResp>({
+    queryKey: ['admin', 'retention'],
+    queryFn: () => apiFetch<RetentionResp>('/admin/ops/retention?days=90', { token }),
     enabled: !!token,
   });
   if (isLoading || !data) return <div className="grid h-40 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -415,6 +430,25 @@ function SummaryTab() {
         </div>
       )}
 
+      {ret && (ret.stats.totalNewUsers > 0) && (
+        <div className="space-y-3">
+          <SectionHead2>Retention · {ret.windowDays}d</SectionHead2>
+          <div className="grid grid-cols-3 gap-2">
+            <MiniStat label="Activation" value={`${(ret.stats.activationRate * 100).toFixed(0)}%`} tone="ok" />
+            <MiniStat label="Active users" value={String(ret.stats.activeUsers)} tone="info" />
+            <MiniStat label="Churn" value={`${(ret.stats.churnRate * 100).toFixed(0)}%`} tone={ret.stats.churnRate > 0.5 ? 'info' : 'ok'} />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <MiniStat label="D7 activation" value={`${(ret.stats.d7 * 100).toFixed(0)}%`} tone="ok" />
+            <MiniStat label="D14" value={`${(ret.stats.d14 * 100).toFixed(0)}%`} tone="ok" />
+            <MiniStat label="D30" value={`${(ret.stats.d30 * 100).toFixed(0)}%`} tone="ok" />
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-3">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weekly activation · signups vs activated</div>
+            <RetentionBars cohorts={ret.stats.weeklyCohorts} />
+          </div>
+        </div>
+      )}
       {conv && (conv.freelancers.length > 0 || conv.funnel.views > 0) && (
         <div className="space-y-3">
           <SectionHead2>Conversion insights · 30d</SectionHead2>
@@ -492,6 +526,25 @@ function SummaryTab() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+function RetentionBars({ cohorts }: { cohorts: { week: string; signups: number; activated: number; activationRate: number }[] }) {
+  if (!cohorts.length) return <div className="py-4 text-center text-xs text-muted-foreground">No signups yet.</div>;
+  const maxSignups = Math.max(...cohorts.map((c) => c.signups), 1);
+  return (
+    <div className="mt-2 space-y-1.5">
+      {cohorts.slice(-12).map((c) => (
+        <div key={c.week} className="flex items-center gap-2">
+          <span className="w-14 shrink-0 text-[10px] font-mono text-muted-foreground">{c.week}</span>
+          <div className="flex-1">
+            <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+              <div className="absolute inset-y-0 left-0 rounded-full bg-primary" style={{ width: `${(c.signups / maxSignups) * 100}%` }} />
+            </div>
+          </div>
+          <span className="w-12 shrink-0 text-right text-[10px] text-muted-foreground">{c.signups}·{(c.activationRate * 100).toFixed(0)}%</span>
+        </div>
+      ))}
     </div>
   );
 }

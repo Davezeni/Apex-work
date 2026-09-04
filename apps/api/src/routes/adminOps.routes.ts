@@ -35,6 +35,8 @@ import * as leaderboard from '../services/admin/leaderboard.service.js';
 import * as insights from '../services/admin/insights.service.js';
 import * as orderHealth from '../services/admin/orderHealth.service.js';
 import * as proRoi from '../services/admin/proRoi.service.js';
+import * as retention from '../services/admin/retention.service.js';
+import * as emailQueue from '../services/admin/emailQueue.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -125,6 +127,46 @@ router.get(
   asyncHandler(async (req, res) => {
     const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
     return success(res, await proRoi.proRoi(limit));
+  }),
+);
+
+// ================= RETENTION & CHURN =================
+
+router.get(
+  '/retention',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 60));
+    return success(res, await retention.retention(days));
+  }),
+);
+
+// ================= EMAIL QUEUE =================
+
+router.get(
+  '/email-queue',
+  requireCapability('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(100, Math.max(1, Number((req.query as { limit?: string }).limit) || 50));
+    return success(res, await emailQueue.emailQueueStatus(limit));
+  }),
+);
+
+router.post(
+  '/email-queue/flush',
+  requireCapability('settings:manage'),
+  asyncHandler(async (req, res) => {
+    const actor = await loadActor(req);
+    const result = await emailQueue.flushQueue();
+    await adminAudit({
+      adminId: actor.adminId,
+      adminName: actor.adminName,
+      adminRole: actor.adminRole,
+      action: 'EMAIL_QUEUE.FLUSH',
+      resourceType: 'EMAIL_QUEUE',
+      meta: result,
+    });
+    return success(res, result);
   }),
 );
 
