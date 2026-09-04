@@ -180,6 +180,11 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   `GET /admin/ops/flagged` + `POST /flagged/:id/triage` + `POST /flagged/bulk` +
   Flagged sub-view with status filter / select-all / per-item + bulk resolve.
   168 unit tests.
+- **Freelancer win-rate & per-gig conversion insights** (#14):
+  `lib/conversionInsights.ts` (view→order conversion + order-completion win
+  rate, funnel) + `GET /admin/ops/insights/conversion` + Conversion insights
+  section on Summary (top converters, best-converting & highest-earning gigs).
+  173 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Freelancer win-rate & per-gig conversion insights (power push #14)
+
+### Added
+- **Conversion insights** — `lib/conversionInsights.ts` (pure
+  `buildConversionInsights`: view→order conversion + order-completion "win"
+  rate per freelancer and per gig, a funnel, and best-converting /
+  highest-earning gig rankings; conservative when there are no views/orders).
+- **`GET /admin/ops/insights/conversion`** (`dashboard:view`) — aggregates at
+  the DB via groupBy (candidate gigs ordered by volume, capped at 500) and
+  never loads whole tables.
+- **Conversion insights · 30d** on the Summary tab: funnel (views → orders →
+  completed), top converters by win-rate with an inline rate bar,
+  best-converting and highest-earning gigs.
+- **+5 unit tests** — 168 → 173 tests.
+
 ## [Unreleased] — Flag-queue moderation triage (power push #13)
 
 ### Added
