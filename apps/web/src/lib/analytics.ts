@@ -21,9 +21,14 @@ function configured(): boolean {
 function getPosthog(): typeof posthog | null {
   if (!configured()) return null;
   if (!_posthog) {
-    // dynamic import keeps it out of the initial bundle path until first use
+    // dynamic import keeps it out of the initial bundle path until first use.
+    // posthog-js is an ESM package: depending on how the bundler resolves a
+    // CommonJS `require`, the real singleton can be the module itself OR the
+    // `.default` export. Normalise to whichever exposes `.init` so we never
+    // call `.init()` on the empty namespace object (which crashed the app).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _posthog = require('posthog-js') as typeof posthog;
+    const mod = require('posthog-js') as { default?: typeof posthog } & typeof posthog;
+    _posthog = (mod.default && typeof mod.default.init === 'function' ? mod.default : mod);
   }
   return _posthog;
 }
@@ -45,11 +50,17 @@ export function initPosthog(): void {
   if (_inited || !configured()) return;
   const ph = getPosthog();
   if (!ph) return;
-  const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
-  ph.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, { api_host: host });
-  // Respect a saved opt-out.
-  if (!hasConsent()) ph.opt_out_capturing();
-  _inited = true;
+  // Fully guarded: analytics must NEVER be able to crash the app.
+  try {
+    const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const host = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com';
+    if (key) ph.init(key, { api_host: host });
+    // Respect a saved opt-out.
+    if (!hasConsent()) ph.opt_out_capturing();
+    _inited = true;
+  } catch {
+    /* swallow so analytics can never break the app */
+  }
 }
 
 /** Opt the current browser in/out of PostHog capturing. */

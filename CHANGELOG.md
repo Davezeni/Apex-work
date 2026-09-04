@@ -643,3 +643,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - next-intl locale wiring for Amharic UI
 - Playwright E2E tests
 - Sentry error reporting
+
+## [Fix] — PostHog init crashed the whole app (analytics namespace bug)
+
+### Fixed
+- `lib/analytics.ts` `getPosthog()` resolved `require('posthog-js')` directly,
+  but posthog-js is an ESM package whose real singleton lives under `.default`
+  when imported via CommonJS. The result was `.init` being `undefined`, so
+  `ph.init(...)` threw `TypeError: e.init is not a function` on every route
+  render, surfacing the global error boundary ("Something went wrong") on the
+  sign-in/sign-up pages. Now normalises to the `.default` export when it
+  exposes `.init`, and `initPosthog()` is fully try/catch-guarded so analytics
+  can never take the app down. Marker `.18`.
