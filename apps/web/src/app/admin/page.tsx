@@ -37,7 +37,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.5';
+export const ADMIN_UI_BUILD = '2026-09-04.6';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -298,6 +298,24 @@ interface LeaderboardEntry {
   rank: number; userId: string; username: string; fullName: string; role: string;
   revenueEtb: number; completedOrders: number; rating: number; activeGigs: number;
 }
+interface ConversionInsightsResp {
+  funnel: { views: number; orders: number; completed: number };
+  avgWinRate: number;
+  freelancers: FranchiseSummary[];
+  topByViews: GigMetric[];
+  topByConversion: GigMetric[];
+  topByRevenue: GigMetric[];
+}
+interface FranchiseSummary {
+  userId: string; username: string; fullName: string; rating: number; activeGigs: number;
+  totalGigViews: number; totalOrders: number; totalCompleted: number; totalRevenueEtb: number;
+  conversionRate: number; winRate: number; conversionPerMille: number; percentileRank: number;
+}
+interface GigMetric {
+  gigId: string; title: string; status: string; views: number; orders: number;
+  completedOrders: number; revenueEtb: number; startingPriceEtb: number; rating: number;
+  conversionRate: number; winRate: number; conversionPerMille: number;
+}
 function SummaryTab() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery<Summary>({
@@ -314,6 +332,11 @@ function SummaryTab() {
   const { data: lb } = useQuery<LeaderboardResp>({
     queryKey: ['admin', 'leaderboard'],
     queryFn: () => apiFetch<LeaderboardResp>('/admin/ops/leaderboard?days=30&limit=5', { token }),
+    enabled: !!token,
+  });
+  const { data: conv } = useQuery<ConversionInsightsResp>({
+    queryKey: ['admin', 'conversion-insights'],
+    queryFn: () => apiFetch<ConversionInsightsResp>('/admin/ops/insights/conversion?days=30&limit=5&minOrders=2', { token }),
     enabled: !!token,
   });
   if (isLoading || !data) return <div className="grid h-40 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -391,6 +414,101 @@ function SummaryTab() {
           )}
         </div>
       )}
+
+      {conv && (conv.freelancers.length > 0 || conv.funnel.views > 0) && (
+        <div className="space-y-3">
+          <SectionHead2>Conversion insights · 30d</SectionHead2>
+          <div className="rounded-2xl border border-border bg-card p-3">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <FunnelCell label="Views" value={formatCompact(conv.funnel.views)} />
+              <FunnelCell label="Orders" value={formatCompact(conv.funnel.orders)} />
+              <FunnelCell label="Completed" value={formatCompact(conv.funnel.completed)} />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>View→order {((conv.funnel.views ? conv.funnel.orders / conv.funnel.views : 0) * 100).toFixed(1)}%</span>
+              <span>Order completion {((conv.funnel.orders ? conv.funnel.completed / conv.funnel.orders : 0) * 100).toFixed(1)}%</span>
+              <span>Avg win-rate {(conv.avgWinRate * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+          {conv.freelancers.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Top converters (win-rate)</div>
+              <div className="mt-2 space-y-2">
+                {conv.freelancers.map((f) => (
+                  <Link key={f.userId} href={`/u/${f.username}`} className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{f.fullName}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        @{f.username} · {formatEtb(f.totalRevenueEtb)} · {f.totalOrders} orders
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-sm font-extrabold">{(f.winRate * 100).toFixed(0)}%</div>
+                      <div className="text-[10px] text-muted-foreground">win</div>
+                    </div>
+                    <WinBar value={f.winRate} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {conv.topByConversion.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Best-converting gigs</div>
+              <div className="mt-2 space-y-2">
+                {conv.topByConversion.map((g) => (
+                  <Link key={g.gigId} href={`/g/${g.gigId}`} className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{g.title}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {g.views} views · {g.orders} orders · {formatEtb(g.revenueEtb)}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right text-xs font-extrabold text-primary">
+                      {g.conversionPerMille}‰
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          {conv.topByRevenue.length > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Highest-earning gigs</div>
+              <div className="mt-2 space-y-2">
+                {conv.topByRevenue.map((g) => (
+                  <Link key={g.gigId} href={`/g/${g.gigId}`} className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{g.title}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        ⭐{g.rating ? g.rating.toFixed(1) : '—'} · {g.completedOrders} done
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right text-sm font-bold">{formatEtb(g.revenueEtb)}</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+function FunnelCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xl font-extrabold tracking-tight">{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+function WinBar({ value }: { value: number }) {
+  const pct = Math.round(value * 100);
+  const color = pct >= 70 ? 'bg-emerald-500' : pct >= 40 ? 'bg-amber-500' : 'bg-red-500';
+  return (
+    <div className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-muted">
+      <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }

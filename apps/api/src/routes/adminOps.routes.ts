@@ -32,6 +32,7 @@ import * as reconcile from '../services/admin/reconcile.service.js';
 import * as subscriptions from '../services/admin/subscriptions.service.js';
 import * as supportStats from '../services/admin/supportAnalytics.service.js';
 import * as leaderboard from '../services/admin/leaderboard.service.js';
+import * as insights from '../services/admin/insights.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -80,6 +81,17 @@ router.get(
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
     const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
     return success(res, await leaderboard.leaderboard(days, limit));
+  }),
+);
+
+router.get(
+  '/insights/conversion',
+  requireCapability('dashboard:view'),
+  asyncHandler(async (req, res) => {
+    const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
+    const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
+    const minOrders = Math.min(50, Math.max(1, Number((req.query as { minOrders?: string }).minOrders) || 3));
+    return success(res, await insights.conversionInsights(days, limit, minOrders));
   }),
 );
 
