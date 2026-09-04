@@ -166,6 +166,53 @@ router.post(
   }),
 );
 
+// ================= MODERATION FLAG-QUEUE TRIAGE =================
+
+router.get(
+  '/flagged',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const status = String((req.query as { status?: string }).status ?? '');
+    const valid = ['QUEUED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'];
+    const s = valid.includes(status) ? status : undefined;
+    const limit = Math.min(200, Math.max(1, Number((req.query as { limit?: string }).limit) || 100));
+    return success(res, { items: await mod.adminListFlagged({ moderationStatus: s, limit }) });
+  }),
+);
+
+const triageSchema = z.object({
+  status: z.enum(['QUEUED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED']).optional(),
+  assignee: z.string().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+router.post(
+  '/flagged/:id/triage',
+  requireCapability('moderation:content'),
+  validate(triageSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as z.infer<typeof triageSchema>;
+    const actor = await loadActor(req);
+    const result = await mod.triageGig(id, body, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'MODERATION.TRIAGE', resourceType: 'GIG', resourceId: id, after: { status: body.status, assignee: body.assignee, notes: body.notes } });
+    return success(res, result);
+  }),
+);
+
+const bulkTriageSchema = z.object({ ids: z.array(z.string()).min(1).max(200), status: z.enum(['RESOLVED', 'DISMISSED']) });
+router.post(
+  '/flagged/bulk',
+  requireCapability('moderation:content'),
+  validate(bulkTriageSchema),
+  asyncHandler(async (req, res) => {
+    const { ids, status } = req.body as z.infer<typeof bulkTriageSchema>;
+    const actor = await loadActor(req);
+    const result = await mod.bulkTriage(ids, status, actor.adminId);
+    await adminAudit({ ...actor, ip: req.ip, action: 'MODERATION.BULK', resourceType: 'GIG', resourceId: `bulk-${ids[0]}`, after: { status, count: result.updated } });
+    return success(res, result);
+  }),
+);
+
 router.post(
   '/gigs/:id/moderate',
   requireCapability('moderation:content'),

@@ -10,7 +10,7 @@ import { apiFetch } from '@/lib/api';
 import { formatEtb, cn } from '@/lib/utils';
 import { SectionHead, Badge, Spinner, Empty, TableShell, Th, Td, inputCls } from './admin-ui';
 
-type Sub = 'gigs' | 'jobs' | 'reviews';
+type Sub = 'gigs' | 'jobs' | 'reviews' | 'flagged';
 
 const gigStatusTone: Record<string, 'ok' | 'warn' | 'neutral' | 'bad'> = {
   ACTIVE: 'ok', PAUSED: 'warn', DRAFT: 'neutral', ARCHIVED: 'bad',
@@ -42,7 +42,7 @@ export function ModerationTab() {
         }
       />
       <div className="flex gap-1 rounded-xl bg-muted p-1">
-        {(['gigs', 'jobs', 'reviews'] as Sub[]).map((s) => (
+        {(['gigs', 'jobs', 'reviews', 'flagged'] as Sub[]).map((s) => (
           <button
             key={s}
             onClick={() => setSub(s)}
@@ -55,6 +55,84 @@ export function ModerationTab() {
       {sub === 'gigs' && <GigsModeration />}
       {sub === 'jobs' && <JobsModeration />}
       {sub === 'reviews' && <ReviewsModeration />}
+      {sub === 'flagged' && <FlaggedTriage />}
+    </div>
+  );
+}
+
+const mStatusTone: Record<string, 'warn' | 'info' | 'ok' | 'neutral'> = {
+  QUEUED: 'warn', IN_REVIEW: 'info', RESOLVED: 'ok', DISMISSED: 'neutral',
+};
+
+function FlaggedTriage() {
+  const token = useToken();
+  const qc = useQueryClient();
+  const [status, setStatus] = useState('QUEUED');
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const { data, isLoading } = useQuery<{ items: any[] }>({
+    queryKey: ['admin/flagged', status],
+    queryFn: () => apiFetch(`/admin/ops/flagged?status=${status}&limit=100`, { token }),
+    enabled: !!token,
+  });
+  const triage = useMutation({
+    mutationFn: (v: { id: string; body: { status?: string; assignee?: string; notes?: string } }) =>
+      apiFetch(`/admin/ops/flagged/${v.id}/triage`, { method: 'POST', token, body: v.body }),
+    onSuccess: () => { toast.success('Updated'); qc.invalidateQueries({ queryKey: ['admin/flagged'] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const bulk = useMutation({
+    mutationFn: (st: string) => apiFetch(`/admin/ops/flagged/bulk`, { method: 'POST', token, body: { ids: [...sel], status: st } }),
+    onSuccess: (r: any, st: string) => { toast.success(`Bulk ${st === 'RESOLVED' ? 'resolved' : 'dismissed'} ${r.updated}`); setSel(new Set()); qc.invalidateQueries({ queryKey: ['admin/flagged'] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const items: any[] = data?.items ?? [];
+  const allSel = items.length > 0 && items.every((i) => sel.has(i.id));
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1">
+          {['QUEUED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'].map((s) => (
+            <button key={s} onClick={() => setStatus(s)} className={cn('rounded-full px-3 py-1 text-[11px] font-bold', status === s ? 'bg-primary text-white' : 'border border-border text-muted-foreground')}>{s}</button>
+          ))}
+        </div>
+        {sel.size > 0 && (
+          <div className="ml-auto flex gap-1">
+            <Button size="sm" variant="brand" disabled={bulk.isPending} onClick={() => bulk.mutate('RESOLVED')}>Resolve {sel.size}</Button>
+            <Button size="sm" variant="outline" disabled={bulk.isPending} onClick={() => bulk.mutate('DISMISSED')}>Dismiss {sel.size}</Button>
+          </div>
+        )}
+      </div>
+      {isLoading ? <Spinner label="Loading queue…" /> : items.length === 0 ? <Empty message="No flagged gigs in this state" /> : (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+            <input type="checkbox" checked={allSel} onChange={(e) => setSel(e.target.checked ? new Set(items.map((i) => i.id)) : new Set())} />
+            Select all
+          </label>
+          {items.map((g) => (
+            <div key={g.id} className="rounded-2xl border border-border bg-card p-3">
+              <div className="flex items-start gap-2">
+                <input type="checkbox" checked={sel.has(g.id)} onChange={(e) => { const n = new Set(sel); if (e.target.checked) n.add(g.id); else n.delete(g.id); setSel(n); }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold">{g.title}</div>
+                  <div className="text-[11px] text-muted-foreground">@{g.owner?.fullName} · {g.viewsCount} views · {g.ordersCount} orders</div>
+                  {g.flaggedReason && <p className="mt-1 text-xs text-amber-600">{g.flaggedReason}</p>}
+                  {g.moderatorNotes && <p className="mt-1 text-[11px] italic text-muted-foreground">Notes: {g.moderatorNotes}</p>}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {status !== 'IN_REVIEW' && <Button size="sm" variant="outline" disabled={triage.isPending} onClick={() => triage.mutate({ id: g.id, body: { status: 'IN_REVIEW' } })}>Start review</Button>}
+                    <Button size="sm" variant="brand" disabled={triage.isPending} onClick={() => triage.mutate({ id: g.id, body: { status: 'RESOLVED' } })}>Resolve</Button>
+                    <Button size="sm" variant="ghost" disabled={triage.isPending} onClick={() => triage.mutate({ id: g.id, body: { status: 'DISMISSED' } })}>Dismiss</Button>
+                    {status === 'QUEUED' && (
+                      <Button size="sm" variant="ghost" disabled={triage.isPending} onClick={() => triage.mutate({ id: g.id, body: { assignee: prompt('Assignee username (leave blank to self?)') ?? '' } })}>Assign…</Button>
+                    )}
+                  </div>
+                </div>
+                <Badge tone={mStatusTone[g.moderationStatus] ?? 'neutral'}>{g.moderationStatus}</Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

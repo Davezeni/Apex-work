@@ -41,6 +41,14 @@ enum GigStatus {
   ARCHIVED
 }
 
+/// Flag-queue workflow status for a flagged gig.
+enum ModerationStatus {
+  QUEUED    // flagged, awaiting a moderator
+  IN_REVIEW // assigned / someone is working it
+  RESOLVED  // action taken (e.g. removed/restored)
+  DISMISSED // reviewed and cleared
+}
+
 enum PackageTier {
   BASIC
   STANDARD
@@ -339,6 +347,12 @@ model Gig {
   isFlagged      Boolean      @default(false)
   flaggedReason  String?      @db.Text
   pinnedAt       DateTime?
+
+  /// Moderation triage — assignee, workflow status and notes for the flag-queue.
+  moderationStatus   ModerationStatus @default(QUEUED)
+  moderationAssignee String?
+  moderatorNotes     String?
+  moderatedAt        DateTime?
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt

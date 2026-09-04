@@ -158,6 +158,66 @@ export async function moderateReview(
   return prisma.review.update({ where: { id: reviewId }, data });
 }
 
+// ---------------- FLAG-QUEUE TRIAGE ----------------
+
+export interface TriageItem {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  isFlagged: boolean;
+  flaggedReason: string | null;
+  moderationStatus: string;
+  moderationAssignee: string | null;
+  moderatorNotes: string | null;
+  viewsCount: number;
+  ordersCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  owner: { id: string; username: string; fullName: string };
+}
+
+/** List flagged gigs for the flag queue (optionally filtered by workflow status). */
+export async function adminListFlagged(opts: { moderationStatus?: string; limit: number }) {
+  const where: Record<string, unknown> = {};
+  if (opts.moderationStatus) where.moderationStatus = opts.moderationStatus;
+  return prisma.gig.findMany({
+    where,
+    orderBy: { updatedAt: 'desc' },
+    take: opts.limit,
+    select: {
+      id: true, title: true, slug: true, status: true, isFlagged: true, flaggedReason: true,
+      moderationStatus: true, moderationAssignee: true, moderatorNotes: true,
+      viewsCount: true, ordersCount: true, createdAt: true, updatedAt: true,
+      owner: { select: { id: true, username: true, fullName: true } },
+    },
+  });
+}
+
+/** Set a gig's moderation triage status, assignee and/or notes. */
+export async function triageGig(
+  gigId: string,
+  input: { status?: string; assignee?: string | null; notes?: string | null },
+  adminId: string,
+) {
+  const gig = await prisma.gig.findUnique({ where: { id: gigId } });
+  if (!gig) throw new NotFoundError('Gig');
+  const data: Record<string, unknown> = { moderatedAt: new Date(), moderationAssignee: adminId };
+  if (input.status) data.moderationStatus = input.status;
+  if (input.assignee !== undefined) data.moderationAssignee = input.assignee;
+  if (input.notes !== undefined) data.moderatorNotes = input.notes;
+  return prisma.gig.update({ where: { id: gigId }, data });
+}
+
+/** Bulk-move a set of flagged gigs to a terminal status (e.g. resolve all). */
+export async function bulkTriage(ids: string[], status: string, adminId: string) {
+  const result = await prisma.gig.updateMany({
+    where: { id: { in: ids } },
+    data: { moderationStatus: status as never, moderatorNotes: `Bulk ${status}`, moderationAssignee: adminId, moderatedAt: new Date() },
+  });
+  return { updated: result.count };
+}
+
 // ---------------- PROACTIVE SCAN ----------------
 
 export interface ScanItem {
