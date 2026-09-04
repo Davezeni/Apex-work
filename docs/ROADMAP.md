@@ -185,6 +185,17 @@ These are the biggest functional holes on the user side. Each is a product gap, 
   rate, funnel) + `GET /admin/ops/insights/conversion` + Conversion insights
   section on Summary (top converters, best-converting & highest-earning gigs).
   173 unit tests.
+- **Order-health "needs attention" inbox + daily digest** (#15):
+  `lib/orderHealth.ts` (overdue delivery / stale dispute / stale review /
+  unresolved / abandoned, severity + age) + `GET /admin/ops/order-health` +
+  `POST /order-health/digest` + Money tab "health" sub-view. 182 unit tests.
+- **Downloadable receipts + monthly earnings statement** (#16):
+  `lib/statement.ts` (self-contained printable HTML) + `GET /orders/:id/receipt`
+  + `GET /me/earnings/statement` + order-page HTML receipt + Stats-page monthly
+  statement. 187 unit tests.
+- **Pro-subscription ROI analytics** (#17): `lib/proRoi.ts` (ROI multiple, net,
+  repurchase rate, best/lowest) + `GET /admin/ops/subscriptions/roi` +
+  Subscriptions tab ROI view. 191 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The

@@ -3,6 +3,49 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Pro-subscription ROI analytics (power push #16)
+
+### Added
+- **Pro-subscription ROI** — `lib/proRoi.ts` (pure `buildProRoi`: cohort ROI
+  multiple, net value, avg per-subscriber ROI, repurchase rate, profitable %,
+  best/lowest ROI) — measures whether a Pro pass pays for itself.
+- **`GET /admin/ops/subscriptions/roi`** (`subscriptions:manage`) — aggregates
+  subscription cost per user + completed-order value generated (freelancer
+  earnings / client spend) via DB groupBy.
+- **ROI view** on the Subscriptions tab: ROI/net/subscribers cells, invested vs
+  returned, avg ROI + repeat rate, and best/lowest-ROI subscriber lists.
+- **+4 unit tests** — 187 → 191 tests.
+
+## [Unreleased] — Downloadable receipts & monthly earnings statement (power push #15)
+
+### Added
+- **`lib/statement.ts`** — pure `buildOrderReceipt` + `buildMonthlyStatement`:
+  self-contained printable HTML (inline styles, HTML-escaped, no external
+  resources), with totals and a per-order table.
+- **`services/earnings.service.ts`** — `receiptForOrder` (party role-check) and
+  `monthlyStatement` (completed orders in a calendar month).
+- **Routes** `GET /orders/:id/receipt` (+ `.json`), `GET /me/earnings/statement`
+  (+ `.json`) — served as downloadable attachments.
+- **Order page** — new server "HTML" receipt download (in addition to the
+  existing PDF receipt); **Stats page** — Monthly earnings statement card with a
+  month picker (download + show totals).
+- **`lib/api`** — `downloadViaAuth` authenticated blob-download helper.
+- **+5 unit tests** — 182 → 187 tests.
+
+## [Unreleased] — Order-health needs-attention inbox + daily digest (power push #15)
+### Added
+- **`lib/orderHealth.ts`** — pure `buildOrderHealth`/`classifyOrder`: flags
+  overdue delivery, stale dispute, stale review, unresolved delivery and
+  abandoned orders with severity + age; priority inbox, per-category counts and
+  a ready-to-send digest.
+- **`services/admin/orderHealth.service.ts`** — order query by status + durable
+  EmailQueue digest to staff + audit trail.
+- **Routes** `GET /admin/ops/order-health`, `POST /admin/ops/order-health/digest`
+  (`dashboard:view`).
+- **Money tab** "health" sub-view: summary chips, per-category counts, priority
+  inbox, "Send daily digest".
+- **+9 unit tests** — 173 → 182 tests.
+
 ## [Unreleased] — Freelancer win-rate & per-gig conversion insights (power push #14)
 
 ### Added
