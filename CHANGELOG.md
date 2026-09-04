@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Top-performer leaderboard (power push #11)
+
+### Added
+- **Top-performer leaderboard** — `lib/leaderboard.ts` (pure
+  `buildLeaderboard`: independently ranks freelancers and clients by revenue,
+  plus a trailing-window "risers" list) + `GET /admin/ops/leaderboard` (RBAC
+  `dashboard:view`). Aggregates at the DB via groupBy/sum, never loads whole
+  tables.
+- **Top performers · 30d** section on the Summary tab: freelance & client
+  leaderboards (rank, revenue, rating, orders) with profile links, plus a
+  "Rising" card for window activity.
+- **+4 unit tests** — 155 → 159 tests.
+
 ## [Unreleased] — Support SLA & team dashboard (power push #10)
 
 ### Added

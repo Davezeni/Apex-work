@@ -37,7 +37,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-04.2';
+export const ADMIN_UI_BUILD = '2026-09-04.3';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
@@ -289,6 +289,15 @@ interface AnalyticsSeriesResp {
     revenueEtb: SeriesPoint[];
   };
 }
+interface LeaderboardResp {
+  freelancers: LeaderboardEntry[];
+  clients: LeaderboardEntry[];
+  risers: LeaderboardEntry[];
+}
+interface LeaderboardEntry {
+  rank: number; userId: string; username: string; fullName: string; role: string;
+  revenueEtb: number; completedOrders: number; rating: number; activeGigs: number;
+}
 function SummaryTab() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery<Summary>({
@@ -300,6 +309,11 @@ function SummaryTab() {
   const { data: series } = useQuery<AnalyticsSeriesResp>({
     queryKey: ['admin', 'analytics-series', seriesDays],
     queryFn: () => apiFetch<AnalyticsSeriesResp>(`/admin/ops/analytics/series?days=${seriesDays}`, { token }),
+    enabled: !!token,
+  });
+  const { data: lb } = useQuery<LeaderboardResp>({
+    queryKey: ['admin', 'leaderboard'],
+    queryFn: () => apiFetch<LeaderboardResp>('/admin/ops/leaderboard?days=30&limit=5', { token }),
     enabled: !!token,
   });
   if (isLoading || !data) return <div className="grid h-40 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -351,6 +365,52 @@ function SummaryTab() {
           />
         </div>
       )}
+
+      {lb && (lb.freelancers.length > 0 || lb.clients.length > 0) && (
+        <div className="space-y-3">
+          <SectionHead2>Top performers · 30d</SectionHead2>
+          <div className="grid gap-2 md:grid-cols-2">
+            <LbList title="Freelancers" rows={lb.freelancers} />
+            <LbList title="Clients" rows={lb.clients} />
+          </div>
+          {lb.risers.length > 0 && (
+            <div>
+              <SectionHead2>Rising ({new Date().toLocaleDateString()})</SectionHead2>
+              <div className="grid gap-2 md:grid-cols-2">
+                {lb.risers.map((r) => (
+                  <div key={r.userId} className="flex items-center gap-2 rounded-2xl border border-border bg-card p-2.5">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-black text-primary">#{r.rank}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-bold">{r.fullName}</div>
+                      <div className="text-[10px] text-muted-foreground">@{r.username} · {formatEtb(r.revenueEtb)} in 30d</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+function LbList({ title, rows }: { title: string; rows: LeaderboardEntry[] }) {
+  if (!rows.length) return null;
+  return (
+    <div className="rounded-2xl border border-border bg-card p-3">
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
+      <div className="mt-2 space-y-2">
+        {rows.map((r) => (
+          <Link key={r.userId} href={`/u/${r.username}`} className="flex items-center gap-2">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-black text-primary">{r.rank}</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold">{r.fullName}</div>
+              <div className="text-[10px] text-muted-foreground">@{r.username} · ⭐{r.rating ? r.rating.toFixed(1) : '—'} · {r.completedOrders} orders</div>
+            </div>
+            <div className="shrink-0 text-right text-xs font-bold">{formatEtb(r.revenueEtb)}</div>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

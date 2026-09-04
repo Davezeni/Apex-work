@@ -170,6 +170,8 @@ These are the biggest functional holes on the user side. Each is a product gap, 
 - **Support SLA & team dashboard** (#10): `lib/supportAnalytics.ts` +
   `GET /admin/ops/support/analytics` + Queue/SLA toggle with SLA cards and
   per-admin throughput. 155 unit tests.
+- **Top-performer leaderboard** (#11): `lib/leaderboard.ts` +
+  `GET /admin/ops/leaderboard` + Top performers/risers on Summary. 159 unit tests.
 
 **⏳ Deferred (needs external accounts/keys to be useful):**
 - **Sentry / PostHog wiring.** Both have free tiers but need org keys/DSN. The
