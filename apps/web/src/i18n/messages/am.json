@@ -410,7 +410,15 @@
     "label5": "ወደድኩት!",
     "yourReview": "የእርስዎ ግምገማ",
     "leaveReview": "ግምገማ ይተው",
-    "reviewsHeading": "ግምገማዎች"
+    "reviewsHeading": "ግምገማዎች",
+    "responseFromSeller": "የሻጩ ምላሽ",
+    "reply": "ምላሽ ይስጡ",
+    "editReply": "ምላሽ አስተካክል",
+    "removeReply": "አስወግድ",
+    "saveReply": "አስቀምጥ",
+    "cancelReply": "ይቅር",
+    "replyEdited": "ተስተካክሏል",
+    "writeReplyPlaceholder": "ለዚህ ግምገማ ሙያዊ ምላሽ ይስጡ…"
   },
   "wallet": {
     "title": "ዋሌት",

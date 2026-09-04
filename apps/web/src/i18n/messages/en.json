@@ -410,7 +410,15 @@
     "label5": "Loved it!",
     "yourReview": "Your review",
     "leaveReview": "Leave a review",
-    "reviewsHeading": "Reviews"
+    "reviewsHeading": "Reviews",
+    "responseFromSeller": "Seller's response",
+    "reply": "Reply",
+    "editReply": "Edit response",
+    "removeReply": "Remove",
+    "saveReply": "Save",
+    "cancelReply": "Cancel",
+    "replyEdited": "Edited",
+    "writeReplyPlaceholder": "Give a professional response to this review…"
   },
   "wallet": {
     "title": "Wallet",

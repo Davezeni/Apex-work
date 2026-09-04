@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createReviewSchema } from '@apex-work/shared';
+import { createReviewSchema, createReviewReplySchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
@@ -41,6 +41,39 @@ router.get(
     if (!q.userId) throw new NotFoundError('User');
     const limit = Math.min(Math.max(Number(q.limit ?? 20), 1), 50);
     const result = await reviews.listReviewsFor(q.userId, { limit, cursor: q.cursor });
+    return success(res, result);
+  }),
+);
+
+/**
+ * PUT /reviews/:id/reply — the seller (subject of the review) posts or edits
+ * their rebuttal. Idempotent — calling again edits the reply.
+ */
+router.put(
+  '/:id/reply',
+  requireAuth,
+  validate(createReviewReplySchema.pick({ comment: true })),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const { comment } = req.body as { comment: string };
+    const result = await reviews.upsertReviewReply({
+      reviewId: id,
+      subjectId: req.user!.sub,
+      comment,
+    });
+    void bust(`/v1/reviews`);
+    return success(res, result, result.created ? 201 : 200);
+  }),
+);
+
+/** DELETE /reviews/:id/reply — the seller removes their rebuttal. */
+router.delete(
+  '/:id/reply',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const result = await reviews.deleteReviewReply(id, req.user!.sub);
+    void bust(`/v1/reviews`);
     return success(res, result);
   }),
 );

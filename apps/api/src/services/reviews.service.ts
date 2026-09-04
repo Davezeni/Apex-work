@@ -96,7 +96,16 @@ export async function listReviewsFor(subjectId: string, opts: { limit: number; c
     orderBy: { createdAt: 'desc' },
     take: opts.limit + 1,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
-    include: {
+    select: {
+      id: true,
+      subjectId: true,
+      rating: true,
+      comment: true,
+      photoUrls: true,
+      createdAt: true,
+      sellerReply: true,
+      sellerRepliedAt: true,
+      sellerReplyEditedAt: true,
       author: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       order: { select: { id: true, title: true } },
     },
@@ -114,5 +123,71 @@ export async function getMyReviewForOrder(orderId: string, authorId: string) {
   return prisma.review.findFirst({
     where: { orderId, authorId },
     select: { id: true, rating: true, comment: true, photoUrls: true, createdAt: true },
+  });
+}
+
+/**
+ * Create or update a seller rebuttal to a review. The caller must be the
+ * subject (seller) of the review. Idempotent: calling again edits the reply.
+ * Returns `created: boolean` so the route can decide whether to re-notify.
+ */
+export async function upsertReviewReply(input: {
+  reviewId: string;
+  subjectId: string;
+  comment: string;
+}) {
+  const review = await prisma.review.findUnique({
+    where: { id: input.reviewId },
+    select: {
+      id: true,
+      subjectId: true,
+      authorId: true,
+      orderId: true,
+      sellerReply: true,
+      sellerRepliedAt: true,
+      order: { select: { title: true } },
+    },
+  });
+  if (!review) throw new NotFoundError('Review');
+  if (review.subjectId !== input.subjectId) throw new ForbiddenError();
+
+  const wasNew = !review.sellerReply;
+
+  const updated = await prisma.review.update({
+    where: { id: review.id },
+    data: {
+      sellerReply: input.comment,
+      sellerRepliedAt: review.sellerRepliedAt ?? new Date(),
+      sellerReplyEditedAt: wasNew ? null : new Date(),
+    },
+    select: { id: true, sellerReply: true, sellerRepliedAt: true, sellerReplyEditedAt: true },
+  });
+
+  // Notify the reviewer only the first time a reply is created.
+  if (wasNew) {
+    await notify({
+      userId: review.authorId,
+      type: 'REVIEW_REPLY',
+      title: 'The seller replied to your review',
+      body: `On order: ${review.order.title}`,
+      payload: { reviewId: review.id, orderId: review.orderId },
+    });
+  }
+
+  return { ...updated, created: wasNew };
+}
+
+/** Remove the seller's rebuttal. The seller must own the review they're replying to. */
+export async function deleteReviewReply(reviewId: string, subjectId: string) {
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { id: true, subjectId: true },
+  });
+  if (!review) throw new NotFoundError('Review');
+  if (review.subjectId !== subjectId) throw new ForbiddenError();
+  return prisma.review.update({
+    where: { id: review.id },
+    data: { sellerReply: null, sellerRepliedAt: null, sellerReplyEditedAt: null },
+    select: { id: true, sellerReply: true, sellerRepliedAt: true, sellerReplyEditedAt: true },
   });
 }

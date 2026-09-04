@@ -6,10 +6,14 @@ import { useAuthStore } from '@/stores/auth-store';
 
 export interface Review {
   id: string;
+  subjectId: string;
   rating: number;
   comment: string | null;
   photoUrls?: string[];
   createdAt: string;
+  sellerReply: string | null;
+  sellerRepliedAt: string | null;
+  sellerReplyEditedAt: string | null;
   author: { id: string; username: string; fullName: string; avatarUrl: string | null };
   order?: { id: string; title: string };
 }
@@ -43,6 +47,37 @@ export function useCreateReview() {
       qc.invalidateQueries({ queryKey: ['review', 'for-order'] });
       qc.invalidateQueries({ queryKey: ['public-user'] });
       qc.invalidateQueries({ queryKey: ['order'] });
+    },
+  });
+}
+
+/** Post or edit the seller's rebuttal to a review about them. */
+export function useUpsertReviewReply() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { reviewId: string; comment: string }) =>
+      apiFetch<{ id: string; sellerReply: string | null }>(
+        `/reviews/${input.reviewId}/reply`,
+        { method: 'PUT', token, body: { comment: input.comment } },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews'] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
+
+/** Remove the seller's rebuttal. */
+export function useDeleteReviewReply() {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reviewId: string) =>
+      apiFetch(`/reviews/${reviewId}/reply`, { method: 'DELETE', token }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reviews'] });
+      qc.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

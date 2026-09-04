@@ -17,6 +17,7 @@ const ICON: Record<string, string> = {
   PAYMENT: '💰',
   SYSTEM: '⚙️',
   REVIEW: '⭐',
+  REVIEW_REPLY: '💬',
 };
 
 export default function NotificationsPage() {

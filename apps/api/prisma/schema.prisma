@@ -89,6 +89,7 @@ enum NotificationType {
   PAYMENT
   SYSTEM
   REVIEW
+  REVIEW_REPLY
 }
 
 // ================= USERS =================
@@ -585,6 +586,12 @@ model Review {
   hiddenById  String?
   hiddenReason String?  @db.Text
   hiddenBy    User?     @relation("ReviewHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+
+  /// Seller rebuttal — the subject of the review (the seller) may reply
+  /// once, and edit/remove that reply, to give their side of the story.
+  sellerReply       String?   @db.Text
+  sellerRepliedAt   DateTime?
+  sellerReplyEditedAt DateTime?
 
   @@unique([orderId, authorId])
   @@index([subjectId, createdAt(sort: Desc)])

@@ -30,6 +30,7 @@ const preferenceForType: Record<NotificationType, PreferenceKey> = {
   ORDER_UPDATE: 'orders',
   PAYMENT: 'payments',
   REVIEW: 'reviews',
+  REVIEW_REPLY: 'reviews',
   SYSTEM: 'system',
 };
 

@@ -14,7 +14,8 @@ export type NotificationType =
   | 'NEW_BID'
   | 'PAYMENT'
   | 'SYSTEM'
-  | 'REVIEW';
+  | 'REVIEW'
+  | 'REVIEW_REPLY';
 
 export interface AppNotification {
   id: string;
