@@ -117,6 +117,41 @@ export async function listConversations(userId: string) {
   return memberships.map((m) => shapeConversation(m.conversation, userId, m.lastReadAt));
 }
 
+/** Full detail for one conversation (used by the chat screen for group UI). */
+export async function getConversation(conversationId: string, userId: string) {
+  await assertMember(conversationId, userId);
+  const membership = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+    select: { lastReadAt: true, isMuted: true, isAdmin: true },
+  });
+  const conv = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    include: {
+      members: {
+        include: { user: { select: { id: true, username: true, fullName: true, avatarUrl: true } } },
+      },
+      messages: {
+        take: 1,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, body: true, attachmentType: true, senderId: true, createdAt: true },
+      },
+    },
+  });
+  const shaped = shapeConversation(conv, userId, membership?.lastReadAt ?? null);
+  return {
+    ...shaped,
+    createdAt: conv.createdAt,
+    members: conv.members.map((m) => ({
+      userId: m.userId,
+      isAdmin: m.isAdmin,
+      joinedAt: m.joinedAt,
+      lastReadAt: m.lastReadAt,
+      ...m.user,
+    })),
+    me: { isMuted: membership?.isMuted ?? false, isAdmin: membership?.isAdmin ?? false },
+  };
+}
+
 export async function listMessages(
   conversationId: string,
   userId: string,
@@ -142,6 +177,13 @@ export async function listMessages(
   const hasMore = items.length > opts.limit;
   const trimmed = hasMore ? items.slice(0, opts.limit) : items;
 
+  // Read receipts: for each OTHER member, the last time they read the thread.
+  // A message is "read by" someone when their lastReadAt >= message.createdAt.
+  const readTimes = await prisma.conversationMember.findMany({
+    where: { conversationId, userId: { not: userId } },
+    select: { userId: true, lastReadAt: true },
+  });
+
   // Compact reactions into { emoji, count, mine } per message so the client
   // renders a chip row without extra plumbing.
   const enriched = trimmed.map((m) => {
@@ -151,7 +193,8 @@ export async function listMessages(
       b.count++;
       if (r.userId === userId) b.mine = true;
     }
-    return { ...m, reactions: Object.values(buckets) };
+    const readBy = readTimes.filter((rt) => rt.lastReadAt && rt.lastReadAt >= m.createdAt).length;
+    return { ...m, reactions: Object.values(buckets), readBy, readByTotal: readTimes.length };
   });
 
   return {
@@ -239,6 +282,157 @@ export async function markAsRead(conversationId: string, userId: string) {
   return prisma.conversationMember.update({
     where: { conversationId_userId: { conversationId, userId } },
     data: { lastReadAt: new Date() },
+  });
+}
+
+/** Create a group room with an initial set of members. */
+export async function createGroup(input: {
+  ownerId: string;
+  title: string;
+  memberIds: string[];
+  avatarUrl?: string;
+}) {
+  await assertPhoneVerified(input.ownerId);
+  const ids = [...new Set(input.memberIds)];
+  if (ids.includes(input.ownerId) || ids.length === 0) {
+    throw new BadRequestError('Add at least one other member');
+  }
+  const count = await prisma.user.count({ where: { id: { in: ids }, isActive: true } });
+  if (count !== ids.length) throw new NotFoundError('One or more members not found');
+
+  return prisma.conversation.create({
+    data: {
+      isGroup: true,
+      title: input.title,
+      avatarUrl: input.avatarUrl,
+      createdById: input.ownerId,
+      members: {
+        createMany: {
+          data: [
+            { userId: input.ownerId, isAdmin: true },
+            ...ids.map((userId) => ({ userId })),
+          ],
+        },
+      },
+    },
+    include: conversationInclude(input.ownerId),
+  });
+}
+
+async function assertGroupAdmin(conversationId: string, userId: string) {
+  const conv = await prisma.conversation.findUniqueOrThrow({
+    where: { id: conversationId },
+    select: { isGroup: true },
+  });
+  if (!conv.isGroup) throw new BadRequestError('This is not a group conversation');
+  const member = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+    select: { isAdmin: true },
+  });
+  if (!member) throw new ForbiddenError('You are not a member of this group');
+  if (!member.isAdmin) throw new ForbiddenError('Only group admins can do this');
+}
+
+/** Rename or set the group avatar. */
+export async function updateGroup(conversationId: string, userId: string, input: { title?: string; avatarUrl?: string | null }) {
+  await assertGroupAdmin(conversationId, userId);
+  return prisma.conversation.update({
+    where: { id: conversationId },
+    data: { title: input.title, avatarUrl: input.avatarUrl ?? undefined },
+    include: conversationInclude(userId),
+  });
+}
+
+/** Add members to a group (admin only). */
+export async function addGroupMembers(conversationId: string, userId: string, memberIds: string[]) {
+  await assertGroupAdmin(conversationId, userId);
+  const ids = [...new Set(memberIds)];
+  const exists = await prisma.conversationMember.findMany({
+    where: { conversationId, userId: { in: ids } },
+    select: { userId: true },
+  });
+  const toAdd = ids.filter((id) => !exists.some((e) => e.userId === id));
+  if (toAdd.length === 0) return prisma.conversation.findUniqueOrThrow({ where: { id: conversationId }, include: conversationInclude(userId) });
+  await prisma.conversationMember.createMany({
+    data: toAdd.map((uid) => ({ conversationId, userId: uid })),
+    skipDuplicates: true,
+  });
+  return prisma.conversation.findUniqueOrThrow({ where: { id: conversationId }, include: conversationInclude(userId) });
+}
+
+/** Remove a member (admin removes anyone, or a member leaves themselves). */
+export async function removeGroupMember(conversationId: string, actorId: string, memberId: string) {
+  await assertMember(conversationId, actorId);
+  const target = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId, userId: memberId } },
+    select: { isAdmin: true },
+  });
+  if (!target) throw new NotFoundError('Member');
+  const self = actorId === memberId;
+  if (!self) await assertGroupAdmin(conversationId, actorId);
+  if (target.isAdmin && !self) throw new ForbiddenError('Cannot remove a group admin');
+
+  if (self) {
+    // Leave: remove our membership. Empty groups are cleaned up lazily.
+    await prisma.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId: memberId } } });
+    return { ok: true, left: true, members: null };
+  }
+  await prisma.conversationMember.delete({ where: { conversationId_userId: { conversationId, userId: memberId } } });
+  return prisma.conversation.findUniqueOrThrow({ where: { id: conversationId }, include: conversationInclude(actorId) });
+}
+
+/** Toggle our emoji reaction on a message. Returns the new reaction state. */
+export async function toggleReaction(conversationId: string, messageId: string, userId: string, emoji: string) {
+  if (emoji.length > 16) throw new BadRequestError('Emoji too long');
+  await assertMember(conversationId, userId);
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { conversationId: true },
+  });
+  if (!message || message.conversationId !== conversationId) throw new NotFoundError('Message');
+
+  const existing = await prisma.messageReaction.findUnique({
+    where: { messageId_userId_emoji: { messageId, userId, emoji } },
+  });
+  if (existing) {
+    await prisma.messageReaction.delete({ where: { id: existing.id } });
+    return { ok: true, added: false, emoji };
+  }
+  await prisma.messageReaction.create({ data: { messageId, userId, emoji } });
+  return { ok: true, added: true, emoji };
+}
+
+/** Edit our own message (sets editedAt). */
+export async function editMessage(conversationId: string, messageId: string, userId: string, body: string) {
+  await assertMember(conversationId, userId);
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { conversationId: true, senderId: true },
+  });
+  if (!message || message.conversationId !== conversationId) throw new NotFoundError('Message');
+  if (message.senderId !== userId) throw new ForbiddenError('You can only edit your own messages');
+  if (body.trim().length === 0) throw new BadRequestError('Message cannot be empty');
+  return prisma.message.update({
+    where: { id: messageId },
+    data: { body, editedAt: new Date() },
+  });
+}
+
+/** Soft-delete a message (sender, or any member for moderation). */
+export async function deleteMessage(conversationId: string, messageId: string, userId: string) {
+  await assertMember(conversationId, userId);
+  const message = await prisma.message.findUnique({
+    where: { id: messageId },
+    select: { conversationId: true, senderId: true },
+  });
+  if (!message || message.conversationId !== conversationId) throw new NotFoundError('Message');
+  if (message.senderId !== userId) {
+    // Non-sender can only delete via an admin/moderator (checked by capability upstream).
+    throw new ForbiddenError('You can only delete your own messages');
+  }
+  return prisma.message.update({
+    where: { id: messageId },
+    data: { deletedAt: new Date(), body: null, attachmentUrl: null },
   });
 }
 

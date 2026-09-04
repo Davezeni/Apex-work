@@ -3,6 +3,11 @@ import {
   listMessagesQuerySchema,
   sendMessageSchema,
   startConversationSchema,
+  createChatGroupSchema,
+  toggleReactionSchema,
+  groupMembersSchema,
+  updateChatGroupSchema,
+  editMessageSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -32,6 +37,15 @@ router.post(
     const body = req.body as import('@apex-work/shared').StartConversationInput;
     const conv = await chat.getOrCreateDirectConversation(req.user!.sub, body.peerUserId);
     return success(res, conv);
+  }),
+);
+
+/** GET /conversations/:id — full detail (members, unread, group flag). */
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await chat.getConversation(id, req.user!.sub));
   }),
 );
 
@@ -86,6 +100,104 @@ router.post(
     const { id } = req.params as { id: string };
     await chat.markAsRead(id, req.user!.sub);
     return success(res, { ok: true });
+  }),
+);
+
+/** POST /conversations/group — create a group room. */
+router.post(
+  '/group',
+  validate(createChatGroupSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').CreateChatGroupInput;
+    const conv = await chat.createGroup({
+      ownerId: req.user!.sub,
+      title: body.title,
+      memberIds: body.memberIds,
+      avatarUrl: body.avatarUrl,
+    });
+    const io = getIo();
+    if (io) for (const m of conv.members) io.to(`user:${m.userId}`).emit('conversation:new', conv);
+    return success(res, conv, 201);
+  }),
+);
+
+/** PATCH /conversations/:id — rename a group / set avatar. */
+router.patch(
+  '/:id',
+  validate(updateChatGroupSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').UpdateChatGroupInput;
+    const conv = await chat.updateGroup(id, req.user!.sub, body);
+    const io = getIo();
+    if (io) io.to(`conv:${id}`).emit('conversation:updated', conv);
+    return success(res, conv);
+  }),
+);
+
+/** POST /conversations/:id/members — add members to a group (admin). */
+router.post(
+  '/:id/members',
+  validate(groupMembersSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').GroupMembersInput;
+    const conv = await chat.addGroupMembers(id, req.user!.sub, body.memberIds);
+    const io = getIo();
+    if (io) for (const m of conv.members) io.to(`user:${m.userId}`).emit('conversation:new', conv);
+    return success(res, conv);
+  }),
+);
+
+/** DELETE /conversations/:id/members/:userId — leave/remove a group member. */
+router.delete(
+  '/:id/members/:userId',
+  asyncHandler(async (req, res) => {
+    const { id, userId } = req.params as { id: string; userId: string };
+    const result = await chat.removeGroupMember(id, req.user!.sub, userId);
+    const io = getIo();
+    if (io) { io.to(`conv:${id}`).emit('conversation:updated', result); io.to(`user:${userId}`).emit('conversation:left', { conversationId: id }); }
+    return success(res, result);
+  }),
+);
+
+/** POST /conversations/:id/messages/:messageId/reaction — toggle an emoji. */
+router.post(
+  '/:id/messages/:messageId/reaction',
+  validate(toggleReactionSchema),
+  asyncHandler(async (req, res) => {
+    const { id, messageId } = req.params as { id: string; messageId: string };
+    const body = req.body as import('@apex-work/shared').ToggleReactionInput;
+    const result = await chat.toggleReaction(id, messageId, req.user!.sub, body.emoji);
+    const io = getIo();
+    if (io) io.to(`conv:${id}`).emit('message:reaction', { conversationId: id, messageId, userId: req.user!.sub, emoji: body.emoji, added: result.added });
+    return success(res, result);
+  }),
+);
+
+/** PATCH /conversations/:id/messages/:messageId — edit our own message. */
+router.patch(
+  '/:id/messages/:messageId',
+  validate(editMessageSchema),
+  asyncHandler(async (req, res) => {
+    const { id, messageId } = req.params as { id: string; messageId: string };
+    const body = req.body as import('@apex-work/shared').EditMessageInput;
+    const message = await chat.editMessage(id, messageId, req.user!.sub, body.body);
+    const io = getIo();
+    if (io) io.to(`conv:${id}`).emit('message:edit', { conversationId: id, message });
+    return success(res, message);
+  }),
+);
+
+/** DELETE /conversations/:id/messages/:messageId — soft delete our own message. */
+router.delete(
+  '/:id/messages/:messageId',
+  asyncHandler(async (req, res) => {
+    const { id, messageId } = req.params as { id: string; messageId: string };
+    const message = await chat.deleteMessage(id, messageId, req.user!.sub);
+    const io = getIo();
+    if (io) io.to(`conv:${id}`).emit('message:delete', { conversationId: id, message });
+    return success(res, message);
   }),
 );
 

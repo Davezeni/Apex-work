@@ -28,3 +28,35 @@ export const listMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(30),
 });
 export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
+
+/** Create a chat group / room for several members at once. */
+export const createChatGroupSchema = z.object({
+  title: z.string().trim().min(1, 'Group needs a name').max(80),
+  memberIds: z.array(z.string().min(1).max(40)).min(1, 'Add at least one member').max(50),
+  avatarUrl: z.string().url().max(1000).optional(),
+});
+export type CreateChatGroupInput = z.infer<typeof createChatGroupSchema>;
+
+/** Toggle our emoji reaction on a message. */
+export const toggleReactionSchema = z.object({
+  emoji: z.string().min(1).max(16),
+});
+export type ToggleReactionInput = z.infer<typeof toggleReactionSchema>;
+
+/** Add / remove group members, or rename a group. */
+export const groupMembersSchema = z.object({
+  memberIds: z.array(z.string().min(1).max(40)).min(1).max(50),
+});
+export type GroupMembersInput = z.infer<typeof groupMembersSchema>;
+
+export const updateChatGroupSchema = z.object({
+  title: z.string().trim().min(1).max(80).optional(),
+  avatarUrl: z.string().url().max(1000).nullable().optional(),
+});
+export type UpdateChatGroupInput = z.infer<typeof updateChatGroupSchema>;
+
+/** Mark a message deleted (soft) / edited (body replaced). */
+export const editMessageSchema = z.object({
+  body: z.string().trim().min(1, 'Message cannot be empty').max(4000),
+});
+export type EditMessageInput = z.infer<typeof editMessageSchema>;

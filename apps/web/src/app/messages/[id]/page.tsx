@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
-import { useMessages, useSendMessage, useChatSocket, type ChatMessage } from '@/hooks/use-chat';
+import { apiFetch } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth-store';
+import { useMessages, useSendMessage, useChatSocket, useConversation, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { AttachButton } from '@/components/chat/attach-button';
@@ -46,10 +48,29 @@ export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { data: me } = useMe();
+  const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading, error } = useMessages(id);
+  const { data: conv } = useConversation(id);
   const send = useSendMessage(id);
+  const addMembers = useAddGroupMembers(id);
+  const leaveGroup = useLeaveGroup();
+  const renameGroup = useUpdateGroup(id);
+  const editMessage = useEditMessage(id);
+  const deleteMessage = useDeleteMessage(id);
+  const [typingUsers, setTypingUsers] = useState<Record<string, number>>({});
   const socket = useChatSocket(id, {
     onIncomingCall: (from, mode) => setIncoming({ from, mode }),
+    onTyping: (status, userId) => {
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        if (status === 'start') {
+          next[userId] = Date.now() + 3500;
+        } else {
+          delete next[userId];
+        }
+        return next;
+      });
+    },
   });
   const { t } = useI18n();
   const draft = useMessageDraft(id);
@@ -63,6 +84,7 @@ export default function ConversationPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [reactingId, setReactingId] = useState<string | null>(null);
+  const [membersOpen, setMembersOpen] = useState(false);
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   const blockUser = useBlockUser();
@@ -79,6 +101,24 @@ export default function ConversationPage() {
   }, []);
   const listRef = useRef<HTMLDivElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Auto-expire typing indicators (client firewall in case a stop event is missed).
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTypingUsers((prev) => {
+        const now = Date.now();
+        const next: Record<string, number> = {};
+        let changed = false;
+        for (const [uid, until] of Object.entries(prev)) {
+          if (until > now) next[uid] = until;
+          else changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const activeTypers = Object.keys(typingUsers).filter((uid) => uid !== me?.id).length;
+  const typingNames = conv?.members?.filter((m) => typingUsers[m.userId] && m.userId !== me?.id).map((m) => m.fullName.split(' ')[0]) ?? [];
 
   const messages = data?.items ?? [];
   const peer = messages.find((m) => m.senderId !== me?.id)?.sender ?? null;
@@ -141,7 +181,16 @@ export default function ConversationPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        {peer ? (
+        {conv?.isGroup ? (
+          <button
+            onClick={() => setMembersOpen(true)}
+            className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br text-sm font-bold text-white active:scale-90"
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#22c55e)' }}
+            aria-label="Group members"
+          >
+            <Users className="h-5 w-5" />
+          </button>
+        ) : peer ? (
           <Link
             href={`/u/${peer.username}`}
             className={cn(
@@ -157,8 +206,14 @@ export default function ConversationPage() {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h4 className="truncate text-sm font-semibold">{peer?.fullName ?? 'Conversation'}</h4>
-          {peer && <p className="text-[11px] text-muted-foreground">@{peer.username}</p>}
+          <h4 className="truncate text-sm font-semibold">
+            {conv?.isGroup ? conv.title : peer?.fullName ?? 'Conversation'}
+          </h4>
+          {conv?.isGroup ? (
+            <p className="text-[11px] text-muted-foreground">{conv.members.length} members{activeTypers > 0 ? ` · ${activeTypers} typing…` : ''}</p>
+          ) : peer ? (
+            <p className="text-[11px] text-muted-foreground">@{peer.username}</p>
+          ) : null}
         </div>
         {imageUrls.length > 0 && (
           <button
@@ -169,20 +224,24 @@ export default function ConversationPage() {
             <Images className="h-5 w-5" />
           </button>
         )}
-        <button
-          aria-label="Voice call"
-          onClick={() => setCallMode('audio')}
-          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
-        >
-          <Phone className="h-5 w-5" />
-        </button>
-        <button
-          aria-label="Video call"
-          onClick={() => setCallMode('video')}
-          className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
-        >
-          <VideoIcon className="h-5 w-5" />
-        </button>
+        {!conv?.isGroup && (
+          <>
+            <button
+              aria-label="Voice call"
+              onClick={() => setCallMode('audio')}
+              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
+            >
+              <Phone className="h-5 w-5" />
+            </button>
+            <button
+              aria-label="Video call"
+              onClick={() => setCallMode('video')}
+              className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
+            >
+              <VideoIcon className="h-5 w-5" />
+            </button>
+          </>
+        )}
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -194,7 +253,39 @@ export default function ConversationPage() {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-10 z-40 w-48 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+              <div className="absolute right-0 top-10 z-40 w-52 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                {conv?.isGroup && (
+                  <>
+                    <button
+                      onClick={() => { setMenuOpen(false); setMembersOpen(true); }}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                    >
+                      <Users className="h-4 w-4" /> Members
+                    </button>
+                    {conv.me?.isAdmin && (
+                      <button
+                        onClick={() => {
+                          setMenuOpen(false);
+                          const name = window.prompt('Group name', conv.title ?? '');
+                          if (name && name.trim()) renameGroup.mutate({ title: name.trim() });
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                      >
+                        <Pencil className="h-4 w-4" /> Rename group
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        if (!window.confirm('Leave this group?')) return;
+                        leaveGroup.mutate({ conversationId: id, userId: me?.id ?? '' }, { onSuccess: () => router.push('/messages') });
+                      }}
+                      className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-sm text-red-500 active:bg-muted"
+                    >
+                      <LogOut className="h-4 w-4" /> Leave group
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     setMenuOpen(false);
@@ -269,6 +360,7 @@ export default function ConversationPage() {
             key={m.id}
             m={m}
             isMine={m.senderId === me?.id}
+            isGroup={!!conv?.isGroup}
             showAvatar={
               m.senderId !== me?.id &&
               (i === 0 || messages[i - 1]?.senderId !== m.senderId)
@@ -280,8 +372,18 @@ export default function ConversationPage() {
             onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
             onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
             onReactClose={() => setReactingId(null)}
+            onEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
+            onDelete={() => deleteMessage.mutate(m.id)}
           />
         ))}
+
+        {/* Live typing indicator */}
+        {activeTypers > 0 && (
+          <div className="flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
+            <span className="flex gap-0.5"><span className="typing-dot" /><span className="typing-dot" style={{ animationDelay: '0.2s' }} /><span className="typing-dot" style={{ animationDelay: '0.4s' }} /></span>
+            {typingNames.join(', ')} {typingNames.length > 1 ? 'are' : 'is'} typing…
+          </div>
+        )}
       </div>
 
       {/* Composer */}
@@ -433,6 +535,61 @@ export default function ConversationPage() {
         />
       )}
 
+      {/* Group members sheet */}
+      {membersOpen && conv?.isGroup && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setMembersOpen(false)}>
+          <div className="max-h-[75dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-extrabold">Members</h2>
+              <button onClick={() => setMembersOpen(false)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
+            </div>
+            {conv.me?.isAdmin ? (
+              <button
+                onClick={async () => {
+                  const input = window.prompt('Add members by @username, separated by commas');
+                  if (!input) return;
+                  const names = input.split(',').map((s) => s.trim().replace(/^@/, '')).filter(Boolean);
+                  const found: string[] = [];
+                  for (const name of names) {
+                    try {
+                      const r = await apiFetch<any>(`/search?q=${encodeURIComponent(name)}`, { token });
+                      const users = (r as any)?.users ?? [];
+                      const hit = users.find((u: any) => u.username?.toLowerCase() === name.toLowerCase()) ?? users[0];
+                      if (hit?.id) found.push(hit.id);
+                    } catch { /* skip */ }
+                  }
+                  if (found.length === 0) { toast.error('No matching users found'); return; }
+                  addMembers.mutate(found, { onSuccess: () => toast.success(`Added ${found.length} member${found.length === 1 ? '' : 's'}`) });
+                }}
+                className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-2.5 text-sm font-semibold text-primary active:scale-[.98]"
+              >
+                <UserPlus className="h-4 w-4" /> Add member
+              </button>
+            ) : null}
+            <div className="space-y-1">
+              {conv.members.map((m) => {
+                const typing = !!typingUsers[m.userId];
+                return (
+                  <div key={m.userId} className="flex items-center gap-3 rounded-xl p-2 hover:bg-muted/50">
+                    <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.userId))}>
+                      {initialsOf(m.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold">
+                        {m.fullName} {m.userId === me?.id && <span className="text-[10px] text-muted-foreground">(you)</span>}
+                        {m.isAdmin && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">admin</span>}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">@{m.username}{typing ? ' · typing…' : ''}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Media gallery */}
       {galleryOpen && (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-lg">
@@ -467,6 +624,7 @@ export default function ConversationPage() {
 function MessageBubble({
   m,
   isMine,
+  isGroup,
   showAvatar,
   onImageClick,
   onReply,
@@ -475,9 +633,12 @@ function MessageBubble({
   onReactPick,
   onReactionTap,
   onReactClose,
+  onEdit,
+  onDelete,
 }: {
   m: ChatMessage;
   isMine: boolean;
+  isGroup?: boolean;
   showAvatar: boolean;
   onImageClick?: (url: string) => void;
   onReply?: () => void;
@@ -486,6 +647,8 @@ function MessageBubble({
   onReactPick?: (e: ReactionEmoji) => void;
   onReactionTap?: (emoji: string) => void;
   onReactClose?: () => void;
+  onEdit?: (body: string) => void;
+  onDelete?: () => void;
 }) {
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
@@ -545,6 +708,29 @@ function MessageBubble({
           >
             <Reply className="h-3.5 w-3.5" />
           </button>
+          {isMine && (
+            <>
+              <button
+                onClick={() => {
+                  const next = window.prompt('Edit message', m.body ?? '');
+                  if (next !== null && next.trim() && next !== m.body) onEdit?.(next.trim());
+                }}
+                aria-label="Edit"
+                className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-muted-foreground hover:text-foreground active:scale-90"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => {
+                  if (window.confirm('Delete this message?')) onDelete?.();
+                }}
+                aria-label="Delete"
+                className="grid h-7 w-7 place-items-center rounded-full border border-border bg-card text-red-500 hover:text-red-600 active:scale-90"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
         </div>
       <div
         onTouchStart={startPress}
@@ -620,19 +806,35 @@ function MessageBubble({
           </a>
         )}
 
+        {isGroup && !isMine && showAvatar && (
+          <div className={cn('mb-1 text-[11px] font-bold', isMine ? 'text-white/80' : 'text-primary')}>
+            {m.sender.fullName.split(' ')[0]}
+          </div>
+        )}
         {m.body && (
           <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
         )}
 
         <div
           className={cn(
-            'text-[10px] font-medium',
+            'flex items-center gap-1 text-[10px] font-medium',
             isImage ? 'px-3 pb-2' : 'mt-1',
             isMine ? 'text-white/70' : 'text-muted-foreground',
             hasAttachment && !m.body && !isImage && 'mt-1',
           )}
         >
+          {m.editedAt && <span>edited · </span>}
           {timeAgo(m.createdAt)}
+          {isMine && (m.readBy ?? 0) > 0 ? (
+            <span className="text-white" aria-label="Read">
+              <CheckCheck className="h-3.5 w-3.5" />
+            </span>
+          ) : isMine ? (
+            <Check className="h-3.5 w-3.5" />
+          ) : null}
+          {isMine && (m.readBy ?? 0) > 0 && (m.readByTotal ?? 0) > 1 ? (
+            <span className="opacity-80">{m.readBy}/{m.readByTotal}</span>
+          ) : null}
         </div>
         {m.attachmentMeta?.transcript && (
           <div className={cn('mt-1 border-t px-1 pt-1 text-[11px] italic', isMine ? 'border-white/20 text-white/70' : 'border-border text-muted-foreground')}>

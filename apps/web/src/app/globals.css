@@ -80,6 +80,21 @@
     -ms-overflow-style: none;
   }
 
+  /* Chat typing indicator dots */
+  .typing-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.5;
+    animation: typing-bounce 1s infinite ease-in-out;
+  }
+  @keyframes typing-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+
   .grad-hero {
     background: linear-gradient(135deg, #7c3aed 0%, #22c55e 50%, #fbbf24 100%);
     background-size: 200% 200%;
