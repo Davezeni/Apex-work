@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -147,10 +147,10 @@ export default function ConversationPage() {
   const { data: savedConv } = useSavedMessages();
   const forwardTo = (m: ChatMessage) => setForwardMsg(m);
   const saveMessage = (m: ChatMessage) => {
-    if (!savedConv?.id) { toast.error('Could not load Saved Messages'); return; }
+    if (!savedConv?.id) { toast.error(t('chat.errorNoSaved')); return; }
     forwardMessage.mutate(
       { messageId: m.id, targetConversationId: savedConv.id },
-      { onSuccess: () => toast.success('Saved to Saved Messages'), onError: (e) => toast.error((e as Error).message) },
+      { onSuccess: () => toast.success(t('chat.saved')), onError: (e) => toast.error((e as Error).message) },
     );
   };
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
@@ -358,7 +358,7 @@ export default function ConversationPage() {
                       }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                     >
-                      <Link2 className="h-4 w-4" /> Invite via link
+                      <Link2 className="h-4 w-4" /> {t('chat.inviteLink')}
                     </button>
                     {conv.me?.isAdmin && (
                       <button
@@ -369,13 +369,13 @@ export default function ConversationPage() {
                         }}
                         className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                       >
-                        <Pencil className="h-4 w-4" /> Rename group
+                        <Pencil className="h-4 w-4" /> {t('chat.renameGroup')}
                       </button>
                     )}
                     <button
                       onClick={() => {
                         setMenuOpen(false);
-                        if (!window.confirm('Leave this group?')) return;
+                        if (!window.confirm(t('chat.leaveGroup'))) return;
                         leaveGroup.mutate({ conversationId: id, userId: me?.id ?? '' }, { onSuccess: () => router.push('/messages') });
                       }}
                       className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-sm text-red-500 active:bg-muted"
@@ -533,7 +533,7 @@ export default function ConversationPage() {
               className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-[11px] font-semibold text-muted-foreground active:scale-95 disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ArrowLeft className="h-3 w-3" />}
-              Load older messages
+              {t('chat.loadOlder')}
             </button>
           </div>
         )}
@@ -650,9 +650,9 @@ export default function ConversationPage() {
                   <>
                     <div className="fixed inset-0 z-30" onClick={() => setQuickRepliesOpen(false)} />
                     <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Quick replies</div>
+                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.quickReplies')}</div>
                       <div className="max-h-48 overflow-y-auto">
-                        {replies.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">No saved replies yet. Type a message, then tap “+ Save reply”.</p>}
+                        {replies.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">{t('chat.noReplies')}</p>}
                         {replies.map((r) => (
                           <div key={r.id} className="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-muted">
                             <button
@@ -675,13 +675,13 @@ export default function ConversationPage() {
                       <button
                         onClick={() => {
                           const body = text.trim();
-                          if (!body) { toast.error('Type a message first'); return; }
-                          const title = window.prompt('Name this reply', body.slice(0, 40) || 'Reply');
+                          if (!body) { toast.error(t('chat.typeReply')); return; }
+                          const title = window.prompt(t('chat.nameReply'), body.slice(0, 40) || 'Reply');
                           if (title) { addReply(title, body); setQuickRepliesOpen(false); }
                         }}
                         className="mx-2 mb-1 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-primary active:bg-muted"
                       >
-                        <Plus className="h-3.5 w-3.5" /> Save current text as reply
+                        <Plus className="h-3.5 w-3.5" /> {t('chat.saveReply')}
                       </button>
                     </div>
                   </>
@@ -764,7 +764,14 @@ export default function ConversationPage() {
           targetId={peer.id}
         />
       )}
-      <ImageViewer open={!!viewerUrl} onOpenChange={(v) => !v && setViewerUrl(null)} url={viewerUrl} />
+      <ImageViewer
+        open={!!viewerUrl}
+        onOpenChange={(v) => !v && setViewerUrl(null)}
+        url={viewerUrl}
+        images={imageUrls}
+        imageIndex={viewerUrl ? Math.max(0, imageUrls.indexOf(viewerUrl)) : 0}
+        onImageIndex={(i) => setViewerUrl(imageUrls[i] ?? null)}
+      />
 
       {/* Incoming call ring */}
       {incoming && !callMode && (
@@ -810,7 +817,7 @@ export default function ConversationPage() {
           <div className="max-h-[75dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-extrabold">Members</h2>
+              {t('chat.members')}
               <button onClick={() => setMembersOpen(false)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             {conv.me?.isAdmin ? (
@@ -828,7 +835,7 @@ export default function ConversationPage() {
                       if (hit?.id) found.push(hit.id);
                     } catch { /* skip */ }
                   }
-                  if (found.length === 0) { toast.error('No matching users found'); return; }
+                  if (found.length === 0) { toast.error(t('chat.noMatching')); return; }
                   addMembers.mutate(found, { onSuccess: () => toast.success(`Added ${found.length} member${found.length === 1 ? '' : 's'}`) });
                 }}
                 className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-2.5 text-sm font-semibold text-primary active:scale-[.98]"
@@ -868,7 +875,7 @@ export default function ConversationPage() {
           <div className="max-h-[75dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-extrabold">Forward to</h2>
+              <h2 className="text-lg font-extrabold">{t('chat.forward')} →</h2>
               <button onClick={() => setForwardMsg(null)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
             </div>
             <div className="mb-3 rounded-lg border-l-2 border-primary bg-muted/50 px-3 py-2">
@@ -897,7 +904,7 @@ export default function ConversationPage() {
                 </button>
               ))}
               {(convs?.items ?? []).filter((c) => c.id !== id).length === 0 && (
-                <p className="py-8 text-center text-sm text-muted-foreground">No other chats to forward to.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">{t('chat.noTargets')}</p>
               )}
             </div>
           </div>
@@ -917,31 +924,31 @@ export default function ConversationPage() {
               <span className="shrink-0 text-[11px] text-muted-foreground">{timeAgo(actionMsg.createdAt)}</span>
             </div>
             <div className="mx-2">
-              <ActionRow icon={<Reply className="h-4 w-4" />} label="Reply" onClick={() => { setReplyTo(actionMsg); setActionMsg(null); }} />
-              <ActionRow icon={<SmilePlus className="h-4 w-4" />} label="React" onClick={() => { setReactingId(actionMsg.id); setActionMsg(null); }} />
-              <ActionRow icon={<Forward className="h-4 w-4" />} label="Forward" onClick={() => { forwardTo(actionMsg); setActionMsg(null); }} />
-              <ActionRow icon={<Pin className="h-4 w-4" />} label={actionMsg.pinnedAt ? 'Unpin' : 'Pin'} onClick={() => { pinMessage.mutate({ messageId: actionMsg.id, pinned: !actionMsg.pinnedAt }); setActionMsg(null); }} />
+              <ActionRow icon={<Reply className="h-4 w-4" />} label={t('chat.reply')} onClick={() => { setReplyTo(actionMsg); setActionMsg(null); }} />
+              <ActionRow icon={<SmilePlus className="h-4 w-4" />} label={t('chat.react')} onClick={() => { setReactingId(actionMsg.id); setActionMsg(null); }} />
+              <ActionRow icon={<Forward className="h-4 w-4" />} label={t('chat.forward')} onClick={() => { forwardTo(actionMsg); setActionMsg(null); }} />
+              <ActionRow icon={<Pin className="h-4 w-4" />} label={actionMsg.pinnedAt ? t('chat.unpin') : t('chat.pin')} onClick={() => { pinMessage.mutate({ messageId: actionMsg.id, pinned: !actionMsg.pinnedAt }); setActionMsg(null); }} />
               {!conv?.isSaved && (
-                <ActionRow icon={<Bookmark className="h-4 w-4" />} label="Save to Saved Messages" onClick={() => { saveMessage(actionMsg); setActionMsg(null); }} />
+                <ActionRow icon={<Bookmark className="h-4 w-4" />} label={t('chat.saveAction')} onClick={() => { saveMessage(actionMsg); setActionMsg(null); }} />
               )}
               {actionMsg.body && (
-                <ActionRow icon={<Copy className="h-4 w-4" />} label="Copy text" onClick={() => { void navigator.clipboard?.writeText(actionMsg.body ?? ''); toast.success('Copied'); setActionMsg(null); }} />
+                <ActionRow icon={<Copy className="h-4 w-4" />} label={t('chat.copyText')} onClick={() => { void navigator.clipboard?.writeText(actionMsg.body ?? ''); toast.success(t('chat.copied')); setActionMsg(null); }} />
               )}
               {actionMsg.senderId === me?.id && (actionMsg.readByTotal ?? 0) > 0 && conv?.members && (
                 <div className="mx-3 my-1 rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Read receipts</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.readReceipts')}</div>
                   <div className="mt-1 text-xs text-foreground">
                     {(actionMsg.readBy ?? 0) > 0
-                      ? `Seen by ${conv.members.filter((m) => actionMsg.readByUserIds?.includes(m.userId)).map((m) => m.fullName.split(' ')[0]).join(', ') || 'some members'}`
-                      : 'Not yet seen'}
+                      ? t('chat.seenBy', { names: conv.members.filter((m) => actionMsg.readByUserIds?.includes(m.userId)).map((m) => m.fullName.split(' ')[0]).join(', ') || '—' })
+                      : t('chat.notSeen')}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">{actionMsg.readBy}/{actionMsg.readByTotal} read</div>
+                  <div className="text-[10px] text-muted-foreground">{t('chat.readFraction', { read: actionMsg.readBy ?? 0, total: actionMsg.readByTotal ?? 0 })}</div>
                 </div>
               )}
               {actionMsg.senderId === me?.id && (
                 <>
-                  <ActionRow icon={<Pencil className="h-4 w-4" />} label="Edit" onClick={() => { const next = window.prompt('Edit message', actionMsg.body ?? ''); if (next !== null && next.trim() && next !== actionMsg.body) editMessage.mutate({ messageId: actionMsg.id, body: next.trim() }); setActionMsg(null); }} />
-                  <ActionRow icon={<Trash2 className="h-4 w-4" />} label="Delete for me" danger onClick={() => { if (window.confirm('Delete this message?')) deleteMessage.mutate(actionMsg.id); setActionMsg(null); }} />
+                  <ActionRow icon={<Pencil className="h-4 w-4" />} label={t('chat.edit')} onClick={() => { const next = window.prompt(t('chat.editMessage'), actionMsg.body ?? ''); if (next !== null && next.trim() && next !== actionMsg.body) editMessage.mutate({ messageId: actionMsg.id, body: next.trim() }); setActionMsg(null); }} />
+                  <ActionRow icon={<Trash2 className="h-4 w-4" />} label={t('chat.deleteForMe')} danger onClick={() => { if (window.confirm(t('chat.deleteMessage'))) deleteMessage.mutate(actionMsg.id); setActionMsg(null); }} />
                 </>
               )}
             </div>
@@ -1008,6 +1015,7 @@ function MessageBubble({
   onReactionTap?: (emoji: string) => void;
   onReactClose?: () => void;
 }) {
+  const { t } = useI18n();
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
   const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
@@ -1015,14 +1023,6 @@ function MessageBubble({
   const offerMatch = m.attachmentUrl?.match(/^apex:\/\/offer\/([a-zA-Z0-9_-]+)$/);
 
   // Long-press to open the reaction picker on mobile.
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const startPress = () => {
-    if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => onReactOpen?.(), 400);
-  };
-  const cancelPress = () => {
-    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
-  };
 
   if (offerMatch) {
     return (
@@ -1049,14 +1049,14 @@ function MessageBubble({
           )}
         </div>
       )}
-      <div className="group relative flex items-end gap-1">
-        {!isMine && <ActionTrigger onOpen={onOpenActions} />}
+      <div className="group flex items-end gap-1">
         <div
-          onTouchStart={startPress}
-          onTouchEnd={cancelPress}
-          onTouchMove={cancelPress}
+          onClick={() => onOpenActions?.()}
+          role="button"
+          tabIndex={0}
+          aria-label="Open message actions"
           className={cn(
-            'relative max-w-[80%] overflow-hidden rounded-2xl text-sm leading-snug',
+            'relative max-w-[80%] cursor-pointer overflow-hidden rounded-2xl text-sm leading-snug',
             // Image bubbles are edge-to-edge; text/file bubbles keep padding.
             isImage ? 'p-0' : 'px-3.5 py-2',
             isMine
@@ -1067,12 +1067,12 @@ function MessageBubble({
         <ReactionPicker open={!!reactingOpen} onSelect={(e) => onReactPick?.(e)} onClose={() => onReactClose?.()} />
         {(m.attachmentMeta as any)?.forwarded && (
           <div className={cn('mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide', isMine ? 'text-white/70' : 'text-primary')}>
-            <Forward className="h-3 w-3" /> Forwarded
+            <Forward className="h-3 w-3" /> {t('chat.forwarded')}
           </div>
         )}
         {m.pinnedAt && (
           <div className={cn('mb-1 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold', isMine ? 'bg-white/15 text-white' : 'bg-primary/15 text-primary')}>
-            <Pin className="h-3 w-3" /> Pinned
+            <Pin className="h-3 w-3" /> {t('chat.pinned')}
           </div>
         )}
         {m.replyTo && (
@@ -1089,7 +1089,7 @@ function MessageBubble({
         {isImage && m.attachmentUrl && (
           <button
             type="button"
-            onClick={() => onImageClick?.(m.attachmentUrl!)}
+            onClick={(e) => { e.stopPropagation(); onImageClick?.(m.attachmentUrl!); }}
             className="block"
           >
             <div className="relative aspect-[4/3] w-64 max-w-full bg-black/20">
@@ -1125,13 +1125,23 @@ function MessageBubble({
             href={m.attachmentUrl}
             target="_blank"
             rel="noreferrer"
+            download
+            onClick={(e) => e.stopPropagation()}
             className={cn(
-              'flex items-center gap-2 text-sm font-semibold',
-              isMine ? 'text-white' : 'text-primary',
+              'flex max-w-[240px] items-center gap-3 rounded-xl border p-2 pr-3 transition-transform active:scale-[.98]',
+              isMine ? 'border-white/25 bg-white/10' : 'border-border bg-background/60',
             )}
           >
-            <FileText className="h-5 w-5" />
-            <span className="truncate">{humanFileName(m.attachmentUrl)}</span>
+            <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white', isMine ? 'bg-white/20' : 'bg-primary')}>
+              <FileText className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{humanFileName(m.attachmentUrl)}</span>
+              <span className={cn('block text-[11px]', isMine ? 'text-white/70' : 'text-muted-foreground')}>
+                {fileSizeLabel(m.attachmentMeta?.size)}
+              </span>
+            </span>
+            <Download className={cn('h-4 w-4 shrink-0', isMine ? 'text-white' : 'text-primary')} />
           </a>
         )}
 
@@ -1171,13 +1181,12 @@ function MessageBubble({
           </div>
         )}
       </div>
-      {isMine && <ActionTrigger onOpen={onOpenActions} />}
       {m.reactions && m.reactions.length > 0 && (
         <div className={cn('mt-1 flex flex-wrap gap-1', isMine ? 'justify-end' : 'justify-start')}>
           {m.reactions.map((r) => (
             <button
               key={r.emoji}
-              onClick={() => onReactionTap?.(r.emoji)}
+              onClick={(e) => { e.stopPropagation(); onReactionTap?.(r.emoji); }}
               className={cn(
                 'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition-transform active:scale-90',
                 r.mine ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-card text-muted-foreground',
@@ -1207,19 +1216,14 @@ function ActionRow({ icon, label, onClick, danger }: { icon: ReactNode; label: s
   );
 }
 
-/** Subtle "more" trigger shown beside each message bubble. Opens a labeled menu. */
-function ActionTrigger({ onOpen }: { onOpen?: () => void }) {
-  return (
-    <div className="flex w-6 shrink-0 items-end pb-1">
-      <button
-        onClick={onOpen}
-        aria-label="Message actions"
-        className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground active:scale-90"
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </button>
-    </div>
-  );
+/** Human-readable file size from bytes. */
+function fileSizeLabel(bytes?: number | null): string {
+  if (!bytes || bytes <= 0) return 'File';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  let n = bytes;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
 }
 
 /** Pull the last path segment (usually a random slug + original filename). */

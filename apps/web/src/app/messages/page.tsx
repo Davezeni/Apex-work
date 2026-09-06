@@ -129,7 +129,7 @@ export default function MessagesPage() {
               <Bookmark className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-[15px] font-semibold">Saved Messages</h4>
+              {t('chat.savedMessages')}
               <p className="truncate text-[13px] text-muted-foreground">Bookmark your notes, voice mutes &amp; files</p>
             </div>
           </Link>
