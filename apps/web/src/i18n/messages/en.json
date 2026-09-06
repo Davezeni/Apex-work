@@ -263,7 +263,8 @@
     "messageExpired": "Message expired",
     "play": "Play",
     "pause": "Pause",
-    "addTools": "More"
+    "addTools": "More",
+    "enterToSend": "Send on Enter"
   },
   "pin": {
     "createTitle": "Create a 6-digit PIN",

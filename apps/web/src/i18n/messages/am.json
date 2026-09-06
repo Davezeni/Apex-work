@@ -263,7 +263,8 @@
     "messageExpired": "መልእክቱ ተጠፍፏል",
     "play": "አጫውት",
     "pause": "አቁም",
-    "addTools": "ተጨማሪ"
+    "addTools": "ተጨማሪ",
+    "enterToSend": "በEnter ይላኩ"
   },
   "pin": {
     "createTitle": "የ6 አመራር ቅብብክ ሮር ይጽፈሉ",

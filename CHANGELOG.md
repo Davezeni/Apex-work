@@ -3,6 +3,20 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Composer spacing, attach button & zoom (power push #35)
+
+### Added
+- **Space above the input** — the composer has more top padding and the
+  message list more bottom padding so the input never touches the last message.
+- **Always-visible Attach** — the paperclip moved out of the `+` panel back
+  onto the composer, so attaching is one tap.
+- **"Send on Enter" toggle** — a switch in the header `...` menu (persisted
+  per device). When on, Enter sends; when off, Enter makes a new line
+  (Shift+Enter always makes a new line).
+- **No pinch-zoom on the chat** — `/messages*` routes now ship a scoped
+  `<meta viewport>` (`maximum-scale=1, user-scalable=no`) so the chat
+  "playground" feels like a native messenger (other pages keep zoom).
+
 ## [Unreleased] — Telegram-style composer (power push #34)
 
 ### Changed

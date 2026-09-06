@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye, Sparkles } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye, Sparkles, KeyRound } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -153,6 +153,16 @@ export default function ConversationPage() {
   const [timerSec, setTimerSec] = useState<number>(0);
   const [scheduledOpen, setScheduledOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [enterToSend, setEnterToSend] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.localStorage.getItem('apex.enterToSend') !== '0' : true,
+  );
+  const toggleEnterToSend = () => {
+    setEnterToSend((v) => {
+      const next = !v;
+      try { window.localStorage.setItem('apex.enterToSend', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
   const [scheduled, setScheduled] = useState<ScheduledSend[]>([]);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -486,6 +496,15 @@ export default function ConversationPage() {
                   {conv?.me?.isMuted ? 'Unmute' : 'Mute'}
                 </button>
                 <button
+                  onClick={() => toggleEnterToSend()}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                >
+                  <KeyRound className="h-4 w-4" /> {t('chat.enterToSend')}
+                  <span className={cn('ml-auto h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors', enterToSend ? 'bg-primary' : 'bg-muted')}>
+                    <span className={cn('block h-4 w-4 rounded-full bg-white transition-transform', enterToSend && 'translate-x-4')} />
+                  </span>
+                </button>
+                <button
                   onClick={() => { setMenuOpen(false); markUnread.mutate(id, { onSuccess: () => router.push('/messages') }); }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                 >
@@ -595,7 +614,7 @@ export default function ConversationPage() {
       {/* Message list */}
       <div
         ref={listRef}
-        className="flex-1 space-y-2 overflow-y-auto px-3 py-4"
+        className="flex-1 space-y-2 overflow-y-auto px-3 pt-4 pb-6"
         aria-live="polite"
       >
         {isLoading && (
@@ -676,7 +695,7 @@ export default function ConversationPage() {
       </div>
 
       {/* Composer */}
-      <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 py-2 backdrop-blur-xl">
+      <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 pt-3 pb-2 backdrop-blur-xl">
         {!smartDismissed && smart.length > 0 && composerMode === 'text' && (
           <div className="mx-auto mb-1.5 flex w-full max-w-md items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
@@ -833,9 +852,6 @@ export default function ConversationPage() {
                 <PanelRow icon={<Zap className="h-4 w-4" />} label={t('chat.quickReplies')} onClick={() => { setToolsOpen(false); setQuickRepliesOpen(true); }} />
                 <PanelRow icon={<TimerIcon className="h-4 w-4" />} label={t('chat.timer')} onClick={() => { setToolsOpen(false); setTimerSec((v) => (v > 0 ? 0 : 60)); }} />
                 <PanelRow icon={<CalendarClock className="h-4 w-4" />} label={t('chat.schedule')} onClick={() => { setToolsOpen(false); setScheduledOpen(true); }} />
-                <div className="mt-1 border-t border-border pt-1">
-                  <AttachButton disabled={send.isPending} onAttached={async (att) => { await send.mutateAsync({ attachmentUrl: att.url, attachmentType: att.type === 'image' ? 'image' : 'file', attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType }, replyToId: replyTo?.id }); setReplyTo(null); setToolsOpen(false); }} />
-                </div>
               </div>
             </>
           )}
@@ -855,12 +871,24 @@ export default function ConversationPage() {
             />
           ) : (
             <div className="flex items-end gap-1.5">
+              <AttachButton
+                disabled={send.isPending}
+                onAttached={async (att) => {
+                  await send.mutateAsync({
+                    attachmentUrl: att.url,
+                    attachmentType: att.type === 'image' ? 'image' : 'file',
+                    attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType },
+                    replyToId: replyTo?.id,
+                  });
+                  setReplyTo(null);
+                }}
+              />
               <div className="flex flex-1 items-end gap-1 rounded-3xl border border-border bg-card px-2 py-1.5">
                 <textarea
                   value={text}
                   onChange={(e) => handleTextChange(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                    if (e.key === 'Enter' && !e.shiftKey && enterToSend) { e.preventDefault(); void handleSend(); }
                   }}
                   rows={1}
                   placeholder={t('chat.typePlaceholder')}
