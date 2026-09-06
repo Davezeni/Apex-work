@@ -61,10 +61,11 @@
     font-feature-settings: 'ss01', 'cv11';
   }
 
-  /* Prevent mobile viewport bounce/zoom */
+  /* Prevent mobile viewport bounce/zoom & horizontal pan */
   html,
   body {
     overscroll-behavior-y: none;
+    overflow-x: hidden;
   }
 }
 

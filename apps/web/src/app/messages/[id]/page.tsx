@@ -341,7 +341,7 @@ export default function ConversationPage() {
   };
 
   return (
-    <div className="chat-bg flex h-dvh flex-col">
+    <div className="chat-bg flex h-dvh flex-col overflow-x-hidden">
       {/* Header */}
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
@@ -680,6 +680,7 @@ export default function ConversationPage() {
                 onReactClose={() => setReactingId(null)}
                 onOpenActions={() => setActionMsg(m)}
                 onReplyJump={jumpTo}
+                onReplyStart={setReplyTo}
               />
             </div>
           );
@@ -821,7 +822,9 @@ export default function ConversationPage() {
                     <TimerIcon className="mr-1 inline h-3 w-3" />{o.l}
                   </button>
                 ))}
-                <button onClick={() => setTimerSec(0)} className="w-full rounded-lg py-1 text-xs font-semibold text-red-500 active:bg-muted">{t('common.cancel')}</button>
+                {timerSec > 0 && (
+                  <button onClick={() => setTimerSec(0)} className="w-full rounded-lg py-1 text-xs font-semibold text-red-500 active:bg-muted">{t('common.cancel')}</button>
+                )}
               </div>
             </>
           )}
@@ -839,23 +842,7 @@ export default function ConversationPage() {
               </div>
             </>
           )}
-          {/* + tools panel */}
-          {toolsOpen && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setToolsOpen(false)} />
-              <div className="absolute bottom-14 left-0 z-40 w-72 overflow-hidden rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.addTools')}</div>
-                {me?.role === 'FREELANCER' && (
-                  <PanelRow icon={<Package className="h-4 w-4" />} label={t('offer.title')} onClick={() => { setToolsOpen(false); setOfferSheetOpen(true); }} />
-                )}
-                <PanelRow icon={<Sticker className="h-4 w-4" />} label={t('chat.stickers')} onClick={() => { setToolsOpen(false); setStickerOpen(true); }} />
-                <PanelRow icon={<Zap className="h-4 w-4" />} label={t('chat.quickReplies')} onClick={() => { setToolsOpen(false); setQuickRepliesOpen(true); }} />
-                <PanelRow icon={<TimerIcon className="h-4 w-4" />} label={t('chat.timer')} onClick={() => { setToolsOpen(false); setTimerSec((v) => (v > 0 ? 0 : 60)); }} />
-                <PanelRow icon={<CalendarClock className="h-4 w-4" />} label={t('chat.schedule')} onClick={() => { setToolsOpen(false); setScheduledOpen(true); }} />
-              </div>
-            </>
-          )}
-          {/* Input row */}
+          {/* Input row — Telegram-style pill (emoji left, paperclip right) + blue send/+ */}
           {composerMode === 'voice' ? (
             <VoiceRecorder
               onSend={async (att) => {
@@ -870,20 +857,16 @@ export default function ConversationPage() {
               }}
             />
           ) : (
-            <div className="flex items-end gap-1.5">
-              <AttachButton
-                disabled={send.isPending}
-                onAttached={async (att) => {
-                  await send.mutateAsync({
-                    attachmentUrl: att.url,
-                    attachmentType: att.type === 'image' ? 'image' : 'file',
-                    attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType },
-                    replyToId: replyTo?.id,
-                  });
-                  setReplyTo(null);
-                }}
-              />
-              <div className="flex flex-1 items-end gap-1 rounded-3xl border border-border bg-card px-2 py-1.5">
+            <div className="flex items-end gap-2">
+              <div className="flex flex-1 items-center gap-1 overflow-hidden rounded-full border border-border bg-card px-2 py-1.5">
+                <button
+                  onClick={() => setEmojiOpen((v) => !v)}
+                  aria-label="Emoji"
+                  aria-pressed={emojiOpen}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
+                >
+                  <Smile className={cn('h-5 w-5', emojiOpen && 'text-primary')} />
+                </button>
                 <textarea
                   value={text}
                   onChange={(e) => handleTextChange(e.target.value)}
@@ -896,47 +879,63 @@ export default function ConversationPage() {
                   className="min-w-0 flex-1 resize-none bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
                   style={{ maxHeight: '120px' }}
                 />
-                <button
-                  onClick={() => setEmojiOpen((v) => !v)}
-                  aria-label="Emoji"
-                  aria-pressed={emojiOpen}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
-                >
-                  <Smile className={cn('h-5 w-5', emojiOpen && 'text-primary')} />
-                </button>
-                <button
-                  onClick={() => setToolsOpen((v) => !v)}
-                  aria-label={t('chat.addTools')}
-                  aria-pressed={toolsOpen}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
-                >
-                  <Plus className={cn('h-5 w-5', toolsOpen && 'text-primary')} />
-                </button>
+                <AttachButton
+                  disabled={send.isPending}
+                  className="h-9 w-9 rounded-full bg-transparent hover:bg-muted"
+                  onAttached={async (att) => {
+                    await send.mutateAsync({
+                      attachmentUrl: att.url,
+                      attachmentType: att.type === 'image' ? 'image' : 'file',
+                      attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType },
+                      replyToId: replyTo?.id,
+                    });
+                    setReplyTo(null);
+                  }}
+                />
               </div>
               {timerSec > 0 && (
                 <button
                   onClick={() => setTimerSec(0)}
                   title={`${Math.round(timerSec / 60)}m`}
                   aria-label={t('chat.timer')}
-                  className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary active:scale-90"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-primary active:scale-90"
                 >
                   <TimerIcon className="h-5 w-5" />
-                  <span className="absolute -top-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-white">{Math.round(timerSec / 60)}</span>
+                  <span className="-mt-3 grid h-4 w-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-white">{Math.round(timerSec / 60)}</span>
                 </button>
               )}
-              {text.trim() ? (
-                <button onClick={() => void handleSend()} disabled={send.isPending} aria-label={t('common.post')} className="grad-hero grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40">
-                  {send.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                </button>
-              ) : (
-                <button onClick={() => setComposerMode('voice')} aria-label={t('chat.voice')} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground">
-                  <Mic className="h-5 w-5" />
-                </button>
-              )}
+              <button
+                onClick={() => (text.trim() ? void handleSend() : setToolsOpen(true))}
+                disabled={send.isPending}
+                aria-label={text.trim() ? t('common.post') : t('chat.addTools')}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40"
+              >
+                {send.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : text.trim() ? <Send className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              </button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Tools bottom sheet (slides up) */}
+      {toolsOpen && (
+        <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setToolsOpen(false)}>
+          <div className="w-full max-w-md rounded-t-3xl border border-b-0 border-border bg-card pb-5" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t('chat.addTools')}>
+            <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-muted" />
+            <div className="px-4 pt-3">
+              <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.addTools')}</div>
+              <PanelRow icon={<Mic className="h-4 w-4" />} label={t('chat.voice')} onClick={() => { setToolsOpen(false); setComposerMode('voice'); }} />
+              {me?.role === 'FREELANCER' && (
+                <PanelRow icon={<Package className="h-4 w-4" />} label={t('offer.title')} onClick={() => { setToolsOpen(false); setOfferSheetOpen(true); }} />
+              )}
+              <PanelRow icon={<Sticker className="h-4 w-4" />} label={t('chat.stickers')} onClick={() => { setToolsOpen(false); setStickerOpen(true); }} />
+              <PanelRow icon={<Zap className="h-4 w-4" />} label={t('chat.quickReplies')} onClick={() => { setToolsOpen(false); setQuickRepliesOpen(true); }} />
+              <PanelRow icon={<TimerIcon className="h-4 w-4" />} label={t('chat.timer')} onClick={() => { setToolsOpen(false); setTimerSec((v) => (v > 0 ? 0 : 60)); }} />
+              <PanelRow icon={<CalendarClock className="h-4 w-4" />} label={t('chat.schedule')} onClick={() => { setToolsOpen(false); setScheduledOpen(true); }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <CustomOfferSheet open={offerSheetOpen} onOpenChange={setOfferSheetOpen} conversationId={id} />
       {peer && (
@@ -1202,6 +1201,7 @@ function MessageBubble({
   onReactionTap,
   onReactClose,
   onReplyJump,
+  onReplyStart,
 }: {
   m: ChatMessage;
   isMine: boolean;
@@ -1216,6 +1216,7 @@ function MessageBubble({
   onReactionTap?: (emoji: string) => void;
   onReactClose?: () => void;
   onReplyJump?: (id: string) => void;
+  onReplyStart?: (m: ChatMessage) => void;
 }) {
   const { t } = useI18n();
   const isImage = m.attachmentType === 'image';
@@ -1244,6 +1245,17 @@ function MessageBubble({
     .filter(Boolean) as { userId: string; fullName: string; avatarUrl?: string | null }[];
   const seenCut = seenMembers.slice(0, 3);
   const seenExtra = seenMembers.length - seenCut.length;
+
+  // Long-press → reply.
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+  const startPress = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, a')) return;
+    longPressed.current = false;
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => { longPressed.current = true; onReplyStart?.(m); }, 550);
+  };
+  const cancelPress = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
 
   // Long-press to open the reaction picker on mobile.
 
@@ -1285,7 +1297,12 @@ function MessageBubble({
       )}
       <div className="group flex items-end gap-1">
         <div
-          onClick={() => onOpenActions?.()}
+          onClick={() => { if (longPressed.current) { longPressed.current = false; return; } onOpenActions?.(); }}
+          onPointerDown={startPress}
+          onPointerUp={cancelPress}
+          onPointerLeave={cancelPress}
+          onPointerCancel={cancelPress}
+          onContextMenu={(e) => e.preventDefault()}
           role="button"
           tabIndex={0}
           aria-label="Open message actions"

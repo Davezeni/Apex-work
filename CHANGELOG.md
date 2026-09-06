@@ -3,6 +3,26 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Telegram composer redesign + gestures (power push #36)
+
+### Changed
+- **Composer redesigned to the Telegram style** — a single rounded pill with
+  the **emoji button inside on the left**, the text field in the middle, and
+  the **paperclip (attach) inside on the right**, plus a **blue round send/+
+  button** outside on the right (shows send when there's text, `+` when empty).
+- **Tools open as a slide-up bottom sheet** — tapping the blue `+` slides up a
+  sheet (voice message, stickers, save replies, timer, schedule, offer) with a
+  grabber and backdrop, instead of an inline popover.
+- **Long-press → reply** — press-and-hold any message bubble to start a reply
+  (tap still opens the actions sheet; navigating long-press from buttons is
+  ignored).
+- **No horizontal movement** — the chat page and body are set to
+  `overflow-x: hidden` so the page can't be dragged side-to-side.
+
+### Fixed
+- **Space above the input** — extra padding around the composer and message
+  list so the last message never crowds the input bar.
+
 ## [Unreleased] — Composer spacing, attach button & zoom (power push #35)
 
 ### Added

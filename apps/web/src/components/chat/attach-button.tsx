@@ -5,6 +5,7 @@ import { Paperclip, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUpload } from '@/hooks/use-upload';
 import { useI18n } from '@/i18n';
+import { cn } from '@/lib/utils';
 import { ATTACHMENT_ACCEPT } from '@/lib/file-types';
 
 interface Props {
@@ -16,6 +17,7 @@ interface Props {
     name: string;
   }) => Promise<void>;
   disabled?: boolean;
+  className?: string;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * back to the caller. Deliberately narrow scope: no drag+drop, no
  * multiple files. Chat UIs benefit from being predictable.
  */
-export function AttachButton({ onAttached, disabled }: Props) {
+export function AttachButton({ onAttached, disabled, className }: Props) {
   const { t } = useI18n();
   const fileRef = useRef<HTMLInputElement>(null);
   const upload = useUpload();
@@ -64,7 +66,10 @@ export function AttachButton({ onAttached, disabled }: Props) {
         onClick={() => fileRef.current?.click()}
         disabled={disabled || upload.isPending}
         aria-label={t('chat.attach')}
-        className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 disabled:opacity-50 hover:bg-muted hover:text-foreground"
+        className={cn(
+          'grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 disabled:opacity-50 hover:bg-muted hover:text-foreground',
+          className,
+        )}
       >
         {upload.isPending ? (
           <Loader2 className="h-5 w-5 animate-spin" />
