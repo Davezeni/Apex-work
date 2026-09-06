@@ -262,7 +262,8 @@
     "scheduledNote": "መልእክት ተይዟል",
     "messageExpired": "መልእክቱ ተጠፍፏል",
     "play": "አጫውት",
-    "pause": "አቁም"
+    "pause": "አቁም",
+    "addTools": "ተጨማሪ"
   },
   "pin": {
     "createTitle": "የ6 አመራር ቅብብክ ሮር ይጽፈሉ",

@@ -152,6 +152,7 @@ export default function ConversationPage() {
   const [stickerOpen, setStickerOpen] = useState(false);
   const [timerSec, setTimerSec] = useState<number>(0);
   const [scheduledOpen, setScheduledOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [scheduled, setScheduled] = useState<ScheduledSend[]>([]);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -754,18 +755,98 @@ export default function ConversationPage() {
             </div>
           ) : null;
         })()}
-        <div className="mx-auto flex max-w-md items-end gap-2">
+        <div className="relative mx-auto w-full max-w-md">
+          {/* Emoji */}
+          {emojiOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setEmojiOpen(false)} />
+              <div className="absolute bottom-14 left-0 z-40 grid w-64 grid-cols-8 gap-1 rounded-2xl border border-border bg-card p-3 shadow-2xl">
+                {EMOJI_QUICK.map((e) => (
+                  <button key={e} onClick={() => { setText(text + e); setEmojiOpen(false); }} className="grid h-8 w-8 place-items-center rounded-lg text-lg hover:bg-muted active:scale-90" aria-label={`Insert ${e}`}>{e}</button>
+                ))}
+              </div>
+            </>
+          )}
+          <StickerPicker open={stickerOpen} onClose={() => setStickerOpen(false)} onPick={(e) => setText(text + e)} />
+          {/* Save replies (quick replies) */}
+          {quickRepliesOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setQuickRepliesOpen(false)} />
+              <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.quickReplies')}</div>
+                <div className="max-h-48 overflow-y-auto">
+                  {replies.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">{t('chat.noReplies')}</p>}
+                  {replies.map((r) => (
+                    <div key={r.id} className="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-muted">
+                      <button onClick={() => { setText(r.body); setQuickRepliesOpen(false); }} className="min-w-0 flex-1 text-left">
+                        <div className="truncate text-xs font-semibold">{r.title}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">{r.body}</div>
+                      </button>
+                      <button onClick={() => removeReply(r.id)} aria-label="Delete reply" className="text-muted-foreground opacity-0 hover:text-red-500 group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => { const body = text.trim(); if (!body) { toast.error(t('chat.typeReply')); return; } const title = window.prompt(t('chat.nameReply'), body.slice(0, 40) || 'Reply'); if (title) { addReply(title, body); setQuickRepliesOpen(false); } }} className="mx-2 mb-1 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-primary active:bg-muted">
+                  <Plus className="h-3.5 w-3.5" /> {t('chat.saveReply')}
+                </button>
+              </div>
+            </>
+          )}
+          {/* Disappearing timer */}
+          {timerSec > 0 && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setTimerSec(0)} />
+              <div className="absolute bottom-14 left-0 z-40 flex w-56 flex-wrap gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                {([{ s: 60, l: '1m' }, { s: 3600, l: '1h' }, { s: 86400, l: '1d' }, { s: 604800, l: '1w' }] as { s: number; l: string }[]).map((o) => (
+                  <button key={o.s} onClick={() => setTimerSec(o.s)} className={cn('flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold active:bg-muted', timerSec === o.s ? 'border-primary bg-primary/10 text-primary' : 'border-border')}>
+                    <TimerIcon className="mr-1 inline h-3 w-3" />{o.l}
+                  </button>
+                ))}
+                <button onClick={() => setTimerSec(0)} className="w-full rounded-lg py-1 text-xs font-semibold text-red-500 active:bg-muted">{t('common.cancel')}</button>
+              </div>
+            </>
+          )}
+          {/* Schedule send */}
+          {scheduledOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setScheduledOpen(false)} />
+              <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.schedule')}</div>
+                <div className="grid grid-cols-1 gap-1">
+                  {([{ ms: 10 * 60 * 1000, l: t('chat.in10m') }, { ms: 60 * 60 * 1000, l: t('chat.in1h') }, { ms: 3 * 60 * 60 * 1000, l: t('chat.in3h') }, { ms: 24 * 60 * 60 * 1000, l: t('chat.tomorrow') }] as { ms: number; l: string }[]).map((o) => (
+                    <button key={o.ms} onClick={() => { const at = Date.now() + o.ms; const item: ScheduledSend = { id: makeClientId() + '_sch', conversationId: id, body: text.trim(), replyToId: replyTo?.id, clientId: makeClientId(), at }; setScheduled(addScheduled(item)); setText(''); setReplyTo(null); setScheduledOpen(false); toast.success(t('chat.scheduledNote')); }} className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-muted">{o.l}</button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {/* + tools panel */}
+          {toolsOpen && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setToolsOpen(false)} />
+              <div className="absolute bottom-14 left-0 z-40 w-72 overflow-hidden rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.addTools')}</div>
+                {me?.role === 'FREELANCER' && (
+                  <PanelRow icon={<Package className="h-4 w-4" />} label={t('offer.title')} onClick={() => { setToolsOpen(false); setOfferSheetOpen(true); }} />
+                )}
+                <PanelRow icon={<Sticker className="h-4 w-4" />} label={t('chat.stickers')} onClick={() => { setToolsOpen(false); setStickerOpen(true); }} />
+                <PanelRow icon={<Zap className="h-4 w-4" />} label={t('chat.quickReplies')} onClick={() => { setToolsOpen(false); setQuickRepliesOpen(true); }} />
+                <PanelRow icon={<TimerIcon className="h-4 w-4" />} label={t('chat.timer')} onClick={() => { setToolsOpen(false); setTimerSec((v) => (v > 0 ? 0 : 60)); }} />
+                <PanelRow icon={<CalendarClock className="h-4 w-4" />} label={t('chat.schedule')} onClick={() => { setToolsOpen(false); setScheduledOpen(true); }} />
+                <div className="mt-1 border-t border-border pt-1">
+                  <AttachButton disabled={send.isPending} onAttached={async (att) => { await send.mutateAsync({ attachmentUrl: att.url, attachmentType: att.type === 'image' ? 'image' : 'file', attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType }, replyToId: replyTo?.id }); setReplyTo(null); setToolsOpen(false); }} />
+                </div>
+              </div>
+            </>
+          )}
+          {/* Input row */}
           {composerMode === 'voice' ? (
             <VoiceRecorder
               onSend={async (att) => {
                 await send.mutateAsync({
                   attachmentUrl: att.url,
                   attachmentType: 'audio',
-                  attachmentMeta: {
-                    duration: att.durationSec,
-                    size: att.sizeBytes,
-                    waveform: att.waveform,
-                  },
+                  attachmentMeta: { duration: att.durationSec, size: att.sizeBytes, waveform: att.waveform },
                   replyToId: replyTo?.id,
                 });
                 setReplyTo(null);
@@ -773,240 +854,58 @@ export default function ConversationPage() {
               }}
             />
           ) : (
-            <>
-              <AttachButton
-                disabled={send.isPending}
-                onAttached={async (att) => {
-                  await send.mutateAsync({
-                    attachmentUrl: att.url,
-                    attachmentType: att.type === 'image' ? 'image' : 'file',
-                    attachmentMeta: { name: att.name, size: att.sizeBytes, contentType: att.contentType },
-                    replyToId: replyTo?.id,
-                  });
-                  setReplyTo(null);
-                }}
-              />
-              {me?.role === 'FREELANCER' && (
-                <button
-                  onClick={() => setOfferSheetOpen(true)}
-                  aria-label={t('offer.title')}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-primary transition-transform active:scale-90 hover:bg-primary/10"
-                >
-                  <Package className="h-5 w-5" />
-                </button>
-              )}
-              <div className="relative">
-                <button
-                  onClick={() => setQuickRepliesOpen((v) => !v)}
-                  aria-label="Quick replies"
-                  aria-pressed={quickRepliesOpen}
-                  className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground', quickRepliesOpen && 'text-foreground')}
-                >
-                  <Zap className={cn('h-5 w-5', quickRepliesOpen && 'text-primary')} />
-                </button>
-                {quickRepliesOpen && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setQuickRepliesOpen(false)} />
-                    <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.quickReplies')}</div>
-                      <div className="max-h-48 overflow-y-auto">
-                        {replies.length === 0 && <p className="px-2 py-3 text-xs text-muted-foreground">{t('chat.noReplies')}</p>}
-                        {replies.map((r) => (
-                          <div key={r.id} className="group flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-muted">
-                            <button
-                              onClick={() => { setText(r.body); setQuickRepliesOpen(false); }}
-                              className="min-w-0 flex-1 text-left"
-                            >
-                              <div className="truncate text-xs font-semibold">{r.title}</div>
-                              <div className="truncate text-[11px] text-muted-foreground">{r.body}</div>
-                            </button>
-                            <button
-                              onClick={() => removeReply(r.id)}
-                              aria-label="Delete reply"
-                              className="text-muted-foreground opacity-0 hover:text-red-500 group-hover:opacity-100"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => {
-                          const body = text.trim();
-                          if (!body) { toast.error(t('chat.typeReply')); return; }
-                          const title = window.prompt(t('chat.nameReply'), body.slice(0, 40) || 'Reply');
-                          if (title) { addReply(title, body); setQuickRepliesOpen(false); }
-                        }}
-                        className="mx-2 mb-1 flex w-[calc(100%-1rem)] items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-semibold text-primary active:bg-muted"
-                      >
-                        <Plus className="h-3.5 w-3.5" /> {t('chat.saveReply')}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="relative">
+            <div className="flex items-end gap-1.5">
+              <div className="flex flex-1 items-end gap-1 rounded-3xl border border-border bg-card px-2 py-1.5">
+                <textarea
+                  value={text}
+                  onChange={(e) => handleTextChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
+                  }}
+                  rows={1}
+                  placeholder={t('chat.typePlaceholder')}
+                  aria-label={t('chat.typePlaceholder')}
+                  className="min-w-0 flex-1 resize-none bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+                  style={{ maxHeight: '120px' }}
+                />
                 <button
                   onClick={() => setEmojiOpen((v) => !v)}
                   aria-label="Emoji"
                   aria-pressed={emojiOpen}
-                  className={cn('grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground', emojiOpen && 'text-foreground')}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
                 >
                   <Smile className={cn('h-5 w-5', emojiOpen && 'text-primary')} />
                 </button>
-                {emojiOpen && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setEmojiOpen(false)} />
-                    <div className="absolute bottom-14 left-0 z-40 grid w-64 grid-cols-8 gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                      {EMOJI_QUICK.map((e) => (
-                        <button
-                          key={e}
-                          onClick={() => { setText(text + e); setEmojiOpen(false); }}
-                          className="grid h-7 w-7 place-items-center rounded-lg text-lg hover:bg-muted active:scale-90"
-                          aria-label={`Insert ${e}`}
-                        >
-                          {e}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="relative">
                 <button
-                  onClick={() => setStickerOpen((v) => !v)}
-                  aria-label={t('chat.stickers')}
-                  aria-pressed={stickerOpen}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
+                  onClick={() => setToolsOpen((v) => !v)}
+                  aria-label={t('chat.addTools')}
+                  aria-pressed={toolsOpen}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
                 >
-                  <Sticker className={cn('h-5 w-5', stickerOpen && 'text-primary')} />
+                  <Plus className={cn('h-5 w-5', toolsOpen && 'text-primary')} />
                 </button>
-                <StickerPicker
-                  open={stickerOpen}
-                  onClose={() => setStickerOpen(false)}
-                  onPick={(e) => setText(text + e)}
-                />
               </div>
-              <div className="relative">
+              {timerSec > 0 && (
                 <button
-                  onClick={() => setTimerSec((v) => (v === 0 ? 60 : 0))}
+                  onClick={() => setTimerSec(0)}
+                  title={`${Math.round(timerSec / 60)}m`}
                   aria-label={t('chat.timer')}
-                  aria-pressed={timerSec > 0}
-                  disabled={send.isPending}
-                  title={timerSec > 0 ? `${Math.round(timerSec / 60)} min` : t('chat.timer')}
-                  className={cn(
-                    'grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground',
-                    timerSec > 0 && 'text-primary',
-                  )}
+                  className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-primary active:scale-90"
                 >
-                  <TimerIcon className={cn('h-5 w-5', timerSec > 0 && 'text-primary')} />
-                  {timerSec > 0 && <span className="absolute -top-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-white">{Math.round(timerSec / 60)}</span>}
+                  <TimerIcon className="h-5 w-5" />
+                  <span className="absolute -top-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-white">{Math.round(timerSec / 60)}</span>
                 </button>
-                {timerSec > 0 && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setTimerSec(0)} />
-                    <div className="absolute bottom-14 left-0 z-40 flex w-56 flex-wrap gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                      {([{ s: 60, l: '1m' }, { s: 3600, l: '1h' }, { s: 86400, l: '1d' }, { s: 604800, l: '1w' }] as { s: number; l: string }[]).map((o) => (
-                        <button
-                          key={o.s}
-                          onClick={() => setTimerSec(o.s)}
-                          className={cn('flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold active:bg-muted', timerSec === o.s ? 'border-primary bg-primary/10 text-primary' : 'border-border')}
-                        >
-                          <TimerIcon className="mr-1 inline h-3 w-3" />{o.l}
-                        </button>
-                      ))}
-                      <button onClick={() => setTimerSec(0)} className="w-full rounded-lg py-1 text-xs font-semibold text-red-500 active:bg-muted">{t('common.cancel')}</button>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="relative">
-                <button
-                  onClick={() => setScheduledOpen((v) => !v)}
-                  aria-label={t('chat.schedule')}
-                  aria-pressed={scheduledOpen}
-                  disabled={!text.trim()}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground disabled:opacity-40"
-                >
-                  <CalendarClock className={cn('h-5 w-5', scheduledOpen && 'text-primary')} />
-                </button>
-                {scheduledOpen && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setScheduledOpen(false)} />
-                    <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
-                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.schedule')}</div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {([
-                          { ms: 10 * 60 * 1000, l: t('chat.in10m') },
-                          { ms: 60 * 60 * 1000, l: t('chat.in1h') },
-                          { ms: 3 * 60 * 60 * 1000, l: t('chat.in3h') },
-                          { ms: 24 * 60 * 60 * 1000, l: t('chat.tomorrow') },
-                        ] as { ms: number; l: string }[]).map((o) => (
-                          <button
-                            key={o.ms}
-                            onClick={() => {
-                              const at = Date.now() + o.ms;
-                              const item: ScheduledSend = {
-                                id: makeClientId() + '_sch',
-                                conversationId: id,
-                                body: text.trim(),
-                                replyToId: replyTo?.id,
-                                clientId: makeClientId(),
-                                at,
-                              };
-                              setScheduled(addScheduled(item));
-                              setText('');
-                              setReplyTo(null);
-                              setScheduledOpen(false);
-                              toast.success(t('chat.scheduledNote'));
-                            }}
-                            className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
-                          >
-                            {o.l}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-              <textarea
-                value={text}
-                onChange={(e) => handleTextChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    void handleSend();
-                  }
-                }}
-                rows={1}
-                placeholder={t('chat.typePlaceholder')}
-                className="flex-1 resize-none rounded-2xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
-                style={{ maxHeight: '120px' }}
-              />
+              )}
               {text.trim() ? (
-                <button
-                  onClick={() => void handleSend()}
-                  disabled={send.isPending}
-                  aria-label={t('common.post')}
-                  className="grad-hero grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40"
-                >
-                  {send.isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Send className="h-5 w-5" />
-                  )}
+                <button onClick={() => void handleSend()} disabled={send.isPending} aria-label={t('common.post')} className="grad-hero grid h-11 w-11 shrink-0 place-items-center rounded-full text-white shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40">
+                  {send.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 </button>
               ) : (
-                <button
-                  onClick={() => setComposerMode('voice')}
-                  aria-label={t('chat.voice')}
-                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
-                >
+                <button onClick={() => setComposerMode('voice')} aria-label={t('chat.voice')} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground">
                   <Mic className="h-5 w-5" />
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -1561,6 +1460,19 @@ function MessageBubble({
 }
 
 /** A labeled row in the message actions sheet. */
+/** A labeled row inside the composer "+" tools panel. */
+function PanelRow({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium active:bg-muted"
+    >
+      <span className="grid h-8 w-8 place-items-center rounded-full bg-primary/10 text-primary">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
 function ActionRow({ icon, label, onClick, danger }: { icon: ReactNode; label: string; onClick: () => void; danger?: boolean }) {
   return (
     <button

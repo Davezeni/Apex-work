@@ -3,6 +3,18 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Telegram-style composer (power push #34)
+
+### Changed
+- **Decluttered composer** — the many side icons (sticker, timer, schedule,
+  quick replies, offer) no longer squeeze the text input. The input is now a
+  wide Telegram-style pill (textarea + inline emoji + a single `+` button),
+  with a large send/mic button on the right.
+- **`+` tools panel** — the `+` opens a labeled panel with Stickers,
+  Save replies (quick replies), Disappearing timer, Schedule send, Offer
+  (freelancers), and Attach. The active self-destruct timer shows a small
+  badge beside the input.
+
 ## [Unreleased] — Voice waveforms + AI smart replies (power push #33)
 
 ### Added

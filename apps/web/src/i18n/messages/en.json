@@ -262,7 +262,8 @@
     "scheduledNote": "Message scheduled",
     "messageExpired": "Message expired",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "addTools": "More"
   },
   "pin": {
     "createTitle": "Create a 6-digit PIN",
