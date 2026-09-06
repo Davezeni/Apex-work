@@ -3,6 +3,22 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Chat polish + full Amharic (power push #30)
+
+### Fixed
+- **Overlapping message icons** — the per-bubble side `⋯` triggers (which
+  overlapped) are removed. Tapping a message bubble now opens a clean, labeled
+  action sheet (Reply / React / Forward / Pin / Save / Copy / Edit / Delete).
+- **Image viewer close button** — close/download controls are now layered above
+  the image (they were being covered by the image layer) so they actually work;
+  added prev/next gallery navigation, tap-to-zoom, and an "n of m" counter.
+- **File attachments** — replaced bare text links with proper file cards
+  (icon + name + size + download).
+
+### Added
+- **Comprehensive Amharic** — all new chat strings routed through `t()`; locale
+  parity now **585 keys, 0 missing** (only proper-noun identicals remain).
+
 ## [Unreleased] — Messaging depth (power push #29)
 
 ### Added
