@@ -220,3 +220,14 @@
   .no-hpan {
     overflow-x: hidden;
   }
+
+  /* Sticker "pop" entrance — large sticker emojis spring in on send/receive. */
+  .sticker-pop {
+    animation: sticker-pop 0.4s cubic-bezier(0.18, 1.25, 0.4, 1);
+    display: inline-block;
+  }
+  @keyframes sticker-pop {
+    0% { transform: scale(0.4) translateY(8px); opacity: 0; }
+    60% { transform: scale(1.12) translateY(-2px); opacity: 1; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+  }

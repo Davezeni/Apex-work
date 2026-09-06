@@ -8,7 +8,21 @@ export interface StickerCategory {
   items: [string, string][];
 }
 
+/** Animated / "GIF-style" expressive stickers — rendered large with a pop
+ *  animation on send. Free (unicode), no external service or key. */
+export const STICKER_ANIMATED = new Set([
+  '😀', '😂', '🤣', '😍', '🥳', '😎', '🤩', '😜', '🤪', '😱', '🤯', '🥺', '😭',
+  '❤️', '❤️🔥', '💀', '🔥', '✨', '💯', '🏆', '🎉', '🚀', '🎊', '👏', '🙌',
+  '🤝', '💪', '👑', '🌟', '⚡', '🍕', '☕', '🌈', '💃', '🕺',
+]);
+
 export const STICKER_CATEGORIES: StickerCategory[] = [
+  {
+    id: 'animated',
+    label: 'Animated',
+    emoji: '⚡',
+    items: [...STICKER_ANIMATED].map((e) => [e, 'animated gif fun express live'] as [string, string]),
+  },
   {
     id: 'smileys',
     label: 'Smileys',

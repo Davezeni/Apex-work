@@ -18,6 +18,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Chat UX polish + session reliability (power push #38)
+
+### Fixed
+- **"Invalid or expired token" on voice messages** — the root cause was the
+  15-min access-token lifespan with no auto-refresh. `apiFetch` now silently
+  refreshes the session (via the refresh token) and replays the request once,
+  so long voice/chat sessions no longer die mid-send.
+
+### Added
+- **Live character counter** in the composer (shows `n/4096`, turns amber near
+  the limit and red at it); message length is clamped at 4096 chars.
+- **Voice hint** — small helper text under the mic (`Hold the mic to record a
+  voice message`).
+- **Animated / GIF-style stickers** — a new "Animated" sticker tab plus a pop
+  entrance animation on large stickers sent in chat (free Unicode, no key).
+- **Enhanced + cleaned top-nav menu** — grouped into Conversation /
+  Notifications / More sections with headers, a new "Search in conversation"
+  entry, and all labels localized (Amharic + English).
+
+### Changed
+- **Dark-mode pill refinement** — the composer pill uses a translucent surface
+  + soft border in dark mode.
+
 ## [Unreleased] — Telegram composer redesign + gestures (power push #36)
 
 ### Changed

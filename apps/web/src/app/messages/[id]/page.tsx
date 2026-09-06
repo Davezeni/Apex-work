@@ -57,6 +57,11 @@ const EMOJI_QUICK = [
   '🚀','💡','📌','📈','💰','🌍','🤗','😇','🥰','😴',
 ];
 
+/** Max message body length — counter appears in the composer as you type. */
+const CHAR_MAX = 4096;
+// Counter turns amber once you're within this many chars of the limit.
+const CHAR_THRESHOLD = 240;
+
 function dateKey(iso: string): string {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -359,6 +364,7 @@ export default function ConversationPage() {
     .map((m) => m.attachmentUrl!);
 
   const handleTextChange = (v: string) => {
+    if (v.length > CHAR_MAX) v = v.slice(0, CHAR_MAX);
     setText(v);
     if (v.trim().length > 0) {
       socket.typingStart();
@@ -468,14 +474,21 @@ export default function ConversationPage() {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-10 z-40 w-52 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+              <div className="absolute right-0 top-10 z-40 max-h-[80vh] w-56 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-card py-1 shadow-xl">
+                <button
+                  onClick={() => { setMenuOpen(false); setSearchOpen(true); }}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                >
+                  <Search className="h-4 w-4" /> {t('chat.searchInConvo')}
+                </button>
                 {conv?.isGroup && (
                   <>
+                    <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('chat.convoSection')}</div>
                     <button
                       onClick={() => { setMenuOpen(false); setMembersOpen(true); }}
                       className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                     >
-                      <Users className="h-4 w-4" /> Members
+                      <Users className="h-4 w-4" /> {t('chat.members')}
                     </button>
                     <button
                       onClick={() => {
@@ -514,10 +527,11 @@ export default function ConversationPage() {
                       }}
                       className="flex w-full items-center gap-2 border-t border-border px-3 py-2.5 text-sm text-red-500 active:bg-muted"
                     >
-                      <LogOut className="h-4 w-4" /> Leave group
+                      <LogOut className="h-4 w-4" /> {t('chat.leaveGroup')}
                     </button>
                   </>
                 )}
+                <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('chat.alertSection')}</div>
                 <button
                   onClick={() => {
                     setMenuOpen(false);
@@ -526,7 +540,7 @@ export default function ConversationPage() {
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                 >
                   {conv?.me?.isMuted ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                  {conv?.me?.isMuted ? 'Unmute' : 'Mute'}
+                  {conv?.me?.isMuted ? t('chat.unmute') : t('chat.mute')}
                 </button>
                 <button
                   onClick={() => toggleEnterToSend()}
@@ -537,11 +551,12 @@ export default function ConversationPage() {
                     <span className={cn('block h-4 w-4 rounded-full bg-white transition-transform', enterToSend && 'translate-x-4')} />
                   </span>
                 </button>
+                <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t('chat.moreSection')}</div>
                 <button
                   onClick={() => { setMenuOpen(false); markUnread.mutate(id, { onSuccess: () => router.push('/messages') }); }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
                 >
-                  <Mail className="h-4 w-4" /> Mark as unread
+                  <Mail className="h-4 w-4" /> {t('chat.markUnread')}
                 </button>
                 <button
                   onClick={() => {
@@ -880,21 +895,36 @@ export default function ConversationPage() {
           )}
           {/* Input row — Telegram-style pill (emoji left, paperclip right) + blue send/+ */}
           {composerMode === 'voice' ? (
-            <VoiceRecorder
-              onSend={async (att) => {
-                await send.mutateAsync({
-                  attachmentUrl: att.url,
-                  attachmentType: 'audio',
-                  attachmentMeta: { duration: att.durationSec, size: att.sizeBytes, waveform: att.waveform },
-                  replyToId: replyTo?.id,
-                });
-                setReplyTo(null);
-                setComposerMode('text');
-              }}
-            />
+            <div className="flex-1">
+              <VoiceRecorder
+                onSend={async (att) => {
+                  await send.mutateAsync({
+                    attachmentUrl: att.url,
+                    attachmentType: 'audio',
+                    attachmentMeta: { duration: att.durationSec, size: att.sizeBytes, waveform: att.waveform },
+                    replyToId: replyTo?.id,
+                  });
+                  setReplyTo(null);
+                  setComposerMode('text');
+                }}
+              />
+              <p className="mt-1.5 px-1 text-center text-[11px] text-muted-foreground">{t('chat.voiceHint')}</p>
+            </div>
           ) : (
             <div className="flex items-end gap-2">
-              <div className="flex flex-1 items-center gap-1 overflow-hidden rounded-full border border-border bg-card px-2 py-1.5">
+              {text.trim().length > 0 && (
+                <span
+                  className={cn(
+                    'mb-2 hidden shrink-0 select-none font-mono text-[10px] text-muted-foreground sm:block',
+                    text.length >= CHAR_MAX - CHAR_THRESHOLD && 'text-amber-500',
+                    text.length >= CHAR_MAX && 'text-red-500',
+                  )}
+                >
+                  {text.length}
+                  <span className="text-muted-foreground/60">/{CHAR_MAX}</span>
+                </span>
+              )}
+              <div className="flex flex-1 items-center gap-1 overflow-hidden rounded-full border border-border bg-card px-2 py-1.5 dark:border-white/10 dark:bg-background/60 dark:shadow-inner">
                 <button
                   onClick={() => setEmojiOpen((v) => !v)}
                   aria-label="Emoji"
@@ -1453,7 +1483,7 @@ function MessageBubble({
         )}
         {m.body && (
           sticker ? (
-            <div className={cn('px-2 py-1 text-5xl leading-none', isImage && 'p-3')}>{m.body}</div>
+            <div className={cn('sticker-pop px-2 py-0.5 text-6xl leading-none', isImage && 'p-3')}>{m.body}</div>
           ) : (
             <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
           )
