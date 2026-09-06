@@ -48,6 +48,20 @@ export const aiTranslateGigSchema = z.object({
 });
 export type AITranslateGigInput = z.infer<typeof aiTranslateGigSchema>;
 
+/** AI smart-reply suggestions for a live chat thread. */
+export const aiRepliesSchema = z.object({
+  history: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().min(1).max(2000),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+export type AIRepliesInput = z.infer<typeof aiRepliesSchema>;
+
 /** Resume coach — returns a score and practical fixes without changing data. */
 export const aiResumeReviewSchema = z.object({
   targetRole: z.string().trim().max(120).optional(),

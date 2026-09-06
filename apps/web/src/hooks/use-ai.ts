@@ -169,3 +169,15 @@ export function useAIChat() {
     mutationFn: (body) => apiFetch('/ai/chat', { method: 'POST', token, body }),
   });
 }
+
+export function useAISuggestReplies() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { replies: string[]; source: 'ai' | 'fallback' },
+    Error,
+    { history: { role: 'user' | 'assistant'; content: string }[] }
+  >({
+    mutationFn: (body) => apiFetch('/ai/replies', { method: 'POST', token, body }),
+    retry: 1,
+  });
+}

@@ -17,6 +17,7 @@ interface Props {
     contentType: string;
     sizeBytes: number;
     durationSec: number;
+    waveform?: number[];
   }) => Promise<void>;
   disabled?: boolean;
 }
@@ -45,6 +46,10 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
   const streamRef = useRef<MediaStream | null>(null);
   const startTsRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const waveformRef = useRef<number[]>([]);
+  const samplerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const upload = useUpload();
 
   useEffect(() => {
@@ -58,6 +63,10 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
   const cleanup = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = null;
+    if (samplerRef.current) clearInterval(samplerRef.current);
+    samplerRef.current = null;
+    if (audioCtxRef.current) { void audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+    analyserRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     recorderRef.current = null;
@@ -73,6 +82,35 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       chunksRef.current = [];
+      waveformRef.current = [];
+
+      // Best-effort waveform capture (optional; falls back to empty array).
+      try {
+        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          audioCtxRef.current = ctx;
+          const source = ctx.createMediaStreamSource(stream);
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          source.connect(analyser);
+          analyserRef.current = analyser;
+          const data = new Uint8Array(analyser.frequencyBinCount);
+          samplerRef.current = setInterval(() => {
+            analyser.getByteTimeDomainData(data);
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) {
+              const v = (data[i]! - 128) / 128;
+              sum += v * v;
+            }
+            const rms = Math.sqrt(sum / data.length);
+            waveformRef.current.push(Math.min(1, Math.max(0, rms * 2.2)));
+            if (waveformRef.current.length > 400) waveformRef.current.shift();
+          }, 120);
+        }
+      } catch {
+        /* waveform is optional */
+      }
 
       // Prefer webm/opus (best-supported + tiny). If not available, let the
       // browser pick its default (usually mp4 on iOS Safari).
@@ -148,6 +186,7 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
         contentType: uploaded.contentType,
         sizeBytes: uploaded.sizeBytes,
         durationSec: seconds,
+        waveform: downsample(waveformRef.current, 48),
       });
       discard();
     } catch (err) {
@@ -237,4 +276,19 @@ function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+/** Resample a raw waveform into a fixed number of bars for compact display. */
+export function downsample(samples: number[], count: number): number[] {
+  if (!samples.length) return [];
+  if (samples.length <= count) return samples;
+  const out: number[] = [];
+  const step = samples.length / count;
+  for (let i = 0; i < count; i++) {
+    const start = Math.floor(i * step);
+    const end = Math.min(samples.length, Math.floor((i + 1) * step));
+    const seg = samples.slice(start, Math.max(end, start + 1));
+    out.push(seg.reduce((a, b) => a + b, 0) / seg.length);
+  }
+  return out;
 }

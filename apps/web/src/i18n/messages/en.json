@@ -260,7 +260,9 @@
     "in3h": "In 3 hours",
     "tomorrow": "Tomorrow 9:00 AM",
     "scheduledNote": "Message scheduled",
-    "messageExpired": "Message expired"
+    "messageExpired": "Message expired",
+    "play": "Play",
+    "pause": "Pause"
   },
   "pin": {
     "createTitle": "Create a 6-digit PIN",

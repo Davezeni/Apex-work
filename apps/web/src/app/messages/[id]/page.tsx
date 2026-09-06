@@ -4,18 +4,20 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye, Sparkles } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useSavedMessages, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, useLoadOlder, useGroupInvite, useSavedReplies, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
+import { useAISuggestReplies } from '@/hooks/use-ai';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { LinkPreview, firstUrlIn } from '@/components/chat/link-preview';
 import { AttachButton } from '@/components/chat/attach-button';
 import { ReactionPicker } from '@/components/chat/reaction-picker';
 import { StickerPicker } from '@/components/chat/sticker-picker';
+import { WaveformPlayer } from '@/components/chat/waveform';
 import { isSticker } from '@/components/chat/emoji-data';
 import { addScheduled, listScheduled, removeScheduled, makeClientId, type ScheduledSend } from '@/lib/scheduled-send';
 import {
@@ -30,7 +32,7 @@ import { useMessageDraft } from '@/hooks/use-drafts';
 import { useOutboxSync } from '@/hooks/use-outbox';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
-import type { ReactionEmoji } from '@apex-work/shared';
+import { REACTION_EMOJIS, type ReactionEmoji } from '@apex-work/shared';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -234,6 +236,10 @@ export default function ConversationPage() {
     }
   };
 
+  const sendReply = (body: string) => {
+    void send.mutateAsync({ body }).then(() => setSmart([])).catch(() => {});
+  };
+
   // Combine paginated older messages + live loaded messages (oldest → newest),
   // then drop any self-destructed messages whose timer has already elapsed.
   const renderedMessages = [...older, ...messages];
@@ -276,6 +282,36 @@ export default function ConversationPage() {
     const timer = setInterval(tick, 10000);
     return () => clearInterval(timer);
   }, [id, send]);
+
+  // — AI smart replies (suggestions for the last peer message) —
+  const suggestReplies = useAISuggestReplies();
+  const [smart, setSmart] = useState<string[]>([]);
+  const [smartDismissed, setSmartDismissed] = useState(false);
+  // Stable signature (string) so the effect only re-runs when the visible
+  // conversation dialogue actually changes.
+  const smartSig = effectiveMessages.slice(-10).filter((m) => m.body)
+    .map((m) => `${m.senderId === me?.id ? 'a' : 'u'}:${m.body}`).join('\u0001');
+  useEffect(() => {
+    if (smartDismissed) return;
+    const parts = smartSig.split('\u0001').filter(Boolean);
+    if (parts.length < 2) return;
+    // Skip when the last visible message is mine (no need to prompt myself).
+    if (parts[parts.length - 1]!.startsWith('a:')) return;
+    const history: { role: 'user' | 'assistant'; content: string }[] = parts.map((p) => {
+      const [role, ...rest] = p.split(':');
+      return { role: role === 'a' ? 'assistant' : 'user', content: rest.join(':') };
+    });
+    const t = setTimeout(() => {
+      suggestReplies.mutate(
+        { history },
+        {
+          onSuccess: (r) => { if (r.replies?.length) setSmart(r.replies.slice(0, 3)); },
+          onError: () => {},
+        },
+      );
+    }, 700);
+    return () => clearTimeout(t);
+  }, [smartSig, me?.id, smartDismissed, suggestReplies]);
 
   // Collect all image URLs so we can drive a media-gallery lightbox.
   const imageUrls: string[] = messages
@@ -640,6 +676,34 @@ export default function ConversationPage() {
 
       {/* Composer */}
       <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 py-2 backdrop-blur-xl">
+        {!smartDismissed && smart.length > 0 && composerMode === 'text' && (
+          <div className="mx-auto mb-1.5 flex w-full max-w-md items-start gap-2">
+            <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+              {smart.map((s, i) => (
+                <button
+                  key={`${s}-${i}`}
+                  onClick={() => sendReply(s)}
+                  disabled={send.isPending}
+                  className={cn(
+                    'max-w-full truncate rounded-full border px-3 py-1.5 text-xs font-medium transition-transform active:scale-95 disabled:opacity-50',
+                    i === 0
+                      ? 'border-primary/40 bg-primary/10 text-primary'
+                      : 'border-border bg-card text-foreground',
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setSmartDismissed(true)}
+              aria-label={t('common.cancel')}
+              className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         {scheduled.length > 0 && (
           <div className="mx-auto mb-1.5 w-full max-w-md rounded-xl border border-border bg-muted/40 px-3 py-2">
             <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -697,7 +761,11 @@ export default function ConversationPage() {
                 await send.mutateAsync({
                   attachmentUrl: att.url,
                   attachmentType: 'audio',
-                  attachmentMeta: { duration: att.durationSec, size: att.sizeBytes },
+                  attachmentMeta: {
+                    duration: att.durationSec,
+                    size: att.sizeBytes,
+                    waveform: att.waveform,
+                  },
                   replyToId: replyTo?.id,
                 });
                 setReplyTo(null);
@@ -1111,6 +1179,21 @@ export default function ConversationPage() {
               </div>
               <span className="shrink-0 text-[11px] text-muted-foreground">{timeAgo(actionMsg.createdAt)}</span>
             </div>
+            <div className="mx-5 mb-2 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.react')}</span>
+              <div className="flex gap-1">
+                {REACTION_EMOJIS.slice(0, 6).map((e) => (
+                  <button
+                    key={e}
+                    onClick={(ev) => { ev.stopPropagation(); toggleReaction.mutate({ messageId: actionMsg.id, emoji: e }); setActionMsg(null); }}
+                    className="grid h-8 w-8 place-items-center rounded-full text-lg transition-transform hover:bg-muted active:scale-90"
+                    aria-label={`React ${e}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="mx-2">
               <ActionRow icon={<Reply className="h-4 w-4" />} label={t('chat.reply')} onClick={() => { setReplyTo(actionMsg); setActionMsg(null); }} />
               <ActionRow icon={<SmilePlus className="h-4 w-4" />} label={t('chat.react')} onClick={() => { setReactingId(actionMsg.id); setActionMsg(null); }} />
@@ -1334,18 +1417,27 @@ function MessageBubble({
         )}
 
         {isAudio && m.attachmentUrl && (
-          <div className="flex items-center gap-2">
-            <PlayCircle
-              className={cn('h-5 w-5 shrink-0', isMine ? 'text-white' : 'text-primary')}
-              aria-hidden
-            />
-            <audio
+          (m.attachmentMeta as any)?.waveform?.length ? (
+            <WaveformPlayer
               src={m.attachmentUrl}
-              controls
-              preload="metadata"
-              className="h-8 flex-1 max-w-[220px]"
+              waveform={((m.attachmentMeta as any).waveform as number[]) ?? []}
+              durationSec={Number((m.attachmentMeta as any).duration) || undefined}
+              isMine={isMine}
             />
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <PlayCircle
+                className={cn('h-5 w-5 shrink-0', isMine ? 'text-white' : 'text-primary')}
+                aria-hidden
+              />
+              <audio
+                src={m.attachmentUrl}
+                controls
+                preload="metadata"
+                className="h-8 flex-1 max-w-[220px]"
+              />
+            </div>
+          )
         )}
 
         {isFile && m.attachmentUrl && (

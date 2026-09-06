@@ -15,6 +15,7 @@ import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
 import { redis } from '../lib/redis.js';
 import { createHash } from 'node:crypto';
+import { parseRepliesAnswers, fallbackReplies } from './smart-replies.js';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_TRANSCRIBE_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
@@ -347,6 +348,31 @@ export async function chatAssistant(
       'assistant AI unavailable — using deterministic help',
     );
     return { text: fallbackAssistantReply(last), source: 'fallback' };
+  }
+}
+
+// ---------------- SMART REPLIES (chat) ----------------
+
+const REPLIES_SYSTEM = `You are a short, natural chat-reply assistant. Given the conversation history (last message is the other person), write 3 suggested replies the current user could send. Rules:
+- 3 replies only, each max 10 words.
+- Keep them casual and relevant to the last message.
+- Match the LANGUAGE of the last message (Amharic if Amharic, otherwise English).
+- Return ONLY a JSON array of exactly 3 strings, e.g. ["...", "...", "..."].`;
+
+export async function suggestReplies(
+  history: { role: 'user' | 'assistant'; content: string }[],
+): Promise<{ replies: string[]; source: 'ai' | 'fallback' }> {
+  try {
+    const out = await callGroq([{ role: 'system', content: REPLIES_SYSTEM }, ...history], {
+      temperature: 0.6,
+      maxTokens: 200,
+    });
+    const replies = parseRepliesAnswers(out).slice(0, 3);
+    if (replies.length) return { replies, source: 'ai' };
+    throw new Error('EMPTY_REPLIES');
+  } catch (error) {
+    logger.warn({ err: (error as Error).message }, 'smart replies AI unavailable — using fallback');
+    return { replies: fallbackReplies(history[history.length - 1]?.content ?? ''), source: 'fallback' };
   }
 }
 

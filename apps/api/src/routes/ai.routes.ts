@@ -5,6 +5,7 @@ import {
   aiTranscribeSchema,
   enhanceResumeSchema,
   aiChatSchema,
+  aiRepliesSchema,
   aiResumeReviewSchema,
   aiResumeSkillsSchema,
   aiPortfolioCaseStudySchema,
@@ -34,6 +35,15 @@ router.get('/status', (_req, res) => {
 });
 
 router.use(requireAuth);
+
+router.post(
+  '/replies',
+  validate(aiRepliesSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIRepliesInput;
+    return success(res, await ai.suggestReplies(body.history));
+  }),
+);
 
 router.post(
   '/proposal',

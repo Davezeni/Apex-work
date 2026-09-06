@@ -260,7 +260,9 @@
     "in3h": "ከ3 ሰዓት በኋላ",
     "tomorrow": "ነገ ጠዋት 9:00",
     "scheduledNote": "መልእክት ተይዟል",
-    "messageExpired": "መልእክቱ ተጠፍፏል"
+    "messageExpired": "መልእክቱ ተጠፍፏል",
+    "play": "አጫውት",
+    "pause": "አቁም"
   },
   "pin": {
     "createTitle": "የ6 አመራር ቅብብክ ሮር ይጽፈሉ",

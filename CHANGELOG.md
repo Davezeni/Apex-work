@@ -3,6 +3,23 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Voice waveforms + AI smart replies (power push #33)
+
+### Added
+- **Voice-message waveforms** — the recorder now samples a live amplitude
+  waveform (WebAudio AnalyserNode), stores it in `attachmentMeta.waveform`,
+  and audio bubbles render a custom waveform player (play/pause, live
+  progress, duration) instead of a native bar. Falls back to the native
+  player when no waveform is present.
+- **Quick-react row in the action sheet** — the message actions sheet now
+  shows one-tap reaction emojis (❤️ 👍 👎 😂 😮 🎉) at the top for fast reactions.
+- **AI smart replies** — after a peer's message, up to 3 suggested short
+  replies appear above the composer (one-tap to send); regenerate
+  automatically on new dialogue, dismissible. Powered by `POST /v1/ai/replies`
+  (Groq via `callGroq`, with a deterministic, language-aware Amharic/English
+  fallback). New `suggestReplies` service + pure, testable `smart-replies`
+  helpers (4 unit tests).
+
 ## [Unreleased] — Messenger power bundle (power push #32)
 
 ### Added
