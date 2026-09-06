@@ -13,6 +13,7 @@ import {
   forwardMessageSchema,
   searchMessagesQuerySchema,
   joinGroupSchema,
+  unfurlQuerySchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -24,6 +25,16 @@ import { getIo } from '../realtime/socket.js';
 const router: Router = Router();
 
 router.use(requireAuth);
+
+/** GET /conversations/unfurl — fetch a rich link preview (OpenGraph) for a pasted URL. */
+router.get(
+  '/unfurl',
+  validate(unfurlQuerySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const { url } = req.query as { url: string };
+    return success(res, await chat.unfurl(url));
+  }),
+);
 
 /** GET /conversations — list all conversations for the current user. */
 router.get(
@@ -253,7 +264,7 @@ router.get(
   }),
 );
 
-/** POST /conversations/:id/mute — mute / unmute for me. */
+/** GET /conversations/:id/mute — mute / unmute for me. */
 router.post(
   '/:id/mute',
   validate(muteConversationSchema),

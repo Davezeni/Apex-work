@@ -12,6 +12,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useMessages, useSendMessage, useChatSocket, useConversation, useConversations, useSavedMessages, useAddGroupMembers, useLeaveGroup, useUpdateGroup, useEditMessage, useDeleteMessage, useMuteConversation, useMarkUnread, useForwardMessage, usePinMessage, useSearchMessages, useLoadOlder, useGroupInvite, useSavedReplies, type ChatMessage } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { VoiceRecorder } from '@/components/chat/voice-recorder';
+import { LinkPreview, firstUrlIn } from '@/components/chat/link-preview';
 import { AttachButton } from '@/components/chat/attach-button';
 import { ReactionPicker } from '@/components/chat/reaction-picker';
 import {
@@ -600,6 +601,14 @@ export default function ConversationPage() {
             </button>
           </div>
         )}
+        {(() => {
+          const u = firstUrlIn(text);
+          return u ? (
+            <div className={cn('mx-auto mb-1.5 max-w-md', replyTo && 'mt-1')}>
+              <LinkPreview url={u} />
+            </div>
+          ) : null;
+        })()}
         <div className="mx-auto flex max-w-md items-end gap-2">
           {composerMode === 'voice' ? (
             <VoiceRecorder
@@ -1153,6 +1162,10 @@ function MessageBubble({
         {m.body && (
           <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
         )}
+        {(() => {
+          const u = m.body ? firstUrlIn(m.body) : null;
+          return u ? <LinkPreview url={u} isMine={isMine} /> : null;
+        })()}
 
         <div
           className={cn(

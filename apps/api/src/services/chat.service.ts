@@ -646,3 +646,8 @@ function shapeConversation(conv: any, selfId: string, lastReadAt: Date | null) {
     updatedAt: conv.updatedAt,
   };
 }
+
+
+// Link previews (OpenGraph unfurl) are implemented in their own module so the
+// pure parser can be unit-tested without a DB connection.
+export { unfurl } from './link-preview.js';

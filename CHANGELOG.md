@@ -3,6 +3,23 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Rich link previews (power push #31)
+
+### Added
+- **Link preview cards** — when a message contains a URL, the chat now
+  unfurls it and renders a rich card (title, domain, description, cover image)
+  instead of a bare link, like WhatsApp/Telegram/iMessage.
+- **Live composer preview** — while typing a URL the card preview appears
+  above the composer before you send.
+- **`GET /conversations/unfurl`** — new authenticated endpoint that fetches a
+  page and parses OpenGraph / Twitter-card metadata server-side (with SSRF
+  guards against private/loopback hosts, response-size + 6s timeouts, and a
+  15-min cache). Pure `link-preview` module + 11 unit tests.
+
+### Fixed
+- **SSRF safety** — the unfurl endpoint refuses private hosts, non-http(s)
+  schemes, and unparseable URLs.
+
 ## [Unreleased] — Chat polish + full Amharic (power push #30)
 
 ### Fixed

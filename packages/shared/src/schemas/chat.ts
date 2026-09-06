@@ -79,3 +79,16 @@ export type SearchMessagesQuery = z.infer<typeof searchMessagesQuerySchema>;
 
 export const joinGroupSchema = z.object({ token: z.string().trim().min(8).max(64) });
 export type JoinGroupInput = z.infer<typeof joinGroupSchema>;
+
+/** Unfurl a URL into a rich link preview (OpenGraph / Twitter card). */
+export const unfurlQuerySchema = z.object({ url: z.string().trim().min(4).max(2048) });
+export type UnfurlQuery = z.infer<typeof unfurlQuerySchema>;
+
+export interface LinkPreview {
+  url: string;
+  domain: string;
+  title?: string;
+  description?: string;
+  image?: string;
+  siteName?: string;
+}
