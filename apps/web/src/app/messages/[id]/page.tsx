@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -15,6 +15,9 @@ import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { LinkPreview, firstUrlIn } from '@/components/chat/link-preview';
 import { AttachButton } from '@/components/chat/attach-button';
 import { ReactionPicker } from '@/components/chat/reaction-picker';
+import { StickerPicker } from '@/components/chat/sticker-picker';
+import { isSticker } from '@/components/chat/emoji-data';
+import { addScheduled, listScheduled, removeScheduled, makeClientId, type ScheduledSend } from '@/lib/scheduled-send';
 import {
   LazyCustomOfferSheet as CustomOfferSheet,
   LazyOfferCard as OfferCard,
@@ -144,6 +147,12 @@ export default function ConversationPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [actionMsg, setActionMsg] = useState<ChatMessage | null>(null);
+  const [stickerOpen, setStickerOpen] = useState(false);
+  const [timerSec, setTimerSec] = useState<number>(0);
+  const [scheduledOpen, setScheduledOpen] = useState(false);
+  const [scheduled, setScheduled] = useState<ScheduledSend[]>([]);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { data: convs } = useConversations();
   const { data: savedConv } = useSavedMessages();
   const forwardTo = (m: ChatMessage) => setForwardMsg(m);
@@ -213,16 +222,60 @@ export default function ConversationPage() {
     const replyId = replyTo?.id;
     setReplyTo(null);
     try {
-      await send.mutateAsync({ body, replyToId: replyId });
+      await send.mutateAsync({
+        body,
+        replyToId: replyId,
+        attachmentMeta: timerSec > 0 ? { timer: timerSec } : undefined,
+      });
+      if (timerSec > 0) setTimerSec(0);
     } catch {
       // restore text on failure so user doesn't lose their draft
       setText(body);
     }
   };
 
-  // Combine paginated older messages + live loaded messages (oldest → newest).
+  // Combine paginated older messages + live loaded messages (oldest → newest),
+  // then drop any self-destructed messages whose timer has already elapsed.
   const renderedMessages = [...older, ...messages];
-  const effectiveMessages = renderedMessages;
+  const notExpired = (m: ChatMessage) => {
+    const timer = Number((m.attachmentMeta as any)?.timer);
+    if (!timer) return true;
+    return Date.parse(m.createdAt) + timer * 1000 > Date.now();
+  };
+  const effectiveMessages = renderedMessages.filter(notExpired);
+
+  // — Jump to a quoted/replied-to message —
+  const jumpTo = (mid: string) => {
+    const el = msgRefs.current[mid];
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightId(mid);
+    window.setTimeout(() => setHighlightId((c) => (c === mid ? null : c)), 2500);
+  };
+
+  // — Scheduled "send later" queue (local, fires while open & online) —
+  useEffect(() => { setScheduled(listScheduled(id)); }, [id]);
+  useEffect(() => {
+    const tick = async () => {
+      const due = listScheduled(id).filter((s) => s.at <= Date.now());
+      for (const s of due) {
+        try {
+          await send.mutateAsync({
+            body: s.body,
+            attachmentUrl: s.attachmentUrl,
+            attachmentType: s.attachmentType as any,
+            attachmentMeta: s.attachmentMeta,
+            replyToId: s.replyToId,
+          });
+          setScheduled(removeScheduled(id, s.id));
+        } catch {
+          /* keep for a later retry */
+        }
+      }
+    };
+    const timer = setInterval(tick, 10000);
+    return () => clearInterval(timer);
+  }, [id, send]);
 
   // Collect all image URLs so we can drive a media-gallery lightbox.
   const imageUrls: string[] = messages
@@ -542,7 +595,11 @@ export default function ConversationPage() {
           const prev = effectiveMessages[i - 1];
           const showDate = !prev || dateKey(prev.createdAt) !== dateKey(m.createdAt);
           return (
-            <div key={m.id} className="flex flex-col">
+            <div
+              key={m.id}
+              ref={(el) => { msgRefs.current[m.id] = el; }}
+              className={cn('flex flex-col rounded-xl transition-colors', highlightId === m.id && 'bg-primary/10')}
+            >
               {showDate && (
                 <div className="my-3 flex justify-center">
                   <span className="rounded-full bg-card px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-sm">
@@ -554,6 +611,7 @@ export default function ConversationPage() {
                 m={m}
                 isMine={m.senderId === me?.id}
                 isGroup={!!conv?.isGroup}
+                members={conv?.members ?? []}
                 showAvatar={
                   m.senderId !== me?.id &&
                   (i === 0 || messages[i - 1]?.senderId !== m.senderId)
@@ -565,6 +623,7 @@ export default function ConversationPage() {
                 onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
                 onReactClose={() => setReactingId(null)}
                 onOpenActions={() => setActionMsg(m)}
+                onReplyJump={jumpTo}
               />
             </div>
           );
@@ -581,6 +640,28 @@ export default function ConversationPage() {
 
       {/* Composer */}
       <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 py-2 backdrop-blur-xl">
+        {scheduled.length > 0 && (
+          <div className="mx-auto mb-1.5 w-full max-w-md rounded-xl border border-border bg-muted/40 px-3 py-2">
+            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              <CalendarClock className="h-3.5 w-3.5" /> {scheduled.length} {t('chat.scheduled')}
+            </div>
+            {scheduled.map((s) => (
+              <div key={s.id} className="flex items-center gap-2 py-0.5 text-xs">
+                <span className="min-w-0 flex-1 truncate">{s.body ?? t('chat.attachment')}</span>
+                <span className="shrink-0 text-[11px] text-muted-foreground">
+                  {t('chat.atTime', { time: new Date(s.at).toLocaleString() })}
+                </span>
+                <button
+                  onClick={() => setScheduled(removeScheduled(id, s.id))}
+                  aria-label={t('common.cancel')}
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-red-500"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {replyTo && (
           <div className="mx-auto mb-1.5 flex max-w-md items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/60 px-3 py-1.5">
             <Reply className="h-3.5 w-3.5 shrink-0 text-primary" />
@@ -719,6 +800,104 @@ export default function ConversationPage() {
                           {e}
                         </button>
                       ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setStickerOpen((v) => !v)}
+                  aria-label={t('chat.stickers')}
+                  aria-pressed={stickerOpen}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground"
+                >
+                  <Sticker className={cn('h-5 w-5', stickerOpen && 'text-primary')} />
+                </button>
+                <StickerPicker
+                  open={stickerOpen}
+                  onClose={() => setStickerOpen(false)}
+                  onPick={(e) => setText(text + e)}
+                />
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setTimerSec((v) => (v === 0 ? 60 : 0))}
+                  aria-label={t('chat.timer')}
+                  aria-pressed={timerSec > 0}
+                  disabled={send.isPending}
+                  title={timerSec > 0 ? `${Math.round(timerSec / 60)} min` : t('chat.timer')}
+                  className={cn(
+                    'grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground',
+                    timerSec > 0 && 'text-primary',
+                  )}
+                >
+                  <TimerIcon className={cn('h-5 w-5', timerSec > 0 && 'text-primary')} />
+                  {timerSec > 0 && <span className="absolute -top-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-primary text-[8px] font-bold text-white">{Math.round(timerSec / 60)}</span>}
+                </button>
+                {timerSec > 0 && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setTimerSec(0)} />
+                    <div className="absolute bottom-14 left-0 z-40 flex w-56 flex-wrap gap-1 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                      {([{ s: 60, l: '1m' }, { s: 3600, l: '1h' }, { s: 86400, l: '1d' }, { s: 604800, l: '1w' }] as { s: number; l: string }[]).map((o) => (
+                        <button
+                          key={o.s}
+                          onClick={() => setTimerSec(o.s)}
+                          className={cn('flex-1 rounded-lg border px-2 py-1.5 text-xs font-semibold active:bg-muted', timerSec === o.s ? 'border-primary bg-primary/10 text-primary' : 'border-border')}
+                        >
+                          <TimerIcon className="mr-1 inline h-3 w-3" />{o.l}
+                        </button>
+                      ))}
+                      <button onClick={() => setTimerSec(0)} className="w-full rounded-lg py-1 text-xs font-semibold text-red-500 active:bg-muted">{t('common.cancel')}</button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setScheduledOpen((v) => !v)}
+                  aria-label={t('chat.schedule')}
+                  aria-pressed={scheduledOpen}
+                  disabled={!text.trim()}
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 hover:bg-muted hover:text-foreground disabled:opacity-40"
+                >
+                  <CalendarClock className={cn('h-5 w-5', scheduledOpen && 'text-primary')} />
+                </button>
+                {scheduledOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setScheduledOpen(false)} />
+                    <div className="absolute bottom-14 left-0 z-40 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl">
+                      <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.schedule')}</div>
+                      <div className="grid grid-cols-1 gap-1">
+                        {([
+                          { ms: 10 * 60 * 1000, l: t('chat.in10m') },
+                          { ms: 60 * 60 * 1000, l: t('chat.in1h') },
+                          { ms: 3 * 60 * 60 * 1000, l: t('chat.in3h') },
+                          { ms: 24 * 60 * 60 * 1000, l: t('chat.tomorrow') },
+                        ] as { ms: number; l: string }[]).map((o) => (
+                          <button
+                            key={o.ms}
+                            onClick={() => {
+                              const at = Date.now() + o.ms;
+                              const item: ScheduledSend = {
+                                id: makeClientId() + '_sch',
+                                conversationId: id,
+                                body: text.trim(),
+                                replyToId: replyTo?.id,
+                                clientId: makeClientId(),
+                                at,
+                              };
+                              setScheduled(addScheduled(item));
+                              setText('');
+                              setReplyTo(null);
+                              setScheduledOpen(false);
+                              toast.success(t('chat.scheduledNote'));
+                            }}
+                            className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-sm hover:bg-muted"
+                          >
+                            {o.l}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
@@ -1003,6 +1182,7 @@ function MessageBubble({
   m,
   isMine,
   isGroup,
+  members,
   showAvatar,
   onImageClick,
   onOpenActions,
@@ -1011,10 +1191,12 @@ function MessageBubble({
   onReactPick,
   onReactionTap,
   onReactClose,
+  onReplyJump,
 }: {
   m: ChatMessage;
   isMine: boolean;
   isGroup?: boolean;
+  members?: { userId: string; fullName: string; avatarUrl?: string | null }[];
   showAvatar: boolean;
   onImageClick?: (url: string) => void;
   onOpenActions?: () => void;
@@ -1023,6 +1205,7 @@ function MessageBubble({
   onReactPick?: (e: ReactionEmoji) => void;
   onReactionTap?: (emoji: string) => void;
   onReactClose?: () => void;
+  onReplyJump?: (id: string) => void;
 }) {
   const { t } = useI18n();
   const isImage = m.attachmentType === 'image';
@@ -1030,6 +1213,27 @@ function MessageBubble({
   const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
   const hasAttachment = !!m.attachmentUrl;
   const offerMatch = m.attachmentUrl?.match(/^apex:\/\/offer\/([a-zA-Z0-9_-]+)$/);
+  const sticker = isSticker(m.body);
+
+  // Self-destruct timer (disappearing message).
+  const timerSec = Number((m.attachmentMeta as any)?.timer);
+  const expiresAt = timerSec ? Date.parse(m.createdAt) + timerSec * 1000 : 0;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!timerSec) return;
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [timerSec]);
+  const expired = timerSec > 0 && expiresAt <= nowMs;
+  const remainingSec = timerSec ? Math.max(0, Math.ceil((expiresAt - nowMs) / 1000)) : 0;
+
+  // Seen-by avatar stack for my own messages.
+  const seen = isMine && (m.readByUserIds?.length ?? 0) > 0 ? (m.readByUserIds ?? []) : [];
+  const seenMembers = seen
+    .map((uid) => members?.find((mm) => mm.userId === uid))
+    .filter(Boolean) as { userId: string; fullName: string; avatarUrl?: string | null }[];
+  const seenCut = seenMembers.slice(0, 3);
+  const seenExtra = seenMembers.length - seenCut.length;
 
   // Long-press to open the reaction picker on mobile.
 
@@ -1038,6 +1242,17 @@ function MessageBubble({
       <div className={cn('flex items-end gap-2', isMine ? 'justify-end' : 'justify-start')}>
         {!isMine && <div className="w-8 shrink-0" />}
         <OfferCard offerId={offerMatch[1]!} isMine={isMine} />
+      </div>
+    );
+  }
+
+  // Self-destructed (disappeared) message — show a subtle "message expired" chip.
+  if (expired) {
+    return (
+      <div className={cn('flex items-end gap-2 px-2', isMine ? 'justify-end' : 'justify-start')}>
+        <div className={cn('rounded-2xl border border-dashed px-3 py-1.5 text-[11px] italic', isMine ? 'border-white/20 text-white/50' : 'border-border text-muted-foreground')}>
+          {t('chat.messageExpired')}
+        </div>
       </div>
     );
   }
@@ -1085,15 +1300,19 @@ function MessageBubble({
           </div>
         )}
         {m.replyTo && (
-          <div className={cn(
-            'mb-1 rounded-md border-l-2 px-2 py-1 text-[11px] leading-tight',
-            isMine ? 'border-white/70 bg-white/10' : 'border-primary bg-muted/70',
-          )}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onReplyJump?.(m.replyTo?.id ?? ''); }}
+            className={cn(
+              'mb-1 block max-w-full rounded-md border-l-2 px-2 py-1 text-left text-[11px] leading-tight transition-colors active:bg-background/20',
+              isMine ? 'border-white/70 bg-white/10' : 'border-primary bg-muted/70',
+            )}
+          >
             <div className="font-bold opacity-80">↳ {m.replyTo.sender?.fullName ?? 'Reply'}</div>
             <div className="truncate opacity-90">
               {m.replyTo.body ?? (m.replyTo.attachmentType === 'audio' ? '🎤 Voice' : '📎 Attachment')}
             </div>
-          </div>
+          </button>
         )}
         {isImage && m.attachmentUrl && (
           <button
@@ -1160,7 +1379,11 @@ function MessageBubble({
           </div>
         )}
         {m.body && (
-          <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
+          sticker ? (
+            <div className={cn('px-2 py-1 text-5xl leading-none', isImage && 'p-3')}>{m.body}</div>
+          ) : (
+            <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
+          )
         )}
         {(() => {
           const u = m.body ? firstUrlIn(m.body) : null;
@@ -1177,6 +1400,12 @@ function MessageBubble({
         >
           {m.editedAt && <span>edited · </span>}
           {timeAgo(m.createdAt)}
+          {timerSec > 0 && (
+            <span className={cn('inline-flex items-center gap-0.5', isMine ? 'text-white' : 'text-primary')}>
+              <TimerIcon className="h-3 w-3" />
+              {formatDuration(remainingSec)}
+            </span>
+          )}
           {isMine && (m.readBy ?? 0) > 0 ? (
             <span className="text-white" aria-label="Read">
               <CheckCheck className="h-3.5 w-3.5" />
@@ -1188,6 +1417,29 @@ function MessageBubble({
             <span className="opacity-80">{m.readBy}/{m.readByTotal}</span>
           ) : null}
         </div>
+        {isMine && seenMembers.length > 0 && (
+          <div className={cn('mt-1.5 flex items-center gap-1', isMine ? 'justify-end' : 'justify-start')}>
+            {seenCut.map((mm, idx) => (
+              <span
+                key={mm.userId}
+                title={mm.fullName}
+                className={cn(
+                  'grid h-5 w-5 -ml-1 place-items-center rounded-full border text-[8px] font-bold text-white',
+                  gradientFor(mm.userId),
+                  idx === 0 && 'ml-0',
+                )}
+              >
+                {initialsOf(mm.fullName)}
+              </span>
+            ))}
+            {seenExtra > 0 && (
+              <span title={seenMembers.map((s) => s.fullName).join(', ')} className="grid h-5 w-5 place-items-center rounded-full border border-border bg-card text-[9px] font-bold text-muted-foreground">
+                +{seenExtra}
+              </span>
+            )}
+            <Eye className="ml-0.5 h-3 w-3 opacity-60" />
+          </div>
+        )}
         {m.attachmentMeta?.transcript && (
           <div className={cn('mt-1 border-t px-1 pt-1 text-[11px] italic', isMine ? 'border-white/20 text-white/70' : 'border-border text-muted-foreground')}>
             &ldquo;{m.attachmentMeta.transcript}&rdquo;
@@ -1237,6 +1489,19 @@ function fileSizeLabel(bytes?: number | null): string {
   let n = bytes;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
   return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
+}
+
+/** Compact duration label for self-destruct countdowns (e.g. 1h 02m, 45s). */
+function formatDuration(sec: number): string {
+  if (sec <= 0) return '0s';
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
 }
 
 /** Pull the last path segment (usually a random slug + original filename). */

@@ -3,6 +3,28 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Messenger power bundle (power push #32)
+
+### Added
+- **Sticker/GIF picker** — a free, curated emoji sticker picker (Smileys,
+  Emotions, Hands, Animals, Food, Objects) with search, in the composer; a
+  single-emoji message renders as a large sticker bubble.
+- **Quoted-reply jump** — tapping a quoted reply block scrolls to and
+  highlights the original message in the thread.
+- **Seen-by avatars** — my own messages show a small avatar stack (up to 3
+  + more) of exactly who has read them, with name tooltips.
+- **Self-destruct (disappearing) messages** — per-message timer before sending
+  (1m / 1h / 1d / 1w) with a live countdown and an "expired" chip when the
+  time lapses (both sides filter it client-side).
+- **Scheduled "send later"** — pick a send time (in 10 min / 1h / 3h /
+  tomorrow) from the composer; the message is held locally and sent when the
+  time arrives (while the app is open & online), with a cancelable
+  "scheduled" panel.
+- **Conversation pin / archive / smart grouping** — inbox rows can be pinned
+  and archived (per-user, stored on-device), and the list is grouped into
+  Pinned / Unread / Recent with a collapsible Archived section. No schema
+  migration needed.
+
 ## [Unreleased] — Rich link previews (power push #31)
 
 ### Added
