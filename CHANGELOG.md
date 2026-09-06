@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Composer growth, spacing & gestures (power push #37)
+
+### Added
+- **Auto-growing input** — the composer now grows vertically as you type
+  (up to ~140px, then it scrolls) instead of a fixed one-line box.
+- **Space below the input** — the composer bar has real bottom padding plus
+  the iOS/Android safe-area inset, so the text field never sits flush against
+  the viewport bottom (no more negative space).
+- **Send-arrow animation** — the send icon does a short "whoosh" slide on each
+  send.
+- **Swipe-back** — swipe right from the left edge of the chat to go back,
+  like a native mobile app.
+- **Blue `+` trigger** — the blue round button shows `+` when empty and slides
+  up the tools bottom sheet.
+
 ## [Unreleased] — Telegram composer redesign + gestures (power push #36)
 
 ### Changed

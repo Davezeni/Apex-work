@@ -205,3 +205,18 @@
     display: none;
   }
 }
+
+  /* Chat send-arrow "whoosh" animation (restarts on each send). */
+  .send-fly {
+    animation: send-fly 0.45s ease;
+  }
+  @keyframes send-fly {
+    0% { transform: translateX(0); opacity: 1; }
+    50% { transform: translateX(14px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Never let the chat body/page pan horizontally. */
+  .no-hpan {
+    overflow-x: hidden;
+  }

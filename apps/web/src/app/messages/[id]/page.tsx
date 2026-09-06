@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -191,6 +191,35 @@ export default function ConversationPage() {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [sendFx, setSendFx] = useState(0);
+  const swipesRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Auto-grow the composer as text is entered (max ~140px, then scroll).
+  const resizeInput = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  };
+  useEffect(() => { resizeInput(); }, [text]);
+
+  // Swipe-right-from-left-edge → go back (native mobile feel).
+  const onTouchStart = (e: ReactTouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    swipesRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: ReactTouchEvent) => {
+    const start = swipesRef.current;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (start.x < 40 && dx > 70 && Math.abs(dy) < 60) router.back();
+    swipesRef.current = null;
+  };
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Auto-expire typing indicators (client firewall in case a stop event is missed).
   useEffect(() => {
@@ -341,7 +370,11 @@ export default function ConversationPage() {
   };
 
   return (
-    <div className="chat-bg flex h-dvh flex-col overflow-x-hidden">
+    <div
+      className="chat-bg flex h-dvh flex-col overflow-x-hidden"
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Header */}
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
@@ -696,7 +729,10 @@ export default function ConversationPage() {
       </div>
 
       {/* Composer */}
-      <div className="safe-bottom sticky bottom-0 z-10 border-t border-border bg-background/95 px-2 pt-3 pb-2 backdrop-blur-xl">
+      <div
+        className="sticky bottom-0 z-10 border-t border-border bg-background/95 px-3 pt-3 backdrop-blur-xl"
+        style={{ paddingBottom: 'calc(max(0.875rem, env(safe-area-inset-bottom, 14px)))' }}
+      >
         {!smartDismissed && smart.length > 0 && composerMode === 'text' && (
           <div className="mx-auto mb-1.5 flex w-full max-w-md items-start gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
@@ -868,6 +904,7 @@ export default function ConversationPage() {
                   <Smile className={cn('h-5 w-5', emojiOpen && 'text-primary')} />
                 </button>
                 <textarea
+                  ref={inputRef}
                   value={text}
                   onChange={(e) => handleTextChange(e.target.value)}
                   onKeyDown={(e) => {
@@ -876,8 +913,8 @@ export default function ConversationPage() {
                   rows={1}
                   placeholder={t('chat.typePlaceholder')}
                   aria-label={t('chat.typePlaceholder')}
-                  className="min-w-0 flex-1 resize-none bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
-                  style={{ maxHeight: '120px' }}
+                  className="min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
+                  style={{ maxHeight: '140px', minHeight: '38px' }}
                 />
                 <AttachButton
                   disabled={send.isPending}
@@ -905,12 +942,12 @@ export default function ConversationPage() {
                 </button>
               )}
               <button
-                onClick={() => (text.trim() ? void handleSend() : setToolsOpen(true))}
+                onClick={() => { if (text.trim()) { setSendFx((v) => v + 1); void handleSend(); } else { setToolsOpen(true); } }}
                 disabled={send.isPending}
                 aria-label={text.trim() ? t('common.post') : t('chat.addTools')}
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md shadow-primary/40 transition-transform active:scale-90 disabled:opacity-40"
               >
-                {send.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : text.trim() ? <Send className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                {send.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : text.trim() ? <Send key={sendFx} className={cn('h-5 w-5', sendFx > 0 && 'send-fly')} /> : <Plus className="h-5 w-5" />}
               </button>
             </div>
           )}
