@@ -2,7 +2,7 @@
 
 import { BadgeCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
-import { cn } from '@/lib/utils';
+import { cn, resolveMediaUrl } from '@/lib/utils';
 
 /**
  * A user avatar that renders the real profile photo when available and falls
@@ -37,6 +37,10 @@ export function UserAvatar({
     .join('')
     .toUpperCase();
 
+  // Resolve root-relative media paths against the API origin so the image
+  // loads regardless of where the avatar URL was saved.
+  const src = resolveMediaUrl(avatarUrl);
+
   const size = className?.match(/h-(\d+)/)?.[1] ?? '10';
   const badgeCls =
     size === '5' ? 'h-3.5 w-3.5'
@@ -56,8 +60,8 @@ export function UserAvatar({
           verified && 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-background',
         )}
       >
-        {avatarUrl ? (
-          <AvatarImage src={avatarUrl} alt={name} onError={onError} />
+        {src ? (
+          <AvatarImage src={src} alt={name} onError={onError} referrerPolicy="no-referrer" />
         ) : null}
         <AvatarFallback className="from-violet-600 to-emerald-500">
           {initials}

@@ -186,6 +186,8 @@ export default function ConversationPage() {
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // Tap ✓✓ / "seen by" avatars → popover listing who read this message.
   const [readReceiptId, setReadReceiptId] = useState<string | null>(null);
+  // Tap a reaction chip → popover listing who reacted with that emoji.
+  const [reactionInfo, setReactionInfo] = useState<{ messageId: string; emoji: string } | null>(null);
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { data: convs } = useConversations();
   const { data: savedConv } = useSavedMessages();
@@ -444,6 +446,7 @@ export default function ConversationPage() {
         ) : peer ? (
           <Link
             href={`/u/${peer.username}`}
+            onClick={(e) => { e.preventDefault(); router.push(`/u/${peer.username}`); }}
             aria-label={peer.fullName}
             title={peer.fullName}
             className="block h-10 w-10 shrink-0"
@@ -457,7 +460,7 @@ export default function ConversationPage() {
         )}
         <div className="min-w-0 flex-1">
           {peer && !conv?.isGroup ? (
-            <Link href={`/u/${peer.username}`} className="block min-w-0 active:opacity-60">
+            <Link href={`/u/${peer.username}`} onClick={(e) => { e.preventDefault(); router.push(`/u/${peer.username}`); }} className="block min-w-0 active:opacity-60">
               <h4 className="truncate text-sm font-semibold">{peer.fullName}</h4>
             </Link>
           ) : (
@@ -764,6 +767,7 @@ export default function ConversationPage() {
                 reactingOpen={reactingId === m.id}
                 onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
                 onReactionTap={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })}
+                onReactionInfo={(msg, emoji) => setReactionInfo({ messageId: msg.id, emoji })}
                 onReactClose={() => setReactingId(null)}
                 onOpenActions={() => setActionMsg(m)}
                 onReplyJump={jumpTo}
@@ -1195,38 +1199,106 @@ export default function ConversationPage() {
               </div>
               <div className="mt-3 space-y-1">
                 {seenBy.length === 0 && <div className="py-4 text-center text-xs text-muted-foreground">{t('chat.seenBy', { names: '—' })}</div>}
-                {seenBy.map((m) => (
-                  <div key={m.uid} className="flex items-center gap-3 rounded-xl p-2">
-                    <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.uid))}>
-                      {initialsOf(m.fullName)}
+                {seenBy.map((m) => {
+                  const row = (
+                    <div className="flex w-full items-center gap-3 rounded-xl p-2">
+                      <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.uid))}>
+                        {initialsOf(m.fullName)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold">{m.fullName} {m.isMe && <span className="text-[10px] text-muted-foreground">(you)</span>}</div>
+                        <div className="text-[11px] text-muted-foreground">@{m.username || m.uid}</div>
+                      </div>
+                      <CheckCheck className="h-4 w-4 shrink-0 text-primary" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold">{m.fullName} {m.isMe && <span className="text-[10px] text-muted-foreground">(you)</span>}</div>
-                      <div className="text-[11px] text-muted-foreground">@{m.username || m.uid}</div>
-                    </div>
-                    <CheckCheck className="h-4 w-4 shrink-0 text-primary" />
-                  </div>
-                ))}
+                  );
+                  return m.isMe || !m.username ? row : (
+                    <Link key={m.uid} href={`/u/${m.username}`} className="flex items-center rounded-xl active:bg-muted" onClick={() => setReadReceiptId(null)}>
+                      {row}
+                    </Link>
+                  );
+                })}
               </div>
               {notSeen.length > 0 && (
                 <>
                   <div className="mt-4 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.readReceiptsNotSeen')}</div>
                   <div className="space-y-1">
-                    {notSeen.map((m) => (
-                      <div key={m.userId} className="flex items-center gap-3 rounded-xl p-2 opacity-70">
-                        <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.userId))}>
-                          {initialsOf(m.fullName)}
+                    {notSeen.map((m) => {
+                      const row = (
+                        <div className="flex w-full items-center gap-3 rounded-xl p-2 opacity-70">
+                          <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.userId))}>
+                            {initialsOf(m.fullName)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold">{m.fullName}</div>
+                            <div className="text-[11px] text-muted-foreground">@{m.username}</div>
+                          </div>
+                          <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold">{m.fullName}</div>
-                          <div className="text-[11px] text-muted-foreground">@{m.username}</div>
-                        </div>
-                        <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      </div>
-                    ))}
+                      );
+                      return m.username ? (
+                        <Link key={m.userId} href={`/u/${m.username}`} className="flex items-center rounded-xl active:bg-muted" onClick={() => setReadReceiptId(null)}>
+                          {row}
+                        </Link>
+                      ) : (
+                        <div key={m.userId}>{row}</div>
+                      );
+                    })}
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Who-reacted popover: lists everyone who chose this emoji on a message */}
+      {reactionInfo && (() => {
+        const msg = messages.find((x) => x.id === reactionInfo.messageId);
+        const bucket = msg?.reactions?.find((r) => r.emoji === reactionInfo.emoji);
+        const reactors = (bucket?.reactorIds ?? []).map((uid) => {
+          const member = (conv?.members ?? []).find((mm) => mm.userId === uid);
+          return { uid, fullName: member?.fullName ?? uid, username: member?.username ?? '', isMe: uid === me?.id };
+        });
+        return (
+          <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setReactionInfo(null)}>
+            <div className="max-h-[70dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-extrabold"><span className="text-2xl leading-none">{reactionInfo.emoji}</span>{t('chat.reactions')}</h2>
+                <button onClick={() => setReactionInfo(null)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {bucket?.count ?? 0} {t('chat.reactions')} · {msg?.body ?? '📎 Attachment'}
+              </div>
+              <div className="mt-3 space-y-1">
+                {reactors.length === 0 && <div className="py-4 text-center text-xs text-muted-foreground">{t('chat.noReactions')}</div>}
+                {reactors.map((m) => {
+                  const row = (
+                    <div className="flex w-full items-center gap-3 rounded-xl p-2">
+                      <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.uid))}>
+                        {initialsOf(m.fullName)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold">{m.fullName} {m.isMe && <span className="text-[10px] text-muted-foreground">(you)</span>}</div>
+                        <div className="text-[11px] text-muted-foreground">@{m.username || m.uid}</div>
+                      </div>
+                      <span className="text-xl">{reactionInfo.emoji}</span>
+                    </div>
+                  );
+                  return m.isMe || !m.username ? row : (
+                    <Link key={m.uid} href={`/u/${m.username}`} className="flex items-center rounded-xl active:bg-muted" onClick={() => setReactionInfo(null)}>
+                      {row}
+                    </Link>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => { toggleReaction.mutate({ messageId: reactionInfo.messageId, emoji: reactionInfo.emoji }); setReactionInfo(null); }}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-sm font-semibold active:scale-[.98]"
+              >
+                {bucket?.mine ? t('chat.removeReaction') : t('chat.addReaction')} {reactionInfo.emoji}
+              </button>
             </div>
           </div>
         );
@@ -1368,6 +1440,70 @@ export default function ConversationPage() {
   );
 }
 
+/** Split a message body into text / link / mention / code segments and render
+ * each with a tap action: URLs open, @handles go to that user's profile, and
+ * `` `code` `` copies to clipboard. Search-hit text is highlighted. */
+function RichBody({ body, isMine, highlight, className }: { body: string; isMine: boolean; highlight?: string | null; className?: string }) {
+  const { t } = useI18n();
+  const q = highlight?.trim().toLowerCase();
+  const qLen = q && q.length >= 2 ? q.length : 0;
+
+  const highlightText = (s: string, key: string) => {
+    if (!qLen) return <span key={key}>{s}</span>;
+    const idx = s.toLowerCase().indexOf(q!);
+    if (idx < 0) return <span key={key}>{s}</span>;
+    return (
+      <span key={key}>
+        {s.slice(0, idx)}
+        <mark className={cn('rounded px-0.5 font-bold text-foreground', isMine ? 'bg-yellow-300' : 'bg-primary/20')}>{s.slice(idx, idx + qLen)}</mark>
+        {s.slice(idx + qLen)}
+      </span>
+    );
+  };
+
+  const copyCode = (code: string) => {
+    try { void navigator.clipboard?.writeText(code); toast.success(t('chat.copiedCode')); } catch { /* ignore */ }
+  };
+
+  // URL, @mention, #hashtag, or `inline code` (non-greedy code so it doesn't swallow newlines).
+  const re = /(https?:\/\/[^\s<]+)|(@[a-zA-Z0-9_]{2,30})|(#[a-zA-Z0-9_]{3,30})|(`[^`\n]+`)/g;
+  const out: ReactNode[] = [];
+  let last = 0;
+  let key = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(body)) !== null) {
+    if (m.index > last) out.push(highlightText(body.slice(last, m.index), `t${key++}`));
+    const tok = m[0];
+    if (m[1]) {
+      const href = /^https?:\/\//i.test(tok) ? tok : `https://${tok}`;
+      out.push(
+        <a key={`l${key++}`} href={href} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+          className={cn('underline decoration-dotted underline-offset-2', isMine ? 'text-white' : 'text-primary')}>{tok}</a>,
+      );
+    } else if (m[2]) {
+      out.push(
+        <Link key={`l${key++}`} href={`/u/${tok.slice(1)}`} onClick={(e) => e.stopPropagation()}
+          className={cn('font-bold', isMine ? 'text-white' : 'text-primary')}>{tok}</Link>,
+      );
+    } else if (m[3]) {
+      out.push(
+        <span key={`l${key++}`} className={cn('font-semibold', isMine ? 'text-white' : 'text-primary')}>{tok}</span>,
+      );
+    } else if (m[4]) {
+      const code = tok.slice(1, -1);
+      out.push(
+        <button key={`l${key++}`} type="button" onClick={(e) => { e.stopPropagation(); copyCode(code); }}
+          className={cn('mx-0.5 rounded border px-1 py-0.5 font-mono text-[0.85em]', isMine ? 'border-white/30 bg-white/10' : 'border-border bg-muted text-foreground')}
+          title={t('chat.copyCode')}>{code}</button>,
+      );
+    }
+    last = m.index + tok.length;
+  }
+  if (last < body.length) out.push(highlightText(body.slice(last), `t${key++}`));
+
+  return <p className={cn('whitespace-pre-wrap break-words', className)}>{out.length ? out : body}</p>;
+}
+
 function MessageBubble({
   m,
   isMine,
@@ -1384,6 +1520,7 @@ function MessageBubble({
   onReplyJump,
   onReplyStart,
   onReadTap,
+  onReactionInfo,
   highlight,
 }: {
   m: ChatMessage;
@@ -1401,6 +1538,7 @@ function MessageBubble({
   onReplyJump?: (id: string) => void;
   onReplyStart?: (m: ChatMessage) => void;
   onReadTap?: (m: ChatMessage) => void;
+  onReactionInfo?: (m: ChatMessage, emoji: string) => void;
   highlight?: string | null;
 }) {
   const { t } = useI18n();
@@ -1645,20 +1783,7 @@ function MessageBubble({
           sticker ? (
             <div className={cn('sticker-pop px-2 py-0.5 text-6xl leading-none', isImage && 'p-3')}>{m.body}</div>
           ) : (
-            (() => {
-              const q = highlight?.trim().toLowerCase();
-              const idx = q && q.length >= 2 ? m.body.toLowerCase().indexOf(q) : -1;
-              if (idx < 0) {
-                return <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>;
-              }
-              return (
-                <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>
-                  {m.body.slice(0, idx)}
-                  <mark className={cn('rounded px-0.5 font-bold text-foreground', isMine ? 'bg-yellow-300' : 'bg-primary/20')}>{m.body.slice(idx, idx + (highlight?.length ?? 0))}</mark>
-                  {m.body.slice(idx + (highlight?.length ?? 0))}
-                </p>
-              );
-            })()
+            <RichBody body={m.body} isMine={isMine} highlight={highlight} className={isImage ? 'p-3' : undefined} />
           )
         )}
         {(() => {
@@ -1736,7 +1861,7 @@ function MessageBubble({
           {m.reactions.map((r) => (
             <button
               key={r.emoji}
-              onClick={(e) => { e.stopPropagation(); onReactionTap?.(r.emoji); }}
+              onClick={(e) => { e.stopPropagation(); onReactionInfo?.(m, r.emoji); }}
               className={cn(
                 'inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] transition-transform active:scale-90',
                 r.mine ? 'border-primary/40 bg-primary/15 text-primary' : 'border-border bg-card text-muted-foreground',

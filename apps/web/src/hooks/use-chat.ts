@@ -58,7 +58,7 @@ export interface ChatMessage {
     senderId: string;
     sender: { fullName: string };
   } | null;
-  reactions?: { emoji: string; count: number; mine: boolean }[];
+  reactions?: { emoji: string; count: number; mine: boolean; reactorIds?: string[] }[];
   readBy?: number;
   readByTotal?: number;
   readByUserIds?: string[];

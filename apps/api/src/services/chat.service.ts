@@ -216,11 +216,12 @@ export async function listMessages(
   // Compact reactions into { emoji, count, mine } per message so the client
   // renders a chip row without extra plumbing.
   const enriched = trimmed.map((m) => {
-    const buckets: Record<string, { emoji: string; count: number; mine: boolean }> = {};
+    const buckets: Record<string, { emoji: string; count: number; mine: boolean; reactorIds: string[] }> = {};
     for (const r of m.reactions) {
-      const b = buckets[r.emoji] ?? (buckets[r.emoji] = { emoji: r.emoji, count: 0, mine: false });
+      const b = buckets[r.emoji] ?? (buckets[r.emoji] = { emoji: r.emoji, count: 0, mine: false, reactorIds: [] });
       b.count++;
       if (r.userId === userId) b.mine = true;
+      b.reactorIds.push(r.userId);
     }
     const readers = readTimes.filter((rt) => rt.lastReadAt && rt.lastReadAt >= m.createdAt).map((rt) => rt.userId);
     return { ...m, reactions: Object.values(buckets), readBy: readers.length, readByTotal: readTimes.length, readByUserIds: readers };

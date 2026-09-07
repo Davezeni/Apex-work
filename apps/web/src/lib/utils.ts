@@ -2,6 +2,21 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /** shadcn's `cn` helper — merge Tailwind classes safely */
+const MEDIA_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+
+/**
+ * Resolve a media URL to one the browser <img>/<audio>/<video> can load.
+ * Avatars/attachments served by the API may come back as a root-relative path
+ * (e.g. "/v1/uploads/files/<id>"). On the web origin that path would 404, so we
+ * prefix it with the API base. Absolute (http/blob/data) URLs pass through.
+ */
+export function resolveMediaUrl(input?: string | null): string | undefined {
+  if (!input) return undefined;
+  if (/^(https?:)?\/\//.test(input) || input.startsWith('data:') || input.startsWith('blob:')) return input;
+  if (input.startsWith('/') && MEDIA_BASE) return `${MEDIA_BASE}${input}`;
+  return input;
+}
+
 export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }

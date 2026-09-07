@@ -18,6 +18,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Avatar fix, profile navigation & chat tap-actions (power push #48)
+
+### Fixed
+- **Avatar shows empty everywhere** — avatar URLs that were stored as a
+  root-relative path (`/v1/uploads/files/<id>`) resolved against the *web*
+  origin and 404'd in the browser. `UserAvatar` now resolves media paths against
+  the API origin (`resolveMediaUrl`) and sets `referrerPolicy="no-referrer"`, so
+  the photo loads on chat headers, gig cards, the profile page, reviews, and
+  search. Avatars are also uploaded via the API's self-hosted public gateway so
+  they always return a bare-`<img>`-readable absolute URL.
+- **Chat profile click → user page** — tapping the header avatar, name, or
+  verified badge now reliably routes to `/u/<username>` (added a `router.push`
+  fallback so it never gets swallowed by the mobile touch/swipe layer).
+
+### Added
+- **Tap-actions in message text** — URLs open in a new tab, `@handles` link to
+  that user's profile, and `` `inline code` `` taps copy to clipboard (with a
+  toast). Search-hit highlighting still works.
+- **"Who reacted" popover** — tap a message's emoji chips to see exactly who
+  reacted (avatar, name, `@handle`) with an add/remove toggle. Rows link to the
+  member's profile. API now returns per-emoji reactor IDs.
+- **Read-receipt rows are clickable** — each person in the read / not-read sheet
+  links to their profile page.
+
 ## [Unreleased] — Chat power features: read-receipt popover & in-text search highlight (power push #47)
 
 ### Added

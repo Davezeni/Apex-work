@@ -161,6 +161,13 @@ export function useUpload() {
   >({
     mutationFn: async ({ file, bucket, onProgress }) => {
       const contentType = contentTypeForFile(file);
+      // Avatars must be readable by any bare <img> tag everywhere (chat header,
+      // gig cards, profile, reviews). The API's self-hosted file gateway serves
+      // them publicly at an absolute URL with immutable cache headers, so we use
+      // it directly — it can't fail with a non-public Supabase bucket ACL.
+      if (bucket === 'avatars') {
+        return await uploadThroughApi(file, bucket, token, contentType, onProgress);
+      }
       let signed: SignResponse | null = null;
       let firstError: Error | null = null;
 
