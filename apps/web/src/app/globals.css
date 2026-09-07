@@ -7,19 +7,19 @@
     /* Light theme — UI/UX Pro Max Freelancer/Marketplace palette.
        Violet primary (trust) + hire-green accent, with violet-tinted neutrals so
        every surface feels on-brand rather than generic gray. */
-    --background: 262 40% 98.5%;         /* barely-cool near-white */
-    --foreground: 258 24% 10%;           /* near-black w/ violet cast */
+    --background: 262 40% 98.5%; /* barely-cool near-white */
+    --foreground: 258 24% 10%; /* near-black w/ violet cast */
     --card: 0 0% 100%;
     --card-foreground: 258 24% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 258 24% 10%;
-    --primary: 262 83% 58%;              /* violet */
+    --primary: 262 83% 58%; /* violet */
     --primary-foreground: 0 0% 100%;
-    --secondary: 258 60% 96%;            /* violet-tinted surface */
+    --secondary: 258 60% 96%; /* violet-tinted surface */
     --secondary-foreground: 262 62% 34%;
     --muted: 256 50% 96%;
     --muted-foreground: 258 12% 42%;
-    --accent: 142 66% 37%;               /* hire green (#16A34A) */
+    --accent: 142 66% 37%; /* hire green (#16A34A) */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
@@ -30,25 +30,25 @@
   }
 
   .dark {
-    --background: 258 22% 6%;            /* deep violet-black */
-    --foreground: 258 20% 96%;
-    --card: 258 20% 9%;
-    --card-foreground: 258 20% 96%;
-    --popover: 258 22% 8%;
-    --popover-foreground: 258 20% 96%;
-    --primary: 262 90% 74%;              /* lighter violet for dark */
-    --primary-foreground: 258 40% 8%;
-    --secondary: 258 16% 15%;
-    --secondary-foreground: 258 20% 96%;
-    --muted: 258 16% 15%;
-    --muted-foreground: 258 8% 64%;
-    --accent: 142 66% 52%;               /* hire green */
-    --accent-foreground: 258 40% 8%;
+    --background: 256 32% 8%; /* deeper violet-black */
+    --foreground: 258 30% 97%;
+    --card: 256 30% 11%; /* cards lift off bg */
+    --card-foreground: 258 30% 97%;
+    --popover: 256 30% 10%;
+    --popover-foreground: 258 30% 97%;
+    --primary: 262 94% 76%; /* brighter violet for dark */
+    --primary-foreground: 256 60% 9%;
+    --secondary: 260 22% 17%;
+    --secondary-foreground: 258 30% 97%;
+    --muted: 258 18% 16%;
+    --muted-foreground: 258 12% 68%;
+    --accent: 142 70% 55%; /* brighter hire-green for dark */
+    --accent-foreground: 258 60% 9%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 258 16% 16%;
-    --input: 258 16% 16%;
-    --ring: 262 90% 74%;
+    --border: 258 22% 20%;
+    --input: 258 22% 20%;
+    --ring: 262 94% 76%;
     --radius: 0.75rem;
   }
 
@@ -62,6 +62,10 @@
   body {
     @apply bg-background font-sans text-foreground antialiased;
     font-feature-settings: 'ss01', 'cv11';
+    background-image:
+      radial-gradient(1000px 560px at 18% -12%, oklch(0.5 0.25 290 / 0.1), transparent 60%),
+      radial-gradient(880px 480px at 100% 0%, oklch(0.5 0.18 150 / 0.07), transparent 58%);
+    background-attachment: fixed;
   }
 
   /* Prevent mobile viewport bounce/zoom & horizontal pan.
@@ -105,8 +109,16 @@
     animation: typing-bounce 1s infinite ease-in-out;
   }
   @keyframes typing-bounce {
-    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-    30% { transform: translateY(-3px); opacity: 1; }
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+    30% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
   }
 
   .grad-hero {
@@ -211,28 +223,46 @@
   }
 }
 
-  /* Chat send-arrow "whoosh" animation (restarts on each send). */
-  .send-fly {
-    animation: send-fly 0.45s ease;
+/* Chat send-arrow "whoosh" animation (restarts on each send). */
+.send-fly {
+  animation: send-fly 0.45s ease;
+}
+@keyframes send-fly {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
   }
-  @keyframes send-fly {
-    0% { transform: translateX(0); opacity: 1; }
-    50% { transform: translateX(14px); opacity: 0; }
-    100% { transform: translateX(0); opacity: 1; }
+  50% {
+    transform: translateX(14px);
+    opacity: 0;
   }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
 
-  /* Never let the chat body/page pan horizontally. */
-  .no-hpan {
-    overflow-x: hidden;
-  }
+/* Never let the chat body/page pan horizontally. */
+.no-hpan {
+  overflow-x: hidden;
+}
 
-  /* Sticker "pop" entrance — large sticker emojis spring in on send/receive. */
-  .sticker-pop {
-    animation: sticker-pop 0.4s cubic-bezier(0.18, 1.25, 0.4, 1);
-    display: inline-block;
+/* Sticker "pop" entrance — large sticker emojis spring in on send/receive. */
+.sticker-pop {
+  animation: sticker-pop 0.4s cubic-bezier(0.18, 1.25, 0.4, 1);
+  display: inline-block;
+}
+@keyframes sticker-pop {
+  0% {
+    transform: scale(0.4) translateY(8px);
+    opacity: 0;
   }
-  @keyframes sticker-pop {
-    0% { transform: scale(0.4) translateY(8px); opacity: 0; }
-    60% { transform: scale(1.12) translateY(-2px); opacity: 1; }
-    100% { transform: scale(1) translateY(0); opacity: 1; }
+  60% {
+    transform: scale(1.12) translateY(-2px);
+    opacity: 1;
   }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
