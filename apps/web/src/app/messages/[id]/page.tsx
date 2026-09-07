@@ -62,6 +62,15 @@ const CHAR_MAX = 4096;
 // Counter turns amber once you're within this many chars of the limit.
 const CHAR_THRESHOLD = 240;
 
+/** Short haptic tick on supported devices (best-effort, no-op otherwise). */
+function haptic(): void {
+  try {
+    navigator.vibrate?.(15);
+  } catch {
+    /* not supported — ignore */
+  }
+}
+
 function dateKey(iso: string): string {
   const d = new Date(iso);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -84,7 +93,11 @@ export default function ConversationPage() {
   const { data, isLoading, error } = useMessages(id);
   const { data: conv } = useConversation(id);
   const messages = data?.items ?? [];
-  const peer = messages.find((m) => m.senderId !== me?.id)?.sender ?? null;
+  // Peer from the conversation detail (works even when there are no messages
+  // yet); fall back to the latest incoming sender, then null.
+  const peer =
+    (conv && !conv.isGroup ? (conv.peer ?? null) : null) ??
+    (messages.find((m) => m.senderId !== me?.id)?.sender ?? null);
   const send = useSendMessage(id);
   const addMembers = useAddGroupMembers(id);
   const leaveGroup = useLeaveGroup();
@@ -382,7 +395,10 @@ export default function ConversationPage() {
       onTouchEnd={onTouchEnd}
     >
       {/* Header */}
-      <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+      <header
+        className="sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 pb-3 backdrop-blur-xl"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
+      >
         <button
           onClick={() => router.back()}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
@@ -1315,7 +1331,7 @@ function MessageBubble({
     if ((e.target as HTMLElement).closest('button, a')) return;
     longPressed.current = false;
     if (pressTimer.current) clearTimeout(pressTimer.current);
-    pressTimer.current = setTimeout(() => { longPressed.current = true; onReplyStart?.(m); }, 550);
+    pressTimer.current = setTimeout(() => { longPressed.current = true; haptic(); onReplyStart?.(m); }, 550);
   };
   const cancelPress = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
 
@@ -1337,6 +1353,7 @@ function MessageBubble({
     const dy = t.clientY - start.y;
     if (dx > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) {
       cancelPress();
+      haptic();
       onReplyStart?.(m);
     }
   };
@@ -1368,13 +1385,15 @@ function MessageBubble({
       {!isMine && (
         <div className={cn('w-8 shrink-0', showAvatar ? '' : 'invisible')}>
           {showAvatar && (
-            <div
-              className={cn(
-                'grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br text-[11px] font-bold text-white',
-                gradientFor(m.sender.id),
+            <div className="h-8 w-8 overflow-hidden rounded-full bg-gradient-to-br">
+              {m.sender.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.sender.avatarUrl} alt={m.sender.fullName} className="h-full w-full object-cover" />
+              ) : (
+                <div className={cn('grid h-8 w-8 place-items-center text-[11px] font-bold text-white', gradientFor(m.sender.id))}>
+                  {initialsOf(m.sender.fullName)}
+                </div>
               )}
-            >
-              {initialsOf(m.sender.fullName)}
             </div>
           )}
         </div>

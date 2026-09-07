@@ -18,6 +18,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Header fix, headroom, sender photos & haptics (power push #40)
+
+### Fixed
+- **Header shows "Conversation" / "?" instead of the contact** — the header
+  derived the peer only from loaded messages, which was null for empty/new
+  conversations. It now reads `conv.peer` (from conversation detail) first, so
+  the contact's real name and photo show immediately.
+
+### Changed
+- **Headroom above the profile** — the chat header now has extra top padding
+  (plus the safe-area inset) so the profile avatar/name aren't clipped at the
+  top edge.
+- **Sender photo in message bubbles** — the small avatar beside incoming
+  messages now renders the sender's real profile photo (falling back to
+  initials).
+
+### Added
+- **Haptic feedback** on swipe-right-to-reply and on long-press-to-reply
+  (short vibration tick on supported devices).
+
 ## [Unreleased] — Chat header & composer tweaks (power push #39)
 
 ### Changed
