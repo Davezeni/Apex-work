@@ -14,6 +14,7 @@ export interface ChatPeer {
   fullName: string;
   avatarUrl: string | null;
   online?: boolean | null;
+  isVerified?: boolean;
 }
 
 export interface ChatSummary {

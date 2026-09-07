@@ -135,6 +135,8 @@ router.get(
             rating: true,
             ratingCount: true,
             completedOrders: true,
+            isPhoneVerified: true,
+            isIdVerified: true,
           },
         },
       },

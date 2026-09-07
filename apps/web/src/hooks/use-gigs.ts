@@ -43,6 +43,9 @@ export interface GigDetail extends GigListItem {
     rating: number;
     ratingCount: number;
     completedOrders: number;
+    isVerified?: boolean;
+    isPhoneVerified?: boolean;
+    isIdVerified?: boolean;
   };
 }
 

@@ -236,6 +236,7 @@ export default function GigDetailPage() {
             name={gig.owner.fullName}
             avatarUrl={gig.owner.avatarUrl}
             id={gig.owner.id}
+            verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
             className="h-14 w-14 text-base font-bold ring-4 ring-card"
           />
           <div className="min-w-0 flex-1">
@@ -327,6 +328,7 @@ export default function GigDetailPage() {
                 name={gig.owner.fullName}
                 avatarUrl={gig.owner.avatarUrl}
                 id={gig.owner.id}
+                verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
                 className="h-14 w-14 text-base font-bold"
               />
               <div className="min-w-0 flex-1">

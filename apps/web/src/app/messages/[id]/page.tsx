@@ -422,7 +422,7 @@ export default function ConversationPage() {
             aria-label={peer.fullName}
             className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full"
           >
-            <UserAvatar name={peer.fullName} avatarUrl={peer.avatarUrl} id={peer.id} className="h-10 w-10 text-sm font-bold" />
+            <UserAvatar name={peer.fullName} avatarUrl={peer.avatarUrl} id={peer.id} verified={peer.isVerified} className="h-10 w-10 text-sm font-bold" />
           </Link>
         ) : (
           <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
@@ -1384,16 +1384,13 @@ function MessageBubble({
       {!isMine && (
         <div className={cn('w-8 shrink-0', showAvatar ? '' : 'invisible')}>
           {showAvatar && (
-            <div className="h-8 w-8 overflow-hidden rounded-full bg-gradient-to-br">
-              {m.sender.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={m.sender.avatarUrl} alt={m.sender.fullName} className="h-full w-full object-cover" />
-              ) : (
-                <div className={cn('grid h-8 w-8 place-items-center text-[11px] font-bold text-white', gradientFor(m.sender.id))}>
-                  {initialsOf(m.sender.fullName)}
-                </div>
-              )}
-            </div>
+            <UserAvatar
+              name={m.sender.fullName}
+              avatarUrl={m.sender.avatarUrl}
+              id={m.sender.id}
+              verified={m.sender.isVerified}
+              className="h-8 w-8 text-[11px] font-bold"
+            />
           )}
         </div>
       )}

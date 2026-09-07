@@ -232,6 +232,7 @@ export default function PublicProfilePage() {
             name={user.fullName}
             avatarUrl={user.avatarUrl}
             id={user.id}
+            verified={user.isVerified}
             className="h-20 w-20 text-2xl font-bold ring-4 ring-card"
           />
           <div className="min-w-0 flex-1 pt-1">

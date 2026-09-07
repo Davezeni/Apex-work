@@ -9,6 +9,7 @@ import {
   ArrowLeft, Users, ShoppingBag, Briefcase, Package, Wallet as WalletIcon, Flag,
   ShieldOff, ShieldCheck, Loader2, CheckCircle, XCircle, TrendingUp,
   BarChart3, AlertTriangle as AlertTri, Award as AwardIcon, Cpu, Menu, X as CloseIcon, Search,
+  Image as ImageIcon, Upload,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -17,6 +18,8 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatEtb, formatCompact, timeAgo, cn } from '@/lib/utils';
 import { ModerationTab } from '@/components/admin/moderation-tab';
+import { MediaReviewTab } from '@/components/admin/media-review-tab';
+import { UsersImportButton } from '@/components/admin/users-import';
 import { MoneyTab } from '@/components/admin/money-tab';
 import { SupportTab } from '@/components/admin/support-tab';
 import { PromotionsTab } from '@/components/admin/promotions-tab';
@@ -39,11 +42,11 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-06.38';
+export const ADMIN_UI_BUILD = '2026-09-06.39';
 
 type Tab =
   | 'summary' | 'reports' | 'disputes' | 'withdrawals' | 'users' | 'certs' | 'diagnostics'
-  | 'moderation' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins' | 'agencies';
+  | 'moderation' | 'media' | 'money' | 'support' | 'promotions' | 'subscriptions' | 'settings' | 'audit' | 'admins' | 'agencies';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -95,6 +98,7 @@ export default function AdminPage() {
     <AdminShell role={me.role} tab={tab} onChange={setTab} onBack={() => router.back()}>
       {tab === 'summary' && <SummaryTab />}
       {tab === 'moderation' && <ModerationTab />}
+      {tab === 'media' && <MediaReviewTab />}
       {tab === 'reports' && <ReportsTab />}
       {tab === 'money' && <MoneyTab />}
       {tab === 'disputes' && <DisputesTab />}
@@ -119,6 +123,7 @@ export default function AdminPage() {
 const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; cap: string }[] = [
   { id: 'summary',       label: 'Summary',        icon: <BarChart3 className="h-4 w-4" />, cap: 'dashboard:view' },
   { id: 'moderation',    label: 'Moderation',     icon: <ShieldOff className="h-4 w-4" />, cap: 'moderation:content' },
+  { id: 'media',         label: 'Media review',   icon: <ImageIcon className="h-4 w-4" />, cap: 'moderation:content' },
   { id: 'reports',       label: 'Reports',        icon: <Flag className="h-4 w-4" />, cap: 'moderation:reports' },
   { id: 'money',         label: 'Orders & Money', icon: <WalletIcon className="h-4 w-4" />, cap: 'money:orders' },
   { id: 'disputes',      label: 'Disputes',       icon: <AlertTri className="h-4 w-4" />, cap: 'moderation:reports' },
@@ -870,6 +875,7 @@ function UsersTab() {
     <div className="mx-3 mt-4">
       <div className="mb-2 flex items-center gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users…" className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary" />
+        <UsersImportButton />
         <ExportButton kind="users" params={q ? { q } : {}} />
       </div>
       {isLoading && <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />}

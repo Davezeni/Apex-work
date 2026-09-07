@@ -18,6 +18,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Verified rings, inbox typing, admin media review & import (power push #43)
+
+### Added
+- **Verified avatar ring** — verified users (phone + ID) now show a cyan ring
+  and a small check badge on their avatar everywhere: public profile, chat
+  header, chat bubbles, and gig-owner cards. (`UserAvatar` gained a `verified`
+  prop; the API now returns `isVerified` on chat peers/members and gig owners.)
+- **Live "typing…" in the inbox** — the conversation list now shows a pulsing
+  "typing…" row when a contact is typing, even with the thread closed. The
+  server relays typing to each member's private socket room; a lightweight
+  `useInboxTyping` hook renders the pulse (auto-clears after 4s).
+- **Admin → Media review tab** — a photo-moderation queue listing recent user
+  avatars + gig covers with preview, and one-click **Remove avatar** / **Flag
+  gig** actions (audited). New endpoints under `/admin/ops/media/*`.
+- **Admin → Bulk import users (CSV)** — a "Import" button in the Users tab that
+  uploads/pastes a CSV (`fullName, username, phone, email, role, password`) and
+  bulk-creates accounts with unique usernames + bcrypt passwords, reporting
+  created/skipped rows. Endpoint `/admin/ops/users/import`.
+
 ## [Unreleased] — Taller profile hero, header profile link + suggestions (power push #42)
 
 ### Changed

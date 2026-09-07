@@ -127,13 +127,33 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       }
     });
 
-    // Typing indicators are ephemeral, no persistence — just relay
+    // Typing indicators are ephemeral, no persistence — just relay.
+    // We also push a `typing:inbox` event to the OTHER members' private user
+    // rooms so the conversation list (inbox) can show a live "... typing" pulse
+    // even when no thread is open. Best-effort: if the member lookup fails we
+    // still keep the in-thread relay working.
+    const relayInboxTyping = async (conversationId: string, status: 'start' | 'stop') => {
+      if (!socket.userId) return;
+      try {
+        const { prisma } = await import('../lib/prisma.js');
+        const members = await prisma.conversationMember.findMany({
+          where: { conversationId, userId: { not: socket.userId } },
+          select: { userId: true },
+        });
+        for (const m of members) {
+          io.to(`user:${m.userId}`).emit('typing:inbox', { conversationId, userId: socket.userId, status });
+        }
+      } catch {
+        /* best-effort only */
+      }
+    };
     socket.on('typing:start', (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
       socket.to(`conv:${conversationId}`).emit('typing:start', {
         conversationId,
         userId: socket.userId,
       });
+      void relayInboxTyping(conversationId, 'start');
     });
     socket.on('typing:stop', (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
@@ -141,6 +161,7 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
         conversationId,
         userId: socket.userId,
       });
+      void relayInboxTyping(conversationId, 'stop');
     });
 
     // ------- WebRTC group call signaling -------

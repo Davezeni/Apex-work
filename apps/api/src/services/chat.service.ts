@@ -119,7 +119,7 @@ export async function listConversations(userId: string) {
           members: {
             include: {
               user: {
-                select: { id: true, username: true, fullName: true, avatarUrl: true },
+                select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true },
               },
             },
           },
@@ -154,7 +154,7 @@ export async function getConversation(conversationId: string, userId: string) {
     where: { id: conversationId },
     include: {
       members: {
-        include: { user: { select: { id: true, username: true, fullName: true, avatarUrl: true } } },
+        include: { user: { select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true } } },
       },
       messages: {
         take: 1,
@@ -175,6 +175,7 @@ export async function getConversation(conversationId: string, userId: string) {
       lastReadAt: m.lastReadAt,
       online: isOnline(m.userId),
       ...m.user,
+      isVerified: !!(m.user.isPhoneVerified && m.user.isIdVerified),
     })),
     me: { isMuted: membership?.isMuted ?? false, isAdmin: membership?.isAdmin ?? false },
   };
@@ -192,7 +193,7 @@ export async function listMessages(
     take: opts.limit + 1,
     ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
     include: {
-      sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      sender: { select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true } },
       replyTo: {
         select: {
           id: true, body: true, attachmentType: true, senderId: true,
@@ -257,7 +258,7 @@ export async function sendMessage(input: {
         replyToId: input.replyToId,
       },
       include: {
-        sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+        sender: { select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true } },
       },
     });
     await tx.conversation.update({
@@ -546,7 +547,7 @@ export async function searchMessages(conversationId: string, userId: string, que
     take: 50,
     select: {
       id: true, body: true, senderId: true, attachmentType: true, createdAt: true,
-      sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      sender: { select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true } },
     },
   });
   return { items };
@@ -608,7 +609,7 @@ const conversationInclude = (selfId: string) => ({
   members: {
     include: {
       user: {
-        select: { id: true, username: true, fullName: true, avatarUrl: true },
+        select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true },
       },
     },
   },
@@ -639,7 +640,7 @@ function shapeConversation(conv: any, selfId: string, lastReadAt: Date | null) {
     id: conv.id,
     isGroup: conv.isGroup,
     title: conv.title,
-    peer: peer ? { ...peer, online: isOnline(peer.id) } : null,
+    peer: peer ? { ...peer, online: isOnline(peer.id), isVerified: !!(peer.isPhoneVerified && peer.isIdVerified) } : null,
     lastMessage,
     lastMessageAt: conv.lastMessageAt,
     unread,

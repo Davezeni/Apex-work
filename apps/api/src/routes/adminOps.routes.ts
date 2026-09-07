@@ -17,7 +17,7 @@ import { prisma } from '../lib/prisma.js';
 import {
   gigModerateSchema, jobModerateSchema, reviewModerateSchema, orderRefundSchema,
   walletAdjustSchema, featuredSchema, broadcastSchema, userRoleSchema,
-  ticketReplySchema, ticketStatusSchema, settingUpsertSchema,
+  ticketReplySchema, ticketStatusSchema, settingUpsertSchema, type UserRole,
 } from '@apex-work/shared';
 
 import * as mod from '../services/admin/moderation.service.js';
@@ -40,6 +40,8 @@ import * as proRoi from '../services/admin/proRoi.service.js';
 import * as retention from '../services/admin/retention.service.js';
 import * as emailQueue from '../services/admin/emailQueue.service.js';
 import * as opsHealth from '../services/admin/opsHealth.service.js';
+import * as mediaReview from '../services/admin/mediaReview.service.js';
+import * as userImport from '../services/admin/userImport.service.js';
 
 const router: Router = Router();
 router.use(requireAuth, requireAdmin);
@@ -844,6 +846,75 @@ router.get(
     const { adminId, resourceType } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
       fetch: (p) => ops.listAudit({ adminId, resourceType, limit: p.limit, cursorWhere: p.cursorWhere }),
+    });
+    return success(res, result);
+  }),
+);
+
+// ================= MEDIA REVIEW QUEUE =================
+
+router.get(
+  '/media',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const limit = Math.min(120, Math.max(1, Number((req.query as { limit?: string }).limit) || 40));
+    return success(res, await mediaReview.listMediaQueue(limit));
+  }),
+);
+
+const mediaTargetSchema = z.object({});
+router.post(
+  '/media/avatar/:id/remove',
+  requireCapability('moderation:content'),
+  validate(mediaTargetSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await mediaReview.removeAvatar(id);
+    await adminAudit({ ...actor, ip: req.ip, action: 'MEDIA.REMOVE_AVATAR', resourceType: 'USER', resourceId: id });
+    return success(res, result);
+  }),
+);
+
+router.post(
+  '/media/gig/:id/flag',
+  requireCapability('moderation:content'),
+  validate(mediaTargetSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const actor = await loadActor(req);
+    const result = await mediaReview.flagGig(id);
+    await adminAudit({ ...actor, ip: req.ip, action: 'MEDIA.FLAG_GIG', resourceType: 'GIG', resourceId: id });
+    return success(res, result);
+  }),
+);
+
+// ================= BULK USER IMPORT (CSV) =================
+
+const importSchema = z.object({ rows: z.array(z.record(z.string(), z.any())).max(500) });
+router.post(
+  '/users/import',
+  requireCapability('users:suspend'),
+  validate(importSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as { rows: Record<string, string>[] };
+    const rows: userImport.ImportRow[] = body.rows.map((r) => ({
+      fullName: String(r.fullName ?? r.name ?? ''),
+      username: r.username ? String(r.username) : undefined,
+      phone: r.phone ? String(r.phone) : undefined,
+      email: r.email ? String(r.email) : undefined,
+      role: r.role ? (String(r.role).toUpperCase() as UserRole) : undefined,
+      password: r.password ? String(r.password) : undefined,
+    }));
+    const actor = await loadActor(req);
+    const result = await userImport.importUsers(rows);
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'USERS.BULK_IMPORT',
+      resourceType: 'USER',
+      resourceId: 'csv',
+      meta: { created: result.created, skipped: result.skipped },
     });
     return success(res, result);
   }),
