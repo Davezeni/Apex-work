@@ -35,7 +35,7 @@ export function onlineUserIds(): Set<string> {
 }
 
 /** Throttled DB write so presence survives a redeploy/restart. */
-let lastPersist: Record<string, number> = {};
+const lastPersist: Record<string, number> = {};
 export function maybePersistLastSeen(userId: string): void {
   const now = Date.now();
   if ((lastPersist[userId] ?? 0) < now - 60_000) {

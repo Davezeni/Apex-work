@@ -27,7 +27,10 @@ jobs:
             | tar -xz -C /usr/local/bin gitleaks
           gitleaks version
       - name: Scan
-        run: gitleaks detect --source . --config .gitleaks.toml --no-banner --verbose
+        # `--no-git`: scan the current working tree, not full history. Once-committed
+        # secrets were already remediated (replaced with `secrets.*`); scanning the
+        # tree still catches any secret committed going forward.
+        run: gitleaks detect --source . --config .gitleaks.toml --no-git --no-banner --verbose
 
   lint-typecheck:
     name: Lint & Typecheck

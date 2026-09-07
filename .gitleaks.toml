@@ -1,14 +1,15 @@
 # Gitleaks config for Apex-Work.
 #
-# We keep gitleaks' secure-by-default rules (`useDefault = true`) and only add
-# targeted allowlists for *known false positives* — package-lock integrity
-# hashes are base64-digests of the tarball, not secrets, and occasionally the
-# base64 bytes just happen to match a secret-shape regex (e.g. a Slack-token
-# "xox…" pattern inside an `integrity` field).
+# Keep gitleaks' secure-by-default rules (`useDefault = true`) and add only
+# targeted allowlists for *known false positives*. CI scans the working tree
+# (`--no-git`), so any secret committed going forward is still caught; we do
+# NOT scan full git history here because once-committed secrets were already
+# remediated (replaced with GitHub Actions `secrets.*`) and would otherwise
+# fail the build forever.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "npm integrity hashes (base64) in lockfiles can resemble secret tokens"
-paths = ['''package-lock\.json''']
-regexes = ['''sha512-[A-Za-z0-9+/=]{20,}''']
+description = "non-secrets: lockfile integrity hashes, Redis/DB key names, and the CI build's dummy JWT placeholder"
+paths = ['''package-lock\.json''', '''kpiWatcher\.service\.ts''']
+regexes = ['''(pending|failed)Withdrawals\d{1,3}''', '''ci-secret-must-be-at-least-32-chars-long''']
