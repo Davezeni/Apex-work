@@ -212,6 +212,7 @@
     "joinGroup": "Join group",
     "joinGroupBody": "You have been invited to join a group on Apex-Work.",
     "joined": "You're in! Opening the conversation…",
+    "jumpToLatest": "Latest",
     "lastSeen": "Last seen {when}",
     "leaveGroup": "Leave this group?",
     "loadFailed": "Could not load messages.",

@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
  * should appear (chat bubbles, gig owners, reviews, comments, etc.).
  *
  * Pass `verified` to draw a cyan ring + a small check badge (from the upstream
- * `isVerified` flag: phone + ID verified) so trusted talent pops everywhere.
+ * `isVerified` flag: phone + ID verified). The badge is rendered on an OUTER
+ * wrapper (not the circular, overflow-hidden image), so it is never clipped.
  */
 export function UserAvatar({
   name,
@@ -36,28 +37,41 @@ export function UserAvatar({
     .join('')
     .toUpperCase();
 
+  const size = className?.match(/h-(\d+)/)?.[1] ?? '10';
+  const badgeCls =
+    size === '5' ? 'h-3.5 w-3.5'
+    : size === '6' ? 'h-3 w-3'
+    : size === '7' ? 'h-3.5 w-3.5'
+    : size === '8' ? 'h-4 w-4'
+    : size === '10' ? 'h-4 w-4'
+    : size === '14' ? 'h-5 w-5'
+    : size === '20' ? 'h-6 w-6'
+    : 'h-4 w-4';
+
   return (
-    <Avatar
-      className={cn(
-        'bg-gradient-to-br text-white',
-        verified && 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-background',
-        className,
-      )}
-    >
-      {avatarUrl ? (
-        <AvatarImage src={avatarUrl} alt={name} onError={onError} />
-      ) : null}
-      <AvatarFallback className="from-violet-600 to-emerald-500">
-        {initials}
-      </AvatarFallback>
+    <span className={cn('relative inline-block shrink-0', className)}>
+      <Avatar
+        className={cn(
+          'h-full w-full bg-gradient-to-br text-white',
+          verified && 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-background',
+        )}
+      >
+        {avatarUrl ? (
+          <AvatarImage src={avatarUrl} alt={name} onError={onError} />
+        ) : null}
+        <AvatarFallback className="from-violet-600 to-emerald-500">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
       {verified && (
         <span
-          className="absolute -bottom-0.5 -right-0.5 grid place-items-center rounded-full bg-background p-[2px]"
+          className="absolute -bottom-[3px] -right-[3px] grid place-items-center rounded-full bg-background p-[2px]"
           title="Verified"
+          aria-label={`${name} is verified`}
         >
-          <BadgeCheck className="h-3.5 w-3.5 fill-cyan-400 text-white" />
+          <BadgeCheck className={cn(badgeCls, 'fill-cyan-400 text-white')} />
         </span>
       )}
-    </Avatar>
+    </span>
   );
 }

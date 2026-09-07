@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTo
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye, Sparkles, KeyRound } from 'lucide-react';
+import { ArrowLeft, ArrowDown, Send, Loader2, Phone, PhoneIncoming, Video as VideoIcon, FileText, PlayCircle, Mic, MoreVertical, Flag, ShieldOff, Package, SmilePlus, Reply, X, Images, Pencil, Trash2, Users, UserPlus, Check, CheckCheck, LogOut, Bell, BellOff, Pin, Search, Forward, Mail, Bookmark, MoreHorizontal, Copy, Smile, Link2, Zap, Plus, Download, Sticker, CalendarClock, Timer as TimerIcon, Eye, Sparkles, KeyRound } from 'lucide-react';
 import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -212,6 +212,24 @@ export default function ConversationPage() {
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [sendFx, setSendFx] = useState(0);
+  // Scroll-to-bottom jump chip: track whether the user is near the bottom, and
+  // how many messages arrived while they were scrolled up.
+  const [atBottom, setAtBottom] = useState(true);
+  const [missedCount, setMissedCount] = useState(0);
+  const listOnScroll = () => {
+    const el = listRef.current;
+    if (!el) return;
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+    setAtBottom(nearBottom);
+    if (nearBottom) setMissedCount(0);
+  };
+  const jumpToBottom = () => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    setMissedCount(0);
+    setAtBottom(true);
+  };
   const swipesRef = useRef<{ x: number; y: number } | null>(null);
 
   // Auto-grow the composer as text is entered (max ~140px, then scroll).
@@ -259,14 +277,19 @@ export default function ConversationPage() {
   const activeTypers = Object.keys(typingUsers).filter((uid) => uid !== me?.id).length;
   const typingNames = conv?.members?.filter((m) => typingUsers[m.userId] && m.userId !== me?.id).map((m) => m.fullName.split(' ')[0]) ?? [];
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages — but only if the user is already
+  // near the bottom; otherwise count the missed ones and let them jump down.
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    // Wait one frame for layout, then scroll
     requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
+      if (atBottom) {
+        el.scrollTop = el.scrollHeight;
+      } else {
+        setMissedCount((c) => c + 1);
+      }
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   // Mark as read whenever we open / receive
@@ -420,7 +443,8 @@ export default function ConversationPage() {
           <Link
             href={`/u/${peer.username}`}
             aria-label={peer.fullName}
-            className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full"
+            title={peer.fullName}
+            className="block h-10 w-10 shrink-0"
           >
             <UserAvatar name={peer.fullName} avatarUrl={peer.avatarUrl} id={peer.id} verified={peer.isVerified} className="h-10 w-10 text-sm font-bold" />
           </Link>
@@ -676,6 +700,7 @@ export default function ConversationPage() {
         ref={listRef}
         className="flex-1 space-y-2 overflow-y-auto px-3 pt-4 pb-6"
         aria-live="polite"
+        onScroll={listOnScroll}
       >
         {isLoading && (
           <div className="grid h-full place-items-center">
@@ -756,6 +781,23 @@ export default function ConversationPage() {
       </div>
 
       {/* Composer */}
+      {/* Jump-to-latest chip (visible when scrolled up) */}
+      {!atBottom && (
+        <button
+          onClick={jumpToBottom}
+          aria-label="Jump to latest messages"
+          className="absolute bottom-24 right-4 z-20 flex items-center gap-1.5 rounded-full border border-border bg-background/95 px-3 py-2 text-xs font-bold text-foreground shadow-lg backdrop-blur active:scale-95"
+        >
+          {missedCount > 0 && (
+            <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+              {missedCount > 99 ? '99+' : missedCount}
+            </span>
+          )}
+          <ArrowDown className="h-4 w-4" />
+          <span className="hidden sm:inline">{t('chat.jumpToLatest')}</span>
+        </button>
+      )}
+
       <div
         className="sticky bottom-0 z-10 border-t border-border bg-background/95 px-3 pt-3 backdrop-blur-xl"
         style={{ paddingBottom: 'calc(max(0.875rem, env(safe-area-inset-bottom, 14px)))' }}
@@ -1326,6 +1368,10 @@ function MessageBubble({
   // Long-press → reply.
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressed = useRef(false);
+  // Double-tap to quick-react ❤️ (Telegram-style): a quick second tap cancels the
+  // pending "open actions" and reacts instead.
+  const lastTap = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startPress = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest('button, a')) return;
     longPressed.current = false;
@@ -1396,11 +1442,25 @@ function MessageBubble({
       )}
       <div className="group flex items-end gap-1">
         <div
-          onClick={() => { if (longPressed.current) { longPressed.current = false; return; } onOpenActions?.(); }}
+          onClick={() => {
+            if (longPressed.current) { longPressed.current = false; return; }
+            const now = Date.now();
+            if (now - lastTap.current < 300) {
+              lastTap.current = 0;
+              if (tapTimer.current) clearTimeout(tapTimer.current);
+              tapTimer.current = null;
+              haptic();
+              onReactPick?.('❤️');
+              return;
+            }
+            lastTap.current = now;
+            if (tapTimer.current) clearTimeout(tapTimer.current);
+            tapTimer.current = setTimeout(() => { tapTimer.current = null; onOpenActions?.(); }, 240);
+          }}
           onPointerDown={startPress}
           onPointerUp={cancelPress}
-          onPointerLeave={cancelPress}
-          onPointerCancel={cancelPress}
+          onPointerLeave={() => { cancelPress(); if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; } }}
+          onPointerCancel={() => { cancelPress(); if (tapTimer.current) { clearTimeout(tapTimer.current); tapTimer.current = null; } }}
           onTouchStart={onBubbleTouchStart}
           onTouchEnd={onBubbleTouchEnd}
           onContextMenu={(e) => e.preventDefault()}

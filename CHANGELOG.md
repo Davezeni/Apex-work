@@ -18,6 +18,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Verified badge fix + chat power features (power push #46)
+
+### Fixed
+- **Verified badge was clipped** on avatars — the check badge sat inside the
+  circular, `overflow-hidden` image container so it was cut off (as seen on the
+  "HY" chat header). `UserAvatar` now renders the badge on an outer, non-clipped
+  wrapper and sizes it to the avatar, so it's always fully visible. Clicking the
+  avatar, badge, or name still opens the user's profile page (`/u/<username>`).
+
+### Added
+- **Jump-to-latest chip** — when you scroll up in a thread, a floating "Latest"
+  button appears above the composer with a live count of messages that arrived
+  while you were away; tap it to jump to the newest message.
+- **Double-tap to ❤️** — double-tap any message bubble to quick-react with a
+  heart (tap still opens message actions; the first tap of a double-tap no longer
+  opens the menu). Includes haptic feedback.
+
 ## [Unreleased] — Gig-card avatars, verified flags & media pagination (power push #45)
 
 ### Added
