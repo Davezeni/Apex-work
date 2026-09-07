@@ -17,6 +17,7 @@ export interface SearchResults {
   users: {
     id: string; username: string; fullName: string; avatarUrl: string | null;
     title: string | null; city: string | null; rating: number; ratingCount: number;
+    isVerified?: boolean;
   }[];
 }
 

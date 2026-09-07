@@ -231,14 +231,16 @@ export default function GigDetailPage() {
             <HeaderActions router={router} onTop saved={saved} saving={savePending} onSave={toggleSave} onShare={shareGig} />
           </div>
           <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
-        <div className="flex items-start gap-3">
-          <UserAvatar
-            name={gig.owner.fullName}
-            avatarUrl={gig.owner.avatarUrl}
-            id={gig.owner.id}
-            verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
-            className="h-14 w-14 text-base font-bold ring-4 ring-card"
-          />
+          <div className="flex items-start gap-3">
+          <Link href={`/u/${gig.owner.username}`} aria-label={gig.owner.fullName} className="shrink-0">
+            <UserAvatar
+              name={gig.owner.fullName}
+              avatarUrl={gig.owner.avatarUrl}
+              id={gig.owner.id}
+              verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
+              className="h-14 w-14 text-base font-bold ring-4 ring-card"
+            />
+          </Link>
           <div className="min-w-0 flex-1">
             <Link
               href={`/u/${gig.owner.username}`}

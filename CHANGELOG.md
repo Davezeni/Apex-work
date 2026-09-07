@@ -18,6 +18,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Verified flags everywhere, group typing, media audit log (power push #44)
+
+### Added
+- **Verified flag on more surfaces** — the cyan ring / check badge now also
+  appears on **global-search user results** and **review authors** (in addition
+  to profile, chat, gigs). The API returns `isVerified` for search users and
+  review authors.
+- **Group "typing" in the inbox** — the conversation list shows *"Name is
+  typing…"* for group chats (the server relays the typist's first name), while
+  DMs keep the plain pulse.
+- **Image-approval log in Audit** — the Audit tab now surfaces media actions
+  (`MEDIA.REMOVE_AVATAR` / `MEDIA.FLAG_GIG`) with a dedicated filter, a headline
+  count, and amber badges so staff can audit every image approval/removal.
+
+### Changed
+- **Clickable avatars everywhere** — profile photo and/or name now open the
+  user's profile from: chat header, chat bubbles, gig-owner cards, search
+  results, and review author rows.
+
 ## [Unreleased] — Verified rings, inbox typing, admin media review & import (power push #43)
 
 ### Added

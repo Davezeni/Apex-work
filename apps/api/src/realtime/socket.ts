@@ -136,12 +136,24 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (!socket.userId) return;
       try {
         const { prisma } = await import('../lib/prisma.js');
-        const members = await prisma.conversationMember.findMany({
-          where: { conversationId, userId: { not: socket.userId } },
-          select: { userId: true },
-        });
+        const [members, typist] = await Promise.all([
+          prisma.conversationMember.findMany({
+            where: { conversationId, userId: { not: socket.userId } },
+            select: { userId: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: socket.userId },
+            select: { fullName: true, username: true },
+          }),
+        ]);
+        const name = typist ? typist.fullName.split(' ')[0] : null;
         for (const m of members) {
-          io.to(`user:${m.userId}`).emit('typing:inbox', { conversationId, userId: socket.userId, status });
+          io.to(`user:${m.userId}`).emit('typing:inbox', {
+            conversationId,
+            userId: socket.userId,
+            status,
+            name,
+          });
         }
       } catch {
         /* best-effort only */

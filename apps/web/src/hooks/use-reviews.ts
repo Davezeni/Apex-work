@@ -14,7 +14,7 @@ export interface Review {
   sellerReply: string | null;
   sellerRepliedAt: string | null;
   sellerReplyEditedAt: string | null;
-  author: { id: string; username: string; fullName: string; avatarUrl: string | null };
+  author: { id: string; username: string; fullName: string; avatarUrl: string | null; isVerified?: boolean };
   order?: { id: string; title: string };
 }
 

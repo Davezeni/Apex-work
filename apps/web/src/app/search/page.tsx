@@ -13,6 +13,7 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { VoiceSearch } from '@/components/chat/voice-search';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 
 type Tab = 'all' | 'gigs' | 'jobs' | 'users';
@@ -207,13 +208,7 @@ export default function SearchPage() {
                   {data.users.map((u) => (
                     <div key={u.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
                       <Link href={`/u/${u.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-                        {u.avatarUrl ? (
-                          <Image src={u.avatarUrl} alt={u.fullName} width={40} height={40} unoptimized className="h-10 w-10 rounded-full object-cover" />
-                        ) : (
-                          <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
-                            {(u.fullName[0] ?? '?').toUpperCase()}
-                          </div>
-                        )}
+                        <UserAvatar name={u.fullName} avatarUrl={u.avatarUrl} id={u.id} verified={u.isVerified} className="h-10 w-10 text-sm font-bold" />
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-bold">{u.fullName}</div>
                           <div className="truncate text-[11px] text-muted-foreground">

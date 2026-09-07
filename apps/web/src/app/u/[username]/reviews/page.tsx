@@ -1,11 +1,13 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useState } from 'react';
 import { ArrowLeft, Star, Loader2, MessageSquareReply, Trash2 } from 'lucide-react';
 import { usePublicUser } from '@/hooks/use-public-user';
 import { useMe } from '@/hooks/use-me';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   useUserReviews,
   useUpsertReviewReply,
@@ -122,15 +124,13 @@ function ReviewCardWithReply({ review: r, isOwner }: { review: Review; isOwner: 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-2">
-        {r.author.avatarUrl ? (
-          <Image src={r.author.avatarUrl} alt={r.author.fullName} width={32} height={32} unoptimized className="h-8 w-8 rounded-full object-cover" />
-        ) : (
-          <div className="grad-hero grid h-8 w-8 place-items-center rounded-full text-[10px] font-bold text-white">
-            {(r.author.fullName[0] ?? '?').toUpperCase()}
-          </div>
-        )}
+        <Link href={`/u/${r.author.username}`} aria-label={r.author.fullName}>
+          <UserAvatar name={r.author.fullName} avatarUrl={r.author.avatarUrl} id={r.author.id} verified={r.author.isVerified} className="h-8 w-8 text-[10px] font-bold" />
+        </Link>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-semibold">{r.author.fullName}</div>
+          <Link href={`/u/${r.author.username}`} className="flex items-center gap-1 truncate text-xs font-semibold hover:text-primary">
+            <span className="truncate">{r.author.fullName}</span>
+          </Link>
           <div className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</div>
         </div>
         <div className="flex gap-0.5">

@@ -10,7 +10,7 @@ const API_URL =
     ? 'https://apex-work-api.onrender.com'
     : 'http://localhost:4000');
 
-type TypingMap = Record<string, string>; // conversationId -> peerId
+type TypingMap = Record<string, { userId: string; name: string | null }>; // conversationId -> typer
 
 /**
  * Live "... typing" pulse for the conversation list (inbox). Opens a lightweight
@@ -44,9 +44,9 @@ export function useInboxTyping(): { typing: TypingMap } {
       });
     };
 
-    socket.on('typing:inbox', (d: { conversationId: string; userId: string; status: string }) => {
+    socket.on('typing:inbox', (d: { conversationId: string; userId: string; status: string; name?: string | null }) => {
       if (d.status === 'stop') return clear(d.conversationId);
-      setTyping((prev) => ({ ...prev, [d.conversationId]: d.userId }));
+      setTyping((prev) => ({ ...prev, [d.conversationId]: { userId: d.userId, name: d.name ?? null } }));
       if (timers.current[d.conversationId]) window.clearTimeout(timers.current[d.conversationId] ?? undefined);
       timers.current[d.conversationId] = window.setTimeout(() => clear(d.conversationId), 4000);
     });

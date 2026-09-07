@@ -30,6 +30,7 @@ export interface GlobalSearchResult {
   users: {
     id: string; username: string; fullName: string; avatarUrl: string | null;
     title: string | null; city: string | null; rating: number; ratingCount: number;
+    isVerified?: boolean;
   }[];
 }
 
@@ -72,7 +73,8 @@ export async function globalSearch(rawQ: string, limit = 5): Promise<GlobalSearc
 
   const users = await prisma.$queryRaw<GlobalSearchResult['users']>`
     SELECT "id", "username", "fullName", "avatarUrl", "title", "city",
-           "rating", "ratingCount"
+           "rating", "ratingCount",
+           ("isPhoneVerified" AND "isIdVerified") AS "isVerified"
     FROM "User"
     WHERE "isActive" = true
       AND ("fullName" ILIKE ${like} OR "username" ILIKE ${like})

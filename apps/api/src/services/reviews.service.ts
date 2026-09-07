@@ -106,7 +106,7 @@ export async function listReviewsFor(subjectId: string, opts: { limit: number; c
       sellerReply: true,
       sellerRepliedAt: true,
       sellerReplyEditedAt: true,
-      author: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      author: { select: { id: true, username: true, fullName: true, avatarUrl: true, isPhoneVerified: true, isIdVerified: true } },
       order: { select: { id: true, title: true } },
     },
   });

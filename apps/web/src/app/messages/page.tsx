@@ -161,21 +161,21 @@ export default function MessagesPage() {
 
         {!searchOpen && (
           <Group label={t('chat.pinned')} icon={<Pin className="h-3.5 w-3.5" />} items={groups.pinned}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} pinned isTyping={!!typing[c.id]} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
+            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} pinned isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
         )}
         {!searchOpen && (
           <Group
             label={t('chat.unread')}
             icon={<span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">{groups.unread.length}</span>}
             items={groups.unread}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />}
+            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />}
           />
         )}
         {!searchOpen && (
           <Group label={t('chat.recent')} icon={<Inbox className="h-3.5 w-3.5" />} items={groups.recent}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
+            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
         )}
-        {searchOpen && filteredItems.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />)}
+        {searchOpen && filteredItems.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />)}
 
         {!searchOpen && groups.archived.length > 0 && (
           <div>
@@ -187,7 +187,7 @@ export default function MessagesPage() {
               <ChevronDown className={cn('ml-auto h-3.5 w-3.5 transition-transform', archiveOpen && 'rotate-180')} />
             </button>
             {archiveOpen && groups.archived.map((c) => (
-              <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />
+              <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />
             ))}
           </div>
         )}
@@ -208,7 +208,7 @@ function Group({ label, icon, items, render }: { label: string; icon?: ReactNode
   );
 }
 
-function ConvRow({ c, pinned, isTyping, onPin, onArchive, selfId: _selfId }: { c: ChatSummary; pinned?: boolean; isTyping?: boolean; onPin?: () => void; onArchive?: () => void; selfId: string }) {
+function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _selfId }: { c: ChatSummary; pinned?: boolean; isTyping?: boolean; typingName?: string | null; onPin?: () => void; onArchive?: () => void; selfId: string }) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const peer = c.peer;
@@ -258,13 +258,17 @@ function ConvRow({ c, pinned, isTyping, onPin, onArchive, selfId: _selfId }: { c
           <div className="mt-1 flex items-center justify-between gap-2">
             <div className="flex min-w-0 items-center gap-1">
               {isTyping ? (
-                <span className="flex items-center gap-1.5 text-[13px] font-semibold text-primary">
-                  <span className="flex gap-0.5">
+                <span className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-primary">
+                  <span className="flex shrink-0 gap-0.5">
                     <span className="typing-dot h-1.5 w-1.5" style={{ animationDelay: '0ms' }} />
                     <span className="typing-dot h-1.5 w-1.5" style={{ animationDelay: '150ms' }} />
                     <span className="typing-dot h-1.5 w-1.5" style={{ animationDelay: '300ms' }} />
                   </span>
-                  {t('chat.isTyping')}
+                  <span className="truncate">
+                    {c.isGroup && typingName
+                      ? `${typingName} ${t('chat.isTyping')}`
+                      : t('chat.isTyping')}
+                  </span>
                 </span>
               ) : (
                 <p className="truncate text-[13px] text-muted-foreground">{preview}</p>
