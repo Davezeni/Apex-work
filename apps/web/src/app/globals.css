@@ -59,6 +59,12 @@
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
+  /* Consistent, on-brand focus ring for every keyboard-visible control. */
+  :where(button, a, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: max(var(--radius), 0.5rem);
+  }
   body {
     @apply bg-background font-sans text-foreground antialiased;
     font-feature-settings: 'ss01', 'cv11';
