@@ -1,23 +1,32 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Plus_Jakarta_Sans, Noto_Sans_Ethiopic } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
 import { AnnouncementBanner } from '@/components/site/announcement-banner';
 
-const inter = Inter({
+// Plus Jakarta Sans — Friendly/Enterprise SaaS pairing (UI/UX Pro Max): modern,
+// approachable, highly legible, ideal for a B2B marketplace + admin. Noto Sans
+// Ethiopic backs it up so the full Amharic UI (Ethiopic script) renders crisply,
+// not as a fallback system font.
+const pjs = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-pjs',
+  display: 'swap',
+});
+const ethiopic = Noto_Sans_Ethiopic({
+  subsets: ['ethiopic'],
+  variable: '--font-ethiopic',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
   title: {
-    default: 'Apex-Work — Ethiopia\'s freelance marketplace',
+    default: "Apex-Work — Ethiopia's freelance marketplace",
     template: '%s · Apex-Work',
   },
   description:
-    "Hire vetted Ethiopian digital talent or land your next gig — AI-powered, Telebirr payments, built for Amharic speakers.",
+    'Hire vetted Ethiopian digital talent or land your next gig — AI-powered, Telebirr payments, built for Amharic speakers.',
   keywords: ['freelance Ethiopia', 'Telebirr', 'Amharic freelancers', 'Addis Ababa', 'remote work'],
   openGraph: {
     title: 'Apex-Work',
@@ -56,7 +65,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${pjs.variable} ${ethiopic.variable}`} suppressHydrationWarning>
       <body>
         <AnnouncementBanner />
         <Providers>{children}</Providers>

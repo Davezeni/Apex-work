@@ -19,6 +19,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Design-system restyle with UI/UX Pro Max design intelligence (power push #50)
+
+Rebuilt the app-wide visual language on a three-layer token architecture
+(primitive → semantic → component), inspired by the open-source **UI/UX Pro
+Max** skill (uupm.cc) using its **Freelancer Platform / Marketplace (P2P) /
+Chat & Messaging** palettes — the exact product type of Apex-Work. See
+`docs/DESIGN_SYSTEM.md`.
+
+- **Typography** — swapped Inter for **Plus Jakarta Sans** (Friendly/Enterprise
+  SaaS pairing: modern, approachable, legible, ideal for a B2B marketplace +
+  admin), with a **Noto Sans Ethiopic** fallback so the full Amharic UI renders
+  crisply instead of a system fallback. Font stack updated in the Tailwind theme.
+- **Color tokens** — violet `#7C3AED` primary (trust) + hire-green `#16A34A`
+  accent, with violet-tinted neutrals for background/card/muted/border so every
+  surface feels on-brand rather than generic gray. Dark mode switched to a deep
+  violet-black with a lighter violet primary for contrast. `.accent` was
+  darkened in light mode (`142 66% 37%`) so white-on-green CTAs stay readable.
+- **Brand gradient** — `.grad-hero` / `.grad-text` refined from violet→green→amber
+  to violet→indigo→hire-green (`#7c3aed → #6366f1 → #16a34a`) for a cleaner,
+  more premium look; mesh/chat ambient gradients matched.
+- **Buttons** — the `default` variant now uses violet primary (`bg-primary
+text-primary-foreground`) with a violet shadow + hover lift, so primary CTAs
+  read on-brand while `brand` (gradient) stays for hero actions.
+- **Docs** — added `docs/DESIGN_SYSTEM.md` documenting the tokens, typography,
+  dark mode, and motion/accessibility guidance.
+
 ## [Unreleased] — CI & deploy hardening (power push #49)
 
 - **Fixed API type error** that kept the CI "Lint & Typecheck" check red: the

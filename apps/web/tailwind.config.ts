@@ -59,12 +59,15 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        display: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        // Plus Jakarta Sans first; Noto Sans Ethiopic covers Ethiopic glyphs so
+        // the Amharic UI renders with the same weight/cadence as the Latin UI.
+        sans: ['var(--font-pjs)', 'var(--font-ethiopic)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-pjs)', 'var(--font-ethiopic)', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
-        'grad-hero': 'linear-gradient(135deg, #7c3aed 0%, #22c55e 50%, #fbbf24 100%)',
-        'grad-soft': 'linear-gradient(135deg, rgba(124,58,237,.15), rgba(34,197,94,.08))',
+        // UI/UX Pro Max Freelancer/Marketplace palette: violet → indigo → hire green.
+        'grad-hero': 'linear-gradient(135deg, #7c3aed 0%, #6366f1 45%, #16a34a 100%)',
+        'grad-soft': 'linear-gradient(135deg, rgba(124,58,237,.15), rgba(22,163,74,.08))',
       },
       keyframes: {
         'accordion-down': {
