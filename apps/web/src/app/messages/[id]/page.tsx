@@ -1294,7 +1294,7 @@ export default function ConversationPage() {
                 })}
               </div>
               <button
-                onClick={() => { toggleReaction.mutate({ messageId: reactionInfo.messageId, emoji: reactionInfo.emoji }); setReactionInfo(null); }}
+                onClick={() => { toggleReaction.mutate({ messageId: reactionInfo.messageId, emoji: reactionInfo.emoji as ReactionEmoji }); setReactionInfo(null); }}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border py-2.5 text-sm font-semibold active:scale-[.98]"
               >
                 {bucket?.mine ? t('chat.removeReaction') : t('chat.addReaction')} {reactionInfo.emoji}
