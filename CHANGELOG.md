@@ -18,6 +18,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — CI & deploy hardening (power push #49)
+
+- **Fixed API type error** that kept the CI "Lint & Typecheck" check red: the
+  admin media-review queue had two `const [avatars, gigCovers]` queries in the
+  same scope (a leftover pre-cursor block shadowed the cursor block). Removed
+  the dead duplicate — the sorted/paginated block is used.
+- **Gitleaks secret scan is green again** — the only hit was a true false
+  positive: the base64 `integrity` hash of `tinybench@2.9.0` in
+  `package-lock.json` resembles a Slack token. Added `.gitleaks.toml`
+  (`useDefault` + a targeted allowlist for lockfile integrity hashes) and wired
+  it into CI (`--config .gitleaks.toml`).
+- **Fast-fail typecheck in the web deploy** — `vercel.json` now runs
+  `npm --workspace @apex-work/web run typecheck` before `next build`, so a type
+  error fails the build instantly with a clear `TS2322` message instead of after
+  the full 31s webpack compile.
+
 ## [Unreleased] — Avatar fix, profile navigation & chat tap-actions (power push #48)
 
 ### Fixed

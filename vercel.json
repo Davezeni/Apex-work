@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm --workspace @apex-work/shared run build && npm --workspace @apex-work/web run build",
+  "buildCommand": "npm --workspace @apex-work/shared run build && npm --workspace @apex-work/web run typecheck && npm --workspace @apex-work/web run build",
   "installCommand": "npm install",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs"

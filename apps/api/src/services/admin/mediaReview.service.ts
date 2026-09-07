@@ -65,28 +65,6 @@ export async function listMediaQueue(limit = 40, cursor?: string | null): Promis
       },
     }),
   ]);
-  const [avatars, gigCovers] = await Promise.all([
-    prisma.user.findMany({
-      where: { avatarUrl: { not: null } },
-      orderBy: { createdAt: 'desc' },
-      take,
-      select: { id: true, avatarUrl: true, fullName: true, username: true, role: true, createdAt: true },
-    }),
-    prisma.gig.findMany({
-      where: { coverImageUrl: { not: null } },
-      orderBy: { createdAt: 'desc' },
-      take,
-      select: {
-        id: true,
-        slug: true,
-        coverImageUrl: true,
-        title: true,
-        createdAt: true,
-        owner: { select: { id: true, fullName: true, username: true, role: true } },
-      },
-    }),
-  ]);
-
   const items: MediaItem[] = [
     ...avatars.map((u) => ({
       kind: 'avatar' as const,

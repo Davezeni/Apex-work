@@ -1,0 +1,14 @@
+# Gitleaks config for Apex-Work.
+#
+# We keep gitleaks' secure-by-default rules (`useDefault = true`) and only add
+# targeted allowlists for *known false positives* — package-lock integrity
+# hashes are base64-digests of the tarball, not secrets, and occasionally the
+# base64 bytes just happen to match a secret-shape regex (e.g. a Slack-token
+# "xox…" pattern inside an `integrity` field).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "npm integrity hashes (base64) in lockfiles can resemble secret tokens"
+paths = ['''package-lock\.json''']
+regexes = ['''sha512-[A-Za-z0-9+/=]{20,}''']
