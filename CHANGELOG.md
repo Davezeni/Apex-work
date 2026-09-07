@@ -3,6 +3,31 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Desktop styling: collapsible sidebar + list/grid + micro-animations (power push #52)
+
+The desktop experience gets a modern, animated app feel with the same
+subtle-motion system used on mobile.
+
+- **Collapsible sidebar** — the desktop sidebar now collapses to a 76px
+  **icon-only rail** with a smooth spring animation (stiffness 300 / damping
+  30) via Framer Motion. A `layoutId` "sidebar-rail" indicator glides between
+  the active nav items, and the Create button + user card collapse to icons.
+  The collapse state is persisted (`apex-sidebar-collapsed`) and survives
+  reload. A toggle button in the sidebar header expands/collapses it.
+- **List / grid view toggle on marketplace cards** — the Browse page now has a
+  **list | grid** switch in the sort row. Grid renders responsive cards
+  (`2/3/4` columns) with a gradient cover, shimmer sweep, optional
+  "Featured" badge, line-clamped title, rating + city, owner avatar/name +
+  verified check, and a price block. List stays as a wide row card. Your
+  choice is persisted (`apex-gig-view`).
+- **Micro-animations everywhere** — entrance **stagger** on cards
+  (`delay: i*0.03`, capped), **hover lift** on cards (row `y:-3`, grid
+  `y:-6` with subtle scale + border glow/shadow), **cover shimmer** on hover,
+  a **page-content fade-up** transition on route change (keyed by pathname),
+  and an animated verified badge.
+- Added i18n `gig.featured` (EN "Featured" / AM `ተመራጭ`); locale parity now
+  **639/639**.
+
 ## [Unreleased] — Composer growth, spacing & gestures (power push #37)
 
 ### Added

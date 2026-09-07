@@ -14,11 +14,14 @@ import {
   Bell,
   Wallet,
   Settings,
-  LayoutDashboard,
   LogOut,
+  PanelLeftClose,
+  PanelLeft,
+  ChevronRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Drawer } from 'vaul';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
@@ -33,7 +36,8 @@ interface NavItem {
   badge?: number;
 }
 
-/** Desktop left sidebar that renders inside the responsive app shell. */
+const COLLAPSE_KEY = 'apex-sidebar-collapsed';
+
 export function DesktopSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -43,6 +47,27 @@ export function DesktopSidebar() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { data: conversations } = useConversations();
   const unreadChats = conversations?.items.reduce((total, item) => total + item.unread, 0) ?? 0;
+
+  // Collapsed state is persisted so the user's preference sticks across visits.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSE_KEY) === '1');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const toggleCollapse = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
@@ -72,56 +97,109 @@ export function DesktopSidebar() {
     return (
       <Link
         href={it.href}
+        title={collapsed ? it.label : undefined}
         className={cn(
-          'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
+          'group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
           active
-            ? 'bg-primary/10 text-primary'
+            ? 'bg-primary/15 text-primary'
             : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+          collapsed && 'justify-center px-0',
         )}
       >
         <Icon className="h-5 w-5 shrink-0" strokeWidth={active ? 2.5 : 2} />
-        <span className="flex-1 truncate">{it.label}</span>
-        {it.badge && it.badge > 0 && (
+        {!collapsed && <span className="flex-1 truncate">{it.label}</span>}
+        {!collapsed && it.badge && it.badge > 0 && (
           <span className="grid min-w-[20px] place-items-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-bold text-white">
             {it.badge > 99 ? '99+' : it.badge}
           </span>
+        )}
+        {collapsed && it.badge && it.badge > 0 && (
+          <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
+            {it.badge > 99 ? '99+' : it.badge}
+          </span>
+        )}
+        {/* Active rail indicator */}
+        {active && (
+          <motion.span
+            layoutId="sidebar-rail"
+            className={cn(
+              'absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary',
+              !collapsed && 'hidden',
+            )}
+          />
         )}
       </Link>
     );
   };
 
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-card/60 backdrop-blur-xl md:flex">
-      {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-5">
-        <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
-          A
-        </div>
-        <span className="text-lg font-extrabold tracking-tight">Apex-Work</span>
-      </Link>
+    <motion.aside
+      animate={{ width: collapsed ? 76 : 256 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="sticky top-0 hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-border bg-card/60 backdrop-blur-xl md:flex"
+    >
+      {/* Logo / brand */}
+      <div className="flex items-center gap-2.5 px-4 py-5">
+        <Link href="/" className="flex shrink-0 items-center gap-2.5">
+          <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
+            A
+          </div>
+          {!collapsed && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="whitespace-nowrap text-lg font-extrabold tracking-tight"
+            >
+              Apex-Work
+            </motion.span>
+          )}
+        </Link>
+        <button
+          onClick={toggleCollapse}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand' : 'Collapse'}
+          className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
+      </div>
 
       {/* Create */}
       <div className="px-4">
-        <button
-          onClick={() => setSheetOpen(true)}
-          className="grad-hero flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:brightness-110"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.5} />
-          {t('nav.create')}
-        </button>
+        {!collapsed ? (
+          <button
+            onClick={() => setSheetOpen(true)}
+            className="grad-hero flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:brightness-110"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            {t('nav.create')}
+          </button>
+        ) : (
+          <button
+            onClick={() => setSheetOpen(true)}
+            title={t('nav.create')}
+            className="grad-hero mx-auto grid h-10 w-10 place-items-center rounded-xl text-white shadow-lg shadow-primary/30 transition-transform hover:scale-105"
+          >
+            <Plus className="h-5 w-5" strokeWidth={2.5} />
+          </button>
+        )}
       </div>
 
       {/* Nav */}
       <nav className="mt-4 flex-1 space-y-1 overflow-y-auto px-4">
-        <div className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-          {t('nav.workspace')}
-        </div>
+        {!collapsed && (
+          <div className="mb-1 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            {t('nav.workspace')}
+          </div>
+        )}
         {main.map((it) => (
           <Item key={it.href} it={it} />
         ))}
-        <div className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-          {t('nav.account')}
-        </div>
+        {!collapsed && (
+          <div className="mb-1 mt-4 px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            {t('nav.account')}
+          </div>
+        )}
         {other.map((it) => (
           <Item key={it.href} it={it} />
         ))}
@@ -130,7 +208,7 @@ export function DesktopSidebar() {
       {/* Bottom: user card + sign out */}
       {me && (
         <div className="border-t border-border p-4">
-          <div className="flex items-center gap-3">
+          <div className={cn('flex items-center gap-3', collapsed && 'justify-center gap-0')}>
             <Link href="/profile">
               <UserAvatar
                 name={me.fullName}
@@ -140,24 +218,49 @@ export function DesktopSidebar() {
                 className="h-9 w-9 text-sm font-bold"
               />
             </Link>
-            <div className="min-w-0 flex-1">
-              <Link href="/profile" className="block truncate text-sm font-bold hover:text-primary">
-                {me.fullName}
-              </Link>
-              <div className="truncate text-[11px] text-muted-foreground">@{me.username}</div>
-            </div>
+            {!collapsed && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href="/profile"
+                    className="block truncate text-sm font-bold hover:text-primary"
+                  >
+                    {me.fullName}
+                  </Link>
+                  <div className="truncate text-[11px] text-muted-foreground">@{me.username}</div>
+                </div>
+                <Link
+                  href="/settings"
+                  title={t('nav.settings')}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <Settings className="h-4 w-4" />
+                </Link>
+              </>
+            )}
           </div>
-          <button
-            onClick={signOut}
-            className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-            {t('nav.signOut')}
-          </button>
+          {!collapsed && (
+            <button
+              onClick={signOut}
+              className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              {t('nav.signOut')}
+            </button>
+          )}
+          {collapsed && (
+            <button
+              onClick={signOut}
+              title={t('nav.signOut')}
+              className="mx-auto mt-3 grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
         </div>
       )}
 
-      {/* Create sheet (reuses the same actions) */}
+      {/* Create sheet */}
       <Drawer.Root open={sheetOpen} onOpenChange={setSheetOpen}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
@@ -165,7 +268,7 @@ export function DesktopSidebar() {
             <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-muted" />
             <div className="p-6">
               <Drawer.Title className="text-xl font-extrabold">{t('nav.create')}</Drawer.Title>
-              <div className="mt-5 grid grid-cols-2 gap-2">
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <CreateAction
                   icon="💼"
                   title={t('nav.postGig')}
@@ -203,7 +306,7 @@ export function DesktopSidebar() {
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
-    </aside>
+    </motion.aside>
   );
 }
 
@@ -219,7 +322,7 @@ function CreateAction({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4 text-left transition-all active:scale-[.98]"
+      className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4 text-left transition-all hover:border-primary/40 hover:shadow-md active:scale-[.98]"
     >
       <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 text-xl">
         {icon}

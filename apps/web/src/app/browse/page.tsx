@@ -1,14 +1,27 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-import { ArrowLeft, Star, MapPin, Loader2, SlidersHorizontal } from 'lucide-react';
+import {
+  ArrowLeft,
+  Star,
+  MapPin,
+  Loader2,
+  SlidersHorizontal,
+  LayoutGrid,
+  LayoutList,
+  CheckCircle2,
+} from 'lucide-react';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useI18n } from '@/i18n';
+
+const VIEW_MODE_KEY = 'apex-gig-view';
+type ViewMode = 'list' | 'grid';
 
 const AVATAR_GRADIENTS = [
   'from-violet-500 to-emerald-500',
@@ -40,6 +53,25 @@ function BrowseInner() {
   const categoryFromUrl = params.get('category');
   const [category, setCategory] = useState<string | null>(categoryFromUrl);
   const [sort, setSort] = useState<SortKey>('recent');
+  const [view, setView] = useState<ViewMode>('list');
+
+  // Persist the list/grid preference so it sticks across visits.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_MODE_KEY);
+      if (saved === 'grid') setView('grid');
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  const setViewMode = (v: ViewMode) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, v);
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Localise the category label (name from constants stays English, but the
   // 'All categories' pseudo-option needs to translate).
@@ -80,7 +112,7 @@ function BrowseInner() {
       </header>
 
       {/* Category filter */}
-      <div className="flex gap-2 overflow-x-auto px-4 py-4 no-scrollbar">
+      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4">
         <FilterChip
           label={t('browse.allCategories')}
           active={!category}
@@ -96,24 +128,52 @@ function BrowseInner() {
         ))}
       </div>
 
-      {/* Sort dropdown */}
-      <div className="flex items-center justify-between px-5 pb-3">
+      {/* Sort + view toggle */}
+      <div className="flex items-center justify-between gap-2 px-5 pb-3">
         <span className="text-xs text-muted-foreground">
           {isLoading ? '…' : t('browse.resultsCount', { count: sorted.length })}
         </span>
-        <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none"
-          >
-            <option value="recent">{t('browse.recent')}</option>
-            <option value="rating">{t('browse.rating')}</option>
-            <option value="price_asc">{t('browse.priceLow')}</option>
-            <option value="price_desc">{t('browse.priceHigh')}</option>
-          </select>
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none"
+            >
+              <option value="recent">{t('browse.recent')}</option>
+              <option value="rating">{t('browse.rating')}</option>
+              <option value="price_asc">{t('browse.priceLow')}</option>
+              <option value="price_desc">{t('browse.priceHigh')}</option>
+            </select>
+          </label>
+          <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+            <button
+              onClick={() => setViewMode('list')}
+              aria-label="List view"
+              className={cn(
+                'grid h-7 w-7 place-items-center rounded-full transition-colors',
+                view === 'list'
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+              className={cn(
+                'grid h-7 w-7 place-items-center rounded-full transition-colors',
+                view === 'grid'
+                  ? 'bg-primary/15 text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {isLoading && (
@@ -130,9 +190,28 @@ function BrowseInner() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3 px-4 pb-8">
-        {sorted.map((g) => (
-          <BrowseCard key={g.id} g={g} />
+      <div
+        className={cn(
+          'px-4 pb-8 transition-all',
+          view === 'grid'
+            ? 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4'
+            : 'flex flex-col gap-3',
+        )}
+      >
+        {sorted.map((g, i) => (
+          <motion.div
+            key={g.id}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: Math.min(i * 0.03, 0.35),
+              type: 'spring',
+              stiffness: 320,
+              damping: 28,
+            }}
+          >
+            {view === 'grid' ? <GridCard key={g.id} g={g} /> : <BrowseCard g={g} />}
+          </motion.div>
         ))}
       </div>
     </MobileShell>
@@ -166,41 +245,121 @@ function FilterChip({
 function BrowseCard({ g }: { g: GigListItem }) {
   const { t } = useI18n();
   return (
-    <Link
-      href={`/gigs/${g.slug}`}
-      className="flex gap-3 rounded-2xl border border-border bg-card p-3 active:scale-[.99]"
+    <motion.div
+      whileHover={{ y: -3, scale: 1.004 }}
+      transition={{ type: 'spring', stiffness: 380, damping: 26 }}
     >
-      <div className={cn('h-20 w-20 shrink-0 rounded-xl bg-gradient-to-br', gradientFor(g.id))} />
-      <div className="min-w-0 flex-1">
-        <div className="line-clamp-2 text-sm font-semibold leading-tight">{g.title}</div>
-        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-          {g.ratingCount > 0 && (
-            <span className="flex items-center gap-0.5">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              {g.rating.toFixed(1)} ({g.ratingCount})
+      <Link
+        href={`/gigs/${g.slug}`}
+        className="group flex gap-3 rounded-2xl border border-border bg-card p-3 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 active:scale-[.99]"
+      >
+        <div
+          className={cn(
+            'h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-[1.04]',
+            gradientFor(g.id),
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary">
+            {g.title}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+            {g.ratingCount > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                {g.rating.toFixed(1)} ({g.ratingCount})
+              </span>
+            )}
+            {g.owner.city && (
+              <>
+                {g.ratingCount > 0 && <span>·</span>}
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {g.owner.city}
+                </span>
+              </>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+            {t('browse.byShort')}{' '}
+            <span className="font-semibold text-foreground">{g.owner.fullName}</span>
+            {g.owner.isVerified && <CheckCircle2 className="h-3 w-3 fill-cyan-400 text-white" />}
+          </div>
+          <div className="mt-1 text-[11px] text-muted-foreground">
+            {t('gig.from')}{' '}
+            <span className="text-sm font-extrabold text-foreground">
+              {formatEtb(g.startingPriceEtb)}
+            </span>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+function GridCard({ g }: { g: GigListItem }) {
+  const { t } = useI18n();
+  return (
+    <motion.div
+      whileHover={{ y: -6, scale: 1.015 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 22 }}
+    >
+      <Link
+        href={`/gigs/${g.slug}`}
+        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/15 active:scale-[.99]"
+      >
+        {/* Cover */}
+        <div
+          className={cn(
+            'relative h-28 w-full overflow-hidden bg-gradient-to-br',
+            gradientFor(g.id),
+          )}
+        >
+          {/* subtle cover shimmer on hover */}
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+          {g.isFeatured && (
+            <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-white shadow">
+              {t('gig.featured')}
             </span>
           )}
-          {g.owner.city && (
-            <>
-              {g.ratingCount > 0 && <span>·</span>}
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {g.owner.city}
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 p-3">
+          <div className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight group-hover:text-primary">
+            {g.title}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {g.ratingCount > 0 && (
+              <span className="flex items-center gap-0.5">
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                {g.rating.toFixed(1)}
               </span>
-            </>
-          )}
+            )}
+            {g.owner.city && (
+              <>
+                {g.ratingCount > 0 && <span>·</span>}
+                <span className="flex items-center gap-0.5">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate">{g.owner.city}</span>
+                </span>
+              </>
+            )}
+          </div>
+          <div className="mt-auto flex items-center justify-between pt-1">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {g.owner.fullName.split(' ')[0]}
+              </span>
+              {g.owner.isVerified && <CheckCircle2 className="h-3 w-3 fill-cyan-400 text-white" />}
+            </div>
+            <div className="text-right">
+              <div className="text-[9px] text-muted-foreground">{t('gig.from')}</div>
+              <div className="text-sm font-extrabold text-primary">
+                {formatEtb(g.startingPriceEtb)}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
-          {t('browse.byShort')}{' '}
-          <span className="font-semibold text-foreground">{g.owner.fullName}</span>
-        </div>
-        <div className="mt-1 text-[11px] text-muted-foreground">
-          {t('gig.from')}{' '}
-          <span className="text-sm font-extrabold text-foreground">
-            {formatEtb(g.startingPriceEtb)}
-          </span>
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }

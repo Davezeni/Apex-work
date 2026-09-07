@@ -63,7 +63,11 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
     <div className="flex min-h-dvh bg-background text-foreground">
       {/* Desktop: persistent left sidebar; Mobile: hidden (bottom nav instead). */}
       <DesktopSidebar />
-      <main
+      <motion.main
+        key={pathname}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
         className={cn(
           'safe-head-room min-h-dvh min-w-0 flex-1',
           showTabBar && 'safe-b-nav',
@@ -71,7 +75,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
         )}
       >
         {children}
-      </main>
+      </motion.main>
       <PwaInstall />
 
       {showTabBar && (
