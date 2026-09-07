@@ -49,7 +49,14 @@ export async function listMediaQueue(limit = 40, cursor?: string | null): Promis
       where: { avatarUrl: { not: null }, createdAt: whenFilter },
       orderBy: { createdAt: 'asc' },
       take,
-      select: { id: true, avatarUrl: true, fullName: true, username: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        avatarUrl: true,
+        fullName: true,
+        username: true,
+        role: true,
+        createdAt: true,
+      },
     }),
     prisma.gig.findMany({
       where: { coverImageUrl: { not: null }, createdAt: whenFilter },
@@ -91,7 +98,8 @@ export async function listMediaQueue(limit = 40, cursor?: string | null): Promis
   // Oldest first so the oldest items sit on top and get reviewed first.
   items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const page = items.slice(0, limit);
-  const nextCursor = items.length > limit ? page[page.length - 1]?.createdAt.toISOString() ?? null : null;
+  const nextCursor =
+    items.length > limit ? (page[page.length - 1]?.createdAt.toISOString() ?? null) : null;
   return { total: items.length, items: page, nextCursor };
 }
 

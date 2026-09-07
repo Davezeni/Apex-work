@@ -43,7 +43,9 @@ export function maybePersistLastSeen(userId: string): void {
     void (async () => {
       try {
         const { prisma } = await import('../lib/prisma.js');
-        await prisma.user.update({ where: { id: userId }, data: { lastSeenAt: new Date() } }).catch(() => {});
+        await prisma.user
+          .update({ where: { id: userId }, data: { lastSeenAt: new Date() } })
+          .catch(() => {});
       } catch {
         /* best-effort */
       }

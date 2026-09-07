@@ -6,6 +6,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Composer growth, spacing & gestures (power push #37)
 
 ### Added
+
 - **Auto-growing input** — the composer now grows vertically as you type
   (up to ~140px, then it scrolls) instead of a fixed one-line box.
 - **Space below the input** — the composer bar has real bottom padding plus
@@ -29,7 +30,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **`presence.service.ts`** — `lastPersist` was flagged by
     `prefer-const` (its properties are mutated but the binding is never
     reassigned); switched `let` → `const`.
-  - **Gitleaks** — the scan was failing on a *mix* of true false positives
+  - **Gitleaks** — the scan was failing on a _mix_ of true false positives
     (the base64 `integrity` hash of `tinybench@2.9.0` in `package-lock.json`
     resembling a Slack token, plus `pendingWithdrawals7d`/`failedWithdrawals7d`
     Redis key names) **and** once-committed secrets that were already remediated
@@ -46,8 +47,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Avatar fix, profile navigation & chat tap-actions (power push #48)
 
 ### Fixed
+
 - **Avatar shows empty everywhere** — avatar URLs that were stored as a
-  root-relative path (`/v1/uploads/files/<id>`) resolved against the *web*
+  root-relative path (`/v1/uploads/files/<id>`) resolved against the _web_
   origin and 404'd in the browser. `UserAvatar` now resolves media paths against
   the API origin (`resolveMediaUrl`) and sets `referrerPolicy="no-referrer"`, so
   the photo loads on chat headers, gig cards, the profile page, reviews, and
@@ -58,6 +60,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   fallback so it never gets swallowed by the mobile touch/swipe layer).
 
 ### Added
+
 - **Tap-actions in message text** — URLs open in a new tab, `@handles` link to
   that user's profile, and `` `inline code` `` taps copy to clipboard (with a
   toast). Search-hit highlighting still works.
@@ -70,6 +73,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Chat power features: read-receipt popover & in-text search highlight (power push #47)
 
 ### Added
+
 - **Read-receipt popover** — tap a message's ✓✓ (or the "seen by" avatar row)
   to open a bottom sheet listing exactly **who** has read that message and who
   hasn't yet (names, twitter-style @handles, avatars). Includes a live
@@ -83,6 +87,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Verified badge fix + chat power features (power push #46)
 
 ### Fixed
+
 - **Verified badge was clipped** on avatars — the check badge sat inside the
   circular, `overflow-hidden` image container so it was cut off (as seen on the
   "HY" chat header). `UserAvatar` now renders the badge on an outer, non-clipped
@@ -90,6 +95,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   avatar, badge, or name still opens the user's profile page (`/u/<username>`).
 
 ### Added
+
 - **Jump-to-latest chip** — when you scroll up in a thread, a floating "Latest"
   button appears above the composer with a live count of messages that arrived
   while you were away; tap it to jump to the newest message.
@@ -100,6 +106,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Gig-card avatars, verified flags & media pagination (power push #45)
 
 ### Added
+
 - **Verified flags + real avatars on gig cards** — the home/featured gig cards
   (both cover and no-cover variants) now render the owner's real profile photo
   and show the cyan verified check only when the owner is verified. The API
@@ -112,18 +119,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Verified flags everywhere, group typing, media audit log (power push #44)
 
 ### Added
+
 - **Verified flag on more surfaces** — the cyan ring / check badge now also
   appears on **global-search user results** and **review authors** (in addition
   to profile, chat, gigs). The API returns `isVerified` for search users and
   review authors.
-- **Group "typing" in the inbox** — the conversation list shows *"Name is
-  typing…"* for group chats (the server relays the typist's first name), while
+- **Group "typing" in the inbox** — the conversation list shows _"Name is
+  typing…"_ for group chats (the server relays the typist's first name), while
   DMs keep the plain pulse.
 - **Image-approval log in Audit** — the Audit tab now surfaces media actions
   (`MEDIA.REMOVE_AVATAR` / `MEDIA.FLAG_GIG`) with a dedicated filter, a headline
   count, and amber badges so staff can audit every image approval/removal.
 
 ### Changed
+
 - **Clickable avatars everywhere** — profile photo and/or name now open the
   user's profile from: chat header, chat bubbles, gig-owner cards, search
   results, and review author rows.
@@ -131,6 +140,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Verified rings, inbox typing, admin media review & import (power push #43)
 
 ### Added
+
 - **Verified avatar ring** — verified users (phone + ID) now show a cyan ring
   and a small check badge on their avatar everywhere: public profile, chat
   header, chat bubbles, and gig-owner cards. (`UserAvatar` gained a `verified`
@@ -150,6 +160,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Taller profile hero, header profile link + suggestions (power push #42)
 
 ### Changed
+
 - **Taller profile hero banner** — increased the profile cover from ~176px to
   ~240px (≈320px on desktop) so the name and photo breathe.
 - **Chat header → profile** — clicking the contact's **photo or name** in the
@@ -157,6 +168,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the robust `UserAvatar` (real photo, graceful initials fallback on failure).
 
 ### Added
+
 - **Photo nudge on your own profile** — if you haven't set a profile picture, a
   friendly banner appears on your public profile with an "Add photo" button
   (localized EN/AM).
@@ -166,6 +178,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Scroll fix, richer profile photos (power push #41)
 
 ### Fixed
+
 - **Vertical scrolling broke** — the page-no-pan fix used `overflow-x: hidden`
   on `<html>/<body>`, which on some mobile browsers creates a scroll container
   that disables vertical scrolling. Switched to `overflow-x: clip`, which keeps
@@ -175,6 +188,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   more premium.
 
 ### Added
+
 - **Profile photo displayed everywhere** — a reusable `UserAvatar` component now
   shows the real profile image (falling back to gradient + initials) on the
   public profile, gig owner cards, chat bubbles and chat header. Set it once at
@@ -185,12 +199,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Header fix, headroom, sender photos & haptics (power push #40)
 
 ### Fixed
+
 - **Header shows "Conversation" / "?" instead of the contact** — the header
   derived the peer only from loaded messages, which was null for empty/new
   conversations. It now reads `conv.peer` (from conversation detail) first, so
   the contact's real name and photo show immediately.
 
 ### Changed
+
 - **Headroom above the profile** — the chat header now has extra top padding
   (plus the safe-area inset) so the profile avatar/name aren't clipped at the
   top edge.
@@ -199,12 +215,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   initials).
 
 ### Added
+
 - **Haptic feedback** on swipe-right-to-reply and on long-press-to-reply
   (short vibration tick on supported devices).
 
 ## [Unreleased] — Chat header & composer tweaks (power push #39)
 
 ### Changed
+
 - **Contact profile shown in the header** — the chat header now shows the
   contact's real profile photo (falling back to initials) and name.
 - **Rectangular composer** — the input pill keeps a slight `rounded-2xl` corner
@@ -214,22 +232,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Removed the search icon** from the top bar (search stays in the `...` menu).
 
 ### Added
+
 - **Swipe-right → reply** — swipe right on a message bubble on mobile to start
   a reply (distinct from the edge swipe-back).
 
 ## [Unreleased] — Chat UX polish + session reliability (power push #38)
 
 ### Fixed
+
 - **"Invalid or expired token" on voice messages** — the root cause was the
   15-min access-token lifespan with no auto-refresh. `apiFetch` now silently
   refreshes the session (via the refresh token) and replays the request once,
   so long voice/chat sessions no longer die mid-send.
 
 ### Added
+
 - **Live character counter** in the composer (shows `n/4096`, turns amber near
   the limit and red at it); message length is clamped at 4096 chars.
 - **Voice hint** — small helper text under the mic (`Hold the mic to record a
-  voice message`).
+voice message`).
 - **Animated / GIF-style stickers** — a new "Animated" sticker tab plus a pop
   entrance animation on large stickers sent in chat (free Unicode, no key).
 - **Enhanced + cleaned top-nav menu** — grouped into Conversation /
@@ -237,12 +258,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   entry, and all labels localized (Amharic + English).
 
 ### Changed
+
 - **Dark-mode pill refinement** — the composer pill uses a translucent surface
-  + soft border in dark mode.
+  - soft border in dark mode.
 
 ## [Unreleased] — Telegram composer redesign + gestures (power push #36)
 
 ### Changed
+
 - **Composer redesigned to the Telegram style** — a single rounded pill with
   the **emoji button inside on the left**, the text field in the middle, and
   the **paperclip (attach) inside on the right**, plus a **blue round send/+
@@ -257,12 +280,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `overflow-x: hidden` so the page can't be dragged side-to-side.
 
 ### Fixed
+
 - **Space above the input** — extra padding around the composer and message
   list so the last message never crowds the input bar.
 
 ## [Unreleased] — Composer spacing, attach button & zoom (power push #35)
 
 ### Added
+
 - **Space above the input** — the composer has more top padding and the
   message list more bottom padding so the input never touches the last message.
 - **Always-visible Attach** — the paperclip moved out of the `+` panel back
@@ -277,6 +302,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Telegram-style composer (power push #34)
 
 ### Changed
+
 - **Decluttered composer** — the many side icons (sticker, timer, schedule,
   quick replies, offer) no longer squeeze the text input. The input is now a
   wide Telegram-style pill (textarea + inline emoji + a single `+` button),
@@ -289,6 +315,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Voice waveforms + AI smart replies (power push #33)
 
 ### Added
+
 - **Voice-message waveforms** — the recorder now samples a live amplitude
   waveform (WebAudio AnalyserNode), stores it in `attachmentMeta.waveform`,
   and audio bubbles render a custom waveform player (play/pause, live
@@ -306,13 +333,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Messenger power bundle (power push #32)
 
 ### Added
+
 - **Sticker/GIF picker** — a free, curated emoji sticker picker (Smileys,
   Emotions, Hands, Animals, Food, Objects) with search, in the composer; a
   single-emoji message renders as a large sticker bubble.
 - **Quoted-reply jump** — tapping a quoted reply block scrolls to and
   highlights the original message in the thread.
 - **Seen-by avatars** — my own messages show a small avatar stack (up to 3
-  + more) of exactly who has read them, with name tooltips.
+  - more) of exactly who has read them, with name tooltips.
 - **Self-destruct (disappearing) messages** — per-message timer before sending
   (1m / 1h / 1d / 1w) with a live countdown and an "expired" chip when the
   time lapses (both sides filter it client-side).
@@ -328,6 +356,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Rich link previews (power push #31)
 
 ### Added
+
 - **Link preview cards** — when a message contains a URL, the chat now
   unfurls it and renders a rich card (title, domain, description, cover image)
   instead of a bare link, like WhatsApp/Telegram/iMessage.
@@ -339,12 +368,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   15-min cache). Pure `link-preview` module + 11 unit tests.
 
 ### Fixed
+
 - **SSRF safety** — the unfurl endpoint refuses private hosts, non-http(s)
   schemes, and unparseable URLs.
 
 ## [Unreleased] — Chat polish + full Amharic (power push #30)
 
 ### Fixed
+
 - **Overlapping message icons** — the per-bubble side `⋯` triggers (which
   overlapped) are removed. Tapping a message bubble now opens a clean, labeled
   action sheet (Reply / React / Forward / Pin / Save / Copy / Edit / Delete).
@@ -355,12 +386,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (icon + name + size + download).
 
 ### Added
+
 - **Comprehensive Amharic** — all new chat strings routed through `t()`; locale
   parity now **585 keys, 0 missing** (only proper-noun identicals remain).
 
 ## [Unreleased] — Messaging depth (power push #29)
 
 ### Added
+
 - **Load older messages** — cursor pagination in the thread with a "Load older
   messages" button (prepends prior pages; `GET /conversations/:id/messages?cursor=`).
 - **Read-receipts breakdown** — per-message `readBy`, `readByTotal`,
@@ -374,23 +407,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Messenger power-up + Saved Messages (power push #28)
 
 ### Added
+
 - **Online presence** — live online/offline dots on the conversation list, chat
   header and group member sheet (Socket.io heartbeat + `presence` service).
 - **Mute / unmute** a conversation; **mark as unread** (badge returns).
 - **Forward any message** to another chat (mini forward picker).
 - **In-conversation message search** (`GET /conversations/:id/messages/search`).
-- **Pin / unpin messages** (`Message.pinnedAt` + live pin banner). 
+- **Pin / unpin messages** (`Message.pinnedAt` + live pin banner).
 - **Saved Messages** — a private 1-member self-chat: bookmark any message,
   voice note or file. New `GET /conversations/saved`; "Save" button on any
   message; pinned entry in the messages list.
 
 ### Polish
+
 - Live typing + presence socket events merged into the client; admin build
   marker bumped to `2026-09-05.22`.
 
 ## [Unreleased] — Trust, messaging & product polish (power push #27)
 
 ### Fixed
+
 - **Create/List team → "invalid database query"** — Prisma `include` was fed a
   mixed scalar+relation object (`memberSelect`) causing a
   `PrismaClientValidationError`. Both memberships now use `select`.
@@ -404,6 +440,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is unavailable — verified live via Supabase (primary) and locally (fallback).
 
 ### Added
+
 - **Admins: add staff** — Admins can now search any user and assign a staff
   role (ADMIN/MODERATOR/SUPPORT/FINANCE) directly from the admin console.
 - **Chat upgrade (Telegram-grade)** — group rooms (+ create/add/remove/rename/
@@ -414,12 +451,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   screenshots, user flows, security, performance, tech &amp; financial sections.
 
 ### Polish
+
 - Vertical head/bottom room on mobile shell + bottom-nav clearance; typing-dot
   animation; admin build marker bumped to `2026-09-05.20`.
 
 ## [Unreleased] — Per-category fees + KPI threshold watcher (power push #26)
 
 ### Added
+
 - **Per-category fee editor** — new `Category` table (seeded with the 8
   catalog categories; `id` = slug) carrying an optional `feePercent` override.
   Order creation (gig purchase + job proposal acceptance) now looks up the
@@ -438,6 +477,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — CSAT, referral tracking, offline indicator, admin palette (power push #25)
 
 ### Added
+
 - **CSAT post-ticket** — `SupportTicket` gains `csatRating` / `csatComment` /
   `csatScoredAt` (migration `20260904120000_csat_and_referral_clicks`); API
   `POST /support/:id/csat` (owner-only, once per resolved/closed ticket);
@@ -458,6 +498,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Review replies (seller rebuttal) (power push #24)
 
 ### Added
+
 - **DB** — `Review.sellerReply` / `sellerRepliedAt` / `sellerReplyEditedAt`;
   new `NotificationType.REVIEW_REPLY`; migration `20260904110000_review_reply`
   (applied via Render `preDeploy` `db:migrate:deploy`).
@@ -474,6 +515,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — PostHog consent banner + high-signal events (power push #23)
 
 ### Added
+
 - **Analytics consent** — `lib/analytics.ts` got `hasConsent()` / `setConsent()`
   (backed by `apx-consent` in localStorage); PostHog init opts out when the
   user declined; a `ConsentBanner` shows once on first visit when PostHog is
@@ -485,6 +527,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Sentry + PostHog observability wiring (power push #22)
 
 ### Added
+
 - **Sentry (API / Node)** — `config/sentry.ts` (`initSentry`, `captureException`,
   `captureMessage`), no-op without `SENTRY_DSN`; `captureException` wired into
   the global error handler; Diagnostics reports `sentry: configured`.
@@ -492,7 +535,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   setup: `src/instrumentation.ts` (server/edge `register()` + `onRequestError`),
   `src/instrumentation-client.ts` (`onLoad` + `onRouterTransitionStart`),
   `app/global-error.tsx` (React render errors), and `withSentryConfig` in
-  `next.config`. Sourcemap *source-generation* disabled so the free-tier build
+  `next.config`. Sourcemap _source-generation_ disabled so the free-tier build
   stays under memory limits (Vercel still produces `.map` files for traces).
 - **PostHog (web)** — `lib/analytics.ts` (`initPosthog`, `track`, `identify`),
   a `PostHogInit` provider in the Providers tree, `identifyUser` on `/me`,
@@ -505,9 +548,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 > (web) — see README/OBSERVABILITY notes. Without them the SDKs no-op safely.
 
 ## [Unreleased] — Marketplace health score, fraud watchlist, escrow timeline, gig SEO (power push #21)
+
 ## [Unreleased] — Marketplace health score, fraud watchlist, escrow timeline, gig SEO (power push #21)
 
 ### Added
+
 - **Marketplace health score** — `lib/healthScore.ts` (pure `buildHealthScore`: a
   weighted 0–100 composite of activation, churn, disputes, delivery SLA,
   support SLA, liquidity and quality, each as a 0–100 contributor) +
@@ -527,6 +572,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Retention & churn analytics + email-queue monitor + Agencies tab (power push #19)
 
 ### Added
+
 - **Retention & churn analytics** — `lib/retention.ts` (pure `buildRetention`:
   activation, D7/D14/D30 activation rate, churn, weekly activation cohorts) +
   `services/admin/retention.service.ts` (DB groupBy on signups + first/last
@@ -546,6 +592,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Pro-subscription ROI analytics (power push #16)
 
 ### Added
+
 - **Pro-subscription ROI** — `lib/proRoi.ts` (pure `buildProRoi`: cohort ROI
   multiple, net value, avg per-subscriber ROI, repurchase rate, profitable %,
   best/lowest ROI) — measures whether a Pro pass pays for itself.
@@ -559,6 +606,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Downloadable receipts & monthly earnings statement (power push #15)
 
 ### Added
+
 - **`lib/statement.ts`** — pure `buildOrderReceipt` + `buildMonthlyStatement`:
   self-contained printable HTML (inline styles, HTML-escaped, no external
   resources), with totals and a per-order table.
@@ -573,7 +621,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **+5 unit tests** — 182 → 187 tests.
 
 ## [Unreleased] — Order-health needs-attention inbox + daily digest (power push #15)
+
 ### Added
+
 - **`lib/orderHealth.ts`** — pure `buildOrderHealth`/`classifyOrder`: flags
   overdue delivery, stale dispute, stale review, unresolved delivery and
   abandoned orders with severity + age; priority inbox, per-category counts and
@@ -589,6 +639,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Freelancer win-rate & per-gig conversion insights (power push #14)
 
 ### Added
+
 - **Conversion insights** — `lib/conversionInsights.ts` (pure
   `buildConversionInsights`: view→order conversion + order-completion "win"
   rate per freelancer and per gig, a funnel, and best-converting /
@@ -604,6 +655,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Flag-queue moderation triage (power push #13)
 
 ### Added
+
 - **Moderation triage for flagged gigs** — `lib/moderationQueue.ts` (pure
   `buildQueueSummary`: bucket counts via `[groupBy, _count]` + open items
   oldest-first; `canBulkResolve` narrows the target to `RESOLVED | DISMISSED`)
@@ -625,6 +677,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Admin content CMS: site-wide announcement (power push #12)
 
 ### Added
+
 - **Admin-managed site announcement banner** stored as a typed value in the
   existing `AppSetting` store (`content.siteAnnouncement`) — no DB migration.
   `lib/announcement.ts` sanitises/normalises `{text, tone, href, cta}` (clamps
@@ -640,6 +693,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Top-performer leaderboard (power push #11)
 
 ### Added
+
 - **Top-performer leaderboard** — `lib/leaderboard.ts` (pure
   `buildLeaderboard`: independently ranks freelancers and clients by revenue,
   plus a trailing-window "risers" list) + `GET /admin/ops/leaderboard` (RBAC
@@ -653,6 +707,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Support SLA & team dashboard (power push #10)
 
 ### Added
+
 - **Support SLA analytics** — `lib/supportAnalytics.ts` (pure
   `buildSupportAnalytics`: open/aging queue, unattended + SLA-breached counts,
   oldest-open age, resolved-in-7d, avg first-response time, per-admin
@@ -666,6 +721,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Pro-monetization analytics (power push #9)
 
 ### Added
+
 - **Pro revenue analytics** — `lib/subscriptionAnalytics.ts` (pure
   `buildSubscriptionStats`: active subscribers, active/total revenue, trailing
   window revenue + purchases, avg price, by-plan revenue/share ranked, top
@@ -678,6 +734,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Referral programme analytics (power push #8)
 
 ### Added
+
 - **Referral dashboard** — `lib/referralStats.ts` (pure `buildReferralStats`
   mapping referred users → total/active/pending cohorts, attributed GMV and
   commission at a configurable reward rate, top referral) +
@@ -690,6 +747,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Wallet reconciliation report (power push #7)
 
 ### Added
+
 - **Wallet reconciliation report** — `lib/reconcile.ts` (pure: build
   reconciliation over wallet balances + ledger sums, computes signed drift,
   surface worst offenders first) + `GET /admin/ops/reconcile` (RBAC
@@ -702,6 +760,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Proactive moderation auto-flag scan (power push #6)
 
 ### Added
+
 - **Moderation rules engine** (`apps/api/src/lib/moderationRules.ts`): pure,
   testable `analyzeContent` / `maxSeverity` / `summarizeFlags` against a
   declarative rule-set (off-platform + scam, prohibited items, off-platform
@@ -717,6 +776,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Power push #2–#4: CSV exports, privacy/data export
 
 ### Added
+
 - **Admin CSV exports** — `GET /admin/ops/export/{audit|orders|users}` (RBAC per
   kind + download headers). "Export CSV" buttons on the Audit, Orders & Money
   and Users tabs; fetches with the Bearer token and downloads from a blob (token
@@ -732,6 +792,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Admin time-series analytics (feature #1 of the power push)
 
 ### Added
+
 - **Time-series analytics on the admin Summary tab**: daily GMV, revenue,
   signups, orders created and orders completed, rendered as interactive SVG
   line charts with 7/30/90-day window switch and hover tooltips. No chart
@@ -750,12 +811,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Deploy fix: admin panel now live on Vercel
 
 ### Fixed
+
 - **Root cause of the missing admin tabs on the live panel:** Vercel's team
   setting requires the git **commit author** to be a member of the Vercel team
   to create deployments. All feature commits were authored as
   `Apex-Work Dev <dev@apex-work.local>` (not a team member), so Vercel blocked
   every deployment (`BLOCKED`, `readyStateReason = "Git author ... must have
-  access to the team"`), leaving the site on the old build.
+access to the team"`), leaving the site on the old build.
 - Fixed by committing as the team identity (`Davezeni <tamirud8@gmail.com>`)
   and deploying. Added a visible **`ADMIN_UI_BUILD` marker** (currently
   `2026-08-30.3`) in the admin header (`Staff · 2026-08-30.3`) so any future
@@ -772,6 +834,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Money/community coverage + e2e verification (free OSS)
 
 ### Added
+
 - **+15 unit tests** for the money service (refund: credit wallet + ledger +
   cancel; over-refund/debt/overflow guards; wallet adjust credit/debit,
   overdraw and missing-wallet; ledger filter combining) and community service
@@ -785,6 +848,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Test coverage expansion (free OSS)
 
 ### Added
+
 - **+10 unit tests** for the validation middleware, response helpers and the
   moderation service (gig unflag, job pin/open toggle, review hide/restore) —
   78 → 88 tests.
@@ -796,6 +860,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Security & quality hardening (free OSS)
 
 ### Added
+
 - **Secret scanning** (`.github/workflows/ci.yml`): a `gitleaks` job scans the
   full git history on every push/PR so a leaked credential can't slip in.
 - **Dependabot** (`.github/dependabot.yml`): weekly npm + GitHub Actions dep
@@ -805,11 +870,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   RBAC `requireCapability` middleware (60 → 78 tests).
 
 ### Changed
+
 - `vitest.config.ts` coverage threshold updated; test file type safety fixed.
 
 ## [Unreleased] — Order workflow correctness, testing & tooling
 
 ### Added
+
 - **Order state machine** (`shared/domain/orderState.ts`): a single, tested DAG
   of legal transitions (`PENDING → ACTIVE → IN_REVIEW → COMPLETED`, with
   revision, cancel and dispute edges). `orders.service.ts` now routes every
@@ -826,6 +893,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 11 new unit tests for the order state machine + money split (49 → 60 tests).
 
 ### Changed
+
 - `orders.service.ts` guards now emit the reason from the transition map, and
   fee math delegates to `computeOrderSplit`.
 - README documents the real `test:coverage` / `test:e2e` scripts.
@@ -833,6 +901,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Admin control surface (RBAC, moderation, money, ops)
 
 ### Added
+
 - **RBAC** (`lib/adminRbac.ts` + `middleware/adminOnly.ts`): admin capabilities
   map with `ADMIN` (super), `MODERATOR`, `SUPPORT`, `FINANCE`. Staff roles are
   enforced server-side via `requireCapability()`; the admin UI filters its nav
@@ -864,6 +933,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Unit tests for RBAC and cursor pagination (39 → 49 tests).
 
 ### Changed
+
 - Legacy `admin.routes.ts` endpoints are now capability-scoped (reports,
   withdrawals, users, skills, certs, diagnostics, disputes) so a non-super
   staff role can't reach money or user-suspend by accident.
@@ -973,16 +1043,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 **Monorepo**
+
 - npm workspaces (`apps/web`, `apps/api`, `packages/shared`)
 - Shared TS config, Prettier, EditorConfig
 - GitHub Actions CI (lint, typecheck, build)
 
 **Shared package** (`@apex-work/shared`)
+
 - Zod validation schemas (auth, user, gig, common)
 - TypeScript types (ApiResult, Paginated)
 - Constants (categories, roles, payment methods, rate limits, phone regex)
 
 **API** (`@apex-work/api`)
+
 - Express 4 + TypeScript with strict mode
 - Prisma schema for full data model:
   - Users, roles, sessions, refresh tokens
@@ -1011,6 +1084,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Prisma seed with demo user and gig
 
 **Web** (`@apex-work/web`)
+
 - Next.js 14 (App Router, RSC)
 - Tailwind CSS + shadcn-style Button/Card/Avatar
 - Framer Motion for micro-animations
@@ -1031,6 +1105,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Haptic feedback on tap (via navigator.vibrate)
 
 **Documentation**
+
 - Root README with setup instructions
 - `docs/ARCHITECTURE.md` — system diagram, data flow, security, auth flow
 - `docs/CONTRIBUTING.md` — branch strategy, commits, PR checklist, coding standards
@@ -1061,6 +1136,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Fix] — PostHog init crashed the whole app (analytics namespace bug)
 
 ### Fixed
+
 - `lib/analytics.ts` `getPosthog()` resolved `require('posthog-js')` directly,
   but posthog-js is an ESM package whose real singleton lives under `.default`
   when imported via CommonJS. The result was `.init` being `undefined`, so
@@ -1073,6 +1149,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Fix] — Announcement banner + earnings statement pointed at the web origin
 
 ### Fixed
+
 - `AnnouncementBanner` and the earnings-statement download used a relative
   `fetch('/v1/...')` URL, which resolved to the Vercel origin and 404'd (the
   API lives on Render). They now use the exported `API_BASE` so the admin-set
