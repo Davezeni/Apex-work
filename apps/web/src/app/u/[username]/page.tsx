@@ -135,7 +135,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-dvh pb-24">
       {/* Hero */}
-      <div className="relative h-44 overflow-hidden sm:h-56">
+      <div className="relative h-60 overflow-hidden sm:h-80">
         {/* Deep, richly-toned mesh banner (keeps the name/photo legible). */}
         <div
           className="absolute inset-0"
@@ -305,6 +305,20 @@ export default function PublicProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Add-photo nudge (own profile, no photo yet) */}
+      {isSelf && !user.avatarUrl && (
+        <div className="mx-4 -mt-2 flex items-center gap-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-3">
+          <Camera className="h-5 w-5 shrink-0 text-primary" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold">{t('publicProfile.addPhotoTitle')}</p>
+            <p className="text-[11px] text-muted-foreground">{t('publicProfile.addPhotoBody')}</p>
+          </div>
+          <Button asChild variant="brand" size="sm">
+            <Link href="/settings/profile">{t('publicProfile.addPhotoCta')}</Link>
+          </Button>
+        </div>
+      )}
 
       {/* Bio */}
       {user.bio && (

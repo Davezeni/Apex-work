@@ -452,6 +452,9 @@
   },
   "publicProfile": {
     "about": "About",
+    "addPhotoBody": "Clients are more likely to contact people with a photo. Set one from local storage.",
+    "addPhotoCta": "Add photo",
+    "addPhotoTitle": "Add a profile photo",
     "cv": "View CV",
     "joined": "joined {when}",
     "linkCopied": "Link copied",

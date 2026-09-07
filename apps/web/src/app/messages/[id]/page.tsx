@@ -29,6 +29,7 @@ import {
 import { useBlockUser } from '@/hooks/use-moderation';
 import { useToggleReaction } from '@/hooks/use-reactions';
 import { useMessageDraft } from '@/hooks/use-drafts';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useOutboxSync } from '@/hooks/use-outbox';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
@@ -418,16 +419,10 @@ export default function ConversationPage() {
         ) : peer ? (
           <Link
             href={`/u/${peer.username}`}
-            className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br text-sm font-bold text-white"
+            aria-label={peer.fullName}
+            className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full"
           >
-            {peer.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={peer.avatarUrl} alt={peer.fullName} className="h-full w-full object-cover" />
-            ) : (
-              <span className={cn('grid h-10 w-10 place-items-center rounded-full', gradientFor(peer.id))}>
-                {initialsOf(peer.fullName)}
-              </span>
-            )}
+            <UserAvatar name={peer.fullName} avatarUrl={peer.avatarUrl} id={peer.id} className="h-10 w-10 text-sm font-bold" />
           </Link>
         ) : (
           <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
@@ -435,9 +430,13 @@ export default function ConversationPage() {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h4 className="truncate text-sm font-semibold">
-            {conv?.isGroup ? conv.title : peer?.fullName ?? conv?.title ?? 'Conversation'}
-          </h4>
+          {peer && !conv?.isGroup ? (
+            <Link href={`/u/${peer.username}`} className="block min-w-0 active:opacity-60">
+              <h4 className="truncate text-sm font-semibold">{peer.fullName}</h4>
+            </Link>
+          ) : (
+            <h4 className="truncate text-sm font-semibold">{conv?.title ?? 'Conversation'}</h4>
+          )}
           {conv?.isGroup ? (
             <p className="text-[11px] text-muted-foreground">{conv.members.length} members{activeTypers > 0 ? ` · ${activeTypers} typing…` : ''}</p>
           ) : peer ? (

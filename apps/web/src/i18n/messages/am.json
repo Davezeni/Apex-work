@@ -452,6 +452,9 @@
   },
   "publicProfile": {
     "about": "ስሊ",
+    "addPhotoBody": "ፎቶ ያላቸውን ሰዎች ደንበኞች የበለጠ ያግኟቸዋል። ከመሣሪያዎ ፎቶ ያውጡ።",
+    "addPhotoCta": "ፎቶ ያክሉ",
+    "addPhotoTitle": "የመገለጫ ፎቶ ያክሉ",
     "cv": "የሥራ ማሳያ (CV)",
     "joined": "የተቀላቀለው {when}",
     "linkCopied": "ሊንክ ተቀዷል",

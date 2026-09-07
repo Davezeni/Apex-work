@@ -4,10 +4,11 @@ import { useEffect, useState, useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { ArrowLeft, Search as SearchIcon, Star, Loader2, Briefcase, User as UserIcon, Package as PackageIcon, BellPlus } from 'lucide-react';
+import { ArrowLeft, Search as SearchIcon, Star, Loader2, Briefcase, User as UserIcon, Package as PackageIcon, BellPlus, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useGlobalSearch, useSuggest } from '@/hooks/use-search';
 import { useCreateSavedSearch } from '@/hooks/use-saved-searches';
+import { useStartConversation } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
@@ -28,7 +29,8 @@ export default function SearchPage() {
 
   const { data, isLoading, isFetching } = useGlobalSearch(debouncedQ, 15);
   const { data: sug } = useSuggest(q);
-  const { isAuthed } = useMe();
+  const { data: me, isAuthed } = useMe();
+  const startConversation = useStartConversation();
   const saveSearch = useCreateSavedSearch();
 
   const doSaveSearch = async () => {
@@ -203,26 +205,47 @@ export default function SearchPage() {
               <ResultGroup title="People" icon={<UserIcon className="h-3 w-3" />}>
                 <div className="space-y-2">
                   {data.users.map((u) => (
-                    <Link key={u.id} href={`/u/${u.username}`} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
-                      {u.avatarUrl ? (
-                        <Image src={u.avatarUrl} alt={u.fullName} width={40} height={40} unoptimized className="h-10 w-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
-                          {(u.fullName[0] ?? '?').toUpperCase()}
+                    <div key={u.id} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+                      <Link href={`/u/${u.username}`} className="flex min-w-0 flex-1 items-center gap-3">
+                        {u.avatarUrl ? (
+                          <Image src={u.avatarUrl} alt={u.fullName} width={40} height={40} unoptimized className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
+                            {(u.fullName[0] ?? '?').toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold">{u.fullName}</div>
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {u.title ?? '@' + u.username}{u.city ? ` · ${u.city}` : ''}
+                          </div>
                         </div>
+                        {u.ratingCount > 0 && (
+                          <div className="text-[11px] font-bold text-primary">
+                            <Star className="mr-0.5 inline h-3 w-3 fill-amber-400 text-amber-400" />{u.rating.toFixed(1)}
+                          </div>
+                        )}
+                      </Link>
+                      {me && me.id !== u.id && (
+                        <button
+                          onClick={() =>
+                            startConversation.mutate(u.id, {
+                              onSuccess: (c) => router.push(`/messages/${c.id}`),
+                              onError: (e) => toast.error((e as Error).message),
+                            })
+                          }
+                          disabled={startConversation.isPending}
+                          aria-label={`Message ${u.fullName}`}
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border text-muted-foreground transition-transform active:scale-90 hover:text-primary"
+                        >
+                          {startConversation.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MessageCircle className="h-4 w-4" />
+                          )}
+                        </button>
                       )}
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-bold">{u.fullName}</div>
-                        <div className="truncate text-[11px] text-muted-foreground">
-                          {u.title ?? '@' + u.username}{u.city ? ` · ${u.city}` : ''}
-                        </div>
-                      </div>
-                      {u.ratingCount > 0 && (
-                        <div className="text-[11px] font-bold text-primary">
-                          <Star className="mr-0.5 inline h-3 w-3 fill-amber-400 text-amber-400" />{u.rating.toFixed(1)}
-                        </div>
-                      )}
-                    </Link>
+                    </div>
                   ))}
                 </div>
               </ResultGroup>

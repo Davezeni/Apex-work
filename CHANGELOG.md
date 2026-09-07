@@ -18,6 +18,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Taller profile hero, header profile link + suggestions (power push #42)
+
+### Changed
+- **Taller profile hero banner** — increased the profile cover from ~176px to
+  ~240px (≈320px on desktop) so the name and photo breathe.
+- **Chat header → profile** — clicking the contact's **photo or name** in the
+  chat top bar now opens their public profile (`/u/<username>`). The avatar uses
+  the robust `UserAvatar` (real photo, graceful initials fallback on failure).
+
+### Added
+- **Photo nudge on your own profile** — if you haven't set a profile picture, a
+  friendly banner appears on your public profile with an "Add photo" button
+  (localized EN/AM).
+- **Quick "Message" from search** — global search user results now have a
+  message button to jump straight into a conversation.
+
 ## [Unreleased] — Scroll fix, richer profile photos (power push #41)
 
 ### Fixed
