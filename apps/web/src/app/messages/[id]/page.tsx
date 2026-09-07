@@ -402,12 +402,16 @@ export default function ConversationPage() {
         ) : peer ? (
           <Link
             href={`/u/${peer.username}`}
-            className={cn(
-              'grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br text-sm font-bold text-white',
-              gradientFor(peer.id),
-            )}
+            className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br text-sm font-bold text-white"
           >
-            {initialsOf(peer.fullName)}
+            {peer.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={peer.avatarUrl} alt={peer.fullName} className="h-full w-full object-cover" />
+            ) : (
+              <span className={cn('grid h-10 w-10 place-items-center rounded-full', gradientFor(peer.id))}>
+                {initialsOf(peer.fullName)}
+              </span>
+            )}
           </Link>
         ) : (
           <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
@@ -429,13 +433,6 @@ export default function ConversationPage() {
             </p>
           ) : null}
         </div>
-        <button
-          onClick={() => { setSearchOpen((v) => !v); setSearchQ(''); }}
-          aria-label="Search messages"
-          className={cn('grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90', searchOpen && 'text-primary')}
-        >
-          <Search className="h-5 w-5" />
-        </button>
         {imageUrls.length > 0 && (
           <button
             onClick={() => setGalleryOpen(true)}
@@ -912,19 +909,7 @@ export default function ConversationPage() {
             </div>
           ) : (
             <div className="flex items-end gap-2">
-              {text.trim().length > 0 && (
-                <span
-                  className={cn(
-                    'mb-2 hidden shrink-0 select-none font-mono text-[10px] text-muted-foreground sm:block',
-                    text.length >= CHAR_MAX - CHAR_THRESHOLD && 'text-amber-500',
-                    text.length >= CHAR_MAX && 'text-red-500',
-                  )}
-                >
-                  {text.length}
-                  <span className="text-muted-foreground/60">/{CHAR_MAX}</span>
-                </span>
-              )}
-              <div className="flex flex-1 items-center gap-1 overflow-hidden rounded-full border border-border bg-card px-2 py-1.5 dark:border-white/10 dark:bg-background/60 dark:shadow-inner">
+              <div className="flex min-h-11 flex-1 items-center gap-1 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 dark:border-white/10 dark:bg-background/60 dark:shadow-inner">
                 <button
                   onClick={() => setEmojiOpen((v) => !v)}
                   aria-label="Emoji"
@@ -946,6 +931,16 @@ export default function ConversationPage() {
                   className="min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
                   style={{ maxHeight: '140px', minHeight: '38px' }}
                 />
+                {text.length >= CHAR_MAX - CHAR_THRESHOLD && (
+                  <span
+                    className={cn(
+                      'shrink-0 select-none pb-1 font-mono text-[10px] tabular-nums',
+                      text.length >= CHAR_MAX ? 'text-red-500' : 'text-amber-500',
+                    )}
+                  >
+                    {text.length}
+                  </span>
+                )}
                 <AttachButton
                   disabled={send.isPending}
                   className="h-9 w-9 rounded-full bg-transparent hover:bg-muted"
@@ -1324,6 +1319,28 @@ function MessageBubble({
   };
   const cancelPress = () => { if (pressTimer.current) clearTimeout(pressTimer.current); };
 
+  // Swipe-right on a bubble → reply (mobile). Kept distinct from the edge
+  // swipe-back on the page, which only triggers from the far-left edge.
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const onBubbleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    if (!t) return;
+    swipeStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onBubbleTouchEnd = (e: React.TouchEvent) => {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (dx > 70 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      cancelPress();
+      onReplyStart?.(m);
+    }
+  };
+
   // Long-press to open the reaction picker on mobile.
 
   if (offerMatch) {
@@ -1369,6 +1386,8 @@ function MessageBubble({
           onPointerUp={cancelPress}
           onPointerLeave={cancelPress}
           onPointerCancel={cancelPress}
+          onTouchStart={onBubbleTouchStart}
+          onTouchEnd={onBubbleTouchEnd}
           onContextMenu={(e) => e.preventDefault()}
           role="button"
           tabIndex={0}

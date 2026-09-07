@@ -18,6 +18,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Chat header & composer tweaks (power push #39)
+
+### Changed
+- **Contact profile shown in the header** — the chat header now shows the
+  contact's real profile photo (falling back to initials) and name.
+- **Rectangular composer** — the input pill keeps a slight `rounded-2xl` corner
+  and a `min-h` so it stays rectangular (not elliptical) as it grows.
+- **Counter moved into the pill** — the character counter now lives inline in
+  the composer pill (appears near the limit) instead of a side tab.
+- **Removed the search icon** from the top bar (search stays in the `...` menu).
+
+### Added
+- **Swipe-right → reply** — swipe right on a message bubble on mobile to start
+  a reply (distinct from the edge swipe-back).
+
 ## [Unreleased] — Chat UX polish + session reliability (power push #38)
 
 ### Fixed
