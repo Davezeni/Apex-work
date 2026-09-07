@@ -19,7 +19,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
-## [Unreleased] — Design-system restyle with UI/UX Pro Max design intelligence (power push #50)
+## [Unreleased] — Desktop app shell + sidebar (power push #51)
+
+- **Real desktop app experience.** `MobileShell` is now responsive: on desktop
+  (`md+`) it renders a persistent **left sidebar** (`DesktopSidebar`) with the
+  Apex-Work logo, a brand "Create" button, grouped nav (Workspace: Browse,
+  Search, Chat w/ unread badge, Jobs, Saved, Notifications, Wallet; Account:
+  Profile, Settings), a user card (avatar, name, @handle), and a Sign-out action.
+  On mobile the existing bottom tab bar remains unchanged. Because every app
+  page uses `MobileShell`, all of `/browse`, `/search`, `/messages`,
+  `/profile`, `/jobs`, `/saved`, `/wallet`, `/notifications`, `/orders` now get
+  the desktop shell automatically.
+- Added i18n `nav` keys for the sidebar (EN + Amharic, 638/638 parity).
+
+## [Unreleased] — Desktop auth routing & brand refresh (power push #50)
 
 Rebuilt the app-wide visual language on a three-layer token architecture
 (primitive → semantic → component), inspired by the open-source **UI/UX Pro

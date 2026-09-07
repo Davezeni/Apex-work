@@ -11,6 +11,7 @@ import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
 import { useNotificationSocket } from '@/hooks/use-notifications';
 import { useConversations } from '@/hooks/use-chat';
 import { PwaInstall } from '@/components/pwa-install';
+import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
 
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
@@ -59,12 +60,22 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   };
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <main className={cn('min-h-dvh safe-head-room', showTabBar && 'safe-b-nav')}>{children}</main>
+    <div className="flex min-h-dvh bg-background text-foreground">
+      {/* Desktop: persistent left sidebar; Mobile: hidden (bottom nav instead). */}
+      <DesktopSidebar />
+      <main
+        className={cn(
+          'safe-head-room min-h-dvh min-w-0 flex-1',
+          showTabBar && 'safe-b-nav',
+          'md:pb-0',
+        )}
+      >
+        {children}
+      </main>
       <PwaInstall />
 
       {showTabBar && (
-        <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40">
+        <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 md:hidden">
           <div className="mobile-bottom-nav__bar mx-auto grid max-w-md grid-cols-5 items-center px-4 pb-1.5 pt-1">
             <svg
               aria-hidden="true"
