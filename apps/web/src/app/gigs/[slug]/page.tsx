@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import { useSimilarGigs } from '@/hooks/use-similar';
 import { RichViewer } from '@/components/ui/rich-viewer';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { recordGigEvent } from '@/hooks/use-gig-analytics';
 import { BoostSheet } from '@/components/gigs/boost-sheet';
 import { useAuthStore } from '@/stores/auth-store';
@@ -231,14 +232,12 @@ export default function GigDetailPage() {
           </div>
           <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
         <div className="flex items-start gap-3">
-          <div
-            className={cn(
-              'grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base font-bold text-white ring-4 ring-card',
-              gradientFor(gig.owner.id),
-            )}
-          >
-            {initialsOf(gig.owner.fullName)}
-          </div>
+          <UserAvatar
+            name={gig.owner.fullName}
+            avatarUrl={gig.owner.avatarUrl}
+            id={gig.owner.id}
+            className="h-14 w-14 text-base font-bold ring-4 ring-card"
+          />
           <div className="min-w-0 flex-1">
             <Link
               href={`/u/${gig.owner.username}`}
@@ -324,14 +323,12 @@ export default function GigDetailPage() {
           {/* Freelancer card + title inline */}
           <div className="mx-4 mt-4 rounded-2xl border border-border bg-card p-5">
             <div className="flex items-start gap-3">
-              <div
-                className={cn(
-                  'grid h-14 w-14 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base font-bold text-white',
-                  gradientFor(gig.owner.id),
-                )}
-              >
-                {initialsOf(gig.owner.fullName)}
-              </div>
+              <UserAvatar
+                name={gig.owner.fullName}
+                avatarUrl={gig.owner.avatarUrl}
+                id={gig.owner.id}
+                className="h-14 w-14 text-base font-bold"
+              />
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/u/${gig.owner.username}`}

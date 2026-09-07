@@ -451,16 +451,17 @@
     "amharic": "አማርኛ"
   },
   "publicProfile": {
+    "about": "ስሊ",
+    "cv": "የሥራ ማሳያ (CV)",
+    "joined": "የተቀላቀለው {when}",
+    "linkCopied": "ሊንክ ተቀዷል",
+    "noGigs": "ኬ ሥራ የለም።",
+    "noGigsSelf": "አሁን ሥራ አልለጥትም።",
     "notFound": "ተጠቃሚ አልተገኘም",
     "notFoundBody": "ይህ ፕሮፋይል መነሱ አሊቒትር ይቻላል።",
-    "about": "ስሊ",
-    "reviews": "ግምገማዎች",
-    "joined": "የተቀላቀለው {when}",
     "perHourShort": "ሰዓት",
-    "noGigsSelf": "አሁን ሥራ አልለጥትም።",
-    "noGigs": "ኬ ሥራ የለም።",
     "postFirstGig": "መጀመሪያ ሥራዎን ይላክ",
-    "linkCopied": "ሊንክ ተቀዷል"
+    "reviews": "ግምገማዎች"
   },
   "gigDetail": {
     "review": "ግምገማዎች",

@@ -390,7 +390,7 @@ export default function ConversationPage() {
 
   return (
     <div
-      className="chat-bg flex h-dvh flex-col overflow-x-hidden"
+      className="chat-bg flex h-dvh flex-col overflow-x-clip"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >

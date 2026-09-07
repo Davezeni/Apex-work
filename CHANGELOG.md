@@ -18,6 +18,25 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Scroll fix, richer profile photos (power push #41)
+
+### Fixed
+- **Vertical scrolling broke** — the page-no-pan fix used `overflow-x: hidden`
+  on `<html>/<body>`, which on some mobile browsers creates a scroll container
+  that disables vertical scrolling. Switched to `overflow-x: clip`, which keeps
+  horizontal pan locked **and** restores normal vertical scrolling everywhere.
+- **Profile hero washed out the name** — replaced the flat green gradient with a
+  deep violet-to-emerald mesh banner that keeps the name/photo legible and looks
+  more premium.
+
+### Added
+- **Profile photo displayed everywhere** — a reusable `UserAvatar` component now
+  shows the real profile image (falling back to gradient + initials) on the
+  public profile, gig owner cards, chat bubbles and chat header. Set it once at
+  **Settings → Profile** (pick from local storage) and it appears all over the app.
+- **"Edit profile" button** on your own public profile (with a camera icon) that
+  jumps straight to photo upload.
+
 ## [Unreleased] — Header fix, headroom, sender photos & haptics (power push #40)
 
 ### Fixed

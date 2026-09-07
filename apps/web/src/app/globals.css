@@ -61,11 +61,13 @@
     font-feature-settings: 'ss01', 'cv11';
   }
 
-  /* Prevent mobile viewport bounce/zoom & horizontal pan */
+  /* Prevent mobile viewport bounce/zoom & horizontal pan.
+     NB: use `clip` (not `hidden`) on the root — `hidden` creates a scroll
+     container that disables vertical page scrolling on some mobile browsers. */
   html,
   body {
     overscroll-behavior-y: none;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 }
 

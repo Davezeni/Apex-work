@@ -451,16 +451,17 @@
     "amharic": "አማርኛ"
   },
   "publicProfile": {
+    "about": "About",
+    "cv": "View CV",
+    "joined": "joined {when}",
+    "linkCopied": "Link copied",
+    "noGigs": "No gigs yet.",
+    "noGigsSelf": "You haven't posted any gigs yet.",
     "notFound": "User not found",
     "notFoundBody": "This profile may not exist or has been removed.",
-    "about": "About",
-    "reviews": "Reviews",
-    "joined": "joined {when}",
     "perHourShort": "hr",
-    "noGigsSelf": "You haven't posted any gigs yet.",
-    "noGigs": "No gigs yet.",
     "postFirstGig": "Post your first gig",
-    "linkCopied": "Link copied"
+    "reviews": "Reviews"
   },
   "gigDetail": {
     "review": "reviews",

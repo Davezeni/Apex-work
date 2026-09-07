@@ -21,11 +21,13 @@ import {
   ShieldCheck,
   FileText,
   Video,
+  Camera,
 } from 'lucide-react';
 import { LazyReportUserSheet as ReportUserSheet } from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
 import { usePublicUserStats } from '@/hooks/use-public-stats';
 import { usePublicTrust, type TrustProfile } from '@/hooks/use-trust';
@@ -133,7 +135,24 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-dvh pb-24">
       {/* Hero */}
-      <div className={cn('relative h-40 bg-gradient-to-br sm:h-52', gradientFor(user.id))}>
+      <div className="relative h-44 overflow-hidden sm:h-56">
+        {/* Deep, richly-toned mesh banner (keeps the name/photo legible). */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(135deg, #312e81 0%, #6d28d9 34%, #0f766e 72%, #064e3b 100%)',
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(60% 90% at 15% 0%, rgba(255,255,255,0.22), transparent 60%),' +
+              'radial-gradient(50% 80% at 90% 20%, rgba(16,185,129,0.35), transparent 60%),' +
+              'radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.45), transparent 70%)',
+          }}
+        />
         <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
           <button
             onClick={() => router.back()}
@@ -209,14 +228,12 @@ export default function PublicProfilePage() {
       {/* Profile card */}
       <div className="mx-4 -mt-12 rounded-2xl border border-border bg-card p-5 shadow-lg">
         <div className="flex items-start gap-3">
-          <div
-            className={cn(
-              'grid h-20 w-20 shrink-0 place-items-center rounded-full bg-gradient-to-br text-2xl font-bold text-white ring-4 ring-card',
-              gradientFor(user.id),
-            )}
-          >
-            {initialsOf(user.fullName)}
-          </div>
+          <UserAvatar
+            name={user.fullName}
+            avatarUrl={user.avatarUrl}
+            id={user.id}
+            className="h-20 w-20 text-2xl font-bold ring-4 ring-card"
+          />
           <div className="min-w-0 flex-1 pt-1">
             <h1 className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight">
               {user.fullName}
@@ -251,9 +268,16 @@ export default function PublicProfilePage() {
         <div className="mt-4 flex gap-2">
           <Button asChild variant="outline" className="flex-1">
             <Link href={`/u/${user.username}/resume`}>
-              <FileText className="h-4 w-4" /> View CV
+              <FileText className="h-4 w-4" /> {t('publicProfile.cv')}
             </Link>
           </Button>
+          {isSelf && (
+            <Button asChild variant="brand" className="flex-1">
+              <Link href="/settings/profile">
+                <Camera className="h-4 w-4" /> {t('editProfile.title')}
+              </Link>
+            </Button>
+          )}
         </div>
 
         {!isSelf && (
