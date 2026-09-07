@@ -28,15 +28,43 @@ export interface MediaQueue {
   /** How many items were pulled for review (capped by limit). */
   total: number;
   items: MediaItem[];
+  nextCursor: string | null;
 }
 
 /**
  * List user avatars + gig covers for the admin photo-review queue. Returns the
  * most recently uploaded images so content stays fresh. No external provider —
  * everything is a Supabase publicUrl already stored on the row.
+ *
+ * Supports cursor pagination: `cursor` is an ISO timestamp (the oldest item's
+ * `createdAt` of the previous page). Items are unified across the two tables
+ * and sorted oldest-first, so paging walks the queue in review order.
  */
-export async function listMediaQueue(limit = 40): Promise<MediaQueue> {
+export async function listMediaQueue(limit = 40, cursor?: string | null): Promise<MediaQueue> {
   const take = Math.min(120, Math.max(1, limit));
+  const since = cursor ? new Date(cursor) : null;
+  const whenFilter = since ? { gt: since } : undefined;
+  const [avatars, gigCovers] = await Promise.all([
+    prisma.user.findMany({
+      where: { avatarUrl: { not: null }, createdAt: whenFilter },
+      orderBy: { createdAt: 'asc' },
+      take,
+      select: { id: true, avatarUrl: true, fullName: true, username: true, role: true, createdAt: true },
+    }),
+    prisma.gig.findMany({
+      where: { coverImageUrl: { not: null }, createdAt: whenFilter },
+      orderBy: { createdAt: 'asc' },
+      take,
+      select: {
+        id: true,
+        slug: true,
+        coverImageUrl: true,
+        title: true,
+        createdAt: true,
+        owner: { select: { id: true, fullName: true, username: true, role: true } },
+      },
+    }),
+  ]);
   const [avatars, gigCovers] = await Promise.all([
     prisma.user.findMany({
       where: { avatarUrl: { not: null } },
@@ -84,7 +112,9 @@ export async function listMediaQueue(limit = 40): Promise<MediaQueue> {
 
   // Oldest first so the oldest items sit on top and get reviewed first.
   items.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  return { total: items.length, items: items.slice(0, limit) };
+  const page = items.slice(0, limit);
+  const nextCursor = items.length > limit ? page[page.length - 1]?.createdAt.toISOString() ?? null : null;
+  return { total: items.length, items: page, nextCursor };
 }
 
 /** Remove a user's profile photo (admin action on a flagged/unsafe avatar). */

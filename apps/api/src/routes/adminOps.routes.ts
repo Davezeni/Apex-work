@@ -857,8 +857,9 @@ router.get(
   '/media',
   requireCapability('moderation:content'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(120, Math.max(1, Number((req.query as { limit?: string }).limit) || 40));
-    return success(res, await mediaReview.listMediaQueue(limit));
+    const q = req.query as { limit?: string; cursor?: string };
+    const limit = Math.min(120, Math.max(1, Number(q.limit) || 24));
+    return success(res, await mediaReview.listMediaQueue(limit, q.cursor));
   }),
 );
 

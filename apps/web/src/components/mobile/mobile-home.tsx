@@ -338,16 +338,21 @@ function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
       <div className="flex items-start gap-3 p-3">
         <div
           className={cn(
-            'grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br text-base font-bold text-white',
+            'grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br text-base font-bold text-white',
             gradientFor(g.owner.id),
           )}
         >
-          {initialsOf(g.owner.fullName)}
+          {g.owner.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={g.owner.avatarUrl} alt={g.owner.fullName} className="h-full w-full object-cover" />
+          ) : (
+            initialsOf(g.owner.fullName)
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <h3 className="truncate text-sm font-bold">{g.owner.fullName}</h3>
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+            {g.owner.isVerified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />}
             {g.isFeatured && (
               <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
                 ⚡ Featured

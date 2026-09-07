@@ -25,6 +25,7 @@ interface MediaItem {
 interface MediaQueue {
   total: number;
   items: MediaItem[];
+  nextCursor: string | null;
 }
 
 /**
@@ -35,8 +36,8 @@ export function MediaReviewTab() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   const { data, isLoading } = useQuery<MediaQueue>({
-    queryKey: ['admin', 'media'],
-    queryFn: () => apiFetch<MediaQueue>('/admin/ops/media?limit=60', { token }),
+    queryKey: ['admin', 'media', 'page1'],
+    queryFn: () => apiFetch<MediaQueue>('/admin/ops/media?limit=24', { token }),
     enabled: !!token,
   });
 
@@ -58,9 +59,28 @@ export function MediaReviewTab() {
   });
 
   const [preview, setPreview] = useState<string | null>(null);
+  const [extra, setExtra] = useState<MediaItem[]>([]);
+  const [extraCursor, setExtraCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const loadMore = async () => {
+    const cursor = data?.nextCursor ?? extraCursor;
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const res = await apiFetch<MediaQueue>(`/admin/ops/media?limit=24&cursor=${encodeURIComponent(cursor)}`, { token });
+      setExtra((prev) => [...prev, ...res.items]);
+      setExtraCursor(res.nextCursor);
+    } catch (e) {
+      toast.error((e as Error).message ?? 'Failed to load more');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (isLoading) return <Spinner label="Loading media queue…" />;
-  const items = data?.items ?? [];
+  const items: MediaItem[] = [...(data?.items ?? []), ...extra];
+  const hasMore = Boolean(data?.nextCursor ?? extraCursor);
 
   return (
     <div className="mx-3 mt-4">
@@ -118,6 +138,19 @@ export function MediaReviewTab() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', loadingMore && 'animate-spin')} />
+            {loadingMore ? 'Loading…' : `Load more (${items.length} shown)`}
+          </button>
         </div>
       )}
 

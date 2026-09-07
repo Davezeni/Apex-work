@@ -19,6 +19,7 @@ export interface GigListItem {
     fullName: string;
     avatarUrl: string | null;
     city: string | null;
+    isVerified?: boolean;
   };
 }
 

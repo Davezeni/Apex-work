@@ -100,7 +100,7 @@ router.get(
         ratingCount: true,
         startingPriceEtb: true,
         owner: {
-          select: { id: true, username: true, fullName: true, avatarUrl: true, city: true },
+          select: { id: true, username: true, fullName: true, avatarUrl: true, city: true, isPhoneVerified: true, isIdVerified: true },
         },
       },
     });

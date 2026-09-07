@@ -18,6 +18,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Gig-card avatars, verified flags & media pagination (power push #45)
+
+### Added
+- **Verified flags + real avatars on gig cards** — the home/featured gig cards
+  (both cover and no-cover variants) now render the owner's real profile photo
+  and show the cyan verified check only when the owner is verified. The API
+  returns `isVerified` for gig owners across list, detail, recommendations and
+  saved-gigs.
+- **Media review queue pagination** — the admin Media review tab now pages
+  (24/page) via a cursor, with a "Load more" button and a shown-count, so it
+  scales to large image libraries.
+
 ## [Unreleased] — Verified flags everywhere, group typing, media audit log (power push #44)
 
 ### Added

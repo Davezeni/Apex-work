@@ -18,6 +18,8 @@ const gigSelect = {
       fullName: true,
       avatarUrl: true,
       city: true,
+      isPhoneVerified: true,
+      isIdVerified: true,
     },
   },
 } as const;

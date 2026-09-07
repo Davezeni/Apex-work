@@ -101,7 +101,7 @@ export async function forUser(userId: string) {
       rating: true,
       ratingCount: true,
       startingPriceEtb: true,
-      owner: { select: { id: true, username: true, fullName: true, avatarUrl: true, city: true } },
+      owner: { select: { id: true, username: true, fullName: true, avatarUrl: true, city: true, isPhoneVerified: true, isIdVerified: true } },
     },
   });
   return {
