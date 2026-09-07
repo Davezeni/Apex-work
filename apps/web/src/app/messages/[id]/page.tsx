@@ -184,6 +184,8 @@ export default function ConversationPage() {
   };
   const [scheduled, setScheduled] = useState<ScheduledSend[]>([]);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  // Tap ✓✓ / "seen by" avatars → popover listing who read this message.
+  const [readReceiptId, setReadReceiptId] = useState<string | null>(null);
   const msgRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const { data: convs } = useConversations();
   const { data: savedConv } = useSavedMessages();
@@ -766,6 +768,8 @@ export default function ConversationPage() {
                 onOpenActions={() => setActionMsg(m)}
                 onReplyJump={jumpTo}
                 onReplyStart={setReplyTo}
+                onReadTap={(msg) => setReadReceiptId(msg.id)}
+                highlight={searchOpen ? searchQ : null}
               />
             </div>
           );
@@ -1170,6 +1174,64 @@ export default function ConversationPage() {
         </div>
       )}
 
+      {/* Read-receipt popover: shows exactly who has seen this message */}
+      {readReceiptId && (() => {
+        const msg = messages.find((x) => x.id === readReceiptId);
+        const seenBy = (msg?.readByUserIds ?? []).map((uid) => {
+          const member = (conv?.members ?? []).find((mm) => mm.userId === uid);
+          return { uid, fullName: member?.fullName ?? uid, username: member?.username ?? '', isMe: uid === me?.id };
+        });
+        const notSeen = (conv?.members ?? []).filter((mm) => mm.userId !== me?.id && !(msg?.readByUserIds ?? []).includes(mm.userId));
+        return (
+          <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setReadReceiptId(null)}>
+            <div className="max-h-[70dvh] w-full max-w-md overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5" onClick={(e) => e.stopPropagation()}>
+              <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted" />
+              <div className="mb-1 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-lg font-extrabold"><Eye className="h-5 w-5 text-primary" />{t('chat.readReceipts')}</h2>
+                <button onClick={() => setReadReceiptId(null)} className="grid h-8 w-8 place-items-center rounded-full active:bg-muted" aria-label="Close"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {seenBy.length}/{msg?.readByTotal ?? 0} seen · {msg?.body ?? '📎 Attachment'}
+              </div>
+              <div className="mt-3 space-y-1">
+                {seenBy.length === 0 && <div className="py-4 text-center text-xs text-muted-foreground">{t('chat.seenBy', { names: '—' })}</div>}
+                {seenBy.map((m) => (
+                  <div key={m.uid} className="flex items-center gap-3 rounded-xl p-2">
+                    <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.uid))}>
+                      {initialsOf(m.fullName)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold">{m.fullName} {m.isMe && <span className="text-[10px] text-muted-foreground">(you)</span>}</div>
+                      <div className="text-[11px] text-muted-foreground">@{m.username || m.uid}</div>
+                    </div>
+                    <CheckCheck className="h-4 w-4 shrink-0 text-primary" />
+                  </div>
+                ))}
+              </div>
+              {notSeen.length > 0 && (
+                <>
+                  <div className="mt-4 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t('chat.readReceiptsNotSeen')}</div>
+                  <div className="space-y-1">
+                    {notSeen.map((m) => (
+                      <div key={m.userId} className="flex items-center gap-3 rounded-xl p-2 opacity-70">
+                        <div className={cn('grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-xs font-bold text-white', gradientFor(m.userId))}>
+                          {initialsOf(m.fullName)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold">{m.fullName}</div>
+                          <div className="text-[11px] text-muted-foreground">@{m.username}</div>
+                        </div>
+                        <Check className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Forward picker */}
       {forwardMsg && (
         <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/50 backdrop-blur-sm" onClick={() => setForwardMsg(null)}>
@@ -1321,6 +1383,8 @@ function MessageBubble({
   onReactClose,
   onReplyJump,
   onReplyStart,
+  onReadTap,
+  highlight,
 }: {
   m: ChatMessage;
   isMine: boolean;
@@ -1336,6 +1400,8 @@ function MessageBubble({
   onReactClose?: () => void;
   onReplyJump?: (id: string) => void;
   onReplyStart?: (m: ChatMessage) => void;
+  onReadTap?: (m: ChatMessage) => void;
+  highlight?: string | null;
 }) {
   const { t } = useI18n();
   const isImage = m.attachmentType === 'image';
@@ -1575,11 +1641,24 @@ function MessageBubble({
             {m.sender.fullName.split(' ')[0]}
           </div>
         )}
-        {m.body && (
+          {m.body && (
           sticker ? (
             <div className={cn('sticker-pop px-2 py-0.5 text-6xl leading-none', isImage && 'p-3')}>{m.body}</div>
           ) : (
-            <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>
+            (() => {
+              const q = highlight?.trim().toLowerCase();
+              const idx = q && q.length >= 2 ? m.body.toLowerCase().indexOf(q) : -1;
+              if (idx < 0) {
+                return <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>{m.body}</p>;
+              }
+              return (
+                <p className={cn('whitespace-pre-wrap break-words', isImage && 'p-3')}>
+                  {m.body.slice(0, idx)}
+                  <mark className={cn('rounded px-0.5 font-bold text-foreground', isMine ? 'bg-yellow-300' : 'bg-primary/20')}>{m.body.slice(idx, idx + (highlight?.length ?? 0))}</mark>
+                  {m.body.slice(idx + (highlight?.length ?? 0))}
+                </p>
+              );
+            })()
           )
         )}
         {(() => {
@@ -1604,9 +1683,14 @@ function MessageBubble({
             </span>
           )}
           {isMine && (m.readBy ?? 0) > 0 ? (
-            <span className="text-white" aria-label="Read">
+            <button
+              onClick={() => onReadTap?.(m)}
+              className="inline-flex cursor-pointer items-center text-white active:scale-90"
+              aria-label={t('chat.readReceipts')}
+              title={t('chat.readReceipts')}
+            >
               <CheckCheck className="h-3.5 w-3.5" />
-            </span>
+            </button>
           ) : isMine ? (
             <Check className="h-3.5 w-3.5" />
           ) : null}
@@ -1615,7 +1699,11 @@ function MessageBubble({
           ) : null}
         </div>
         {isMine && seenMembers.length > 0 && (
-          <div className={cn('mt-1.5 flex items-center gap-1', isMine ? 'justify-end' : 'justify-start')}>
+          <button
+            onClick={() => onReadTap?.(m)}
+            className={cn('mt-1.5 flex items-center gap-1', isMine ? 'justify-end' : 'justify-start')}
+            aria-label={t('chat.readReceipts')}
+          >
             {seenCut.map((mm, idx) => (
               <span
                 key={mm.userId}
@@ -1635,7 +1723,7 @@ function MessageBubble({
               </span>
             )}
             <Eye className="ml-0.5 h-3 w-3 opacity-60" />
-          </div>
+          </button>
         )}
         {m.attachmentMeta?.transcript && (
           <div className={cn('mt-1 border-t px-1 pt-1 text-[11px] italic', isMine ? 'border-white/20 text-white/70' : 'border-border text-muted-foreground')}>

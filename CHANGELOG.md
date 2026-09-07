@@ -18,6 +18,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Blue `+` trigger** — the blue round button shows `+` when empty and slides
   up the tools bottom sheet.
 
+## [Unreleased] — Chat power features: read-receipt popover & in-text search highlight (power push #47)
+
+### Added
+- **Read-receipt popover** — tap a message's ✓✓ (or the "seen by" avatar row)
+  to open a bottom sheet listing exactly **who** has read that message and who
+  hasn't yet (names, twitter-style @handles, avatars). Includes a live
+  "n seen" count and the message preview.
+- **In-text search highlighting** — while searching a conversation, the matching
+  text inside each message body is highlighted (yellow on your own bubbles,
+  accent on theirs), alongside the existing whole-message highlight.
+- Reply-quote preview while typing (already present) confirmed: the "Replying
+  to …" quote bar shows above the composer with a cancel (×) button.
+
 ## [Unreleased] — Verified badge fix + chat power features (power push #46)
 
 ### Fixed

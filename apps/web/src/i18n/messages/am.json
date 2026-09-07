@@ -242,6 +242,7 @@
     "react": "ምላሽ ይስጡ",
     "readFraction": "{read} ከ {total} ተነቧል",
     "readReceipts": "የንባብ ማረጋገጫ",
+    "readReceiptsNotSeen": "ገና አልተነበበም",
     "recent": "የቅርብ ጊዜ",
     "recordFailed": "መቅደም አልተቻለም። የማይክሮፎን ፍቃድ ይመልከቱ።",
     "recordTooShort": "ቅድሞታዊ በጣም አጭር ነው። አጥብቀው ይቀርጽሇ።",

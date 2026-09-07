@@ -242,6 +242,7 @@
     "react": "React",
     "readFraction": "{read} of {total} read",
     "readReceipts": "Read receipts",
+    "readReceiptsNotSeen": "Not read yet",
     "recent": "Recent",
     "recordFailed": "Could not record. Check microphone access.",
     "recordTooShort": "Recording too short. Hold to record.",
