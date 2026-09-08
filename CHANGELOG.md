@@ -3,6 +3,17 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Notification filters (power push #73)
+
+- **Type filters on /notifications** — the notifications page now has pill
+  filters (All / Orders / Messages / Money / Reviews / System) that group the
+  raw notification types into user-facing categories, so users can zero in on
+  a kind of activity without scanning the whole list.
+  - Filter applies instantly client-side (no extra request).
+  - Filtered empty state ("Nothing here") distinct from the overall empty state.
+  - All labels + empty states localized (en + am).
+- Verified: web typecheck 0 errors, web lint clean.
+
 ## [Unreleased] — Security & concurrency audit #2 (remaining README blockers)
 
 Fixes the remaining high-priority findings from the security/concurrency re-audit:

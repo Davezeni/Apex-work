@@ -400,7 +400,15 @@
     "markAllRead": "Mark all read",
     "empty": "You're all caught up",
     "emptyBody": "Notifications about your orders and messages will appear here.",
-    "signInPrompt": "Sign in to see notifications"
+    "signInPrompt": "Sign in to see notifications",
+    "filterAll": "All",
+    "filterOrders": "Orders",
+    "filterMessages": "Messages",
+    "filterMoney": "Money",
+    "filterReviews": "Reviews",
+    "filterSystem": "System",
+    "emptyFiltered": "Nothing here",
+    "emptyFilteredBody": "No notifications in this category yet."
   },
   "search": {
     "searchAnything": "Search anything…",

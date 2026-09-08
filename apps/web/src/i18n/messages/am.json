@@ -400,7 +400,15 @@
     "markAllRead": "ሁሉንን ታነብዝ እንደ ምልክት",
     "empty": "ሁሉንም አይተይ",
     "emptyBody": "ስለትእዛዝዎና መልእክቶችዎ ማሳወቂያዎች እዚህ ይያላሉ።",
-    "signInPrompt": "ማሳወቂያዎችን ለማየት ይግቡ"
+    "signInPrompt": "ማሳወቂያዎችን ለማየት ይግቡ",
+    "filterAll": "ሁሉም",
+    "filterOrders": "ትዕዛዞች",
+    "filterMessages": "መልእክቶች",
+    "filterMoney": "ገንዘብ",
+    "filterReviews": "ግምገማዎች",
+    "filterSystem": "ስርዓት",
+    "emptyFiltered": "እዚህ የለም",
+    "emptyFilteredBody": "በዚህ ምድብ ውስጥ ማሳወቂያ የለም።"
   },
   "search": {
     "searchAnything": "ምንነትንም ይፍለጉ…",
