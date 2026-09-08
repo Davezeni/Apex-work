@@ -25,17 +25,7 @@ import { useMe } from '@/hooks/use-me';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
-
-function initialsOf(name: string): string {
-  return (
-    name
-      .split(' ')
-      .map((w) => w[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || '?'
-  );
-}
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
@@ -341,7 +331,6 @@ function ConvRow({
       ? (previewByType[c.lastMessage.attachmentType] ?? `📎 ${t('chat.file')}`)
       : t('chat.sayHi');
   const when = c.lastMessageAt ? timeAgo(c.lastMessageAt) : '';
-  const gradient = peer ? gradientFor(peer.id) : gradientFor(c.id);
 
   return (
     <div className="relative">
@@ -350,14 +339,12 @@ function ConvRow({
         className="group flex items-center gap-3 rounded-2xl p-3 pr-12 active:bg-card"
       >
         <div className="relative">
-          <div
-            className={cn(
-              'grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-lg font-bold text-white',
-              gradient,
-            )}
-          >
-            {initialsOf(name)}
-          </div>
+          <UserAvatar
+            name={name}
+            avatarUrl={peer?.avatarUrl ?? null}
+            id={peer?.id ?? c.id}
+            className="h-[52px] w-[52px] text-lg font-bold"
+          />
           {!c.isGroup && peer?.online && (
             <span
               className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500"

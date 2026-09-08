@@ -28,6 +28,7 @@ import { NotificationsPanel } from '@/components/notifications-panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 /** Deterministic pick so a user's avatar color stays stable across renders. */
 
@@ -70,14 +71,19 @@ export function MobileHome() {
         </div>
         <div className="flex gap-2">
           <NotificationsPanel />
-          <Link
-            href="/profile"
-            className={cn(
-              'grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white',
-              me ? `bg-gradient-to-br ${gradientFor(me.id)}` : 'grad-hero',
+          <Link href="/profile" className="grid h-10 w-10 place-items-center">
+            {me ? (
+              <UserAvatar
+                name={me.fullName}
+                avatarUrl={me.avatarUrl}
+                id={me.id}
+                className="h-10 w-10 text-sm font-bold"
+              />
+            ) : (
+              <span className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
+                A
+              </span>
             )}
-          >
-            {me ? initialsOf(me.fullName)[0] : 'A'}
           </Link>
         </div>
       </header>

@@ -1009,9 +1009,7 @@ export default function ConversationPage() {
                 isMine={m.senderId === me?.id}
                 isGroup={!!conv?.isGroup}
                 members={conv?.members ?? []}
-                showAvatar={
-                  m.senderId !== me?.id && (i === 0 || messages[i - 1]?.senderId !== m.senderId)
-                }
+                showAvatar={i === 0 || messages[i - 1]?.senderId !== m.senderId}
                 groupStart={groupStart}
                 groupEnd={groupEnd}
                 onImageClick={setViewerUrl}
@@ -2806,6 +2804,19 @@ function MessageBubble({
           </div>
         )}
       </div>
+      {isMine && (
+        <div className={cn('w-8 shrink-0', showAvatar ? '' : 'invisible')}>
+          {showAvatar && (
+            <UserAvatar
+              name={m.sender.fullName}
+              avatarUrl={m.sender.avatarUrl}
+              id={m.sender.id}
+              verified={m.sender.isVerified}
+              className="h-8 w-8 text-[11px] font-bold"
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

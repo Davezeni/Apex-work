@@ -29,6 +29,7 @@ import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
 import { formatEtb, cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useI18n } from '@/i18n';
 
 export default function ProfilePage() {
@@ -75,21 +76,20 @@ export default function ProfilePage() {
     );
   }
 
-  const initials = me.fullName
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   return (
     <MobileShell activeTab="profile">
       {/* Hero */}
       <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
         <div className="relative">
-          <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-border bg-card text-3xl font-bold text-foreground ring-4 ring-background">
-            {initials || '?'}
+          <div className="mx-auto h-20 w-20">
+            <UserAvatar
+              name={me.fullName}
+              avatarUrl={me.avatarUrl}
+              id={me.id}
+              verified={me.isVerified}
+              className="h-20 w-20 rounded-full text-3xl font-bold ring-4 ring-background"
+            />
           </div>
           <h2 className="mt-3 flex items-center justify-center gap-1.5 text-xl font-extrabold">
             {me.fullName}
