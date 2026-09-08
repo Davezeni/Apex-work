@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — PWA + desktop layout polish (power push #72)
+
+- **PWA notification icons** (`public/sw.js`) — fixed the push-notification
+  default icon/badge paths that pointed at a non-existent `/icons/` directory
+  (assets are at the site root); bumped the service-worker `VERSION` to `v7`
+  so installed clients pick up the fix and purge stale caches.
+- **Desktop gig grid** (`browse`) — results and skeleton now render inside a
+  centered `max-w-7xl` container with `xl`/`2xl` column counts
+  (`2xl:grid-cols-5`), so cards don't stretch across ultra-wide monitors.
+- **Desktop public profile** — the freelancer gigs list became a responsive
+  `md:grid-cols-2 lg:grid-cols-3` grid, and the profile card + content sections
+  center inside a `max-w-4xl` on large screens instead of spanning full width.
+- Note: reputation/trust/verification polish on profiles and PWA install/offline
+  behaviour were already present (TrustCard, phone-verification banner, service
+  worker + beforeinstallprompt + NetworkStatusBanner); this pass tightened
+  their layout + correctness rather than duplicating them.
+- Verified: web+api typecheck 0 errors, web lint clean, shared build 0.
+
 ## [Unreleased] — Recently viewed gigs (power push #71)
 
 - **"Recently viewed" row** — viewing a gig now records it in a device-local

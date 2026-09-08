@@ -16,7 +16,7 @@
  * scope over the entire site — required by the browser SW spec.
  */
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const SHELL_CACHE = `apex-shell-${VERSION}`;
 const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
 const IMAGE_CACHE = `apex-img-${VERSION}`;
@@ -207,8 +207,8 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     tag: data.tag || 'apex-generic',
     renotify: true,
-    icon: data.icon || '/icons/icon-192.png',
-    badge: data.badge || '/icons/icon-192.png',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
     data: { url: data.url || '/' },
     vibrate: [80, 40, 80],
   };

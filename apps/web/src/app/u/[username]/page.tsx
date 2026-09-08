@@ -202,7 +202,7 @@ export default function PublicProfilePage() {
       />
 
       {/* Profile card */}
-      <div className="mx-4 -mt-12 rounded-2xl border border-border bg-card p-5 shadow-lg">
+      <div className="mx-4 -mt-12 rounded-2xl border border-border bg-card p-5 shadow-lg lg:mx-auto lg:max-w-4xl">
         <div className="flex items-start gap-3">
           <UserAvatar
             name={user.fullName}
@@ -372,7 +372,7 @@ export default function PublicProfilePage() {
       {/* Gigs */}
       {user.gigs.length > 0 && (
         <Section title={`${t('search.gigs')} · ${user.gigs.length}`}>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
             {user.gigs.map((g) => (
               <GigMiniCard key={g.id} g={g} owner={user} />
             ))}
@@ -515,7 +515,7 @@ function TrustCard({ trust }: { trust: TrustProfile }) {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-4 mt-6">
+    <div className="mx-4 mt-6 lg:mx-auto lg:max-w-4xl">
       <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         {title}
       </h2>

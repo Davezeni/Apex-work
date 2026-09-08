@@ -35,7 +35,12 @@ export function RecentlyViewedRow({ dense = false }: { dense?: boolean }) {
         </button>
       </div>
 
-      <div className={cn('no-scrollbar flex gap-2.5 overflow-x-auto pb-1', dense ? '-mx-4 px-4 md:-mx-6 md:px-6' : '-mx-5 px-5')}>
+      <div
+        className={cn(
+          'no-scrollbar flex gap-2.5 overflow-x-auto pb-1',
+          dense ? '-mx-4 px-4 md:-mx-6 md:px-6' : '-mx-5 px-5',
+        )}
+      >
         {items.map((g) => (
           <Link
             key={g.slug}
@@ -61,12 +66,14 @@ export function RecentlyViewedRow({ dense = false }: { dense?: boolean }) {
               )}
             </div>
             <div className="p-2.5">
-              <div className="line-clamp-2 min-h-[2rem] text-xs font-semibold leading-tight">{g.title}</div>
+              <div className="line-clamp-2 min-h-[2rem] text-xs font-semibold leading-tight">
+                {g.title}
+              </div>
               <div className="mt-1.5 flex items-center justify-between gap-1">
                 <span className="text-[11px] font-bold text-primary">
                   {formatEtb(g.startingPriceEtb)}+
                 </span>
-                {g.rating && g.ratingCount > 0 && (
+                {g.rating && (g.ratingCount ?? 0) > 0 && (
                   <span className="flex shrink-0 items-center gap-0.5 text-[10px] font-semibold text-muted-foreground">
                     <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
                     {g.rating.toFixed(1)}
