@@ -15,9 +15,6 @@ import { ScrollRestore } from './site/scroll-restore';
 import { GlobalCommandPalette } from './site/global-command-palette';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  // Live notification socket — mounted once, globally, so it works on both
-  // desktop and mobile (and fires in-app toasts for new activity).
-  useNotificationSocket();
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -52,6 +49,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <I18nProvider>
           {children}
           <Toaster richColors position="top-center" />
+          {/* Live notification socket — MUST live INSIDE QueryClientProvider since
+              useNotificationSocket() calls useQueryClient(). Mounted once, globally,
+              so it works on both desktop and mobile (and fires toasts). */}
+          <RealtimeNotifications />
           <ServiceWorkerRegister />
           <PostHogInit />
           <ConsentBanner />
@@ -63,4 +64,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       </QueryClientProvider>
     </ThemeProvider>
   );
+}
+
+/** Thin wrapper so the socket hook runs under the QueryClientProvider. */
+function RealtimeNotifications() {
+  useNotificationSocket();
+  return null;
 }
