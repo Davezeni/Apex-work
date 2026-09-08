@@ -51,7 +51,7 @@ function Row({ n }: { n: AppNotification }) {
  * desktop: clicking shows the latest notifications inline with a "mark all
  * read" action and a link to the full page. Hides itself when signed out.
  */
-export function NotificationsPanel({ className }: { className?: string }) {
+export function NotificationsPanel({ className, align = 'right' }: { className?: string; align?: 'left' | 'right' }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -103,7 +103,7 @@ export function NotificationsPanel({ className }: { className?: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className={cn('absolute top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl', align === 'right' ? 'right-0' : 'left-0')}>
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <span className="text-sm font-bold">{t('nav.notifications')}</span>
             {unread > 0 && (

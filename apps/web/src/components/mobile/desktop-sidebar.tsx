@@ -28,6 +28,7 @@ import { useUnreadCount } from '@/hooks/use-notifications';
 import { useMe } from '@/hooks/use-me';
 import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { NotificationsPanel } from '@/components/notifications-panel';
 import { useI18n } from '@/i18n';
 
 interface NavItem {
@@ -249,6 +250,7 @@ export function DesktopSidebar() {
                   </Link>
                   <div className="truncate text-[11px] text-muted-foreground">@{me.username}</div>
                 </div>
+                <NotificationsPanel align="left" className="shrink-0" />
                 <Link
                   href="/settings"
                   title={t('nav.settings')}

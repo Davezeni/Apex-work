@@ -3,6 +3,20 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Desktop notifications dropdown + search polish (power push #70)
+
+- **Desktop notification dropdown** — the desktop sidebar's bottom user card
+  now shows the live `NotificationsPanel` dropdown (with an `align` prop so it
+  opens leftward from the left rail). Desktop users get the same inline
+  notification list, unread dots, "Mark all read" and "View all" as mobile —
+  no need to navigate away to `/notifications`.
+- **Search skeleton loading** — the `/search` results area now shows a
+  shimmering skeleton grid/list while the query resolves instead of a bare
+  spinner.
+- **Search empty state** — "No matches" now has a branded icon and two actions:
+  **Clear search** (resets the box) and **Browse gigs** (CTA to `/browse`).
+- Verified: web+api typecheck 0 errors, web lint clean, 227 unit tests pass.
+
 ## [Unreleased] — Security & concurrency hardening (README audit, run #54)
 
 Fixes the 10 release blockers from the security/concurrency audit:
