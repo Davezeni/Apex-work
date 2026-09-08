@@ -8,7 +8,6 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from 'react';
 import Image from 'next/image';
-import { supabaseLoader } from '@/lib/image-loader';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -930,7 +929,7 @@ export default function ConversationPage() {
       {/* Message list */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto px-3 pb-6 pt-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-6 pt-4"
         aria-live="polite"
         onScroll={listOnScroll}
       >
@@ -2181,7 +2180,7 @@ export default function ConversationPage() {
                       src={url}
                       alt=""
                       fill
-                      loader={supabaseLoader}
+                      unoptimized
                       sizes="(max-width: 640px) 33vw, 128px"
                       className="object-cover"
                     />
@@ -2464,13 +2463,20 @@ function MessageBubble({
       {!isMine && (
         <div className={cn('w-8 shrink-0', showAvatar ? '' : 'invisible')}>
           {showAvatar && (
-            <UserAvatar
-              name={m.sender.fullName}
-              avatarUrl={m.sender.avatarUrl}
-              id={m.sender.id}
-              verified={m.sender.isVerified}
-              className="h-8 w-8 text-[11px] font-bold"
-            />
+            <Link
+              href={`/u/${m.sender.username}`}
+              className="block"
+              aria-label={m.sender.fullName}
+              title={m.sender.fullName}
+            >
+              <UserAvatar
+                name={m.sender.fullName}
+                avatarUrl={m.sender.avatarUrl}
+                id={m.sender.id}
+                verified={m.sender.isVerified}
+                className="h-8 w-8 text-[11px] font-bold"
+              />
+            </Link>
           )}
         </div>
       )}
@@ -2591,11 +2597,14 @@ function MessageBubble({
               className="block"
             >
               <div className="relative aspect-[4/3] w-64 max-w-full bg-black/20">
+                {/* unoptimized so chat thumbnails load their direct URL — the
+                    ImageViewer already does this, so inline images match the
+                    full preview instead of being blocked by remotePatterns. */}
                 <Image
                   src={m.attachmentUrl}
                   alt="Attachment"
                   fill
-                  loader={supabaseLoader}
+                  unoptimized
                   sizes="256px"
                   className="object-cover"
                 />

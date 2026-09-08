@@ -63,16 +63,16 @@
      Covers the full set of focusable elements + ARIA role=button, and uses
      :where() so it stays low-specificity and won't fight component utilities. */
   :where(
-      button,
-      a,
-      input,
-      textarea,
-      select,
-      summary,
-      [tabindex],
-      [role='button'],
-      [contenteditable]
-    ):focus-visible {
+    button,
+    a,
+    input,
+    textarea,
+    select,
+    summary,
+    [tabindex],
+    [role='button'],
+    [contenteditable]
+  ):focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
     border-radius: max(var(--radius), 0.5rem);
@@ -184,9 +184,10 @@
     pointer-events: none;
   }
 
-  /* Safe-area helpers (iOS) */
+  /* Safe-area helpers (iOS) + a little headroom above the top navigation so
+     every page's header isn't flush against the very top of the screen. */
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0);
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0));
   }
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0);

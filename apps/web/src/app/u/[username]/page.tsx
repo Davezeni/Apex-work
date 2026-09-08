@@ -123,8 +123,9 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-dvh pb-24">
-      {/* Hero */}
-      <div className="relative h-60 overflow-hidden sm:h-80">
+      {/* Hero — kept short so the large empty gradient area below the top
+          navigation is removed; the profile card overlaps it slightly. */}
+      <div className="relative h-36 overflow-hidden sm:h-44">
         {/* Neutral masthead surface (no brand color) — subtle tonal depth that
             keeps the back/share controls legible in light and dark. */}
         <div className="absolute inset-0 bg-gradient-to-b from-muted via-muted/60 to-transparent dark:from-muted/60 dark:via-muted/30 dark:to-transparent" />
