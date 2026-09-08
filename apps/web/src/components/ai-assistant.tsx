@@ -6,6 +6,7 @@ import { Sparkles, X, Send, Loader2, Cpu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAIChat, useAIStatus } from '@/hooks/use-ai';
 import { useMe } from '@/hooks/use-me';
+import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /** Match a media query client-side (SSR-safe: defaults to false). */
@@ -40,8 +41,11 @@ const MAX_HISTORY = 20;
 interface Msg {
   role: 'user' | 'assistant';
   content: string;
-  source?: 'ai' | 'fallback';
+  source?: 'ai' | 'fallback' | 'rate';
 }
+
+/** Seconds to hold the send button after the AI rate limit trips. */
+const RATE_COOLDOWN_S = 20;
 
 function localAssistantReply(input: string): string {
   const query = input.toLowerCase();
@@ -76,6 +80,14 @@ export function AIAssistant() {
   const chat = useAIChat();
   const aiStatus = useAIStatus(open && isAuthed);
   const listRef = useRef<HTMLDivElement>(null);
+  // After a 429 the send button locks briefly so the user doesn't re-trigger
+  // the limiter. Counts down from RATE_COOLDOWN_S.
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   // The support bubble is always available (fallback replies work even when
   // signed out). Hide only where it would obstruct core UI: on mobile chat
@@ -113,7 +125,7 @@ export function AIAssistant() {
 
   const send = async (requestedText?: string) => {
     const text = (requestedText ?? input).trim();
-    if (!text || chat.isPending) return;
+    if (!text || chat.isPending || cooldown > 0) return;
     setInput('');
     const next = [...msgs, { role: 'user' as const, content: text }].slice(-MAX_HISTORY);
     persist(next);
@@ -123,8 +135,22 @@ export function AIAssistant() {
       const r = await chat.mutateAsync({ messages: payload });
       if (r.source === 'fallback') void aiStatus.refetch();
       persist([...next, { role: 'assistant', content: r.text, source: r.source }]);
-    } catch {
+    } catch (e) {
       void aiStatus.refetch();
+      // The server rate-limits /v1/ai/* (20/min). Tell the user honestly
+      // instead of implying the model just gave a product answer.
+      if (e instanceof ApiError && e.status === 429) {
+        setCooldown(RATE_COOLDOWN_S);
+        persist([
+          ...next,
+          {
+            role: 'assistant',
+            content: 'You are sending messages very fast. Please wait a moment, then try again.',
+            source: 'rate',
+          },
+        ]);
+        return;
+      }
       // Still provide useful product help if the session, API, network, or
       // live model is unavailable. The user should never get a dead chat box.
       persist([
@@ -240,6 +266,11 @@ export function AIAssistant() {
                       {m.role === 'assistant' && m.source === 'fallback' && (
                         <div className="mt-1 text-[10px] opacity-70">Apex fallback reply</div>
                       )}
+                      {m.role === 'assistant' && m.source === 'rate' && (
+                        <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-amber-500">
+                          Slow down — try again in a few seconds
+                        </div>
+                      )}
                       {m.role === 'assistant' && m.source === 'ai' && (
                         <div className="mt-1 inline-flex items-center gap-1 text-[10px] opacity-70">
                           <Cpu className="h-2.5 w-2.5" /> AI
@@ -284,12 +315,14 @@ export function AIAssistant() {
                   />
                   <button
                     onClick={() => void send()}
-                    disabled={!input.trim() || chat.isPending}
-                    aria-label="Send"
+                    disabled={!input.trim() || chat.isPending || cooldown > 0}
+                    aria-label={cooldown > 0 ? `Try again in ${cooldown}s` : 'Send'}
                     className="grad-hero grid h-9 w-9 shrink-0 place-items-center rounded-full text-white active:scale-90 disabled:opacity-40"
                   >
                     {chat.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : cooldown > 0 ? (
+                      <span className="text-[11px] font-bold tabular-nums">{cooldown}</span>
                     ) : (
                       <Send className="h-4 w-4" />
                     )}

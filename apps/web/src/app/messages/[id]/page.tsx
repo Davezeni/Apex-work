@@ -8,6 +8,7 @@ import {
   type TouchEvent as ReactTouchEvent,
 } from 'react';
 import Image from 'next/image';
+import { supabaseLoader } from '@/lib/image-loader';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -2161,8 +2162,14 @@ export default function ConversationPage() {
                     }}
                     className="relative aspect-square overflow-hidden rounded-lg bg-black/40"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      loader={supabaseLoader}
+                      sizes="(max-width: 640px) 33vw, 128px"
+                      className="object-cover"
+                    />
                   </button>
                 ))}
             </div>
@@ -2558,9 +2565,9 @@ function MessageBubble({
                   src={m.attachmentUrl}
                   alt="Attachment"
                   fill
+                  loader={supabaseLoader}
                   sizes="256px"
                   className="object-cover"
-                  unoptimized
                 />
               </div>
             </button>

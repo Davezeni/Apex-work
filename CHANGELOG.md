@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Resilience & media batch: AI rate-limit UX, offline banner, WebP media (power push #64)
+
+- **AI assistant rate-limit UX** — when `/v1/ai/*` trips the 20/min limiter the
+  assistant no longer shows a misleading "fallback" reply. It now marks the
+  message with a visible *"Slow down — try again in a few seconds"* badge and
+  locks the send button for a 20s countdown, so users don't hammer the endpoint.
+- **Global offline banner** — a slim top banner (`NetworkStatusBanner`) now
+  appears on *every* route the moment the browser goes offline, and dismisses
+  itself on reconnect. SSR-safe.
+- **WebP/AVIF media in the messenger** — the media gallery thumbnail grid and
+  the inline attachment bubbles now render through the Supabase image
+  transformer (`supabaseLoader`) instead of raw `<img>`/`unoptimized`, so chat
+  images come down auto-negotiated and much lighter.
+- Verified: web typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — Desktop & performance batch: lazy chat, image hero, inbox layout (power push #63)
 
 - **Code-split the heavy chat components** — `CallPanel`, `VoiceRecorder`,
