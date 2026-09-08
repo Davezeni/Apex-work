@@ -3,6 +3,18 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Profile hero: no color (power push #58)
+
+- Own profile (`/profile`) hero — removed the violet `grad-hero` wash behind
+  the avatar/name. Now a clean neutral surface: a flat card avatar on a subtle
+  muted gradient band with a bottom border. No brand color in the hero.
+- Public profile (`/u/[username]`) hero — the deep multi-color mesh gradient
+  (indigo→violet→emerald→green) is gone. Now a neutral masthead: a muted
+  tonal gradient that keeps the back/share controls legible in both light and
+  dark mode, with no brand color.
+- Accent colors remain only on intentional elements (avatars, badges, CTAs)
+  which all render as consistent deep violet / muted palette.
+
 ## [Unreleased] — Fix washed-out "+" (`.grad-hero` now constant deep violet) (power push #57)
 
 `.grad-hero` used `var(--primary)`, which is a LIGHT violet in dark mode; its

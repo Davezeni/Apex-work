@@ -125,23 +125,10 @@ export default function PublicProfilePage() {
     <div className="min-h-dvh pb-24">
       {/* Hero */}
       <div className="relative h-60 overflow-hidden sm:h-80">
-        {/* Deep, richly-toned mesh banner (keeps the name/photo legible). */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'linear-gradient(135deg, #312e81 0%, #6d28d9 34%, #0f766e 72%, #064e3b 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(60% 90% at 15% 0%, rgba(255,255,255,0.22), transparent 60%),' +
-              'radial-gradient(50% 80% at 90% 20%, rgba(16,185,129,0.35), transparent 60%),' +
-              'radial-gradient(120% 60% at 50% 120%, rgba(0,0,0,0.45), transparent 70%)',
-          }}
-        />
+        {/* Neutral masthead surface (no brand color) — subtle tonal depth that
+            keeps the back/share controls legible in light and dark. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-muted via-muted/60 to-transparent dark:from-muted/60 dark:via-muted/30 dark:to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(60%_70%_at_50%_0%,rgba(255,255,255,0.10),transparent_60%)] dark:bg-[radial-gradient(60%_70%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
         <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
           <button
             onClick={() => router.back()}
