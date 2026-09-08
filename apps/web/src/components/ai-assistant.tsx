@@ -34,15 +34,6 @@ function useIsDesktop(): boolean {
  *   - Auto-close on Escape or backdrop tap.
  */
 
-const HIDE_ON = [
-  '/messages/', // don't overlap chat composer
-  '/resume/preview', // print/preview surface
-  '/admin', // admin dashboards
-  '/login',
-  '/signup',
-  // Onboarding is authenticated; keep the assistant available for profile and skill help.
-];
-
 const STORAGE_KEY = 'apex-assistant-history-v1';
 const MAX_HISTORY = 20;
 

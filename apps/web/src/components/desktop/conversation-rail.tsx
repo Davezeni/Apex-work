@@ -8,7 +8,6 @@ import { Edit3, Search, MessageCircleOff, Loader2, Users } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { useConversations, useSavedMessages, type ChatSummary } from '@/hooks/use-chat';
 import { useInboxTyping } from '@/hooks/use-inbox-typing';
-import { useMe } from '@/hooks/use-me';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useI18n } from '@/i18n';
 
@@ -22,7 +21,6 @@ import { useI18n } from '@/i18n';
  */
 export function DesktopConversationRail() {
   const { t } = useI18n();
-  const { data: me } = useMe();
   const { data, isLoading } = useConversations();
   const { data: saved } = useSavedMessages();
   const { typing } = useInboxTyping();

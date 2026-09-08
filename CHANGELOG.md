@@ -3,6 +3,15 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Bug audit: dead-code cleanup (power push #59)
+
+- Removed the now-unused `HIDE_ON` route array in the AI assistant (the
+  visibility logic is inline).
+- Removed an unused `useMe()` call in the desktop conversation rail.
+- Full-suite verification: web + API typecheck green, web + API lint green,
+  219 unit tests pass, 7 Playwright e2e smoke tests pass against the live
+  deploy, and 14 routes audited with zero console errors.
+
 ## [Unreleased] — Profile hero: no color (power push #58)
 
 - Own profile (`/profile`) hero — removed the violet `grad-hero` wash behind
