@@ -16,18 +16,13 @@
  * scope over the entire site — required by the browser SW spec.
  */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const SHELL_CACHE = `apex-shell-${VERSION}`;
 const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
 const IMAGE_CACHE = `apex-img-${VERSION}`;
 
 // Minimal set — the rest is filled in at runtime on first navigation.
-const PRECACHE = [
-  '/',
-  '/manifest.webmanifest',
-  '/icon.svg',
-  '/apple-icon.png',
-];
+const PRECACHE = ['/', '/manifest.webmanifest', '/icon.svg', '/apple-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -180,10 +175,13 @@ self.addEventListener('fetch', (event) => {
         }
         // No cache — race with a 3s soft timeout so slow networks don't hang.
         const raced = await raceWithTimeout(networkPromise, Promise.resolve(null), 3000);
-        return raced ?? new Response(JSON.stringify({ ok: false, error: { code: 'OFFLINE' } }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' },
-        });
+        return (
+          raced ??
+          new Response(JSON.stringify({ ok: false, error: { code: 'OFFLINE' } }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
       })(),
     );
     return;
@@ -201,7 +199,11 @@ self.addEventListener('message', (event) => {
 // safe defaults if anything is missing so a bad payload never breaks the SW.
 self.addEventListener('push', (event) => {
   let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch { /* ignore */ }
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    /* ignore */
+  }
   const title = data.title || 'Apex-Work';
   const options = {
     body: data.body || '',
@@ -218,12 +220,15 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const target = event.notification.data?.url || '/';
-  event.waitUntil((async () => {
-    // Focus an existing tab if we can; otherwise open a new one.
-    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of list) {
-      if (c.url.includes(new URL(target, self.location.origin).pathname) && 'focus' in c) return c.focus();
-    }
-    return self.clients.openWindow(target);
-  })());
+  event.waitUntil(
+    (async () => {
+      // Focus an existing tab if we can; otherwise open a new one.
+      const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const c of list) {
+        if (c.url.includes(new URL(target, self.location.origin).pathname) && 'focus' in c)
+          return c.focus();
+      }
+      return self.clients.openWindow(target);
+    })(),
+  );
 });
