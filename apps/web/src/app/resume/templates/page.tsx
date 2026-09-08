@@ -170,7 +170,7 @@ export default function ResumeTemplatesPage() {
               key={template.id}
               className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg ${!template.available ? 'opacity-60 grayscale' : ''} ${template.active ? 'border-primary shadow-md shadow-primary/10' : 'border-border'}`}
             >
-              <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-card to-accent/10">
+              <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-card to-primary/5">
                 <div className="absolute inset-x-5 top-5 h-2 rounded-full bg-foreground/10" />
                 <div className="absolute inset-x-8 top-10 space-y-2">
                   <div className="h-1.5 w-3/4 rounded-full bg-foreground/10" />

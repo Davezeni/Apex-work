@@ -3,7 +3,19 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-import { Search, Edit3, Loader2, MessageCircleOff, Pin, Archive, Undo2, PinOff, Inbox, ChevronDown, MoreHorizontal } from 'lucide-react';
+import {
+  Search,
+  Edit3,
+  Loader2,
+  MessageCircleOff,
+  Pin,
+  Archive,
+  Undo2,
+  PinOff,
+  Inbox,
+  ChevronDown,
+  MoreHorizontal,
+} from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { getPinned, getArchived, togglePinned, toggleArchived } from '@/lib/conversation-local';
 import { useConversations, useSavedMessages, type ChatSummary } from '@/hooks/use-chat';
@@ -12,21 +24,17 @@ import { Bookmark } from 'lucide-react';
 import { useMe } from '@/hooks/use-me';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
-function gradientFor(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
-}
 function initialsOf(name: string): string {
-  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  return (
+    name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 export default function MessagesPage() {
@@ -39,14 +47,20 @@ export default function MessagesPage() {
   const [query, setQuery] = useState('');
   const uid = me?.id ?? '';
   const filteredItems = (data?.items ?? []).filter((conversation) => {
-    const haystack = `${conversation.peer?.fullName ?? ''} ${conversation.title ?? ''}`.toLowerCase();
+    const haystack =
+      `${conversation.peer?.fullName ?? ''} ${conversation.title ?? ''}`.toLowerCase();
     return haystack.includes(query.trim().toLowerCase());
   });
   const [pinned, setPinned] = useState<Record<string, true>>(() => getPinned(uid));
   const [archived, setArchived] = useState<Record<string, true>>(() => getArchived(uid));
   const [archiveOpen, setArchiveOpen] = useState(false);
   // Re-read prefs when the user id becomes available.
-  useEffect(() => { if (uid) { setPinned(getPinned(uid)); setArchived(getArchived(uid)); } }, [uid]);
+  useEffect(() => {
+    if (uid) {
+      setPinned(getPinned(uid));
+      setArchived(getArchived(uid));
+    }
+  }, [uid]);
   const pickPin = (convId: string) => setPinned({ ...togglePinned(uid, convId) });
   const pickArchive = (convId: string) => setArchived({ ...toggleArchived(uid, convId) });
 
@@ -146,36 +160,96 @@ export default function MessagesPage() {
             href={`/messages/${saved.id}`}
             className="flex items-center gap-3 rounded-2xl p-3 active:bg-card"
           >
-            <div className="grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-white" style={{ background: 'linear-gradient(135deg,#7c3aed,#22c55e)' }}>
+            <div
+              className={`grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-white ${gradientFor(saved.id)}`}
+            >
               <Bookmark className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
               {t('chat.savedMessages')}
-              <p className="truncate text-[13px] text-muted-foreground">Bookmark your notes, voice mutes &amp; files</p>
+              <p className="truncate text-[13px] text-muted-foreground">
+                Bookmark your notes, voice mutes &amp; files
+              </p>
             </div>
           </Link>
         )}
         {searchOpen && query.trim() && filteredItems.length === 0 && (
-          <p className="px-4 py-8 text-center text-xs text-muted-foreground">No conversations found.</p>
+          <p className="px-4 py-8 text-center text-xs text-muted-foreground">
+            No conversations found.
+          </p>
         )}
 
         {!searchOpen && (
-          <Group label={t('chat.pinned')} icon={<Pin className="h-3.5 w-3.5" />} items={groups.pinned}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} pinned isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
+          <Group
+            label={t('chat.pinned')}
+            icon={<Pin className="h-3.5 w-3.5" />}
+            items={groups.pinned}
+            render={(c) => (
+              <ConvRow
+                key={c.id}
+                c={c}
+                selfId={me?.id ?? ''}
+                pinned
+                isTyping={!!typing[c.id]}
+                typingName={typing[c.id]?.name}
+                onPin={() => pickPin(c.id)}
+                onArchive={() => pickArchive(c.id)}
+              />
+            )}
+          />
         )}
         {!searchOpen && (
           <Group
             label={t('chat.unread')}
-            icon={<span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">{groups.unread.length}</span>}
+            icon={
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">
+                {groups.unread.length}
+              </span>
+            }
             items={groups.unread}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />}
+            render={(c) => (
+              <ConvRow
+                key={c.id}
+                c={c}
+                selfId={me?.id ?? ''}
+                isTyping={!!typing[c.id]}
+                typingName={typing[c.id]?.name}
+                onPin={() => pickPin(c.id)}
+                onArchive={() => pickArchive(c.id)}
+              />
+            )}
           />
         )}
         {!searchOpen && (
-          <Group label={t('chat.recent')} icon={<Inbox className="h-3.5 w-3.5" />} items={groups.recent}
-            render={(c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />} />
+          <Group
+            label={t('chat.recent')}
+            icon={<Inbox className="h-3.5 w-3.5" />}
+            items={groups.recent}
+            render={(c) => (
+              <ConvRow
+                key={c.id}
+                c={c}
+                selfId={me?.id ?? ''}
+                isTyping={!!typing[c.id]}
+                typingName={typing[c.id]?.name}
+                onPin={() => pickPin(c.id)}
+                onArchive={() => pickArchive(c.id)}
+              />
+            )}
+          />
         )}
-        {searchOpen && filteredItems.map((c) => <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />)}
+        {searchOpen &&
+          filteredItems.map((c) => (
+            <ConvRow
+              key={c.id}
+              c={c}
+              selfId={me?.id ?? ''}
+              isTyping={!!typing[c.id]}
+              typingName={typing[c.id]?.name}
+              onPin={() => pickPin(c.id)}
+              onArchive={() => pickArchive(c.id)}
+            />
+          ))}
 
         {!searchOpen && groups.archived.length > 0 && (
           <div>
@@ -184,11 +258,25 @@ export default function MessagesPage() {
               className="flex w-full items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
             >
               <Archive className="h-3.5 w-3.5" /> {t('chat.archived')} ({groups.archived.length})
-              <ChevronDown className={cn('ml-auto h-3.5 w-3.5 transition-transform', archiveOpen && 'rotate-180')} />
+              <ChevronDown
+                className={cn(
+                  'ml-auto h-3.5 w-3.5 transition-transform',
+                  archiveOpen && 'rotate-180',
+                )}
+              />
             </button>
-            {archiveOpen && groups.archived.map((c) => (
-              <ConvRow key={c.id} c={c} selfId={me?.id ?? ''} isTyping={!!typing[c.id]} typingName={typing[c.id]?.name} onPin={() => pickPin(c.id)} onArchive={() => pickArchive(c.id)} />
-            ))}
+            {archiveOpen &&
+              groups.archived.map((c) => (
+                <ConvRow
+                  key={c.id}
+                  c={c}
+                  selfId={me?.id ?? ''}
+                  isTyping={!!typing[c.id]}
+                  typingName={typing[c.id]?.name}
+                  onPin={() => pickPin(c.id)}
+                  onArchive={() => pickArchive(c.id)}
+                />
+              ))}
           </div>
         )}
       </div>
@@ -196,7 +284,17 @@ export default function MessagesPage() {
   );
 }
 
-function Group({ label, icon, items, render }: { label: string; icon?: ReactNode; items: ChatSummary[]; render: (c: ChatSummary) => ReactNode }) {
+function Group({
+  label,
+  icon,
+  items,
+  render,
+}: {
+  label: string;
+  icon?: ReactNode;
+  items: ChatSummary[];
+  render: (c: ChatSummary) => ReactNode;
+}) {
   if (items.length === 0) return null;
   return (
     <div>
@@ -208,7 +306,23 @@ function Group({ label, icon, items, render }: { label: string; icon?: ReactNode
   );
 }
 
-function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _selfId }: { c: ChatSummary; pinned?: boolean; isTyping?: boolean; typingName?: string | null; onPin?: () => void; onArchive?: () => void; selfId: string }) {
+function ConvRow({
+  c,
+  pinned,
+  isTyping,
+  typingName,
+  onPin,
+  onArchive,
+  selfId: _selfId,
+}: {
+  c: ChatSummary;
+  pinned?: boolean;
+  isTyping?: boolean;
+  typingName?: string | null;
+  onPin?: () => void;
+  onArchive?: () => void;
+  selfId: string;
+}) {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const peer = c.peer;
@@ -222,7 +336,7 @@ function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _s
   const preview = c.lastMessage?.body
     ? c.lastMessage.body
     : c.lastMessage?.attachmentType
-      ? previewByType[c.lastMessage.attachmentType] ?? `📎 ${t('chat.file')}`
+      ? (previewByType[c.lastMessage.attachmentType] ?? `📎 ${t('chat.file')}`)
       : t('chat.sayHi');
   const when = c.lastMessageAt ? timeAgo(c.lastMessageAt) : '';
   const gradient = peer ? gradientFor(peer.id) : gradientFor(c.id);
@@ -243,10 +357,15 @@ function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _s
             {initialsOf(name)}
           </div>
           {!c.isGroup && peer?.online && (
-            <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" title="Online" />
+            <span
+              className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500"
+              title="Online"
+            />
           )}
           {c.isGroup && (
-            <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-background bg-primary text-[9px] font-bold text-white">G</span>
+            <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-background bg-primary text-[9px] font-bold text-white">
+              G
+            </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -286,7 +405,11 @@ function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _s
       {onPin && onArchive && (
         <div className="absolute right-1 top-1/2 -translate-y-1/2">
           <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen((v) => !v); }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
             aria-label="Conversation actions"
             aria-pressed={menuOpen}
             className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted active:scale-90"
@@ -295,17 +418,34 @@ function ConvRow({ c, pinned, isTyping, typingName, onPin, onArchive, selfId: _s
           </button>
           {menuOpen && (
             <>
-              <div className="fixed inset-0 z-30" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(false); }} />
+              <div
+                className="fixed inset-0 z-30"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                }}
+              />
               <div className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPin(); setMenuOpen(false); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPin();
+                    setMenuOpen(false);
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm active:bg-muted"
                 >
                   {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                   {pinned ? t('chat.unpin') : t('chat.pin')}
                 </button>
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive(); setMenuOpen(false); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onArchive();
+                    setMenuOpen(false);
+                  }}
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm active:bg-muted"
                 >
                   <Undo2 className="h-4 w-4" /> {t('chat.archive')}

@@ -420,7 +420,10 @@
     "priceLow": "ዋጋ፡ ከዝቅተኛ ወደ ከፍተኛ",
     "priceHigh": "ዋጋ፡ ከፍተኛ ወደ ዝቅተኛ",
     "resultsCount": "{count} መልሶች",
-    "byShort": "የ"
+    "byShort": "የ",
+    "subtitle": "በመላ ኢትዮጵያ የተረጋገጡ ነፃ አገልግሎት ሰጪዎችን ያግኙ",
+    "searchPlaceholder": "ስራዎችን፣ ነፃ አገልግሎት ሰጪዎችን፣ ምድቦችን ይፈልጉ…",
+    "clear": "አጽዳ"
   },
   "create": {
     "title": "መስራት",

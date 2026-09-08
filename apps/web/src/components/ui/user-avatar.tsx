@@ -3,6 +3,7 @@
 import { BadgeCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { cn, resolveMediaUrl } from '@/lib/utils';
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
 /**
  * A user avatar that renders the real profile photo when available and falls
@@ -43,14 +44,21 @@ export function UserAvatar({
 
   const size = className?.match(/h-(\d+)/)?.[1] ?? '10';
   const badgeCls =
-    size === '5' ? 'h-3.5 w-3.5'
-    : size === '6' ? 'h-3 w-3'
-    : size === '7' ? 'h-3.5 w-3.5'
-    : size === '8' ? 'h-4 w-4'
-    : size === '10' ? 'h-4 w-4'
-    : size === '14' ? 'h-5 w-5'
-    : size === '20' ? 'h-6 w-6'
-    : 'h-4 w-4';
+    size === '5'
+      ? 'h-3.5 w-3.5'
+      : size === '6'
+        ? 'h-3 w-3'
+        : size === '7'
+          ? 'h-3.5 w-3.5'
+          : size === '8'
+            ? 'h-4 w-4'
+            : size === '10'
+              ? 'h-4 w-4'
+              : size === '14'
+                ? 'h-5 w-5'
+                : size === '20'
+                  ? 'h-6 w-6'
+                  : 'h-4 w-4';
 
   return (
     <span className={cn('relative inline-block shrink-0', className)}>
@@ -63,9 +71,7 @@ export function UserAvatar({
         {src ? (
           <AvatarImage src={src} alt={name} onError={onError} referrerPolicy="no-referrer" />
         ) : null}
-        <AvatarFallback className="from-violet-600 to-emerald-500">
-          {initials}
-        </AvatarFallback>
+        <AvatarFallback className={gradientFor(id ?? name)}>{initials}</AvatarFallback>
       </Avatar>
       {verified && (
         <span

@@ -73,7 +73,7 @@ export default function ProPage() {
         </Button>
       </header>
       <main className="mx-auto max-w-4xl px-3 py-6 sm:px-6">
-        <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-emerald-500/10 p-6 sm:p-9">
+        <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card to-primary/10 p-6 sm:p-9">
           <div className="absolute -right-10 -top-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative">
             <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-foreground">

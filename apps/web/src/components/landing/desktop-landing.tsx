@@ -27,7 +27,7 @@ const featured = [
     skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
     price: 2500,
     initials: 'SA',
-    gradient: 'from-violet-500 to-emerald-500',
+    gradient: 'from-violet-600 to-indigo-600',
   },
   {
     name: 'Dawit Tesfaye',
@@ -38,7 +38,7 @@ const featured = [
     skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
     price: 4800,
     initials: 'DT',
-    gradient: 'from-amber-500 to-red-500',
+    gradient: 'from-indigo-600 to-slate-600',
   },
   {
     name: 'Hanna Wolde',
@@ -49,7 +49,7 @@ const featured = [
     skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
     price: 1200,
     initials: 'HW',
-    gradient: 'from-cyan-500 to-violet-500',
+    gradient: 'from-purple-600 to-violet-600',
   },
 ];
 
@@ -76,15 +76,15 @@ export function DesktopLanding() {
       {/* Navigation */}
       <nav className="sticky top-4 z-50 mx-auto mt-4 max-w-[1240px] px-4">
         <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-3 shadow-lg backdrop-blur-xl backdrop-saturate-150">
-          <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-            <span className="grad-hero grid h-8 w-8 place-items-center rounded-xl text-white font-extrabold shadow-md shadow-primary/40">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            <span className="grad-hero grid h-8 w-8 place-items-center rounded-xl font-extrabold text-white shadow-md shadow-primary/40">
               A
             </span>
             <span>
               Apex<span className="text-accent">-Work</span>
             </span>
           </Link>
-          <div className="ml-auto hidden md:flex gap-1">
+          <div className="ml-auto hidden gap-1 md:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.label}
@@ -110,7 +110,7 @@ export function DesktopLanding() {
               <Link href="/signup">Join free</Link>
             </Button>
             <button
-              className="md:hidden grid h-9 w-9 place-items-center rounded-full border border-border"
+              className="grid h-9 w-9 place-items-center rounded-full border border-border md:hidden"
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Menu"
             >
@@ -119,7 +119,7 @@ export function DesktopLanding() {
           </div>
         </div>
         {menuOpen && (
-          <div className="md:hidden mt-2 rounded-2xl border border-border bg-background/90 p-4 backdrop-blur-xl">
+          <div className="mt-2 rounded-2xl border border-border bg-background/90 p-4 backdrop-blur-xl md:hidden">
             <div className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
@@ -140,7 +140,7 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pt-24 pb-20 text-center">
+      <section className="container relative pb-20 pt-24 text-center">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -148,7 +148,7 @@ export function DesktopLanding() {
           className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-pulse-brand absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-pulse-brand rounded-full bg-accent opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
           </span>
           Now live in Addis Ababa · 12,400+ freelancers
@@ -171,8 +171,8 @@ export function DesktopLanding() {
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground md:text-xl"
         >
-          Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr,
-          built for አማርኛ speakers.
+          Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built
+          for አማርኛ speakers.
         </motion.p>
 
         <motion.div
@@ -267,8 +267,16 @@ export function DesktopLanding() {
         <SectionHeader eyebrow="Simple process" title="Hire in 3 steps" />
         <div className="grid gap-8 md:grid-cols-3">
           {[
-            { n: 1, t: 'Post your project', d: 'AI turns your description into a professional brief.' },
-            { n: 2, t: 'Get matched instantly', d: 'Vetted freelancers apply. Compare, chat, choose.' },
+            {
+              n: 1,
+              t: 'Post your project',
+              d: 'AI turns your description into a professional brief.',
+            },
+            {
+              n: 2,
+              t: 'Get matched instantly',
+              d: 'Vetted freelancers apply. Compare, chat, choose.',
+            },
             { n: 3, t: 'Pay when happy', d: 'Escrow via Chapa — funds released on delivery.' },
           ].map((s) => (
             <div key={s.n} className="text-center">
@@ -293,14 +301,22 @@ export function DesktopLanding() {
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="text-sm font-bold text-primary">For clients</div>
             <div className="mt-2 text-3xl font-extrabold">Free to post</div>
-            <p className="mt-2 text-sm text-muted-foreground">Browse talent, chat, and compare proposals before you hire.</p>
-            <Button asChild variant="brand" className="mt-5 w-full"><Link href="/jobs/new">Post a job</Link></Button>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Browse talent, chat, and compare proposals before you hire.
+            </p>
+            <Button asChild variant="brand" className="mt-5 w-full">
+              <Link href="/jobs/new">Post a job</Link>
+            </Button>
           </div>
           <div className="rounded-2xl border border-primary/40 bg-primary/5 p-6">
             <div className="text-sm font-bold text-accent">For freelancers</div>
             <div className="mt-2 text-3xl font-extrabold">Join free</div>
-            <p className="mt-2 text-sm text-muted-foreground">Create your profile, showcase work, and apply to jobs.</p>
-            <Button asChild className="mt-5 w-full"><Link href="/signup?role=FREELANCER">Become a freelancer</Link></Button>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Create your profile, showcase work, and apply to jobs.
+            </p>
+            <Button asChild className="mt-5 w-full">
+              <Link href="/signup?role=FREELANCER">Become a freelancer</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -346,7 +362,15 @@ export function DesktopLanding() {
   );
 }
 
-function SectionHeader({ eyebrow, title, description }: { eyebrow: string; title: string; description?: string }) {
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+}) {
   return (
     <div className="mx-auto mb-12 max-w-xl text-center">
       <span className="text-xs font-bold uppercase tracking-widest text-accent">{eyebrow}</span>
@@ -362,7 +386,12 @@ function FreelancerCard({ f }: { f: (typeof featured)[number] }) {
       <div className={cn('h-24 bg-gradient-to-br', f.gradient)} />
       <div className="px-5 pb-5">
         <div className="-mt-8 flex items-end gap-3">
-          <div className={cn('grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br text-xl font-bold text-white ring-4 ring-card', f.gradient)}>
+          <div
+            className={cn(
+              'grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br text-xl font-bold text-white ring-4 ring-card',
+              f.gradient,
+            )}
+          >
             {f.initials}
           </div>
           <div className="pb-1">
@@ -386,14 +415,18 @@ function FreelancerCard({ f }: { f: (typeof featured)[number] }) {
         </div>
         <div className="mt-3 flex flex-wrap gap-1.5">
           {f.skills.map((s) => (
-            <span key={s} className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+            <span
+              key={s}
+              className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+            >
               {s}
             </span>
           ))}
         </div>
         <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
           <div className="text-xs text-muted-foreground">
-            From <span className="text-base font-extrabold text-foreground">{formatEtb(f.price)}</span>
+            From{' '}
+            <span className="text-base font-extrabold text-foreground">{formatEtb(f.price)}</span>
           </div>
           <Button asChild size="sm">
             <Link href="/browse">Hire</Link>

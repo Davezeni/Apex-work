@@ -180,7 +180,7 @@ export function DesktopConversationRail() {
               activeId === savedId ? 'bg-primary/10' : 'hover:bg-muted',
             )}
           >
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-violet-500 to-emerald-500 text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">
               <Users className="h-4 w-4" />
             </span>
             <span className="font-semibold">{t('chat.savedMessages')}</span>
@@ -194,7 +194,7 @@ export function DesktopConversationRail() {
         <button
           type="button"
           onClick={() => router.push('/messages/new-group')}
-          className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.99]"
+          className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:shadow-lg hover:brightness-110 active:scale-[0.99]"
         >
           {t('chat.startConv')}
         </button>

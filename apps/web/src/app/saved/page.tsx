@@ -136,7 +136,7 @@ function SavedGigCard({
       )}
     >
       <Link href={`/gigs/${gig.slug}`} className="block active:bg-muted/40">
-        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-violet-500/30 via-primary/20 to-emerald-500/20">
+        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-primary/30 via-primary/15 to-primary/10">
           {gig.coverImageUrl ? (
             <Image
               src={gig.coverImageUrl}

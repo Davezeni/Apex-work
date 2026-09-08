@@ -36,19 +36,8 @@ import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
-function gradientFor(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
-}
 function initialsOf(name: string): string {
   return (
     name

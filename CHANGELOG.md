@@ -3,6 +3,40 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Brand sweep: drop the rainbow gradient + richer desktop browse (power push #54)
+
+The app no longer looks like a stock "vibe-coder" AI app. The loud
+multi-colour gradient (violet→indigo→green) that was on CTAs, avatars, card
+covers and the hero text is gone, replaced by a single restrained violet
+brand with depth from shadow + hover + subtle radial highlight — the
+Linear/Stripe/Raycast look.
+
+- **`.grad-hero` / `.grad-text` redefined** — no more animated colour-cycling
+  gradient; they now render as a flat `--primary` violet with a soft radial
+  top highlight. All CTAs (Create, brand buttons, the sidebar logo tile) pick
+  this up automatically.
+- **The `default` button variant** is now a flat solid violet (shadow + hover
+  lift + brightness) instead of a gradient.
+- **Avatar fallbacks** — a new shared muted palette
+  (`components/ui/avatar-gradient.ts`, violet/indigo/slate/muted-teal) replaces
+  the six duplicated rainbow `AVATAR_GRADIENTS` arrays (violet→emerald,
+  amber→red, cyan→violet…) across browse, search, gigs, threads, inbox,
+  profile and home. Every avatar now looks coordinated and intentional.
+- **Gig/gig-card covers** use the muted palette; the loud green/red/cyan tints
+  were stripped from the pro, profile, saved, resume-template and home promo
+  surfaces (now violet-only).
+- **Landing category tiles** re-coloured to violet/indigo/slate.
+- Ambient body/chat/mesh backgrounds are violet-only (green radial removed).
+
+### Desktop browse header (redesigned)
+
+On `md+` the Browse page header is a real app header: a larger title +
+subtitle, an inline **search input** with a focus glow + ring (filters the
+list live, clearable), and the category chips now **lift on hover**. Added a
+client-side search filter across titles, owners and categories, switched the
+default card view to **grid** (still persisted), and added i18n
+`browse.subtitle/searchPlaceholder/clear`. Locale parity now **642/642**.
+
 ## [Unreleased] — Desktop two-pane messenger (power push #53)
 
 The open thread is now a real desktop messenger. `messages/[id]` gets a

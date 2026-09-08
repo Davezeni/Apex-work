@@ -26,21 +26,9 @@ import { toast } from 'sonner';
 import { NotificationsBell } from '@/components/notifications-bell';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
-
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
 /** Deterministic pick so a user's avatar color stays stable across renders. */
-function gradientFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]!;
-}
 
 function initialsOf(name: string): string {
   return (
@@ -111,7 +99,7 @@ export function MobileHome() {
       <div className="mb-5 grid grid-cols-2 gap-2 px-5">
         <Link
           href="/jobs"
-          className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-emerald-500/10 to-primary/10 p-3 transition-transform active:scale-[0.98]"
+          className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-3 transition-transform active:scale-[0.98]"
         >
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-xl">
             📢
@@ -344,7 +332,11 @@ function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
         >
           {g.owner.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={g.owner.avatarUrl} alt={g.owner.fullName} className="h-full w-full object-cover" />
+            <img
+              src={g.owner.avatarUrl}
+              alt={g.owner.fullName}
+              className="h-full w-full object-cover"
+            />
           ) : (
             initialsOf(g.owner.fullName)
           )}

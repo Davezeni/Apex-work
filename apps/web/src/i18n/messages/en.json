@@ -420,7 +420,10 @@
     "priceLow": "Price: Low to high",
     "priceHigh": "Price: High to low",
     "resultsCount": "{count} results",
-    "byShort": "By"
+    "byShort": "By",
+    "subtitle": "Discover vetted freelancers across Ethiopia",
+    "searchPlaceholder": "Search gigs, freelancers, categories…",
+    "clear": "Clear"
   },
   "create": {
     "title": "Create",

@@ -14,27 +14,16 @@ import {
   LayoutGrid,
   LayoutList,
   CheckCircle2,
+  Search,
 } from 'lucide-react';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useI18n } from '@/i18n';
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
 const VIEW_MODE_KEY = 'apex-gig-view';
 type ViewMode = 'list' | 'grid';
-
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
-function gradientFor(id: string): string {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
-}
 
 type SortKey = 'recent' | 'rating' | 'price_asc' | 'price_desc';
 
@@ -53,7 +42,8 @@ function BrowseInner() {
   const categoryFromUrl = params.get('category');
   const [category, setCategory] = useState<string | null>(categoryFromUrl);
   const [sort, setSort] = useState<SortKey>('recent');
-  const [view, setView] = useState<ViewMode>('list');
+  const [view, setView] = useState<ViewMode>('grid');
+  const [query, setQuery] = useState('');
 
   // Persist the list/grid preference so it sticks across visits.
   useEffect(() => {
@@ -87,32 +77,71 @@ function BrowseInner() {
     router.replace(`/browse${qs}`);
   };
 
-  const sorted = [...(data?.items ?? [])].sort((a, b) => {
-    if (sort === 'rating') return b.rating - a.rating || b.ratingCount - a.ratingCount;
-    if (sort === 'price_asc') return a.startingPriceEtb - b.startingPriceEtb;
-    if (sort === 'price_desc') return b.startingPriceEtb - a.startingPriceEtb;
-    return 0; // recent — API returns createdAt desc by default
-  });
+  const sorted = [...(data?.items ?? [])]
+    .filter((g) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return true;
+      return `${g.title} ${g.owner?.fullName ?? ''} ${g.categoryId ?? ''}`.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (sort === 'rating') return b.rating - a.rating || b.ratingCount - a.ratingCount;
+      if (sort === 'price_asc') return a.startingPriceEtb - b.startingPriceEtb;
+      if (sort === 'price_desc') return b.startingPriceEtb - a.startingPriceEtb;
+      return 0; // recent — API returns createdAt desc by default
+    });
 
   const activeCat = category ? CATEGORIES.find((c) => c.id === category) : null;
 
   return (
     <MobileShell activeTab="search">
-      <header className="safe-top sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/85 px-3 pb-3 pt-4 backdrop-blur-xl">
-        <button
-          onClick={() => router.back()}
-          aria-label={t('common.back')}
-          className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </button>
-        <h1 className="text-lg font-extrabold tracking-tight">
-          {activeCat ? `${activeCat.icon} ${activeCat.label}` : t('browse.title')}
-        </h1>
+      <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl md:px-6 md:pt-6">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.back()}
+            aria-label={t('common.back')}
+            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card transition-colors hover:bg-muted md:hidden"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-extrabold tracking-tight md:text-2xl md:font-black">
+              {activeCat ? `${activeCat.icon} ${activeCat.label}` : t('browse.title')}
+            </h1>
+            <p className="hidden text-sm text-muted-foreground md:block">{t('browse.subtitle')}</p>
+          </div>
+          <button
+            onClick={() => setQuery('')}
+            className="hidden text-xs font-semibold text-primary transition-colors hover:text-primary/80 md:block"
+          >
+            {t('browse.clear')}
+          </button>
+        </div>
+
+        {/* Desktop search input with focus glow */}
+        <div className="mt-4 hidden md:block">
+          <div className="flex h-12 max-w-xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
+            <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('browse.searchPlaceholder')}
+              className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                aria-label={t('browse.clear')}
+                className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-xs text-muted-foreground transition-colors hover:bg-muted/80"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </div>
       </header>
 
-      {/* Category filter */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4">
+      {/* Category filter — animated chips */}
+      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4 md:px-6">
         <FilterChip
           label={t('browse.allCategories')}
           active={!category}
@@ -231,10 +260,10 @@ function FilterChip({
     <button
       onClick={onClick}
       className={cn(
-        'shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-all active:scale-95',
+        'shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-95',
         active
           ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/40'
-          : 'border-border bg-card text-muted-foreground',
+          : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
       )}
     >
       {label}

@@ -35,19 +35,8 @@ import { usePaymentConfig } from '@/hooks/use-payment';
 import { useSaveGig, useSavedGigStatus, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
+import { gradientFor } from '@/components/ui/avatar-gradient';
 
-const AVATAR_GRADIENTS = [
-  'from-violet-500 to-emerald-500',
-  'from-amber-500 to-red-500',
-  'from-cyan-500 to-violet-500',
-  'from-emerald-500 to-amber-500',
-  'from-red-500 to-violet-500',
-];
-function gradientFor(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length]!;
-}
 function initialsOf(name: string): string {
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
 }

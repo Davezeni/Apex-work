@@ -333,7 +333,7 @@ function ProfileSavedGigs({ saved, isLoading }: { saved: SavedGig[]; isLoading: 
                 item.gig.status !== 'ACTIVE' && 'opacity-70',
               )}
             >
-              <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-violet-500/25 to-emerald-500/20">
+              <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-primary/25 to-primary/10">
                 {item.gig.coverImageUrl ? (
                   <Image
                     src={item.gig.coverImageUrl}
