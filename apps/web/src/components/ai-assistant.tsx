@@ -151,17 +151,19 @@ export function AIAssistant() {
 
   return (
     <>
-      {/* Floating trigger */}
+      {/* Floating trigger — a DISTINCT emerald support chip, clearly separate
+          from the violet Create "+" so the two never get confused. */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="AI assistant"
         className={cn(
-          'safe-bottom fixed bottom-24 right-4 z-40 grid h-14 w-14 place-items-center rounded-full text-white shadow-xl shadow-primary/40 transition-transform active:scale-90',
-          'grad-hero',
+          'safe-bottom fixed bottom-24 right-4 z-40 flex h-14 items-center gap-2 rounded-full px-4 text-sm font-bold text-white shadow-xl shadow-emerald-500/40 ring-1 ring-emerald-300/50 transition-all hover:scale-105 hover:brightness-110 active:scale-95',
+          'bg-emerald-600',
           open && 'rotate-45',
         )}
       >
         {open ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" strokeWidth={2.4} />}
+        {!open && <span className="hidden sm:inline">Help</span>}
       </button>
 
       <AnimatePresence>

@@ -118,9 +118,9 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   setSheetOpen(true);
                 }}
                 aria-label="Create"
-                className="mobile-bottom-nav__create-button grad-hero grid h-11 w-11 place-items-center rounded-full text-white shadow-xl shadow-primary/50 transition-transform active:scale-90"
+                className="mobile-bottom-nav__create-button grad-hero grid h-12 w-12 place-items-center rounded-full text-white shadow-xl shadow-primary/50 ring-1 ring-primary-foreground/20 transition-transform active:scale-90"
               >
-                <Plus className="h-5 w-5" strokeWidth={2.5} />
+                <Plus className="h-5 w-5" strokeWidth={3} />
               </button>
             </div>
 

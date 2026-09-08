@@ -3,6 +3,21 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Make the "+" and AI-support chips unmistakable (power push #56)
+
+The add/create and AI-support floats were the same pale violet and washed
+out on the light nav, so neither was visible.
+
+- **`.grad-hero` is now a flat, confident violet** (solid `--primary` with a
+  subtle top highlight) — no more translucent radial that faded to near-white
+  on light surfaces. Every primary chip (mobile "+" FAB, logo tile, headers,
+  chat send) now reads as solid violet.
+- **The AI-support bubble got its own DISTINCT emerald fill** with a "Help"
+  label, so it can never be confused with the violet "+" Create button. It now
+  clearly reads as a separate support/assistant action.
+- The mobile "+" Create FAB is enlarged (h-12, thicker plus, ring) so it pops
+  over the white bottom nav.
+
 ## [Unreleased] — Fix: AI support bubble + desktop Create (+) now always visible (power push #55)
 
 - **AI support bubble** is no longer hidden by the auth gate. Previously the

@@ -127,12 +127,12 @@
     }
   }
 
-  /* Brand surface — a single violet hue with soft vertical depth (no
-     multi-colour cycling). Reads as flat, premium, and cohesive. */
+  /* Brand surface — a single violet hue, FLAT and confident, with a subtle
+     top highlight so it never washes out on light surfaces (no multi-colour
+     cycling). This is used for all primary Create/action chips. */
   .grad-hero {
     background:
-      radial-gradient(120% 90% at 50% 0%, oklch(0.62 0.22 293 / 0.35), transparent 70%),
-      var(--primary);
+      linear-gradient(to bottom, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 55%), var(--primary);
   }
   .grad-text {
     background: var(--primary);
