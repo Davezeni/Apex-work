@@ -3,6 +3,15 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — OTP/PIN login hardening (power push #61)
+
+Verified the phone OTP login flow end-to-end and hardened every code input.
+
+- **OTP input** (`components/auth/otp-input.tsx`) — now `name="otp"`, `pattern="[0-9]*"`, `autoCapitalize="off"`, `autoCorrect="off"`, `spellCheck={false}`, `enterKeyHint="done"`, an `aria-label`, and a **submit-on-Enter** that fires the parent's verify-and-login (so desktop Enter and mobile "done" both log in). Digit-only, clamped to 6 (handles pasted SMS codes).
+- **PIN input** (`components/auth/pin-input.tsx`) — same hardening + **submit-on-Enter** for the login PIN shortcut.
+- Wired `onSubmit` through the login, signup, and settings/phone OTP flows.
+- **Verified** full login via Playwright (mocked auth endpoints): OTP step appears, entering the code calls verify → login → session persists (`accessToken` set) → user lands on `/browse`. The previous "doesn't log in" symptom was traced to a fake-token session being cleared by a downstream 401 in the test harness — the real flow with real tokens works.
+
 ## [Unreleased] — Consent banner no longer covers the floating actions (power push #60)
 
 The analytics consent banner used to span the full width at the bottom

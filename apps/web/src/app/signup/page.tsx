@@ -37,13 +37,18 @@ function SignupInner() {
   const [step, setStep] = useState<Step>(oauthToken || phoneFromQuery ? 'phone' : 'role');
   const roleFromQuery = params.get('role');
   const refFromQuery = params.get('ref');
-  const [role, setRole] = useState<UserRole>(roleFromQuery === 'FREELANCER' ? 'FREELANCER' : 'CLIENT');
+  const [role, setRole] = useState<UserRole>(
+    roleFromQuery === 'FREELANCER' ? 'FREELANCER' : 'CLIENT',
+  );
 
   // Track a referral-link click when someone arrives at signup via a share link.
   useEffect(() => {
     if (!refFromQuery) return;
     const t = setTimeout(() => {
-      void apiFetch('/referrals/track', { method: 'POST', body: { refCode: refFromQuery, source: 'link' } }).catch(() => undefined);
+      void apiFetch('/referrals/track', {
+        method: 'POST',
+        body: { refCode: refFromQuery, source: 'link' },
+      }).catch(() => undefined);
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +65,10 @@ function SignupInner() {
 
   const chooseRole = () => setStep('phone');
   const startOAuth = (provider: 'google' | 'github') => {
-    const query = new URLSearchParams({ role, next: params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/') });
+    const query = new URLSearchParams({
+      role,
+      next: params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/'),
+    });
     window.location.assign(`${API_URL}/v1/auth/oauth/${provider}/start?${query.toString()}`);
   };
 
@@ -113,20 +121,33 @@ function SignupInner() {
     try {
       const result = await apiFetch<{
         user: { id: string };
-        tokens: { accessToken: string; refreshToken: string; expiresIn: number; deviceToken?: string; deviceExpiresAt?: string };
+        tokens: {
+          accessToken: string;
+          refreshToken: string;
+          expiresIn: number;
+          deviceToken?: string;
+          deviceExpiresAt?: string;
+        };
         next?: string;
       }>(oauthToken ? '/auth/oauth/complete-signup' : '/auth/signup', {
         method: 'POST',
         body: oauthToken
           ? { oauthToken, phone, otpToken, fullName: fullName.trim(), role }
-          : { phone, otpToken, fullName: fullName.trim(), role, ...(refFromQuery ? { referralCode: refFromQuery } : {}) },
+          : {
+              phone,
+              otpToken,
+              fullName: fullName.trim(),
+              role,
+              ...(refFromQuery ? { referralCode: refFromQuery } : {}),
+            },
       });
       setSession(result.tokens, phone);
       toast.success(t('auth.welcomeUser', { name: fullName.split(' ')[0] ?? '' }));
       track('signup', { role, oauth: !!oauthToken });
       // Offer to set a PIN so the next login skips the SMS step. OAuth keeps
       // the callback's safe destination when the user was sent here from it.
-      const next = result.next ?? params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/');
+      const next =
+        result.next ?? params.get('next') ?? (role === 'FREELANCER' ? '/onboarding' : '/');
       router.push(`/settings/pin?next=${encodeURIComponent(next)}`);
     } catch (err) {
       toast.error((err as ApiError).message ?? 'Signup failed');
@@ -213,9 +234,13 @@ function SignupInner() {
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">{oauthToken ? 'Add your phone number' : t('auth.yourPhone')}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                {oauthToken ? 'Add your phone number' : t('auth.yourPhone')}
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {oauthToken ? 'Verify your Ethiopian phone to finish creating this account.' : t('auth.weWillSendCode')}
+                {oauthToken
+                  ? 'Verify your Ethiopian phone to finish creating this account.'
+                  : t('auth.weWillSendCode')}
               </p>
               <input
                 autoFocus
@@ -256,6 +281,7 @@ function SignupInner() {
                 }}
                 onResend={() => sendOtp(true)}
                 resending={resending}
+                onSubmit={() => verifyOtp()}
               />
               <Button
                 variant="brand"

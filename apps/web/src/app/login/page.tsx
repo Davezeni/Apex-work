@@ -93,9 +93,11 @@ function LoginInner() {
 
   useEffect(() => {
     if (!oauthError) return;
-    toast.error(oauthError === 'provider_unavailable'
-      ? 'This sign-in provider is not configured yet.'
-      : 'OAuth sign-in could not be completed.');
+    toast.error(
+      oauthError === 'provider_unavailable'
+        ? 'This sign-in provider is not configured yet.'
+        : 'OAuth sign-in could not be completed.',
+    );
   }, [oauthError]);
 
   // ---------------------------------------
@@ -278,10 +280,10 @@ function LoginInner() {
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">{t('loginSmart.welcomeBack')}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t('loginSmart.smartSubtitle')}
-              </p>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                {t('loginSmart.welcomeBack')}
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">{t('loginSmart.smartSubtitle')}</p>
 
               <label className="mt-8 block text-xs font-semibold text-muted-foreground">
                 {t('auth.phoneLabel')}
@@ -350,7 +352,9 @@ function LoginInner() {
           {step === 'pin' && (
             <StepBox key="pin">
               <LockKeyhole className="mb-4 h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-extrabold tracking-tight">{t('loginSmart.welcomeBack')}</h1>
+              <h1 className="text-3xl font-extrabold tracking-tight">
+                {t('loginSmart.welcomeBack')}
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 {t('loginSmart.signedInAs', { phone })}
               </p>
@@ -364,6 +368,7 @@ function LoginInner() {
                   }}
                   autoFocus
                   disabled={loading}
+                  onSubmit={() => submitPin()}
                 />
               </div>
 
@@ -438,6 +443,7 @@ function LoginInner() {
                 }}
                 onResend={() => submitPhone(true)}
                 resending={resending}
+                onSubmit={() => verifyAndLogin()}
               />
               <Button
                 variant="brand"
@@ -474,5 +480,3 @@ function StepBox({ children }: { children: React.ReactNode }) {
     </motion.div>
   );
 }
-
-

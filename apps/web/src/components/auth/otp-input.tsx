@@ -12,6 +12,8 @@ interface Props {
   onChange: (code: string) => void;
   onResend: () => void | Promise<void>;
   resending?: boolean;
+  /** Called when the user presses Enter / the keyboard "done" key. */
+  onSubmit?: () => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  * - a 60s resend cooldown timer that starts when the component mounts,
  *   and resets whenever `onResend` completes
  */
-export function OtpInput({ phone, code, onChange, onResend, resending }: Props) {
+export function OtpInput({ phone, code, onChange, onResend, resending, onSubmit }: Props) {
   const [secondsLeft, setSecondsLeft] = useState(RESEND_COOLDOWN_SEC);
 
   useEffect(() => {
@@ -46,15 +48,33 @@ export function OtpInput({ phone, code, onChange, onResend, resending }: Props) 
 
       <input
         autoFocus
+        name="otp"
         type="text"
         inputMode="numeric"
-        pattern="\d*"
+        pattern="[0-9]*"
         autoComplete="one-time-code"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="done"
         maxLength={OTP_LENGTH}
         value={code}
-        onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
-        placeholder="●●●●●●"
+        onChange={(e) => {
+          // Accept only digits, clamp to OTP_LENGTH (handles pasted SMS codes).
+          const digits = e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
+          onChange(digits);
+        }}
+        onKeyDown={(e) => {
+          // Submit on Enter / keyboard "done": desktop Enter and mobile
+          // keyboards both fire this, so completing the code logs in.
+          if (e.key === 'Enter' && onSubmit && code.length === OTP_LENGTH) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+        placeholder="••••••"
         className="mt-8 h-16 w-full rounded-2xl border border-border bg-card text-center text-3xl font-extrabold tracking-[0.5em] outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+        aria-label={`${OTP_LENGTH}-digit verification code`}
       />
 
       <div className="mt-4 flex items-center justify-center gap-2 text-sm">
@@ -73,8 +93,7 @@ export function OtpInput({ phone, code, onChange, onResend, resending }: Props) 
           </span>
         ) : (
           <span className="text-muted-foreground">
-            Resend code in{' '}
-            <span className="font-semibold text-foreground">{secondsLeft}s</span>
+            Resend code in <span className="font-semibold text-foreground">{secondsLeft}s</span>
           </span>
         )}
       </div>

@@ -10,6 +10,8 @@ interface Props {
   disabled?: boolean;
   /** true = mask digits like a normal password field */
   masked?: boolean;
+  /** Called when the user completes/presses Enter on the PIN. */
+  onSubmit?: () => void;
 }
 
 /**
@@ -19,13 +21,7 @@ interface Props {
  * than one-input-per-digit implementations (which break on paste, keyboard
  * languages, and auto-fill).
  */
-export function PinInput({
-  value,
-  onChange,
-  autoFocus,
-  disabled,
-  masked = true,
-}: Props) {
+export function PinInput({ value, onChange, autoFocus, disabled, masked = true, onSubmit }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -67,12 +63,22 @@ export function PinInput({
         ref={inputRef}
         type="text"
         inputMode="numeric"
-        pattern="\d*"
+        pattern="[0-9]*"
         autoComplete="one-time-code"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
+        enterKeyHint="done"
         maxLength={6}
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onSubmit && value.length === 6) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
         // Visually hidden but accessible + iOS keyboard-friendly
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         aria-label="Enter 6-digit PIN"
