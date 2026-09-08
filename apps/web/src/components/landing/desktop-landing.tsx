@@ -7,57 +7,96 @@ import { motion } from 'framer-motion';
 import { Search, Moon, Sun, Menu, X, ArrowRight, Star, MapPin, CheckCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
+import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 
-const stats = [
-  { value: '12.4K', label: 'Verified freelancers' },
-  { value: '47', label: 'Skill categories' },
-  { value: '98%', label: 'Client satisfaction' },
-  { value: '24h', label: 'Avg. delivery' },
-];
-
-const featured = [
-  {
-    name: 'Selam Assefa',
-    title: 'Senior UI/UX Designer',
-    city: 'Addis Ababa',
-    rating: 4.98,
-    reviews: 312,
-    skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
-    price: 2500,
-    initials: 'SA',
-    gradient: 'from-violet-600 to-indigo-600',
+const DEFAULT_HOME: HomeConfig = {
+  heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
+  heroTitle: "Ethiopia's most powerful",
+  heroTitleAccent: 'freelance marketplace.',
+  heroSubtitle:
+    'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
+  heroCtaPrimary: 'Find talent',
+  heroCtaSecondary: 'Become a freelancer',
+  searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
+  stats: [
+    { value: '12.4K', label: 'Verified freelancers' },
+    { value: '47', label: 'Skill categories' },
+    { value: '98%', label: 'Client satisfaction' },
+    { value: '24h', label: 'Avg. delivery' },
+  ],
+  howItWorks: [
+    {
+      title: 'Post your project',
+      description: 'AI turns your description into a professional brief.',
+    },
+    {
+      title: 'Get matched instantly',
+      description: 'Vetted freelancers apply. Compare, chat, choose.',
+    },
+    { title: 'Pay when happy', description: 'Escrow via Chapa — funds released on delivery.' },
+  ],
+  featured: [
+    {
+      name: 'Selam Assefa',
+      title: 'Senior UI/UX Designer',
+      city: 'Addis Ababa',
+      rating: '4.98',
+      reviews: 312,
+      skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
+      price: 2500,
+      gradient: 'from-violet-600 to-indigo-600',
+    },
+    {
+      name: 'Dawit Tesfaye',
+      title: 'Full-Stack Developer',
+      city: 'Bahir Dar',
+      rating: '5.0',
+      reviews: 198,
+      skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
+      price: 4800,
+      gradient: 'from-indigo-600 to-slate-600',
+    },
+    {
+      name: 'Hanna Wolde',
+      title: 'Amharic Copywriter',
+      city: 'Hawassa',
+      rating: '4.95',
+      reviews: 421,
+      skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
+      price: 1200,
+      gradient: 'from-purple-600 to-violet-600',
+    },
+  ],
+  pricingClient: {
+    heading: 'For clients',
+    price: 'Free to post',
+    description: 'Browse talent, chat, and compare proposals before you hire.',
+    cta: 'Post a job',
   },
-  {
-    name: 'Dawit Tesfaye',
-    title: 'Full-Stack Developer',
-    city: 'Bahir Dar',
-    rating: 5.0,
-    reviews: 198,
-    skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
-    price: 4800,
-    initials: 'DT',
-    gradient: 'from-indigo-600 to-slate-600',
+  pricingFreelancer: {
+    heading: 'For freelancers',
+    price: 'Join free',
+    description: 'Create your profile, showcase work, and apply to jobs.',
+    cta: 'Become a freelancer',
   },
-  {
-    name: 'Hanna Wolde',
-    title: 'Amharic Copywriter',
-    city: 'Hawassa',
-    rating: 4.95,
-    reviews: 421,
-    skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
-    price: 1200,
-    initials: 'HW',
-    gradient: 'from-purple-600 to-violet-600',
+  cta: {
+    title: 'Your next project starts here.',
+    subtitle: 'Join thousands of Ethiopian freelancers and clients building the future of work.',
+    primary: 'Start hiring',
+    secondary: 'Sign up as freelancer',
   },
-];
+};
 
 export function DesktopLanding() {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const { theme, setTheme } = useTheme();
+  // Admin-editable marketing copy; falls back to DEFAULT_HOME until loaded.
+  const { data } = useHomeConfig();
+  const home = data ?? DEFAULT_HOME;
 
   const runSearch = () => {
     const query = search.trim();
@@ -151,7 +190,7 @@ export function DesktopLanding() {
             <span className="absolute inline-flex h-full w-full animate-pulse-brand rounded-full bg-accent opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
           </span>
-          Now live in Addis Ababa · 12,400+ freelancers
+          {home.heroBadge}
         </motion.div>
 
         <motion.h1
@@ -160,9 +199,9 @@ export function DesktopLanding() {
           transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
           className="mx-auto mt-6 max-w-4xl text-balance font-display text-5xl font-extrabold leading-[1.02] tracking-tighter md:text-7xl lg:text-8xl"
         >
-          Ethiopia&apos;s most powerful
+          {home.heroTitle}
           <br />
-          <span className="grad-text">freelance marketplace.</span>
+          <span className="grad-text">{home.heroTitleAccent}</span>
         </motion.h1>
 
         <motion.p
@@ -171,8 +210,7 @@ export function DesktopLanding() {
           transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
           className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground md:text-xl"
         >
-          Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built
-          for አማርኛ speakers.
+          {home.heroSubtitle}
         </motion.p>
 
         <motion.div
@@ -183,11 +221,11 @@ export function DesktopLanding() {
         >
           <Button asChild variant="brand" size="lg">
             <Link href="/browse">
-              Find talent <ArrowRight className="h-4 w-4" />
+              {home.heroCtaPrimary} <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
           <Button asChild size="lg">
-            <Link href="/signup">Become a freelancer</Link>
+            <Link href="/signup">{home.heroCtaSecondary}</Link>
           </Button>
         </motion.div>
 
@@ -206,7 +244,7 @@ export function DesktopLanding() {
               if (event.key === 'Enter') runSearch();
             }}
             className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
-            placeholder="Try 'Amharic translator' or 'React developer'…"
+            placeholder={home.searchPlaceholder}
             aria-label="Search freelancers and services"
           />
           <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
@@ -221,7 +259,7 @@ export function DesktopLanding() {
           transition={{ duration: 0.8, delay: 0.6 }}
           className="mt-16 grid grid-cols-2 gap-8 md:flex md:justify-center md:gap-16"
         >
-          {stats.map((s) => (
+          {home.stats.map((s) => (
             <div key={s.label} className="text-center">
               <div className="grad-text text-3xl font-extrabold tracking-tight md:text-4xl">
                 {s.value}
@@ -256,7 +294,7 @@ export function DesktopLanding() {
       <section className="container py-20">
         <SectionHeader eyebrow="Top talent" title={`Meet Ethiopia's finest`} />
         <div className="grid gap-5 md:grid-cols-3">
-          {featured.map((f) => (
+          {home.featured.map((f) => (
             <FreelancerCard key={f.name} f={f} />
           ))}
         </div>
@@ -266,25 +304,13 @@ export function DesktopLanding() {
       <section id="how" className="container scroll-mt-24 py-20">
         <SectionHeader eyebrow="Simple process" title="Hire in 3 steps" />
         <div className="grid gap-8 md:grid-cols-3">
-          {[
-            {
-              n: 1,
-              t: 'Post your project',
-              d: 'AI turns your description into a professional brief.',
-            },
-            {
-              n: 2,
-              t: 'Get matched instantly',
-              d: 'Vetted freelancers apply. Compare, chat, choose.',
-            },
-            { n: 3, t: 'Pay when happy', d: 'Escrow via Chapa — funds released on delivery.' },
-          ].map((s) => (
-            <div key={s.n} className="text-center">
+          {home.howItWorks.map((s, idx) => (
+            <div key={idx} className="text-center">
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-full border-2 border-border bg-card text-xl font-extrabold transition-all hover:scale-110 hover:border-primary hover:text-primary hover:shadow-lg hover:shadow-primary/30">
-                {s.n}
+                {idx + 1}
               </div>
-              <h3 className="mt-5 text-xl font-bold">{s.t}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{s.d}</p>
+              <h3 className="mt-5 text-xl font-bold">{s.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{s.description}</p>
             </div>
           ))}
         </div>
@@ -299,23 +325,21 @@ export function DesktopLanding() {
         />
         <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-card p-6">
-            <div className="text-sm font-bold text-primary">For clients</div>
-            <div className="mt-2 text-3xl font-extrabold">Free to post</div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Browse talent, chat, and compare proposals before you hire.
-            </p>
+            <div className="text-sm font-bold text-primary">{home.pricingClient.heading}</div>
+            <div className="mt-2 text-3xl font-extrabold">{home.pricingClient.price}</div>
+            <p className="mt-2 text-sm text-muted-foreground">{home.pricingClient.description}</p>
             <Button asChild variant="brand" className="mt-5 w-full">
-              <Link href="/jobs/new">Post a job</Link>
+              <Link href="/jobs/new">{home.pricingClient.cta}</Link>
             </Button>
           </div>
           <div className="rounded-2xl border border-primary/40 bg-primary/5 p-6">
-            <div className="text-sm font-bold text-accent">For freelancers</div>
-            <div className="mt-2 text-3xl font-extrabold">Join free</div>
+            <div className="text-sm font-bold text-accent">{home.pricingFreelancer.heading}</div>
+            <div className="mt-2 text-3xl font-extrabold">{home.pricingFreelancer.price}</div>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create your profile, showcase work, and apply to jobs.
+              {home.pricingFreelancer.description}
             </p>
             <Button asChild className="mt-5 w-full">
-              <Link href="/signup?role=FREELANCER">Become a freelancer</Link>
+              <Link href="/signup?role=FREELANCER">{home.pricingFreelancer.cta}</Link>
             </Button>
           </div>
         </div>
@@ -326,18 +350,16 @@ export function DesktopLanding() {
         <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-12 text-center md:p-20">
           <div className="mesh-bg absolute inset-0" />
           <div className="relative">
-            <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl">
-              Your next project starts here.
-            </h2>
+            <h2 className="text-3xl font-extrabold tracking-tight md:text-5xl">{home.cta.title}</h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground md:text-lg">
-              Join thousands of Ethiopian freelancers and clients building the future of work.
+              {home.cta.subtitle}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild variant="brand" size="lg">
-                <Link href="/signup">Start hiring</Link>
+                <Link href="/signup">{home.cta.primary}</Link>
               </Button>
               <Button asChild size="lg">
-                <Link href="/signup?role=FREELANCER">Sign up as freelancer</Link>
+                <Link href="/signup?role=FREELANCER">{home.cta.secondary}</Link>
               </Button>
             </div>
           </div>
@@ -397,7 +419,14 @@ function SectionHeader({
   );
 }
 
-function FreelancerCard({ f }: { f: (typeof featured)[number] }) {
+function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
+  const initials = (f.name || '?')
+    .split(' ')
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-xl">
       <div className={cn('h-24 bg-gradient-to-br', f.gradient)} />
@@ -409,7 +438,7 @@ function FreelancerCard({ f }: { f: (typeof featured)[number] }) {
               f.gradient,
             )}
           >
-            {f.initials}
+            {initials}
           </div>
           <div className="pb-1">
             <h3 className="flex items-center gap-1.5 text-base font-bold">

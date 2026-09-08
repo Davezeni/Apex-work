@@ -365,3 +365,228 @@ export async function upsertSiteConfig(
 
 /** The content page schema, exported for admin route validation reuse. */
 export const contentPageSchema = pageSchema;
+
+// -----------------------------------------------------------------------------
+// Home / marketing copy — the landing page hero, stats, how-it-works steps,
+// featured freelancers, pricing cards and CTA. Previously hard-coded in the
+// web component; now structured and admin-editable so the public landing page
+// can be tuned without a deploy.
+// -----------------------------------------------------------------------------
+
+export type HomeConfig = {
+  heroBadge: string;
+  heroTitle: string;
+  heroTitleAccent: string;
+  heroSubtitle: string;
+  heroCtaPrimary: string;
+  heroCtaSecondary: string;
+  searchPlaceholder: string;
+  stats: { value: string; label: string }[];
+  howItWorks: { title: string; description: string }[];
+  featured: {
+    name: string;
+    title: string;
+    city: string;
+    rating: string;
+    reviews: number;
+    skills: string[];
+    price: number;
+    gradient: string;
+  }[];
+  pricingClient: { heading: string; price: string; description: string; cta: string };
+  pricingFreelancer: { heading: string; price: string; description: string; cta: string };
+  cta: { title: string; subtitle: string; primary: string; secondary: string };
+};
+
+const HOME_CONFIG_KEY = 'content.home';
+const HOME_CONFIG_CACHE_KEY = cacheKey('content:home');
+
+/** Zod schema for admin-edited home marketing copy. */
+const homeConfigSchema = z.object({
+  heroBadge: z.string().trim().min(1).max(160),
+  heroTitle: z.string().trim().min(1).max(160),
+  heroTitleAccent: z.string().trim().min(1).max(80),
+  heroSubtitle: z.string().trim().min(1).max(400),
+  heroCtaPrimary: z.string().trim().min(1).max(60),
+  heroCtaSecondary: z.string().trim().min(1).max(60),
+  searchPlaceholder: z.string().trim().max(120),
+  stats: z
+    .array(
+      z.object({
+        value: z.string().trim().min(1).max(20),
+        label: z.string().trim().min(1).max(40),
+      }),
+    )
+    .min(1)
+    .max(8),
+  howItWorks: z
+    .array(
+      z.object({
+        title: z.string().trim().min(1).max(80),
+        description: z.string().trim().min(1).max(300),
+      }),
+    )
+    .min(1)
+    .max(8),
+  featured: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(80),
+        title: z.string().trim().min(1).max(120),
+        city: z.string().trim().max(80),
+        rating: z.string().trim().min(1).max(8),
+        reviews: z.number().int().min(0).max(1_000_000),
+        skills: z.array(z.string().trim().max(40)).max(12),
+        price: z.number().int().min(0).max(10_000_000),
+        gradient: z
+          .string()
+          .trim()
+          .regex(/^from-\S+ to-\S+$/)
+          .max(80),
+      }),
+    )
+    .min(1)
+    .max(8),
+  pricingClient: z.object({
+    heading: z.string().trim().max(40),
+    price: z.string().trim().max(40),
+    description: z.string().trim().max(200),
+    cta: z.string().trim().max(60),
+  }),
+  pricingFreelancer: z.object({
+    heading: z.string().trim().max(40),
+    price: z.string().trim().max(40),
+    description: z.string().trim().max(200),
+    cta: z.string().trim().max(60),
+  }),
+  cta: z.object({
+    title: z.string().trim().max(200),
+    subtitle: z.string().trim().max(400),
+    primary: z.string().trim().max(60),
+    secondary: z.string().trim().max(60),
+  }),
+});
+
+export const DEFAULT_HOME_CONFIG: HomeConfig = {
+  heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
+  heroTitle: "Ethiopia's most powerful",
+  heroTitleAccent: 'freelance marketplace.',
+  heroSubtitle:
+    'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
+  heroCtaPrimary: 'Find talent',
+  heroCtaSecondary: 'Become a freelancer',
+  searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
+  stats: [
+    { value: '12.4K', label: 'Verified freelancers' },
+    { value: '47', label: 'Skill categories' },
+    { value: '98%', label: 'Client satisfaction' },
+    { value: '24h', label: 'Avg. delivery' },
+  ],
+  howItWorks: [
+    {
+      title: 'Post your project',
+      description: 'AI turns your description into a professional brief.',
+    },
+    {
+      title: 'Get matched instantly',
+      description: 'Vetted freelancers apply. Compare, chat, choose.',
+    },
+    { title: 'Pay when happy', description: 'Escrow via Chapa — funds released on delivery.' },
+  ],
+  featured: [
+    {
+      name: 'Selam Assefa',
+      title: 'Senior UI/UX Designer',
+      city: 'Addis Ababa',
+      rating: '4.98',
+      reviews: 312,
+      skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
+      price: 2500,
+      gradient: 'from-violet-600 to-indigo-600',
+    },
+    {
+      name: 'Dawit Tesfaye',
+      title: 'Full-Stack Developer',
+      city: 'Bahir Dar',
+      rating: '5.0',
+      reviews: 198,
+      skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
+      price: 4800,
+      gradient: 'from-indigo-600 to-slate-600',
+    },
+    {
+      name: 'Hanna Wolde',
+      title: 'Amharic Copywriter',
+      city: 'Hawassa',
+      rating: '4.95',
+      reviews: 421,
+      skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
+      price: 1200,
+      gradient: 'from-purple-600 to-violet-600',
+    },
+  ],
+  pricingClient: {
+    heading: 'For clients',
+    price: 'Free to post',
+    description: 'Browse talent, chat, and compare proposals before you hire.',
+    cta: 'Post a job',
+  },
+  pricingFreelancer: {
+    heading: 'For freelancers',
+    price: 'Join free',
+    description: 'Create your profile, showcase work, and apply to jobs.',
+    cta: 'Become a freelancer',
+  },
+  cta: {
+    title: 'Your next project starts here.',
+    subtitle: 'Join thousands of Ethiopian freelancers and clients building the future of work.',
+    primary: 'Start hiring',
+    secondary: 'Sign up as freelancer',
+  },
+};
+
+/** Current home marketing config, with built-in defaults when unset (cached). */
+export async function getHomeConfig(): Promise<HomeConfig> {
+  const raw = await cachedRead(
+    HOME_CONFIG_CACHE_KEY,
+    async () => {
+      const row = await prisma.appSetting.findUnique({ where: { key: HOME_CONFIG_KEY } });
+      if (!row) return null;
+      const parsed = homeConfigSchema.safeParse(row.value);
+      return parsed.success ? parsed.data : null;
+    },
+    300,
+  );
+  // Defaults for any missing pieces, so partial edits still render.
+  return {
+    ...DEFAULT_HOME_CONFIG,
+    ...(raw ?? {}),
+    stats: raw?.stats?.length ? raw.stats : DEFAULT_HOME_CONFIG.stats,
+    howItWorks: raw?.howItWorks?.length ? raw.howItWorks : DEFAULT_HOME_CONFIG.howItWorks,
+    featured: raw?.featured?.length ? raw.featured : DEFAULT_HOME_CONFIG.featured,
+    pricingClient: raw?.pricingClient ?? DEFAULT_HOME_CONFIG.pricingClient,
+    pricingFreelancer: raw?.pricingFreelancer ?? DEFAULT_HOME_CONFIG.pricingFreelancer,
+    cta: raw?.cta ?? DEFAULT_HOME_CONFIG.cta,
+  };
+}
+
+/** Persist an admin edit of the home marketing copy and drop the cache. */
+export async function upsertHomeConfig(
+  input: HomeConfig,
+  updatedById: string,
+): Promise<HomeConfig> {
+  const parsed = homeConfigSchema.safeParse(input);
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? 'Invalid home content');
+  await prisma.appSetting.upsert({
+    where: { key: HOME_CONFIG_KEY },
+    update: { value: parsed.data, updatedById },
+    create: {
+      key: HOME_CONFIG_KEY,
+      value: parsed.data,
+      updatedById,
+      description: 'Editable landing page marketing copy',
+    },
+  });
+  await invalidate(HOME_CONFIG_CACHE_KEY);
+  return parsed.data;
+}

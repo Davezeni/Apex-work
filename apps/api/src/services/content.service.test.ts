@@ -21,8 +21,11 @@ import {
   upsertContentPage,
   getSiteConfig,
   upsertSiteConfig,
+  getHomeConfig,
+  upsertHomeConfig,
   CONTENT_PAGES,
   DEFAULT_SITE_CONFIG,
+  DEFAULT_HOME_CONFIG,
 } from './content.service.js';
 
 describe('content service', () => {
@@ -124,6 +127,59 @@ describe('content service', () => {
   it('rejects an invalid site config (bad email)', async () => {
     await expect(
       upsertSiteConfig({ ...DEFAULT_SITE_CONFIG, supportEmail: 'nope' }, 'admin-1'),
+    ).rejects.toThrow();
+  });
+
+  it('returns the bundled home marketing config defaults when unset', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue(null);
+    const cfg = await getHomeConfig();
+    expect(cfg.heroTitle).toBe(DEFAULT_HOME_CONFIG.heroTitle);
+    expect(cfg.stats.length).toBe(DEFAULT_HOME_CONFIG.stats.length);
+    expect(cfg.featured.length).toBe(DEFAULT_HOME_CONFIG.featured.length);
+  });
+
+  it('returns a stored (edited) home config', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue({
+      key: 'content.home',
+      value: { ...DEFAULT_HOME_CONFIG, heroBadge: 'Now live in Bahir Dar' },
+    });
+    const cfg = await getHomeConfig();
+    expect(cfg.heroBadge).toBe('Now live in Bahir Dar');
+  });
+
+  it('persists a home config edit and invalidates the cache', async () => {
+    const { redis } = await import('../lib/redis.js');
+    prismaMock.appSetting.upsert.mockResolvedValue({
+      key: 'content.home',
+      value: DEFAULT_HOME_CONFIG,
+    });
+    const cfg = await upsertHomeConfig(
+      { ...DEFAULT_HOME_CONFIG, heroCtaPrimary: 'Browse services' },
+      'admin-1',
+    );
+    expect(cfg.heroCtaPrimary).toBe('Browse services');
+    expect(redis.del).toHaveBeenCalledWith('apex-cache:content:home');
+  });
+
+  it('rejects an invalid home config (empty stats array / bad gradient)', async () => {
+    await expect(
+      upsertHomeConfig({ ...DEFAULT_HOME_CONFIG, stats: [] }, 'admin-1'),
+    ).rejects.toThrow();
+    const featured = DEFAULT_HOME_CONFIG.featured[0] ?? {
+      name: 'X',
+      title: 'Y',
+      city: 'Z',
+      rating: '5.0',
+      reviews: 1,
+      skills: [],
+      price: 1,
+      gradient: 'from-a to-b',
+    };
+    await expect(
+      upsertHomeConfig(
+        { ...DEFAULT_HOME_CONFIG, featured: [{ ...featured, gradient: 'invalid' }] },
+        'admin-1',
+      ),
     ).rejects.toThrow();
   });
 });

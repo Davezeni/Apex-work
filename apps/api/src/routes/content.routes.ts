@@ -5,7 +5,7 @@ import { success } from '../lib/response.js';
 import { NotFoundError } from '../lib/errors.js';
 import { SETTING_KEYS, getSetting } from '../services/admin/settings.service.js';
 import { sanitiseAnnouncement } from '../lib/announcement.js';
-import { getContentPage, getSiteConfig } from '../services/content.service.js';
+import { getContentPage, getSiteConfig, getHomeConfig } from '../services/content.service.js';
 
 const router: Router = Router();
 
@@ -23,6 +23,14 @@ router.get(
   '/site',
   asyncHandler(async (_req, res) => {
     return success(res, await getSiteConfig());
+  }),
+);
+
+/** GET /content/home — the landing page marketing copy (hero, stats, CTAs). */
+router.get(
+  '/home',
+  asyncHandler(async (_req, res) => {
+    return success(res, await getHomeConfig());
   }),
 );
 

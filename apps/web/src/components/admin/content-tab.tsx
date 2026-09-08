@@ -9,6 +9,7 @@ import { apiFetch } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { SectionHead, Spinner, Empty } from './admin-ui';
 import { Markdown } from '@/components/markdown';
+import type { HomeConfig } from '@/hooks/use-home-config';
 
 type ContentPage = { slug: string; title: string; markdown: string; updatedAt: string | null };
 type SiteConfig = {
@@ -154,9 +155,255 @@ function EditingCard({ page, token }: { page: ContentPage; token: string | null 
   );
 }
 
+function Field({
+  label,
+  value,
+  onChange,
+  type,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1 block text-[11px] font-bold uppercase text-muted-foreground">
+        {label}
+      </label>
+      <input
+        type={type ?? 'text'}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+      />
+    </div>
+  );
+}
+
+function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | null }) {
+  const qc = useQueryClient();
+  const [f, setF] = useState<HomeConfig>(home);
+  const save = useMutation({
+    mutationFn: () =>
+      apiFetch<HomeConfig>('/admin/ops/content/home', { method: 'PUT', token, body: f }),
+    onSuccess: () => {
+      toast.success('Home page copy saved');
+      qc.invalidateQueries({ queryKey: ['admin/content'] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <div className="text-sm font-extrabold">Landing page</div>
+          <div className="text-[11px] text-muted-foreground">
+            Hero, stats, how-it-works, featured freelancers, pricing & CTA.
+          </div>
+        </div>
+        <Button size="sm" variant="brand" onClick={() => save.mutate()} disabled={save.isPending}>
+          {save.isPending ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field
+          label="Hero badge"
+          value={f.heroBadge}
+          onChange={(v) => setF({ ...f, heroBadge: v })}
+        />
+        <Field
+          label="Hero title"
+          value={f.heroTitle}
+          onChange={(v) => setF({ ...f, heroTitle: v })}
+        />
+        <Field
+          label="Hero accent"
+          value={f.heroTitleAccent}
+          onChange={(v) => setF({ ...f, heroTitleAccent: v })}
+        />
+        <Field
+          label="Search placeholder"
+          value={f.searchPlaceholder}
+          onChange={(v) => setF({ ...f, searchPlaceholder: v })}
+        />
+        <Field
+          label="Hero CTA (primary)"
+          value={f.heroCtaPrimary}
+          onChange={(v) => setF({ ...f, heroCtaPrimary: v })}
+        />
+        <Field
+          label="Hero CTA (secondary)"
+          value={f.heroCtaSecondary}
+          onChange={(v) => setF({ ...f, heroCtaSecondary: v })}
+        />
+      </div>
+      <div className="mt-3">
+        <Field
+          label="Hero subtitle"
+          value={f.heroSubtitle}
+          onChange={(v) => setF({ ...f, heroSubtitle: v })}
+        />
+      </div>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">Stats</div>
+        {f.stats.map((s, idx) => (
+          <div key={idx} className="mb-2 grid grid-cols-2 gap-2">
+            <input
+              value={s.value}
+              onChange={(e) => {
+                const v = e.target.value;
+                setF((prev) => ({
+                  ...prev,
+                  stats: prev.stats.map((st, i) => (i === idx ? { ...st, value: v } : st)),
+                }));
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              placeholder="12.4K"
+            />
+            <input
+              value={s.label}
+              onChange={(e) => {
+                const v = e.target.value;
+                setF((prev) => ({
+                  ...prev,
+                  stats: prev.stats.map((st, i) => (i === idx ? { ...st, label: v } : st)),
+                }));
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              placeholder="Verified freelancers"
+            />
+          </div>
+        ))}
+        <button
+          onClick={() => setF({ ...f, stats: [...f.stats, { value: '', label: '' }] })}
+          className="rounded-full border border-border px-3 py-1 text-[11px] font-bold text-muted-foreground"
+        >
+          + Add stat
+        </button>
+      </div>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">
+          How it works
+        </div>
+        {f.howItWorks.map((s, idx) => (
+          <div key={idx} className="mb-2 grid gap-1">
+            <input
+              value={s.title}
+              onChange={(e) => {
+                const v = e.target.value;
+                setF((prev) => ({
+                  ...prev,
+                  howItWorks: prev.howItWorks.map((st, i) =>
+                    i === idx ? { ...st, title: v } : st,
+                  ),
+                }));
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              placeholder="Step title"
+            />
+            <input
+              value={s.description}
+              onChange={(e) => {
+                const v = e.target.value;
+                setF((prev) => ({
+                  ...prev,
+                  howItWorks: prev.howItWorks.map((st, i) =>
+                    i === idx ? { ...st, description: v } : st,
+                  ),
+                }));
+              }}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+              placeholder="Step description"
+            />
+          </div>
+        ))}
+        <button
+          onClick={() =>
+            setF({ ...f, howItWorks: [...f.howItWorks, { title: '', description: '' }] })
+          }
+          className="rounded-full border border-border px-3 py-1 text-[11px] font-bold text-muted-foreground"
+        >
+          + Add step
+        </button>
+      </div>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">CTA</div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field
+            label="CTA title"
+            value={f.cta.title}
+            onChange={(v) => setF({ ...f, cta: { ...f.cta, title: v } })}
+          />
+          <Field
+            label="CTA subtitle"
+            value={f.cta.subtitle}
+            onChange={(v) => setF({ ...f, cta: { ...f.cta, subtitle: v } })}
+          />
+          <Field
+            label="CTA primary"
+            value={f.cta.primary}
+            onChange={(v) => setF({ ...f, cta: { ...f.cta, primary: v } })}
+          />
+          <Field
+            label="CTA secondary"
+            value={f.cta.secondary}
+            onChange={(v) => setF({ ...f, cta: { ...f.cta, secondary: v } })}
+          />
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">
+          Pricing cards
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {(['client', 'freelancer'] as const).map((k) => {
+            const card = k === 'client' ? f.pricingClient : f.pricingFreelancer;
+            const set = (patch: Partial<typeof card>) =>
+              setF(
+                k === 'client'
+                  ? { ...f, pricingClient: { ...card, ...patch } }
+                  : { ...f, pricingFreelancer: { ...card, ...patch } },
+              );
+            return (
+              <div key={k} className="rounded-xl border border-border bg-background p-3">
+                <div className="mb-2 text-xs font-bold capitalize">{k}</div>
+                <div className="space-y-2">
+                  <Field
+                    label="Heading"
+                    value={card.heading}
+                    onChange={(v) => set({ heading: v })}
+                  />
+                  <Field label="Price" value={card.price} onChange={(v) => set({ price: v })} />
+                  <Field
+                    label="Description"
+                    value={card.description}
+                    onChange={(v) => set({ description: v })}
+                  />
+                  <Field label="CTA" value={card.cta} onChange={(v) => set({ cta: v })} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ContentTab() {
   const token = useAuthStore((s) => s.accessToken);
-  const { data, isLoading } = useQuery<{ items: ContentPage[]; site: SiteConfig }>({
+  const { data, isLoading } = useQuery<{
+    items: ContentPage[];
+    site: SiteConfig;
+    home: HomeConfig;
+  }>({
     queryKey: ['admin/content'],
     queryFn: () => apiFetch('/admin/ops/content', { token }),
   });
@@ -173,6 +420,7 @@ export function ContentTab() {
         <Empty message="No content pages" />
       ) : (
         <div className="grid gap-3">
+          {data.home && <HomeConfigCard home={data.home} token={token} />}
           {data.site && <SiteConfigCard site={data.site} token={token} />}
           {data.items.map((p) => (
             <EditingCard key={p.slug} page={p} token={token} />

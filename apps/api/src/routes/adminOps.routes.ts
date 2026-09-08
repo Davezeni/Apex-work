@@ -937,7 +937,27 @@ router.get(
     return success(res, {
       items: await content.listContentPages(),
       site: await content.getSiteConfig(),
+      home: await content.getHomeConfig(),
     });
+  }),
+);
+
+/** PUT /admin/ops/content/home — persist the landing page marketing copy. */
+router.put(
+  '/content/home',
+  requireCapability('content:manage'),
+  asyncHandler(async (req, res) => {
+    const actor = await loadActor(req);
+    const result = await content.upsertHomeConfig(req.body as never, actor.adminId);
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'CONTENT.HOME.UPSERT',
+      resourceType: 'CONTENT_HOME',
+      resourceId: 'home',
+      after: { stats: result.stats.length, featured: result.featured.length },
+    });
+    return success(res, result);
   }),
 );
 
