@@ -241,7 +241,7 @@ export async function acceptBid(bidId: string, clientId: string) {
     if (claimed.count === 0) {
       throw new ConflictError('This job is no longer open');
     }
-    return tx.order.create({
+    const o = await tx.order.create({
       data: {
         clientId,
         sellerId: bid.freelancerId,
@@ -257,6 +257,14 @@ export async function acceptBid(bidId: string, clientId: string) {
         status: 'PENDING',
       },
     });
+    // Create the payment atomically with the order + upsert on the unique
+    // providerRef so a retried accept can never duplicate it (recoverable).
+    await tx.payment.upsert({
+      where: { providerRef: `apex-${o.id}` },
+      create: { orderId: o.id, amountEtb: bid.priceEtb, provider: 'chapa', providerRef: `apex-${o.id}`, status: 'PENDING' },
+      update: {},
+    });
+    return o;
   });
 
   if (!chapa.isConfigured()) {
@@ -290,9 +298,9 @@ export async function acceptBid(bidId: string, clientId: string) {
     description: `Job: ${bid.job.title.slice(0, 40)}`,
   });
   if (!init.ok || !init.checkoutUrl) {
-    // Payment initialization failed — the provisional order is removed AND the
-    // job is restored to open so the client isn't left with a permanently
-    // closed job that has no payable order. Done transactionally.
+    // Payment initialization failed — the provisional order (and its payment
+    // record, which cascades) is removed AND the job is restored to open so the
+    // client isn't left with a permanently closed job that has no payable order.
     await prisma.$transaction(async (tx) => {
       await tx.order.delete({ where: { id: order.id } });
       await tx.job.update({
@@ -310,14 +318,5 @@ export async function acceptBid(bidId: string, clientId: string) {
     });
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
-  await prisma.payment.create({
-    data: {
-      orderId: order.id,
-      amountEtb: bid.priceEtb,
-      provider: 'chapa',
-      providerRef: `apex-${order.id}`,
-      status: 'PENDING',
-    },
-  });
   return { order, checkoutUrl: init.checkoutUrl, devSkipped: false };
 }

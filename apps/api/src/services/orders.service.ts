@@ -30,6 +30,7 @@ import {
   NotFoundError,
 } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
+import { ledgerOnce } from './financialIdempotency.js';
 
 /**
  * Guard that an order may take `action` from `current.status`, translating the
@@ -88,21 +89,36 @@ export async function createOrderAndInitiatePayment(
   const feePercent = await getCategoryFeePercent(gig.categoryId);
   const { feeEtb, sellerNetEtb } = computeOrderSplit(pkg.priceEtb, feePercent);
 
-  const order = await prisma.order.create({
-    data: {
-      clientId,
-      sellerId: gig.ownerId,
-      gigId: gig.id,
-      packageTier,
-      title: `${gig.title} — ${pkg.title}`,
-      amountEtb: pkg.priceEtb,
-      platformFeeEtb: feeEtb,
-      sellerNetEtb,
-      deliveryDays: pkg.deliveryDays,
-      requirements: requirements ?? null,
-      deadline: new Date(Date.now() + pkg.deliveryDays * 24 * 60 * 60 * 1000),
-      status: 'PENDING',
-    },
+  // Create the order AND its pending payment record ATOMICALLY, so there is no
+  // window where an order exists without its payment record (recoverable). The
+  // payment is upserted on the unique providerRef (`apex-{orderId}`) so a retried
+  // checkout for the same order can never create a duplicate payment.
+  const order = await prisma.$transaction(async (tx) => {
+    const o = await tx.order.create({
+      data: {
+        clientId,
+        sellerId: gig.ownerId,
+        gigId: gig.id,
+        packageTier,
+        title: `${gig.title} — ${pkg.title}`,
+        amountEtb: pkg.priceEtb,
+        platformFeeEtb: feeEtb,
+        sellerNetEtb,
+        deliveryDays: pkg.deliveryDays,
+        requirements: requirements ?? null,
+        deadline: new Date(Date.now() + pkg.deliveryDays * 24 * 60 * 60 * 1000),
+        status: 'PENDING',
+      },
+    });
+    const providerRef = `apex-${o.id}`;
+    await tx.payment.upsert({
+      where: { providerRef },
+      create: { orderId: o.id, amountEtb: pkg.priceEtb, provider: 'chapa', providerRef, status: 'PENDING' },
+      // If a prior attempt already recorded this payment, keep it as-is (never
+      // downgrade a SUCCESS/FAILED row back to PENDING).
+      update: {},
+    });
+    return o;
   });
 
   // Initialize Chapa
@@ -140,17 +156,6 @@ export async function createOrderAndInitiatePayment(
         : 'Payment initialization failed',
     );
   }
-
-  // Record the pending payment attempt
-  await prisma.payment.create({
-    data: {
-      orderId: order.id,
-      amountEtb: pkg.priceEtb,
-      provider: 'chapa',
-      providerRef: `apex-${order.id}`,
-      status: 'PENDING',
-    },
-  });
 
   return { order, checkoutUrl: init.checkoutUrl, devSkipped: false };
 }
@@ -191,8 +196,27 @@ export async function confirmPaymentByTxRef(txRef: string) {
     throw new BadRequestError('Payment amount mismatch');
   }
 
-  const updatedOrder = await prisma.$transaction(async (tx) => {
-    const p = await tx.payment.updateMany({
+  const updated = await prisma.$transaction(async (tx) => {
+    // ── PAYMENT-CONFIRMATION ↔ CANCELLATION RACE ─────────────────────────────
+    // Atomically claim the order PENDING → ACTIVE FIRST. This is the single
+    // source of truth for "this order is now paid". A concurrent cancelOrder()
+    // claims PENDING/ACTIVE → CANCELLED with its own CAS, so exactly one of
+    // them wins. If we lose (0 rows — the order was cancelled or already
+    // activated under us), we back out here and NEVER credit escrow to a
+    // cancelled or double-activated order.
+    const orderClaim = await tx.order.updateMany({
+      where: { id: order.id, status: 'PENDING' },
+      data: { status: 'ACTIVE' },
+    });
+    if (orderClaim.count === 0) {
+      // Not pending anymore (cancelled during checkout, or already paid). No
+      // money to move, no notification to send.
+      return { activated: false };
+    }
+
+    // Mark the payment SUCCESS (idempotent). The order gate above already
+    // serializes this path, so only the winning confirmation reaches here.
+    await tx.payment.updateMany({
       where: { orderId: order.id, providerRef: txRef, status: 'PENDING' },
       data: {
         status: 'SUCCESS',
@@ -200,56 +224,47 @@ export async function confirmPaymentByTxRef(txRef: string) {
         rawPayload: verify.raw as Prisma.InputJsonValue,
       },
     });
-    // Race protection: only advance if we actually flipped a pending payment.
-    // If another request (duplicate webhook) already claimed it, `p.count === 0`
-    // and we must NOT re-run the ledger/wallet mutations NOR re-notify.
-    if (p.count === 0) return { order, claimed: false };
 
-    // Ensure the seller has a wallet.
-    await tx.wallet.upsert({
-      where: { userId: order.sellerId },
-      create: { userId: order.sellerId, pendingEtb: order.sellerNetEtb },
-      update: { pendingEtb: { increment: order.sellerNetEtb } },
+    // Escrow credit — DB-level idempotent (ledgerOnce). The ledger row and the
+    // wallet mutation commit atomically, so a retry can never double-credit.
+    await ledgerOnce(tx, {
+      userId: order.clientId,
+      type: 'ORDER_PAYMENT',
+      amountEtb: -order.amountEtb,
+      description: `Payment for ${order.title}`,
+      relatedId: order.id,
     });
-
-    // Ledger entries.
-    await tx.transaction.create({
-      data: {
-        userId: order.clientId,
-        type: 'ORDER_PAYMENT',
-        amountEtb: -order.amountEtb,
-        description: `Payment for ${order.title}`,
-        relatedId: order.id,
-      },
-    });
-    await tx.transaction.create({
-      data: {
+    await ledgerOnce(
+      tx,
+      {
         userId: order.sellerId,
         type: 'ORDER_PAYMENT',
         amountEtb: order.sellerNetEtb,
         description: `Escrow held for ${order.title}`,
         relatedId: order.id,
       },
-    });
-    await tx.transaction.create({
-      data: {
-        userId: order.sellerId,
-        type: 'PLATFORM_FEE',
-        amountEtb: -order.platformFeeEtb,
-        description: `Platform fee on ${order.title}`,
-        relatedId: order.id,
+      async () => {
+        await tx.wallet.upsert({
+          where: { userId: order.sellerId },
+          create: { userId: order.sellerId, pendingEtb: order.sellerNetEtb },
+          update: { pendingEtb: { increment: order.sellerNetEtb } },
+        });
       },
+    );
+    await ledgerOnce(tx, {
+      userId: order.sellerId,
+      type: 'PLATFORM_FEE',
+      amountEtb: -order.platformFeeEtb,
+      description: `Platform fee on ${order.title}`,
+      relatedId: order.id,
     });
 
-    return { order: await tx.order.update({
-      where: { id: order.id },
-      data: { status: 'ACTIVE' },
-    }), claimed: true };
+    return { activated: true };
   });
 
-  // Fire notifications ONLY when THIS request actually claimed the pending
-  // payment — a duplicate webhook that lost the race must not re-notify.
-  if (updatedOrder.claimed) {
+  // Notify only when THIS request actually activated the order — a duplicate
+  // webhook (or a cancellation that lost the race) stays silent.
+  if (updated.activated) {
     await notify({
       userId: order.sellerId,
       type: 'ORDER_UPDATE',
@@ -266,7 +281,7 @@ export async function confirmPaymentByTxRef(txRef: string) {
     });
   }
 
-  return { order: updatedOrder.order, updated: updatedOrder.claimed };
+  return { order, updated: updated.activated };
 }
 
 /** Client marks the delivery as accepted. Releases funds to seller balance. */
@@ -288,26 +303,32 @@ export async function acceptDelivery(orderId: string, clientId: string) {
     if (claimed.count === 0) {
       throw new ConflictError('Order has already been accepted or changed');
     }
-    await tx.wallet.update({
-      where: { userId: order.sellerId },
-      data: {
-        pendingEtb: { decrement: order.sellerNetEtb },
-        balanceEtb: { increment: order.sellerNetEtb },
-        lifetimeEarnedEtb: { increment: order.sellerNetEtb },
-      },
-    });
-    await tx.user.update({
-      where: { id: order.sellerId },
-      data: { completedOrders: { increment: 1 } },
-    });
-    await tx.transaction.create({
-      data: {
+    // DB-level idempotent payout: ledger row keyed uniquely on
+    // (seller, ORDER_PAYOUT, order) + atomic wallet mutation.
+    const { applied } = await ledgerOnce(
+      tx,
+      {
         userId: order.sellerId,
         type: 'ORDER_PAYOUT',
         amountEtb: order.sellerNetEtb,
         description: `Released to balance: ${order.title}`,
         relatedId: order.id,
       },
+      async () => {
+        await tx.wallet.update({
+          where: { userId: order.sellerId },
+          data: {
+            pendingEtb: { decrement: order.sellerNetEtb },
+            balanceEtb: { increment: order.sellerNetEtb },
+            lifetimeEarnedEtb: { increment: order.sellerNetEtb },
+          },
+        });
+      },
+    );
+    if (!applied) throw new ConflictError('Order has already been paid out');
+    await tx.user.update({
+      where: { id: order.sellerId },
+      data: { completedOrders: { increment: 1 } },
     });
     return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
@@ -387,32 +408,43 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
   const next = transitionGuard(order.status, 'CANCEL', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
-    // Atomically claim PENDING/ACTIVE → CANCELLED. Only the request that flips
-    // exactly one row wins; a concurrent cancellation matches 0 rows and
-    // aborts — so the wallet/ledger refund below runs at most once.
+    // ── CANCELLATION ↔ PAYMENT-CONFIRMATION RACE ─────────────────────────────
+    // Cancel CAS-claims the order from the EXACT status we read. This is the
+    // counterpart gate to confirmPaymentByTxRef (which claims PENDING → ACTIVE).
+    // Exactly one of them wins:
+    //   * we win → we transition from `order.status` and, if that was ACTIVE,
+    //     we release escrow. Because we only ever refund the status we actually
+    //     transitioned from, we never end up with a cancelled order that still
+    //     holds escrow (the "stuck funds" outcome).
+    //   * we lose → a concurrent confirm/another cancel changed the order, so
+    //     we abort and the caller retries against the fresh state.
     const claimed = await tx.order.updateMany({
-      where: { id: order.id, status: { in: ['PENDING', 'ACTIVE'] } },
+      where: { id: order.id, status: order.status },
       data: { status: next, cancelledAt: new Date() },
     });
     if (claimed.count === 0) {
       throw new ConflictError('Order has already been cancelled or changed');
     }
-    // Refund pending funds to seller wallet ledger (if payment was captured).
-    // Only an ACTIVE order holds escrowed funds; PENDING holds none.
+    // Refund exactly when we transitioned from ACTIVE (the only state holding
+    // escrow). Idempotent via the unique ledger key, so a retried refund can't
+    // double-credit the client.
     if (order.status === 'ACTIVE') {
-      await tx.wallet.update({
-        where: { userId: order.sellerId },
-        data: { pendingEtb: { decrement: order.sellerNetEtb } },
-      });
-      await tx.transaction.create({
-        data: {
+      await ledgerOnce(
+        tx,
+        {
           userId: order.clientId,
           type: 'ORDER_REFUND',
           amountEtb: order.amountEtb,
           description: `Refund for cancelled order: ${order.title}`,
           relatedId: order.id,
         },
-      });
+        async () => {
+          await tx.wallet.update({
+            where: { userId: order.sellerId },
+            data: { pendingEtb: { decrement: order.sellerNetEtb } },
+          });
+        },
+      );
     }
     return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
@@ -494,13 +526,16 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
       body: `"${o.title}" auto-releases in 2 days if you don't accept or dispute.`,
       payload: { orderId: o.id, autoReleaseIn: '2 days' },
     });
-    // Zero-amount marker transaction so we don't double-remind.
-    await prisma.transaction.create({
-      data: {
-        userId: o.clientId, type: 'ORDER_PAYMENT', amountEtb: 0,
+    // Zero-amount marker so we don't double-remind. Uses its own ledger type
+    // (ESCROW_REMINDER) so it can never collide with the client's real
+    // ORDER_PAYMENT row for the same order under the idempotency unique key.
+    await prisma.transaction.createMany({
+      data: [{
+        userId: o.clientId, type: 'ESCROW_REMINDER', amountEtb: 0,
         description: `Escrow reminder for ${o.title}`, relatedId: o.id,
-      },
-    });
+      }],
+      skipDuplicates: true,
+    }).catch(() => undefined);
     reminded++;
   }
 
@@ -514,13 +549,6 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
     let outcome: 'released' | 'skipped' = 'skipped';
     try {
       outcome = await prisma.$transaction(async (tx) => {
-        // Idempotency guard: this order may already have been paid (e.g. a
-        // concurrent auto-release or a manual accept that ran first).
-        const dup = await tx.transaction.findFirst({
-          where: { relatedId: o.id, type: 'ORDER_PAYOUT' },
-          select: { id: true },
-        });
-        if (dup) return 'skipped';
         // Atomically claim DELIVERED → COMPLETED BEFORE paying. The request that
         // matches exactly one row owns the payout; a concurrent one matches 0
         // rows and returns 'skipped', so funds move at most once.
@@ -530,24 +558,33 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         });
         if (claimed.count === 0) return 'skipped';
 
-        await tx.wallet.upsert({
-          where: { userId: o.sellerId },
-          create: { userId: o.sellerId, balanceEtb: o.sellerNetEtb, lifetimeEarnedEtb: o.sellerNetEtb },
-          update: {
-            pendingEtb: { decrement: o.sellerNetEtb },
-            balanceEtb: { increment: o.sellerNetEtb },
-            lifetimeEarnedEtb: { increment: o.sellerNetEtb },
-          },
-        });
-        await tx.user.update({
-          where: { id: o.sellerId },
-          data: { completedOrders: { increment: 1 } },
-        });
-        await tx.transaction.create({
-          data: {
+        // DB-level idempotency: the ORDER_PAYOUT ledger row is keyed uniquely on
+        // (seller, ORDER_PAYOUT, order) — a retried/concurrent release or a
+        // manual accept that already paid this order matches 0 rows on the
+        // ledger insert (or the CAS above), so it never double-pays.
+        const { applied } = await ledgerOnce(
+          tx,
+          {
             userId: o.sellerId, type: 'ORDER_PAYOUT', amountEtb: o.sellerNetEtb,
             description: `Auto-released: ${o.title}`, relatedId: o.id,
           },
+          async () => {
+            await tx.wallet.upsert({
+              where: { userId: o.sellerId },
+              create: { userId: o.sellerId, balanceEtb: o.sellerNetEtb, lifetimeEarnedEtb: o.sellerNetEtb },
+              update: {
+                pendingEtb: { decrement: o.sellerNetEtb },
+                balanceEtb: { increment: o.sellerNetEtb },
+                lifetimeEarnedEtb: { increment: o.sellerNetEtb },
+              },
+            });
+          },
+        );
+        if (!applied) return 'skipped';
+
+        await tx.user.update({
+          where: { id: o.sellerId },
+          data: { completedOrders: { increment: 1 } },
         });
         return 'released';
       });

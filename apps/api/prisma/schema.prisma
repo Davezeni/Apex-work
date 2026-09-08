@@ -80,6 +80,7 @@ enum TransactionType {
   PLATFORM_FEE
   REFERRAL_BONUS
   MANUAL_ADJUSTMENT   // Admin adjustment (audit-traced)
+  ESCROW_REMINDER     // Non-financial marker (amount 0) so auto-release reminders don't collide with ledger idempotency
 }
 
 enum NotificationType {
@@ -565,6 +566,12 @@ model Transaction {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([type])
+  // DB-level financial idempotency: a given financial event (user + type +
+  // related record) may be recorded at most once. This makes a retried/duplicate
+  // webhook, callback or cron run unable to double-credit or double-debit a
+  // wallet — the ledgerOne() helper relies on it. NOTE: Postgres treats NULL
+  // relatedId as distinct, so marker rows with no related record are unaffected.
+  @@unique([userId, type, relatedId])
 }
 
 // ================= REVIEWS =================

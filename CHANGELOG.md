@@ -3,6 +3,47 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Payment↔cancellation race, financial idempotency, recoverable Chapa init
+
+### 🔴 Payment-confirmation ↔ cancellation race (`orders.service.ts`)
+`confirmPaymentByTxRef` now claims the order `PENDING → ACTIVE` via a CAS
+**before** crediting escrow — the order transition is the single atomic gate and
+a concurrent `cancelOrder` (which claims from the exact status it read) can no
+longer be overwritten. Exactly one of them wins: a cancelled order is never
+resurrected to ACTIVE and never receives escrow; a confirmed order's refund
+only runs if it actually transitioned from ACTIVE (closing the "stuck escrow"
+outcome). Notifications fire only for the winning request.
+
+### 🟠 Database-level financial idempotency
+- New `financialIdempotency.ts` helper `ledgerOnce()` — writes a ledger row and
+  its wallet mutation atomically, and skips the wallet mutation if the DB
+  rejects the duplicate row (P2002). Applied to payment confirm, cancel,
+  delivery accept and auto-release, so retried/duplicate webhooks, callback
+  verifications and cron runs can never double-credit or double-debit.
+- New `@@unique([userId, type, relatedId])` on `Transaction` (migration
+  `20260906100000_financial_idempotency`), which enforces it at the DB layer. A
+  clean-up step de-duplicates pre-existing rows (keeping the earliest, e.g. the
+  old 0-amount reminder marker) and a new `ESCROW_REMINDER` type avoids the
+  reminder marker colliding with a real `ORDER_PAYMENT`.
+- `scripts/db-idempotency-check.mjs` verifies the index exists and that a
+  duplicate `(userId,type,relatedId)` insert is rejected.
+
+### 🟠 Recoverable Chapa initialization / payment-record creation
+- `createOrderAndInitiatePayment`, offer accept and job accept now create the
+  order **and** its payment record atomically (one transaction) — no window
+  where an order exists without its payment record.
+- The payment record is `upsert`ed on the unique `providerRef` (`apex-{orderId}`)
+  so a retried checkout/accept can never create a duplicate payment, and it
+  never downgrades a `SUCCESS`/`FAILED` row back to `PENDING`.
+
+### ✅ Clean CI (Node 24 + Postgres + Redis + Chapa sandbox)
+- The `test` job runs against **Postgres 16** and **Redis 7** service containers,
+  applies all migrations via `prisma migrate deploy`, runs the
+  `db-idempotency-check.mjs`, then the full API suite. Chapa sandbox env vars are
+  wired through repo secrets (`CHAPA_TRANSFERS_ENABLED=false`).
+- Verified locally: 241 unit tests pass (45 files), api+web typecheck 0, api lint
+  clean, shared build 0.
+
 ## [Unreleased] — Notification filters (power push #73)
 
 - **Type filters on /notifications** — the notifications page now has pill

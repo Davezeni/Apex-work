@@ -5,7 +5,7 @@ const { prismaMock, notifyMock } = vi.hoisted(() => ({
     customOffer: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
     order: { create: vi.fn() },
     user: { findUnique: vi.fn() },
-    payment: { create: vi.fn() },
+    payment: { upsert: vi.fn() },
     $transaction: vi.fn(),
   },
   notifyMock: vi.fn(),
@@ -58,7 +58,7 @@ describe('respondToOffer (accept)', () => {
       phone: '+251911111111',
       fullName: 'Client One',
     });
-    prismaMock.payment.create.mockResolvedValue({});
+    prismaMock.payment.upsert.mockResolvedValue({});
 
     const res = (await respondToOffer('offer-1', 'client-1', 'accept')) as {
       order: { id: string };

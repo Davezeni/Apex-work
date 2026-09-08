@@ -6,7 +6,7 @@ const { prismaMock, notifyMock } = vi.hoisted(() => ({
     job: { updateMany: vi.fn(), update: vi.fn(), findUnique: vi.fn() },
     user: { findUnique: vi.fn() },
     order: { create: vi.fn(), delete: vi.fn() },
-    payment: { create: vi.fn() },
+    payment: { upsert: vi.fn() },
     $transaction: vi.fn(),
   },
   notifyMock: vi.fn(),
@@ -63,6 +63,7 @@ describe('acceptBid', () => {
     vi.spyOn(chapa, 'isConfigured').mockReturnValue(true);
     vi.spyOn(chapa, 'initialize').mockResolvedValue({ ok: false, error: 'Payment gateway error' });
     prismaMock.order.delete.mockResolvedValue({});
+    prismaMock.payment.upsert.mockResolvedValue({});
     prismaMock.job.update.mockResolvedValue(bid.job);
 
     await expect(acceptBid('bid-1', 'client-1')).rejects.toThrow(/Payment gateway error/i);

@@ -159,6 +159,13 @@ export async function respondToOffer(
         status: 'PENDING',
       },
     });
+    // Create the payment record atomically with the order + upsert on the unique
+    // providerRef so a retried accept can never duplicate it (recoverable).
+    await tx.payment.upsert({
+      where: { providerRef: `apex-${o.id}` },
+      create: { orderId: o.id, amountEtb: offer.priceEtb, provider: 'chapa', providerRef: `apex-${o.id}`, status: 'PENDING' },
+      update: {},
+    });
     await tx.customOffer.update({
       where: { id: offer.id },
       data: { orderId: o.id },
@@ -212,15 +219,6 @@ export async function respondToOffer(
     });
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
-  await prisma.payment.create({
-    data: {
-      orderId: order.id,
-      amountEtb: offer.priceEtb,
-      provider: 'chapa',
-      providerRef: `apex-${order.id}`,
-      status: 'PENDING',
-    },
-  });
   return { offer, order, checkoutUrl: init.checkoutUrl };
 }
 

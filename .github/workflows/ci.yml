@@ -49,10 +49,46 @@ jobs:
       - run: npm run lint
       - run: npm run format:check:changed
 
-
+  # Clean CI against a REAL Postgres + Redis, with the money-migration applied
+  # and the DB-level financial idempotency guarantee verified.
   test:
-    name: API tests
+    name: API tests (Node 24 + Postgres + Redis)
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: apex
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/apex
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+      JWT_SECRET: ci-test-jwt-secret-that-is-long-enough-for-hmac
+      # Chapa sandbox config — public/private keys used by tests that touch
+      # payment init; keep the private key as a repo secret, not committed.
+      CHAPA_PUBLIC_KEY: ${{ secrets.CHAPA_PUBLIC_KEY }}
+      CHAPA_SECRET_KEY: ${{ secrets.CHAPA_SECRET_KEY }}
+      CHAPA_ENCRYPTION_KEY: ${{ secrets.CHAPA_ENCRYPTION_KEY }}
+      CHAPA_WEBHOOK_SECRET: ${{ secrets.CHAPA_WEBHOOK_SECRET }}
+      CHAPA_TRANSFERS_ENABLED: "false"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,7 +96,16 @@ jobs:
           node-version: '24'
           cache: 'npm'
       - run: npm ci
-      - run: npm run test
+      - run: npm --workspace @apex-work/api run db:generate
+      # Apply all migrations against the real Postgres service so the money
+      # schema (incl. the financial idempotency unique index) is exercised.
+      - name: Apply migrations (Postgres)
+        run: npm --workspace @apex-work/api run db:migrate:deploy
+      # Verify the DB-level guarantee that makes double-crediting impossible.
+      - name: DB financial idempotency check
+        run: node scripts/db-idempotency-check.mjs
+      - name: API unit tests
+        run: npm run test
 
   e2e:
     name: E2E smoke (live deploy)

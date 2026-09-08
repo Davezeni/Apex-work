@@ -4,10 +4,10 @@ const { prismaMock, notifyMock } = vi.hoisted(() => ({
   prismaMock: {
     gig: { findUnique: vi.fn() },
     order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), findMany: vi.fn() },
-    payment: { create: vi.fn(), updateMany: vi.fn() },
+    payment: { create: vi.fn(), upsert: vi.fn(), updateMany: vi.fn() },
     wallet: { update: vi.fn(), upsert: vi.fn() },
     user: { update: vi.fn() },
-    transaction: { create: vi.fn(), findFirst: vi.fn() },
+    transaction: { create: vi.fn(), createMany: vi.fn(), findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
   notifyMock: vi.fn(),
@@ -131,7 +131,7 @@ describe('order escrow lifecycle', () => {
 
     expect(result.status).toBe('CANCELLED');
     expect(prismaMock.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: order.id, status: { in: ['PENDING', 'ACTIVE'] } },
+      where: { id: order.id, status: 'ACTIVE' }, // cancel claims from the exact status it read (ACTIVE here)
       data: expect.objectContaining({ status: 'CANCELLED' }),
     }));
     expect(prismaMock.wallet.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -171,16 +171,18 @@ describe('order escrow lifecycle', () => {
     });
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
     prismaMock.wallet.upsert.mockResolvedValue({ userId: order.sellerId });
+    prismaMock.transaction.create.mockResolvedValue({});
 
-    // First (winning) call flips the payment and notifies.
+    // The order-transition gate is the source of truth. First (winning) call
+    // claims PENDING -> ACTIVE and notifies.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
-    prismaMock.order.update.mockResolvedValue({ ...pendingOrder, status: 'ACTIVE' });
     await confirmPaymentByTxRef('apex-order-1');
     const firstNotifyCalls = notifyMock.mock.calls.length;
     expect(firstNotifyCalls).toBe(2);
 
-    // Duplicate webhook: payment already claimed -> count 0 -> no re-notify.
-    prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
+    // Duplicate webhook: order already ACTIVE -> 0 rows claimed -> no re-notify.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
     const res = await confirmPaymentByTxRef('apex-order-1');
     expect(res.updated).toBe(false);
     expect(notifyMock.mock.calls.length).toBe(firstNotifyCalls);
@@ -210,7 +212,7 @@ describe('checkout payment flow', () => {
     };
     prismaMock.gig.findUnique.mockResolvedValue(gig);
     prismaMock.order.create.mockResolvedValue(pendingOrder);
-    prismaMock.payment.create.mockResolvedValue({ id: 'payment-1' });
+    prismaMock.payment.upsert.mockResolvedValue({ id: 'payment-1' });
     const initialize = vi.spyOn(chapa, 'initialize').mockResolvedValue({
       ok: true,
       checkoutUrl: 'https://checkout.chapa.co/test-order',
@@ -232,8 +234,11 @@ describe('checkout payment flow', () => {
 
     expect(result.checkoutUrl).toBe('https://checkout.chapa.co/test-order');
     expect(result.devSkipped).toBe(false);
-    expect(prismaMock.payment.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
+    // Payment record is created atomically with the order (recoverable), upserted
+    // on the unique providerRef so a retry can't duplicate it.
+    expect(prismaMock.payment.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { providerRef: `apex-${pendingOrder.id}` },
+      create: expect.objectContaining({
         orderId: pendingOrder.id,
         providerRef: `apex-${pendingOrder.id}`,
         status: 'PENDING',
@@ -257,7 +262,9 @@ describe('checkout payment flow', () => {
     prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
     prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
     prismaMock.wallet.upsert.mockResolvedValue({ userId: order.sellerId });
-    prismaMock.order.update.mockResolvedValue({ ...pendingOrder, status: 'ACTIVE' });
+    prismaMock.transaction.create.mockResolvedValue({});
+    // The order-transition CAS is the gate: claim PENDING -> ACTIVE wins.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
     const verify = vi.spyOn(chapa, 'verify').mockResolvedValue({
       ok: true,
       status: 'success',
@@ -269,7 +276,11 @@ describe('checkout payment flow', () => {
     const result = await confirmPaymentByTxRef('apex-order-1');
 
     expect(result.updated).toBe(true);
-    expect(result.order.status).toBe('ACTIVE');
+    // Order transition is claimed via CAS (PENDING -> ACTIVE) as the gate.
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: order.id, status: 'PENDING' },
+      data: expect.objectContaining({ status: 'ACTIVE' }),
+    }));
     expect(prismaMock.payment.updateMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ providerRef: 'apex-order-1', status: 'PENDING' }),
       data: expect.objectContaining({ status: 'SUCCESS', method: 'telebirr' }),
@@ -318,18 +329,39 @@ describe('escrow auto-release', () => {
     expect(notifyMock).toHaveBeenCalledTimes(1);
   });
 
-  it('skips an order already paid (0 rows claimed / dup payout) — no double payout', async () => {
+  it('skips an order already paid (0 rows claimed) — no double payout', async () => {
     prismaMock.order.findMany
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([deliverable]);
-    // A payout ledger entry already exists for this order -> skip.
-    prismaMock.transaction.findFirst.mockResolvedValue({ id: 'existing-payout' });
-    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    // The order is no longer DELIVERED (already paid/COMPLETED), so the CAS
+    // claims 0 rows and the payout is skipped.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
 
     const res = await autoReleaseEscrow();
 
     expect(res.released).toBe(0);
     expect(prismaMock.transaction.create).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('does not double-credit a wallet when the payout ledger row already exists (DB idempotency)', async () => {
+    prismaMock.order.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([deliverable]);
+    prismaMock.wallet.upsert.mockResolvedValue({});
+    prismaMock.user.update.mockResolvedValue({});
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 }); // CAS wins
+
+    // Simulate the unique-constraint guard: the order's payout ledger row was
+    // already written by a prior attempt, so the DB rejects the duplicate.
+    for (let i = 0; i < 4; i++) {
+      prismaMock.transaction.create.mockRejectedValueOnce({ code: 'P2002' });
+    }
+    const res = await autoReleaseEscrow();
+
+    // ledgerOnce swallowed the unique violation -> money not moved again.
+    expect(res.released).toBe(0);
+    expect(prismaMock.wallet.upsert).not.toHaveBeenCalled();
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
