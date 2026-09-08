@@ -8,8 +8,19 @@ const { prismaMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../lib/prisma.js', () => ({ prisma: prismaMock }));
+// The settings service now caches the platform fee via Redis. Stub the Redis
+// client so tests run without a live server and cachedRead falls through to
+// the live loader (getSetting), keeping the unit assertions meaningful.
+vi.mock('../../lib/redis.js', () => ({
+  redis: { get: vi.fn().mockResolvedValue(null), set: vi.fn(), del: vi.fn(), keys: vi.fn() },
+}));
 
-import { upsertSetting, listSettings, getPlatformFeePercent, SETTING_KEYS } from './settings.service.js';
+import {
+  upsertSetting,
+  listSettings,
+  getPlatformFeePercent,
+  SETTING_KEYS,
+} from './settings.service.js';
 
 describe('settings service', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -25,7 +36,10 @@ describe('settings service', () => {
   });
 
   it('persists a valid platform fee', async () => {
-    prismaMock.appSetting.upsert.mockResolvedValue({ key: SETTING_KEYS.platformFeePercent, value: 12 });
+    prismaMock.appSetting.upsert.mockResolvedValue({
+      key: SETTING_KEYS.platformFeePercent,
+      value: 12,
+    });
     const res = await upsertSetting(SETTING_KEYS.platformFeePercent, 12, 'admin-1');
     expect(prismaMock.appSetting.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -36,13 +50,27 @@ describe('settings service', () => {
     expect(res.value).toBe(12);
   });
 
+  it('invalidates the platform-fee cache when the fee is persisted', async () => {
+    // Capture the redis.del mock exposed via the redis module mock.
+    const { redis } = await import('../../lib/redis.js');
+    prismaMock.appSetting.upsert.mockResolvedValue({
+      key: SETTING_KEYS.platformFeePercent,
+      value: 18,
+    });
+    await upsertSetting(SETTING_KEYS.platformFeePercent, 18, 'admin-1');
+    expect(redis.del).toHaveBeenCalledWith('apex-cache:settings:platform-fee');
+  });
+
   it('returns the default fee when nothing is stored', async () => {
     prismaMock.appSetting.findUnique.mockResolvedValue(null);
     expect(await getPlatformFeePercent()).toBe(10);
   });
 
   it('returns an override fee when stored', async () => {
-    prismaMock.appSetting.findUnique.mockResolvedValue({ key: SETTING_KEYS.platformFeePercent, value: 15 });
+    prismaMock.appSetting.findUnique.mockResolvedValue({
+      key: SETTING_KEYS.platformFeePercent,
+      value: 15,
+    });
     expect(await getPlatformFeePercent()).toBe(15);
   });
 
@@ -56,7 +84,12 @@ describe('settings service', () => {
 
   it('attributes an updated setting to the admin who last touched it', async () => {
     prismaMock.appSetting.findMany.mockResolvedValue([
-      { key: SETTING_KEYS.platformFeePercent, value: 12, updatedAt: new Date(), updatedById: 'admin-1' },
+      {
+        key: SETTING_KEYS.platformFeePercent,
+        value: 12,
+        updatedAt: new Date(),
+        updatedById: 'admin-1',
+      },
     ]);
     prismaMock.user.findMany.mockResolvedValue([
       { id: 'admin-1', fullName: 'Aster Kebede', username: 'aster' },

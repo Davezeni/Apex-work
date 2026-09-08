@@ -5,6 +5,10 @@
  */
 import { prisma } from '../../lib/prisma.js';
 import { z } from 'zod';
+import { cacheKey, cachedRead, invalidate } from '../../lib/cache.js';
+
+/** How long the (rarely-changing) platform fee stays cached before a live read. */
+const PLATFORM_FEE_CACHE_TTL_SEC = 300;
 
 export const SETTING_KEYS = {
   platformFeePercent: 'platform.feePercent',
@@ -110,7 +114,14 @@ export async function getSetting<T>(key: string, fallback: T, schema?: z.ZodType
 
 /** Current platform fee percent, honoring an overridden setting. */
 export async function getPlatformFeePercent(): Promise<number> {
-  return getSetting<number>(SETTING_KEYS.platformFeePercent, 10, z.number());
+  // The platform fee is read on EVERY order/job creation but changes rarely, so
+  // it's cached in Redis (bounded TTL) with a live fallback. Cache invalidation
+  // is handled by upsertSetting() below (and the TTL is the backstop).
+  return cachedRead(
+    cacheKey('settings:platform-fee'),
+    () => getSetting<number>(SETTING_KEYS.platformFeePercent, 10, z.number()),
+    PLATFORM_FEE_CACHE_TTL_SEC,
+  );
 }
 
 export async function upsertSetting(
@@ -123,9 +134,13 @@ export async function upsertSetting(
   if (!def) throw new Error(`Unknown setting key: ${key}`);
   const parsed = def.schema.safeParse(value);
   if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? plural);
-  return prisma.appSetting.upsert({
+  const row = await prisma.appSetting.upsert({
     where: { key },
     update: { value: parsed.data, updatedById, ...(description ? { description } : {}) },
     create: { key, value: parsed.data, updatedById, description: description ?? def.description },
   });
+  // A settings change must be visible immediately, so drop any cached value.
+  // Best-effort: on a cache error the TTL backstop still evicts it.
+  await invalidate(cacheKey('settings:platform-fee'));
+  return row;
 }
