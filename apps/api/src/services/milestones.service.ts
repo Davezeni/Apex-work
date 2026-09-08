@@ -8,7 +8,6 @@
  *     write time (setMilestones()). We never let a plan drift.
  *   • Approving the LAST milestone auto-completes the order.
  */
-import type { MilestoneStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import type { MilestoneInput } from '@apex-work/shared';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
@@ -119,10 +118,17 @@ export async function approve(milestoneId: string, userId: string) {
   const fee = Math.round(m.order.platformFeeEtb * ratio);
 
   const result = await prisma.$transaction(async (tx) => {
-    const updated = await tx.milestone.update({
-      where: { id: milestoneId },
+    // Compare-and-set: only the DELIVERED → APPROVED transition may pay out.
+    // A concurrent approval matches 0 rows and we abort, so a milestone can
+    // never release funds twice.
+    const claimed = await tx.milestone.updateMany({
+      where: { id: milestoneId, status: 'DELIVERED' },
       data: { status: 'APPROVED', approvedAt: new Date() },
     });
+    if (claimed.count === 0) {
+      throw new BadRequestError('Milestone must be delivered first');
+    }
+    const updated = await tx.milestone.findUniqueOrThrow({ where: { id: milestoneId } });
     await tx.wallet.upsert({
       where: { userId: m.order.sellerId },
       create: { userId: m.order.sellerId, balanceEtb: payout, lifetimeEarnedEtb: payout },

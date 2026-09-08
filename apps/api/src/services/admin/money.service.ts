@@ -48,6 +48,17 @@ export async function adminListOrders(opts: {
 /**
  * Issue a partial/full refund from an order back to the client's wallet.
  * Mirrors money out of the seller's balance and writes a ledger entry.
+ *
+ * REFUND POLICY (matches implementation):
+ *   - Walets are the internal source of truth. On a refund we credit the
+ *     client's Apex-Work wallet balance and write an `ORDER_REFUND` ledger row.
+ *   - Provider-side refunds are MANUAL, not automatic. Chapa is only used to
+ *     verify the original payment; we do not call a provider refund API here.
+ *     An operator MUST reconcile the Chapa refund payout via the Chapa dashboard
+ *     for any order that was paid through a card/TeleBirr gateway. Orders that
+ *     were funded from a wallet balance require no provider action.
+ *   - Every ledger row's `relatedId` points at the order so operators can find
+ *     and reconcile the corresponding provider transaction.
  */
 export async function refundOrder(orderId: string, amountEtb: number, reason: string) {
   const order = await prisma.order.findUnique({

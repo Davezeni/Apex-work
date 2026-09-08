@@ -84,6 +84,29 @@ export async function assertMember(conversationId: string, userId: string) {
   if (!membership) throw new ForbiddenError('You are not a member of this conversation');
 }
 
+/** True if `userId` is a member of `conversationId`. */
+export async function isMember(conversationId: string, userId: string): Promise<boolean> {
+  const membership = await prisma.conversationMember.findUnique({
+    where: { conversationId_userId: { conversationId, userId } },
+    select: { conversationId: true },
+  });
+  return !!membership;
+}
+
+/**
+ * Assert that BOTH users belong to the conversation. Used to gate WebRTC
+ * signaling so a caller can't push SDP/ICE to an arbitrary user outside the
+ * call's conversation (and can't spoof a target).
+ */
+export async function assertBothMembers(conversationId: string, a: string, b: string) {
+  const [ma, mb] = await Promise.all([
+    isMember(conversationId, a),
+    isMember(conversationId, b),
+  ]);
+  if (!ma) throw new ForbiddenError('You are not a member of this conversation');
+  if (!mb) throw new ForbiddenError('Target is not a member of this conversation');
+}
+
 /**
  * Get-or-create the user's personal "Saved Messages" chat — a 1-member
  * conversation (only you). Used to bookmark messages, voice notes and files.
@@ -606,7 +629,7 @@ export async function joinGroupByInvite(token: string, userId: string, route: 'a
 // Helpers
 // ==========================
 
-const conversationInclude = (selfId: string) => ({
+const conversationInclude = (_selfId: string) => ({
   members: {
     include: {
       user: {

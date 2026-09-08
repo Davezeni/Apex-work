@@ -215,6 +215,20 @@ export async function syncProcessingWithdrawals(limit = 25) {
   return { enabled: true, checked: items.length, succeeded, failed };
 }
 
+/** Legal state-machine edges for a withdrawal along with whether a refund applies. */
+const WITHDRAWAL_TRANSITIONS: Record<WithdrawalStatus, { to: WithdrawalStatus }[]> = {
+  PENDING: [
+    { to: 'PROCESSING' },
+    { to: 'SUCCESS' },
+    { to: 'FAILED' },
+    { to: 'CANCELLED' },
+  ],
+  PROCESSING: [{ to: 'SUCCESS' }, { to: 'FAILED' }, { to: 'CANCELLED' }],
+  SUCCESS: [],
+  FAILED: [],
+  CANCELLED: [],
+};
+
 /** Operator-facing / webhook-facing state transitions. */
 export async function markStatus(
   withdrawalId: string,
@@ -226,11 +240,35 @@ export async function markStatus(
     if (!wd) throw new NotFoundError('Withdrawal');
     if (wd.status === next) return wd;
 
-    // If we're marking FAILED or CANCELLED and funds were already deducted → refund.
-    const shouldRefund =
-      (next === 'FAILED' || next === 'CANCELLED') &&
-      (wd.status === 'PENDING' || wd.status === 'PROCESSING');
+    // Reject an illegal transition up front (e.g. SUCCESS → CANCELLED would
+    // otherwise refund an already-paid-out withdrawal).
+    const allowed = (WITHDRAWAL_TRANSITIONS[wd.status] ?? []).some((e) => e.to === next);
+    if (!allowed) {
+      throw new ConflictError(`Cannot move withdrawal from ${wd.status} to ${next}`);
+    }
 
+    // Compare-and-set: only succeed if the CURRENT status is still `wd.status`.
+    // A concurrent success/failure/cancel matches 0 rows here and we abort, so
+    // funds can never be both paid out AND re-credited.
+    const claimed = await tx.withdrawal.updateMany({
+      where: { id: wd.id, status: wd.status },
+      data: {
+        status: next,
+        providerRef: meta?.providerRef ?? wd.providerRef,
+        failureReason: meta?.failureReason ?? wd.failureReason,
+        processedAt:
+          next === 'SUCCESS' || next === 'FAILED' || next === 'CANCELLED'
+            ? new Date()
+            : wd.processedAt,
+      },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictError('Withdrawal state changed concurrently; retry');
+    }
+
+    // Refund only when the transition legitimately fails/cancels and funds were
+    // deducted (PENDING or PROCESSING).
+    const shouldRefund = next === 'FAILED' || next === 'CANCELLED';
     if (shouldRefund) {
       await tx.wallet.update({
         where: { userId: wd.userId },
@@ -247,18 +285,7 @@ export async function markStatus(
       });
     }
 
-    return tx.withdrawal.update({
-      where: { id: wd.id },
-      data: {
-        status: next,
-        providerRef: meta?.providerRef ?? wd.providerRef,
-        failureReason: meta?.failureReason ?? wd.failureReason,
-        processedAt:
-          next === 'SUCCESS' || next === 'FAILED' || next === 'CANCELLED'
-            ? new Date()
-            : wd.processedAt,
-      },
-    });
+    return tx.withdrawal.findUniqueOrThrow({ where: { id: wd.id } });
   });
 }
 

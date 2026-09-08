@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { decodeEntities, isBlockedHost, parseOpenGraph, unfurl } from './link-preview.js';
 
 describe('link-preview parse', () => {
@@ -58,6 +58,22 @@ describe('link-preview SSRF guard', () => {
     }
   });
 
+  it('blocks IPv6 link-local, unique-local, loopback and mapped ranges', () => {
+    for (const h of [
+      '::1',
+      '::',
+      'fe80::1',
+      'fc00::1',
+      'fd00::1',
+      'fec0::1',
+      '::ffff:127.0.0.1',
+      '::ffff:10.0.0.1',
+      '[::1]',
+    ]) {
+      expect(isBlockedHost(h)).toBe(true);
+    }
+  });
+
   it('allows public hosts', () => {
     for (const h of ['example.com', 'github.com', 'www.example.org']) {
       expect(isBlockedHost(h)).toBe(false);
@@ -76,5 +92,31 @@ describe('link-preview unfurl guard', () => {
 
   it('rejects unparseable urls', async () => {
     await expect(unfurl('not a url')).rejects.toThrow(/Invalid URL/);
+  });
+});
+
+describe('link-preview redirect SSRF guard', () => {
+  it('validates every redirect destination (blocks a public→private hop)', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/latest/meta-data' } }),
+      );
+    const result = await unfurl('https://public.example.com');
+    fetchMock.mockRestore();
+    // Must NOT have followed the private redirect; bare card on the original host.
+    expect(result.domain).toBe('public.example.com');
+  });
+
+  it('follows a safe public redirect chain', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(null, { status: 301, headers: { location: 'https://cdn.example.com/page' } }))
+      .mockResolvedValueOnce(
+        new Response('<meta property="og:title" content="Landed" />', { status: 200, headers: { 'content-type': 'text/html' } }),
+      );
+    const result = await unfurl('https://public.example.com/start');
+    fetchMock.mockRestore();
+    expect(result.title).toBe('Landed');
   });
 });

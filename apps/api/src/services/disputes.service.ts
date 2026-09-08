@@ -102,6 +102,14 @@ export async function adminList(status?: DisputeStatus, limit = 50) {
   });
 }
 
+/**
+ * Resolve a dispute atomically (see the money transitions above).
+ *
+ * REFUND POLICY: dispute refunds credit the relevant wallet balance + write an
+ * ORDER_REFUND ledger row. Provider-side (Chapa) refunds remain MANUAL — an
+ * operator reconciles them via the Chapa dashboard using the order's
+ * transaction reference; wallet-funded orders need no provider action.
+ */
 export async function adminResolve(
   disputeId: string,
   input: {
@@ -147,6 +155,21 @@ export async function adminResolve(
   }
 
   const resolved = await prisma.$transaction(async (tx) => {
+    // Claim the dispute atomically: only an OPEN/REVIEWING dispute may be
+    // resolved. If a concurrent admin already ruled on it, this matches 0 rows
+    // and we abort — so money can never move twice for one dispute.
+    const claimed = await tx.dispute.updateMany({
+      where: { id: disputeId, status: { in: ['OPEN', 'REVIEWING'] } },
+      data: {
+        status: input.ruling,
+        clientPayoutEtb: input.clientPayoutEtb ?? null,
+        sellerPayoutEtb: input.sellerPayoutEtb ?? null,
+        adminNotes: input.adminNotes ?? null,
+        resolvedAt: new Date(),
+      },
+    });
+    if (claimed.count === 0) throw new ConflictError('Already resolved');
+
     if (clientRefund > 0) {
       await tx.wallet.upsert({
         where: { userId: order.clientId },
@@ -184,16 +207,8 @@ export async function adminResolve(
       },
     });
 
-    return tx.dispute.update({
-      where: { id: disputeId },
-      data: {
-        status: input.ruling,
-        clientPayoutEtb: input.clientPayoutEtb ?? null,
-        sellerPayoutEtb: input.sellerPayoutEtb ?? null,
-        adminNotes: input.adminNotes ?? null,
-        resolvedAt: new Date(),
-      },
-    });
+    // Return the freshly-claimed dispute record.
+    return tx.dispute.findUniqueOrThrow({ where: { id: disputeId } });
   });
 
   // Notify both parties.

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock, notifyMock } = vi.hoisted(() => ({
   prismaMock: {
     gig: { findUnique: vi.fn() },
-    order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
     payment: { create: vi.fn(), updateMany: vi.fn() },
     wallet: { update: vi.fn(), upsert: vi.fn() },
     user: { update: vi.fn() },
@@ -45,11 +45,18 @@ beforeEach(() => {
 describe('order escrow lifecycle', () => {
   it('releases seller funds and completes an accepted delivery atomically', async () => {
     prismaMock.order.findUnique.mockResolvedValue(order);
-    prismaMock.order.update.mockResolvedValue({ ...order, status: 'COMPLETED' });
+    // acceptDelivery now claims the transition via updateMany (CAS) and reads
+    // back with findUniqueOrThrow — a concurrent transition would match 0 rows.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.order.findUniqueOrThrow.mockResolvedValue({ ...order, status: 'COMPLETED' });
 
     const result = await acceptDelivery(order.id, order.clientId);
 
     expect(result.status).toBe('COMPLETED');
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: order.id, status: order.status },
+      data: expect.objectContaining({ status: 'COMPLETED' }),
+    }));
     expect(prismaMock.wallet.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { userId: order.sellerId },
       data: expect.objectContaining({
@@ -61,6 +68,19 @@ describe('order escrow lifecycle', () => {
       data: expect.objectContaining({ type: 'ORDER_PAYOUT', amountEtb: order.sellerNetEtb }),
     }));
     expect(notifyMock).toHaveBeenCalledWith(expect.objectContaining({ userId: order.sellerId }));
+  });
+
+  it('aborts without paying if the order was already transitioned concurrently', async () => {
+    prismaMock.order.findUnique.mockResolvedValue(order);
+    // Concurrent accept already flipped the status → CAS claims 0 rows.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(acceptDelivery(order.id, order.clientId)).rejects.toMatchObject({
+      statusCode: 409,
+    });
+    // No wallet credit / ledger / completed-order bump may run.
+    expect(prismaMock.wallet.update).not.toHaveBeenCalled();
+    expect(prismaMock.transaction.create).not.toHaveBeenCalled();
   });
 
   it('rejects acceptance by anyone other than the client', async () => {

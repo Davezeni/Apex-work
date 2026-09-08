@@ -231,11 +231,16 @@ export async function acceptBid(bidId: string, clientId: string) {
   const sellerNet = bid.priceEtb - platformFee;
 
   const order = await prisma.$transaction(async (tx) => {
-    // Close the job so nobody else bids.
-    await tx.job.update({
-      where: { id: bid.jobId },
+    // Atomically claim/close the job: only succeeds if the job is still open.
+    // If a concurrent acceptance already closed it, this matches 0 rows and we
+    // abort — so only one order is ever created for a job.
+    const claimed = await tx.job.updateMany({
+      where: { id: bid.jobId, isOpen: true },
       data: { isOpen: false, closedAt: new Date() },
     });
+    if (claimed.count === 0) {
+      throw new ConflictError('This job is no longer open');
+    }
     return tx.order.create({
       data: {
         clientId,

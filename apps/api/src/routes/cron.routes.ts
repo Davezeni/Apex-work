@@ -18,9 +18,23 @@ const router: Router = Router();
  * warmup workflow every 15 minutes. Falls back to open if CRON_TOKEN
  * isn't set (dev convenience — Render always has it).
  */
+/**
+ * GET/POST /cron/:job — cheap endpoint gated by a shared secret in the
+ * Authorization header. Called by our GitHub Actions cron workflow.
+ *
+ * Fail-closed: in production a missing CRON_TOKEN rejects every request; the
+ * open-by-default behaviour only applies in development/test.
+ */
 function gate(req: Request<unknown, unknown, unknown, unknown>) {
   const token = env.CRON_TOKEN;
-  if (!token) return; // open in dev
+  if (!token) {
+    // Fail closed in production — never silently allow unauthenticated
+    // access to money-moving/state-mutating scheduled jobs.
+    if (env.NODE_ENV === 'production') {
+      throw new UnauthorizedError('Cron is not configured');
+    }
+    return; // dev/test convenience only
+  }
   const header = req.header('authorization') ?? '';
   if (header !== `Bearer ${token}`) throw new UnauthorizedError();
 }

@@ -42,6 +42,7 @@ import agenciesRoutes from './agencies.routes.js';
 import referralsRoutes from './referrals.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
+import { logger } from '../config/logger.js';
 
 const router: Router = Router();
 
@@ -64,17 +65,25 @@ router.get('/health', (_req, res) => {
  * can serve real traffic. Useful for smoke tests + orchestrators that
  * distinguish "alive" from "ready".
  */
+// Coarse readiness probe. Only exposes boolean per-dependency state to
+// callers; the underlying DB error and Redis status strings are logged
+// server-side and never returned, so unauthenticated requesters can't learn
+// about the infra (hostnames, connection errors, version details).
 router.get('/ready', async (_req, res) => {
-  const checks: Record<string, 'ok' | string> = { db: 'pending', redis: 'pending' };
+  const checks: Record<string, boolean> = { db: false, redis: false };
   try {
     await prisma.$queryRaw`SELECT 1`;
-    checks.db = 'ok';
+    checks.db = true;
   } catch (e) {
-    checks.db = (e as Error).message.slice(0, 200);
+    logger.error({ err: e }, 'Readiness DB check failed');
   }
-  checks.redis = redis.status === 'ready' ? 'ok' : `not-ready (${redis.status})`;
-  const allOk = Object.values(checks).every((v) => v === 'ok');
-  res.status(allOk ? 200 : 503).json({ ok: allOk, checks });
+  checks.redis = redis.status === 'ready';
+  if (!checks.redis) {
+    // Log the real status for operators only.
+    logger.warn({ redisStatus: redis.status }, 'Readiness Redis check not ready');
+  }
+  const allOk = Object.values(checks).every(Boolean);
+  res.status(allOk ? 200 : 503).json({ ok: allOk, ready: allOk, checks });
 });
 
 router.use('/auth', authRoutes);

@@ -18,7 +18,7 @@
  *        seller.completedOrders++
  *      → freelancer notified they can withdraw
  */
-import type { OrderStatus, PackageTier, Prisma, User } from '@prisma/client';
+import type { OrderStatus, PackageTier, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { computeOrderSplit } from '@apex-work/shared';
 import { getCategoryFeePercent } from './categories.service.js';
@@ -272,6 +272,17 @@ export async function acceptDelivery(orderId: string, clientId: string) {
   const next = transitionGuard(order.status, 'ACCEPT_DELIVERY', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
+    // Compare-and-set FIRST: atomically require the pre-transition status.
+    // If a concurrent request already transitioned the order, this matches 0
+    // rows and we abort — the wallet/ledger changes below never run, so a
+    // delivery can't be paid out twice.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, status: order.status },
+      data: { status: next, completedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictError('Order has already been accepted or changed');
+    }
     await tx.wallet.update({
       where: { userId: order.sellerId },
       data: {
@@ -293,10 +304,7 @@ export async function acceptDelivery(orderId: string, clientId: string) {
         relatedId: order.id,
       },
     });
-    return tx.order.update({
-      where: { id: order.id },
-      data: { status: next, completedAt: new Date() },
-    });
+    return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
 
   await notify({

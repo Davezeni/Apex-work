@@ -3,6 +3,46 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Security & concurrency hardening (README audit, run #54)
+
+Fixes the 10 release blockers from the security/concurrency audit:
+
+- **Cron fail-closed** (`cron.routes.ts`) — a missing `CRON_TOKEN` now REJECTS
+  every cron request in production; the open-by-default behaviour only applies
+  to dev/test.
+- **WebRTC signaling authorization** (`socket.ts`, `chat.service.ts`) —
+  `call:signal` now verifies BOTH the caller and the target belong to the
+  conversation before relaying SDP/ICE; `call:start/end/join/leave` also gate
+  on membership, so a socket can't broadcast to a room it's not a member of.
+- **Link-preview SSRF redirect hardening** (`link-preview.ts`) — `unfurl` now
+  follows redirects manually and re-validates every destination against
+  loopback/private/link-local/IPv6 ranges (manual `redirect: 'manual'` loop,
+  capped at 5 hops). `isBlockedHost` also covers IPv6 link-local, unique-local,
+  mapped and loopback ranges.
+- **Atomic order acceptance** (`jobs.service.ts`) — `acceptBid` atomically
+  claims/closes the job (`updateMany` conditional on `isOpen: true`) before
+  creating the order, so one job can't get two orders.
+- **Atomic delivery acceptance** (`orders.service.ts`) — `acceptDelivery` uses a
+  compare-and-set status claim first; if the order already transitioned it
+  aborts, so funds are never released twice.
+- **Atomic milestone approval** (`milestones.service.ts`) — `approve` claims
+  `DELIVERED → APPROVED` conditionally and only pays when that succeeds.
+- **Atomic dispute resolution** (`disputes.service.ts`) — `adminResolve` claims
+  the dispute atomically before any ledger movement, so two admins can't both
+  move money for one dispute.
+- **Withdrawal transition guard** (`withdrawals.service.ts`) — `markStatus`
+  enforces a legal state machine and uses a conditional CAS; an illegal
+  `SUCCESS → CANCELLED` is rejected and a concurrent transition can't double
+  refund.
+- **Refund reconciliation policy** (`money.service.ts`, `disputes.service.ts`) —
+  documented the explicit policy (internal wallet ledger = source of truth;
+  provider-side Chapa refunds are MANUAL) matching the implementation.
+- **Readiness hardening** (`routes/index.ts`) — `/v1/ready` now returns only
+  coarse boolean per-dependency state; DB error messages and Redis status
+  strings are logged server-side only.
+- Verified: api web typecheck 0 errors, api lint clean, **227 unit tests pass**
+  (added regression tests for the CAS transitions + redirect SSRF).
+
 ## [Unreleased] — Realtime notifications: dropdown panel + toasts (power push #69)
 
 - **Notification dropdown panel** — the bell (home header) now opens an inline

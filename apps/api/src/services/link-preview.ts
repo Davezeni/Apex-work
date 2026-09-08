@@ -88,12 +88,23 @@ function safeDomain(u: string): string {
 
 /** True if the host routes to a private/internal network (SSRF guard). */
 export function isBlockedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase();
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (host.includes(':')) {
+    // IPv6 (or IPv6-mapped) — block all internal/private/site-local ranges.
+    return (
+      host === '::' || // unspecified
+      host === '::1' || // loopback
+      host.startsWith('::ffff:') || // IPv4-mapped (e.g. ::ffff:127.0.0.1)
+      host.startsWith('fe80:') || // link-local
+      host.startsWith('fc') || // unique-local (fc00::/7)
+      host.startsWith('fd') ||
+      host.startsWith('fec0:') || // site-local
+      host.startsWith('::ffff:') // v4-mapped private
+    );
+  }
   return (
     host === 'localhost' ||
     host === '0.0.0.0' ||
-    host === '::1' ||
-    host === '[::1]' ||
     /^127\./.test(host) ||
     /^10\./.test(host) ||
     /^192\.168\./.test(host) ||
@@ -103,9 +114,15 @@ export function isBlockedHost(hostname: string): boolean {
   );
 }
 
+const MAX_REDIRECTS = 5;
+
 /**
  * Fetch a URL and build a rich link preview. Guards against SSRF (private
- * hosts), limits response size/time, and falls back to a bare domain card.
+ * hosts) on the INITIAL URL **and on every HTTP redirect hop** — the fetch
+ * runs with `redirect: 'manual'` and we follow each `Location` ourselves,
+ * re-validating the destination against loopback/private/link-local/IPv6
+ * ranges before issuing the next request. Limits response size/time and falls
+ * back to a bare domain card.
  */
 export async function unfurl(rawUrl: string): Promise<LinkPreviewResult> {
   let url: URL;
@@ -125,15 +142,46 @@ export async function unfurl(rawUrl: string): Promise<LinkPreviewResult> {
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 6000);
   try {
-    const res = await fetch(url.href, {
-      signal: ac.signal,
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ApexBot/1.0; +https://apex)',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-    });
-    const finalUrl = res.url || url.href;
+    let current = url;
+    let hops = 0;
+    let res: Response;
+
+    // Manual redirect chain — validate every destination host.
+    for (;;) {
+      res = await fetch(current.href, {
+        signal: ac.signal,
+        redirect: 'manual',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; ApexBot/1.0; +https://apex)',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get('location');
+        if (!loc) break; // 3xx with no Location → treat as non-html
+        if (hops >= MAX_REDIRECTS) break; // too many hops → bail
+        let next: URL;
+        try {
+          next = new URL(loc, current);
+        } catch {
+          break;
+        }
+        if (next.protocol !== 'http:' && next.protocol !== 'https:') break;
+        // SSRF: reject a redirect that points at a private/internal host.
+        if (isBlockedHost(next.hostname)) {
+          const bare: LinkPreviewResult = { url: current.href, domain: safeDomain(current.href) };
+          UNFURL_CACHE.set(rawUrl, { at: Date.now(), value: bare });
+          return bare;
+        }
+        current = next;
+        hops++;
+        continue;
+      }
+      break; // non-redirect response → emit the current URL
+    }
+
+    const finalUrl = current.href;
     const ctype = res.headers.get('content-type') || '';
     if (!res.ok || !/text\/html/i.test(ctype)) {
       const bare: LinkPreviewResult = { url: finalUrl, domain: safeDomain(finalUrl) };

@@ -4,7 +4,7 @@ import { verifyAccessToken } from '../lib/jwt.js';
 import { redisPub, redisSub } from '../lib/redis.js';
 import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
-import { assertMember, markAsRead } from '../services/chat.service.js';
+import { assertMember, assertBothMembers, markAsRead } from '../services/chat.service.js';
 import { markOnline, markOffline, maybePersistLastSeen } from '../services/presence.service.js';
 
 interface AuthedSocket extends Socket {
@@ -203,26 +203,45 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       }
     });
 
-    socket.on('call:end', (conversationId: string) => {
+    socket.on('call:end', async (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
-      socket.to(`conv:${conversationId}`).emit('call:end', { conversationId, from: socket.userId });
+      try {
+        await assertMember(conversationId, socket.userId!);
+        socket.to(`conv:${conversationId}`).emit('call:end', { conversationId, from: socket.userId });
+      } catch { /* non-member */ }
     });
 
-    socket.on('call:join', (conversationId: string) => {
+    socket.on('call:join', async (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
-      socket.to(`conv:${conversationId}`).emit('call:join', { conversationId, from: socket.userId });
+      try {
+        await assertMember(conversationId, socket.userId!);
+        socket.to(`conv:${conversationId}`).emit('call:join', { conversationId, from: socket.userId });
+      } catch { /* non-member */ }
     });
 
-    socket.on('call:leave', (conversationId: string) => {
+    socket.on('call:leave', async (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
-      socket.to(`conv:${conversationId}`).emit('call:leave', { conversationId, from: socket.userId });
+      try {
+        await assertMember(conversationId, socket.userId!);
+        socket.to(`conv:${conversationId}`).emit('call:leave', { conversationId, from: socket.userId });
+      } catch { /* non-member */ }
     });
 
     // Forward SDP offers/answers + ICE candidates to a specific peer.
     // The payload can be a large SDP blob; Socket.io compresses it via
     // perMessageDeflate that we enabled last turn.
-    socket.on('call:signal', (input: { conversationId: string; targetUserId: string; payload: unknown }) => {
+    socket.on('call:signal', async (input: { conversationId: string; targetUserId: string; payload: unknown }) => {
       if (!input || typeof input.conversationId !== 'string' || typeof input.targetUserId !== 'string') return;
+      if (input.targetUserId === socket.userId) return; // no self-relay
+      // Authorization: BOTH the caller and the target must belong to the
+      // conversation before any SDP/ICE payload is forwarded. Prevents an
+      // authenticated user from pushing call/signal data to arbitrary users
+      // or spoofing a target outside a conversation they share.
+      try {
+        await assertBothMembers(input.conversationId, socket.userId!, input.targetUserId);
+      } catch {
+        return; // silent — non-member or unknown target; nothing to forward
+      }
       io.to(`user:${input.targetUserId}`).emit('call:signal', {
         conversationId: input.conversationId,
         from: socket.userId,
