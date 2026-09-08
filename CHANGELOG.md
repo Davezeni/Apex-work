@@ -3,6 +3,15 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Consent banner no longer covers the floating actions (power push #60)
+
+The analytics consent banner used to span the full width at the bottom
+(`inset-x-3`, `z-[100]`), covering the Help / Create "+" floating buttons on
+first visit. It now slides in as a compact card anchored **top-left** (top
+center on mobile), so it never blocks the bottom-right action chips. It
+enters with a soft motion animation, has an icon, and is lower z-index than
+the modals.
+
 ## [Unreleased] — Bug audit: dead-code cleanup (power push #59)
 
 - Removed the now-unused `HIDE_ON` route array in the AI assistant (the
