@@ -38,7 +38,14 @@ import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 
 function initialsOf(name: string): string {
-  return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+  return (
+    name
+      .split(' ')
+      .map((w) => w[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase() || '?'
+  );
 }
 
 type Tier = 'BASIC' | 'STANDARD' | 'PREMIUM';
@@ -94,13 +101,14 @@ export default function GigDetailPage() {
         toast.success('Link copied');
       }
     } catch (error) {
-      if ((error as { name?: string }).name !== 'AbortError') toast.error('Could not share this gig');
+      if ((error as { name?: string }).name !== 'AbortError')
+        toast.error('Could not share this gig');
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh grid place-items-center">
+      <div className="grid min-h-dvh place-items-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -108,7 +116,7 @@ export default function GigDetailPage() {
 
   if (error || !gig) {
     return (
-      <div className="min-h-dvh grid place-items-center px-8 text-center">
+      <div className="grid min-h-dvh place-items-center px-8 text-center">
         <div>
           <div className="text-4xl">🤷</div>
           <h1 className="mt-4 text-xl font-bold">{t('gig.notFound')}</h1>
@@ -198,9 +206,14 @@ export default function GigDetailPage() {
       availability: 'https://schema.org/InStock',
     },
     brand: { '@type': 'Organization', name: gig.owner.fullName },
-    aggregateRating: gig.owner.ratingCount > 0
-      ? { '@type': 'AggregateRating', ratingValue: String(gig.owner.rating), reviewCount: String(gig.owner.ratingCount) }
-      : undefined,
+    aggregateRating:
+      gig.owner.ratingCount > 0
+        ? {
+            '@type': 'AggregateRating',
+            ratingValue: String(gig.owner.rating),
+            reviewCount: String(gig.owner.ratingCount),
+          }
+        : undefined,
   });
 
   return (
@@ -215,70 +228,90 @@ export default function GigDetailPage() {
       {gig.coverImageUrl ? (
         <>
           <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={gig.coverImageUrl} alt={gig.title} className="absolute inset-0 h-full w-full object-cover" />
-            <HeaderActions router={router} onTop saved={saved} saving={savePending} onSave={toggleSave} onShare={shareGig} />
+            <Image
+              src={gig.coverImageUrl}
+              alt={gig.title}
+              fill
+              priority
+              unoptimized
+              sizes="(max-width: 640px) 100vw, 50vw"
+              className="object-cover"
+            />
+            <HeaderActions
+              router={router}
+              onTop
+              saved={saved}
+              saving={savePending}
+              onSave={toggleSave}
+              onShare={shareGig}
+            />
           </div>
           <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
-          <div className="flex items-start gap-3">
-          <Link href={`/u/${gig.owner.username}`} aria-label={gig.owner.fullName} className="shrink-0">
-            <UserAvatar
-              name={gig.owner.fullName}
-              avatarUrl={gig.owner.avatarUrl}
-              id={gig.owner.id}
-              verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
-              className="h-14 w-14 text-base font-bold ring-4 ring-card"
-            />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <Link
-              href={`/u/${gig.owner.username}`}
-              className="flex items-center gap-1.5 text-sm font-bold"
-            >
-              {gig.owner.fullName}
-              <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
-            </Link>
-            <p className="text-[11px] text-muted-foreground">@{gig.owner.username}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-              {gig.owner.ratingCount > 0 && (
-                <>
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span className="font-semibold text-foreground">
-                      {gig.owner.rating.toFixed(1)}
-                    </span>{' '}
-                    ({gig.owner.ratingCount})
-                  </span>
-                  <span>·</span>
-                </>
-              )}
-              {gig.owner.city && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-3 w-3" />
-                  {gig.owner.city}
-                </span>
-              )}
-              <span>·</span>
-              <span>{gig.owner.completedOrders} orders</span>
-            </div>
-          </div>
-        </div>
-        <h1 className="mt-4 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl">
-          {translation.data?.title ?? gig.title}
-        </h1>
-        {isOwnGig && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button size="sm" variant="brand" onClick={() => setBoostOpen(true)}>
-              <Zap className="h-3.5 w-3.5" /> Boost
-            </Button>
-            <Button asChild size="sm" variant="outline">
-              <Link href={`/gigs/${slug}/analytics`}>
-                <BarChart3 className="h-3.5 w-3.5" /> Analytics
+            <div className="flex items-start gap-3">
+              <Link
+                href={`/u/${gig.owner.username}`}
+                aria-label={gig.owner.fullName}
+                className="shrink-0"
+              >
+                <UserAvatar
+                  name={gig.owner.fullName}
+                  avatarUrl={gig.owner.avatarUrl}
+                  id={gig.owner.id}
+                  verified={
+                    gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)
+                  }
+                  className="h-14 w-14 text-base font-bold ring-4 ring-card"
+                />
               </Link>
-            </Button>
+              <div className="min-w-0 flex-1">
+                <Link
+                  href={`/u/${gig.owner.username}`}
+                  className="flex items-center gap-1.5 text-sm font-bold"
+                >
+                  {gig.owner.fullName}
+                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />
+                </Link>
+                <p className="text-[11px] text-muted-foreground">@{gig.owner.username}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
+                  {gig.owner.ratingCount > 0 && (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="font-semibold text-foreground">
+                          {gig.owner.rating.toFixed(1)}
+                        </span>{' '}
+                        ({gig.owner.ratingCount})
+                      </span>
+                      <span>·</span>
+                    </>
+                  )}
+                  {gig.owner.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {gig.owner.city}
+                    </span>
+                  )}
+                  <span>·</span>
+                  <span>{gig.owner.completedOrders} orders</span>
+                </div>
+              </div>
+            </div>
+            <h1 className="mt-4 text-xl font-extrabold leading-tight tracking-tight sm:text-2xl">
+              {translation.data?.title ?? gig.title}
+            </h1>
+            {isOwnGig && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button size="sm" variant="brand" onClick={() => setBoostOpen(true)}>
+                  <Zap className="h-3.5 w-3.5" /> Boost
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/gigs/${slug}/analytics`}>
+                    <BarChart3 className="h-3.5 w-3.5" /> Analytics
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
         </>
       ) : (
         <>
@@ -293,15 +326,24 @@ export default function GigDetailPage() {
             </button>
             <div className="min-w-0 flex-1">
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Gig</div>
-              <div className="truncate text-sm font-bold">{translation.data?.title ?? gig.title}</div>
+              <div className="truncate text-sm font-bold">
+                {translation.data?.title ?? gig.title}
+              </div>
             </div>
             <button
               onClick={toggleSave}
               disabled={savePending}
               aria-label={saved ? 'Remove from saved' : 'Save gig'}
-              className={cn('grid h-9 w-9 place-items-center rounded-full disabled:opacity-50', saved ? 'text-primary' : 'text-muted-foreground')}
+              className={cn(
+                'grid h-9 w-9 place-items-center rounded-full disabled:opacity-50',
+                saved ? 'text-primary' : 'text-muted-foreground',
+              )}
             >
-              {savePending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />}
+              {savePending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
+              )}
             </button>
             <button
               onClick={() => void shareGig()}
@@ -319,7 +361,9 @@ export default function GigDetailPage() {
                 name={gig.owner.fullName}
                 avatarUrl={gig.owner.avatarUrl}
                 id={gig.owner.id}
-                verified={gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)}
+                verified={
+                  gig.owner.isVerified ?? (gig.owner.isPhoneVerified && gig.owner.isIdVerified)
+                }
                 className="h-14 w-14 text-base font-bold"
               />
               <div className="min-w-0 flex-1">
@@ -386,7 +430,11 @@ export default function GigDetailPage() {
               disabled={translate.isPending}
               className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"
             >
-              {translate.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+              {translate.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Languages className="h-3 w-3" />
+              )}
               Translate to አማ
             </button>
           )}
@@ -396,7 +444,10 @@ export default function GigDetailPage() {
             </span>
           )}
         </div>
-        <RichViewer html={translation.data?.description ?? gig.description} className="text-sm text-foreground/90" />
+        <RichViewer
+          html={translation.data?.description ?? gig.description}
+          className="text-sm text-foreground/90"
+        />
 
         {gig.tags?.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -427,9 +478,7 @@ export default function GigDetailPage() {
                   onClick={() => setTier(p.tier)}
                   className={cn(
                     'flex-1 rounded-full py-2 text-xs font-bold capitalize transition-colors',
-                    tier === p.tier
-                      ? 'grad-hero text-white shadow'
-                      : 'text-muted-foreground',
+                    tier === p.tier ? 'grad-hero text-white shadow' : 'text-muted-foreground',
                   )}
                 >
                   {p.tier.toLowerCase()}
@@ -543,16 +592,34 @@ function SimilarGigsSection({ slug }: { slug: string }) {
       </h2>
       <div className="grid grid-cols-2 gap-2">
         {items.map((g) => (
-          <Link key={g.id} href={`/gigs/${g.slug}`} className="rounded-2xl border border-border bg-card p-2 transition-transform active:scale-[0.98]">
+          <Link
+            key={g.id}
+            href={`/gigs/${g.slug}`}
+            className="rounded-2xl border border-border bg-card p-2 transition-transform active:scale-[0.98]"
+          >
             <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
               {g.coverImageUrl && (
-                <Image src={g.coverImageUrl} alt={g.title} fill unoptimized sizes="200px" className="object-cover" />
+                <Image
+                  src={g.coverImageUrl}
+                  alt={g.title}
+                  fill
+                  unoptimized
+                  sizes="200px"
+                  className="object-cover"
+                />
               )}
             </div>
             <div className="mt-2 line-clamp-2 text-xs font-semibold">{g.title}</div>
             <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
-              {g.rating > 0 && <><Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" /> {g.rating.toFixed(1)}</>}
-              <span className="ml-auto font-bold text-primary">{formatEtb(g.startingPriceEtb)}+</span>
+              {g.rating > 0 && (
+                <>
+                  <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />{' '}
+                  {g.rating.toFixed(1)}
+                </>
+              )}
+              <span className="ml-auto font-bold text-primary">
+                {formatEtb(g.startingPriceEtb)}+
+              </span>
             </div>
           </Link>
         ))}
@@ -583,10 +650,12 @@ function HeaderActions({
   onShare: () => Promise<void>;
 }) {
   return (
-    <div className={cn(
-      'flex items-center justify-between px-4 py-3',
-      onTop && 'safe-top absolute inset-x-0 top-0 z-10',
-    )}>
+    <div
+      className={cn(
+        'flex items-center justify-between px-4 py-3',
+        onTop && 'safe-top absolute inset-x-0 top-0 z-10',
+      )}
+    >
       <button
         onClick={() => router.back()}
         aria-label="Back"
@@ -604,7 +673,11 @@ function HeaderActions({
             saved && 'text-pink-300',
           )}
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />}
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Heart className="h-5 w-5" fill={saved ? 'currentColor' : 'none'} />
+          )}
         </button>
         <button
           onClick={() => void onShare()}

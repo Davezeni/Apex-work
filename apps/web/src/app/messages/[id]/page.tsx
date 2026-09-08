@@ -57,7 +57,6 @@ import {
   Sparkles,
   KeyRound,
 } from 'lucide-react';
-import { CallPanel } from '@/components/chat/call-panel';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -85,12 +84,7 @@ import {
 } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { useAISuggestReplies } from '@/hooks/use-ai';
-import { VoiceRecorder } from '@/components/chat/voice-recorder';
 import { LinkPreview, firstUrlIn } from '@/components/chat/link-preview';
-import { AttachButton } from '@/components/chat/attach-button';
-import { ReactionPicker } from '@/components/chat/reaction-picker';
-import { StickerPicker } from '@/components/chat/sticker-picker';
-import { WaveformPlayer } from '@/components/chat/waveform';
 import { isSticker } from '@/components/chat/emoji-data';
 import {
   addScheduled,
@@ -104,6 +98,12 @@ import {
   LazyOfferCard as OfferCard,
   LazyReportUserSheet as ReportUserSheet,
   LazyImageViewer as ImageViewer,
+  LazyCallPanel as CallPanel,
+  LazyVoiceRecorder as VoiceRecorder,
+  LazyAttachButton as AttachButton,
+  LazyReactionPicker as ReactionPicker,
+  LazyStickerPicker as StickerPicker,
+  LazyWaveformPlayer as WaveformPlayer,
 } from '@/components/lazy';
 import { useBlockUser } from '@/hooks/use-moderation';
 import { useToggleReaction } from '@/hooks/use-reactions';

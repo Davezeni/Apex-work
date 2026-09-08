@@ -91,7 +91,7 @@ export default function MessagesPage() {
 
   return (
     <MobileShell activeTab="chat">
-      <header className="safe-top flex items-center justify-between px-5 pb-3 pt-4">
+      <header className="safe-top mx-auto flex w-full max-w-2xl items-center justify-between px-5 pb-3 pt-4 md:pt-6">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('chat.messages')}</h1>
         <div className="flex gap-2">
           <button
@@ -131,142 +131,84 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {isLoading && (
-        <div className="grid h-40 place-items-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
+      <div className="mx-auto w-full max-w-2xl">
+        {isLoading && (
+          <div className="grid h-40 place-items-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
 
-      {error && !isLoading && (
-        <div className="mx-5 mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-          {t('chat.loadFailed')}
-        </div>
-      )}
+        {error && !isLoading && (
+          <div className="mx-5 mt-6 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            {t('chat.loadFailed')}
+          </div>
+        )}
 
-      {!isLoading && (data?.items.length ?? 0) === 0 && (
-        <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
-          <div className="text-4xl">💬</div>
-          <p className="mt-3 text-sm font-semibold">{t('chat.noConversations')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('chat.noConversationsBody')}</p>
-          <Button asChild variant="brand" size="sm" className="mt-5">
-            <Link href="/">{t('chat.exploreGigs')}</Link>
-          </Button>
-        </div>
-      )}
+        {!isLoading && (data?.items.length ?? 0) === 0 && (
+          <div className="mx-5 mt-10 rounded-2xl border border-dashed border-border p-8 text-center">
+            <div className="text-4xl">💬</div>
+            <p className="mt-3 text-sm font-semibold">{t('chat.noConversations')}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t('chat.noConversationsBody')}</p>
+            <Button asChild variant="brand" size="sm" className="mt-5">
+              <Link href="/">{t('chat.exploreGigs')}</Link>
+            </Button>
+          </div>
+        )}
 
-      <div className="px-2 pb-4">
-        {!searchOpen && saved?.id && (
-          <Link
-            href={`/messages/${saved.id}`}
-            className="flex items-center gap-3 rounded-2xl p-3 active:bg-card"
-          >
-            <div
-              className={`grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-white ${gradientFor(saved.id)}`}
+        <div className="px-2 pb-4">
+          {!searchOpen && saved?.id && (
+            <Link
+              href={`/messages/${saved.id}`}
+              className="flex items-center gap-3 rounded-2xl p-3 active:bg-card"
             >
-              <Bookmark className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              {t('chat.savedMessages')}
-              <p className="truncate text-[13px] text-muted-foreground">
-                Bookmark your notes, voice mutes &amp; files
-              </p>
-            </div>
-          </Link>
-        )}
-        {searchOpen && query.trim() && filteredItems.length === 0 && (
-          <p className="px-4 py-8 text-center text-xs text-muted-foreground">
-            No conversations found.
-          </p>
-        )}
+              <div
+                className={`grid h-[52px] w-[52px] place-items-center rounded-full bg-gradient-to-br text-white ${gradientFor(saved.id)}`}
+              >
+                <Bookmark className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                {t('chat.savedMessages')}
+                <p className="truncate text-[13px] text-muted-foreground">
+                  Bookmark your notes, voice mutes &amp; files
+                </p>
+              </div>
+            </Link>
+          )}
+          {searchOpen && query.trim() && filteredItems.length === 0 && (
+            <p className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No conversations found.
+            </p>
+          )}
 
-        {!searchOpen && (
-          <Group
-            label={t('chat.pinned')}
-            icon={<Pin className="h-3.5 w-3.5" />}
-            items={groups.pinned}
-            render={(c) => (
-              <ConvRow
-                key={c.id}
-                c={c}
-                selfId={me?.id ?? ''}
-                pinned
-                isTyping={!!typing[c.id]}
-                typingName={typing[c.id]?.name}
-                onPin={() => pickPin(c.id)}
-                onArchive={() => pickArchive(c.id)}
-              />
-            )}
-          />
-        )}
-        {!searchOpen && (
-          <Group
-            label={t('chat.unread')}
-            icon={
-              <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">
-                {groups.unread.length}
-              </span>
-            }
-            items={groups.unread}
-            render={(c) => (
-              <ConvRow
-                key={c.id}
-                c={c}
-                selfId={me?.id ?? ''}
-                isTyping={!!typing[c.id]}
-                typingName={typing[c.id]?.name}
-                onPin={() => pickPin(c.id)}
-                onArchive={() => pickArchive(c.id)}
-              />
-            )}
-          />
-        )}
-        {!searchOpen && (
-          <Group
-            label={t('chat.recent')}
-            icon={<Inbox className="h-3.5 w-3.5" />}
-            items={groups.recent}
-            render={(c) => (
-              <ConvRow
-                key={c.id}
-                c={c}
-                selfId={me?.id ?? ''}
-                isTyping={!!typing[c.id]}
-                typingName={typing[c.id]?.name}
-                onPin={() => pickPin(c.id)}
-                onArchive={() => pickArchive(c.id)}
-              />
-            )}
-          />
-        )}
-        {searchOpen &&
-          filteredItems.map((c) => (
-            <ConvRow
-              key={c.id}
-              c={c}
-              selfId={me?.id ?? ''}
-              isTyping={!!typing[c.id]}
-              typingName={typing[c.id]?.name}
-              onPin={() => pickPin(c.id)}
-              onArchive={() => pickArchive(c.id)}
+          {!searchOpen && (
+            <Group
+              label={t('chat.pinned')}
+              icon={<Pin className="h-3.5 w-3.5" />}
+              items={groups.pinned}
+              render={(c) => (
+                <ConvRow
+                  key={c.id}
+                  c={c}
+                  selfId={me?.id ?? ''}
+                  pinned
+                  isTyping={!!typing[c.id]}
+                  typingName={typing[c.id]?.name}
+                  onPin={() => pickPin(c.id)}
+                  onArchive={() => pickArchive(c.id)}
+                />
+              )}
             />
-          ))}
-
-        {!searchOpen && groups.archived.length > 0 && (
-          <div>
-            <button
-              onClick={() => setArchiveOpen((v) => !v)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
-            >
-              <Archive className="h-3.5 w-3.5" /> {t('chat.archived')} ({groups.archived.length})
-              <ChevronDown
-                className={cn(
-                  'ml-auto h-3.5 w-3.5 transition-transform',
-                  archiveOpen && 'rotate-180',
-                )}
-              />
-            </button>
-            {archiveOpen &&
-              groups.archived.map((c) => (
+          )}
+          {!searchOpen && (
+            <Group
+              label={t('chat.unread')}
+              icon={
+                <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">
+                  {groups.unread.length}
+                </span>
+              }
+              items={groups.unread}
+              render={(c) => (
                 <ConvRow
                   key={c.id}
                   c={c}
@@ -276,9 +218,69 @@ export default function MessagesPage() {
                   onPin={() => pickPin(c.id)}
                   onArchive={() => pickArchive(c.id)}
                 />
-              ))}
-          </div>
-        )}
+              )}
+            />
+          )}
+          {!searchOpen && (
+            <Group
+              label={t('chat.recent')}
+              icon={<Inbox className="h-3.5 w-3.5" />}
+              items={groups.recent}
+              render={(c) => (
+                <ConvRow
+                  key={c.id}
+                  c={c}
+                  selfId={me?.id ?? ''}
+                  isTyping={!!typing[c.id]}
+                  typingName={typing[c.id]?.name}
+                  onPin={() => pickPin(c.id)}
+                  onArchive={() => pickArchive(c.id)}
+                />
+              )}
+            />
+          )}
+          {searchOpen &&
+            filteredItems.map((c) => (
+              <ConvRow
+                key={c.id}
+                c={c}
+                selfId={me?.id ?? ''}
+                isTyping={!!typing[c.id]}
+                typingName={typing[c.id]?.name}
+                onPin={() => pickPin(c.id)}
+                onArchive={() => pickArchive(c.id)}
+              />
+            ))}
+
+          {!searchOpen && groups.archived.length > 0 && (
+            <div>
+              <button
+                onClick={() => setArchiveOpen((v) => !v)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+              >
+                <Archive className="h-3.5 w-3.5" /> {t('chat.archived')} ({groups.archived.length})
+                <ChevronDown
+                  className={cn(
+                    'ml-auto h-3.5 w-3.5 transition-transform',
+                    archiveOpen && 'rotate-180',
+                  )}
+                />
+              </button>
+              {archiveOpen &&
+                groups.archived.map((c) => (
+                  <ConvRow
+                    key={c.id}
+                    c={c}
+                    selfId={me?.id ?? ''}
+                    isTyping={!!typing[c.id]}
+                    typingName={typing[c.id]?.name}
+                    onPin={() => pickPin(c.id)}
+                    onArchive={() => pickArchive(c.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
       </div>
     </MobileShell>
   );

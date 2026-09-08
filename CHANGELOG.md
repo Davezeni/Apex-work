@@ -3,6 +3,22 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Desktop & performance batch: lazy chat, image hero, inbox layout (power push #63)
+
+- **Code-split the heavy chat components** — `CallPanel`, `VoiceRecorder`,
+  `AttachButton`, `ReactionPicker`, `StickerPicker` and `WaveformPlayer` are
+  now `next/dynamic` lazy modules in `components/lazy.tsx`, so the initial
+  thread bundle is much smaller and only downloads a picker/panel/player when
+  it actually opens (faster LCP on the message list).
+- **Gig detail hero → `next/image`** — the hero cover now uses `next/image`
+  (`fill`, `priority`, AVIF/WebP, `sizes`) instead of a raw `<img>`, matching
+  the card cover and cutting bandwidth on mobile.
+- **Desktop inbox (`/messages`) layout** — the conversation list is now
+  constrained to a readable `max-w-2xl` on desktop instead of stretching
+  full-width, and the header aligns, so the inbox reads like a proper pane
+  beside the sidebar.
+- Verified: web typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — Security hardening: AI rate-limit + HSTS (power push #62)
 
 - **AI rate limiter** — the whole `/v1/ai/*` namespace (including the public
