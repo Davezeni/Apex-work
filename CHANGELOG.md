@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Desktop two-pane messenger (power push #53)
+
+The open thread is now a real desktop messenger. `messages/[id]` gets a
+dedicated layout that composes the app sidebar and a new always-visible
+**conversation rail** beside the chat, so a desktop user can switch chats and
+navigate without losing the thread.
+
+- **New `DesktopConversationRail`** (`components/desktop/conversation-rail`,
+  300px, `hidden lg:flex`) — live inbox list beside an open thread: search
+  filter, unread-first sort, unread count badges, online dots, live
+  "typing…" indicator, last-message preview + relative time, a `layoutId`
+  active accent that glides to the selected conversation, a Saved Messages
+  shortcut, and a "Say hi" CTA.
+- **`messages/[id]/layout.tsx`** — desktop shell (`DesktopSidebar` +
+  conversation rail + `flex-1` thread `main`) with the full-page thread
+  untouched. Mobile is unchanged (the sidebar and rail are `hidden` below
+  `md`/`lg`), so the full-screen messenger still works on phones.
+
 ## [Unreleased] — Desktop styling: collapsible sidebar + list/grid + micro-animations (power push #52)
 
 The desktop experience gets a modern, animated app feel with the same
