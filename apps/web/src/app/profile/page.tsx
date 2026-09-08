@@ -33,6 +33,7 @@ import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
 import { formatEtb, cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useI18n } from '@/i18n';
 
 export default function ProfilePage() {
@@ -50,12 +51,30 @@ export default function ProfilePage() {
     );
   }
 
-  // Signed in but data still loading
+  // Signed in but data still loading — show a skeleton mirroring the layout.
   if (isLoading || !me) {
     return (
       <MobileShell activeTab="profile">
-        <div className="grid h-[60dvh] place-items-center text-muted-foreground">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <div className="px-4 pt-6">
+          <div className="mb-5 flex items-center justify-between">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+          <div className="flex flex-col items-center py-6 text-center">
+            <Skeleton className="h-24 w-24 rounded-full" />
+            <Skeleton className="mt-4 h-6 w-40" />
+            <Skeleton className="mt-2 h-4 w-28" />
+          </div>
+          <div className="mt-6 grid grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+            ))}
+          </div>
+          <div className="mt-6 space-y-3">
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+            <Skeleton className="h-16 w-full rounded-2xl" />
+          </div>
         </div>
       </MobileShell>
     );

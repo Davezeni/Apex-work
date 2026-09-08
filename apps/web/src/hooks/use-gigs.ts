@@ -51,19 +51,22 @@ export interface GigDetail extends GigListItem {
 }
 
 /** Public gig list, cursor-paginated. */
-export function useGigs(params: { category?: string; q?: string; limit?: number } = {}) {
+export function useGigs(
+  params: { category?: string; q?: string; limit?: number; cursor?: string | null } = {},
+) {
   const search = new URLSearchParams();
   if (params.category) search.set('category', params.category);
   if (params.q) search.set('q', params.q);
   if (params.limit) search.set('limit', String(params.limit));
+  if (params.cursor) search.set('cursor', params.cursor);
   const qs = search.toString();
 
   return useQuery<{ items: GigListItem[]; nextCursor: string | null; hasMore: boolean }>({
     queryKey: ['gigs', params],
     queryFn: () => apiFetch(`/gigs${qs ? `?${qs}` : ''}`),
+    placeholderData: keepPreviousData,
     staleTime: 60 * 1000, // Matches API cache TTL — no wasted refetches.
     gcTime: 5 * 60 * 1000,
-    placeholderData: keepPreviousData,
   });
 }
 

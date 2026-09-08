@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -19,6 +19,7 @@ import {
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
+import { apiFetch } from '@/lib/api';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -67,10 +68,62 @@ function BrowseInner() {
   // Localise the category label (name from constants stays English, but the
   // 'All categories' pseudo-option needs to translate).
 
+  // Cursor-paginated feed: keep the accumulated pages so "Load more" appends
+  // instead of replacing. `items` holds everything fetched so far; when the
+  // cursor/query/category changes we reset back to the first page.
+  const [items, setItems] = useState<GigListItem[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const { data, isLoading } = useGigs({
     category: category ?? undefined,
     limit: 30,
   });
+  // First page result — accuminates the fresh page, replacing any stale acc.
+  useEffect(() => {
+    if (!data) return;
+    setItems(data.items);
+    setCursor(data.nextCursor);
+    setHasMore(data.hasMore);
+  }, [data]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !cursor) return;
+    setLoadingMore(true);
+    try {
+      const next = await apiFetch<{
+        items: GigListItem[];
+        nextCursor: string | null;
+        hasMore: boolean;
+      }>(`/gigs?limit=30${category ? `&category=${category}` : ''}&cursor=${cursor}`);
+      setItems((prev) => {
+        const existing = new Set(prev.map((g) => g.id));
+        return [...prev, ...next.items.filter((g) => !existing.has(g.id))];
+      });
+      setCursor(next.nextCursor);
+      setHasMore(next.hasMore);
+    } catch {
+      /* keep current list; button can retry */
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Auto-fetch the next page when the sentinel scrolls into view.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMore();
+      },
+      { rootMargin: '600px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, cursor, category]);
 
   const setCategoryUrl = (c: string | null) => {
     setCategory(c);
@@ -78,7 +131,7 @@ function BrowseInner() {
     router.replace(`/browse${qs}`);
   };
 
-  const sorted = [...(data?.items ?? [])]
+  const sorted = [...items]
     .filter((g) => {
       const q = query.trim().toLowerCase();
       if (!q) return true;
@@ -263,6 +316,24 @@ function BrowseInner() {
           </motion.div>
         ))}
       </div>
+
+      {!isLoading && sorted.length > 0 && hasMore && (
+        <div ref={sentinelRef} className="flex justify-center px-4 pb-10">
+          <button
+            onClick={() => void loadMore()}
+            disabled={loadingMore}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-muted-foreground active:scale-95 disabled:opacity-50"
+          >
+            {loadingMore ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+              </>
+            ) : (
+              'Load more'
+            )}
+          </button>
+        </div>
+      )}
     </MobileShell>
   );
 }

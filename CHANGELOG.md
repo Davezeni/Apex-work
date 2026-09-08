@@ -3,6 +3,17 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Infinite-scroll browse + profile skeleton (power push #66)
+
+- **Infinite scroll on Browse** — the list now loads 30 gigs and keeps appending
+  as you scroll (an IntersectionObserver sentinel + explicit "Load more" button
+  with `cursor` pagination), instead of hard-stopping at 30. Dedupe by id; the
+  first page resets when the category changes.
+- **Profile skeleton** — while your profile loads it shows a shimmering skeleton
+  (avatar, name, stats grid, action cards) instead of a bare spinner, matching
+  the layout.
+- Verified: api+web typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — OTP login fix + messenger & polish batch (power push #65)
 
 ### Fixed
