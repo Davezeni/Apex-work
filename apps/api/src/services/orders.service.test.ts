@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const { prismaMock, notifyMock } = vi.hoisted(() => ({
   prismaMock: {
     gig: { findUnique: vi.fn() },
-    order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn() },
+    order: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), findUniqueOrThrow: vi.fn(), findMany: vi.fn() },
     payment: { create: vi.fn(), updateMany: vi.fn() },
     wallet: { update: vi.fn(), upsert: vi.fn() },
     user: { update: vi.fn() },
-    transaction: { create: vi.fn() },
+    transaction: { create: vi.fn(), findFirst: vi.fn() },
     $transaction: vi.fn(),
   },
   notifyMock: vi.fn(),
@@ -18,6 +18,7 @@ vi.mock('./notifications.service.js', () => ({ notify: notifyMock }));
 
 import {
   acceptDelivery,
+  autoReleaseEscrow,
   cancelOrder,
   confirmPaymentByTxRef,
   createOrderAndInitiatePayment,
@@ -122,11 +123,17 @@ describe('order escrow lifecycle', () => {
 
   it('refunds the client ledger and removes held funds when an active order is cancelled', async () => {
     prismaMock.order.findUnique.mockResolvedValue({ ...order, status: 'ACTIVE' });
-    prismaMock.order.update.mockResolvedValue({ ...order, status: 'CANCELLED' });
+    // cancelOrder now claims the transition via updateMany (CAS) and reads back.
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.order.findUniqueOrThrow.mockResolvedValue({ ...order, status: 'CANCELLED' });
 
     const result = await cancelOrder(order.id, order.clientId, 'Client changed scope');
 
     expect(result.status).toBe('CANCELLED');
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: order.id, status: { in: ['PENDING', 'ACTIVE'] } },
+      data: expect.objectContaining({ status: 'CANCELLED' }),
+    }));
     expect(prismaMock.wallet.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { userId: order.sellerId },
       data: { pendingEtb: { decrement: order.sellerNetEtb } },
@@ -135,6 +142,49 @@ describe('order escrow lifecycle', () => {
       data: expect.objectContaining({ type: 'ORDER_REFUND', amountEtb: order.amountEtb }),
     }));
     expect(notifyMock).toHaveBeenCalledWith(expect.objectContaining({ userId: order.sellerId }));
+  });
+
+  it('aborts a concurrent cancellation (0 rows claimed) without refunding or notifying', async () => {
+    prismaMock.order.findUnique.mockResolvedValue({ ...order, status: 'ACTIVE' });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 }); // already cancelled concurrently
+
+    await expect(cancelOrder(order.id, order.clientId)).rejects.toThrow(/already been cancelled/i);
+    expect(prismaMock.wallet.update).not.toHaveBeenCalled();
+    expect(prismaMock.transaction.create).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('only notifies once when the same payment is claimed, even on a duplicate webhook', async () => {
+    const pendingOrder = {
+      ...order,
+      status: 'PENDING' as const,
+      payments: [{ id: 'payment-1', status: 'PENDING' as const, providerRef: 'apex-order-1' }],
+      seller: { id: order.sellerId },
+      gig: { title: order.title },
+    };
+    const verify = vi.spyOn(chapa, 'verify').mockResolvedValue({
+      ok: true,
+      status: 'success',
+      amount: order.amountEtb,
+      method: 'telebirr',
+      raw: { status: 'success' },
+    });
+    prismaMock.order.findUnique.mockResolvedValue(pendingOrder);
+    prismaMock.wallet.upsert.mockResolvedValue({ userId: order.sellerId });
+
+    // First (winning) call flips the payment and notifies.
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.order.update.mockResolvedValue({ ...pendingOrder, status: 'ACTIVE' });
+    await confirmPaymentByTxRef('apex-order-1');
+    const firstNotifyCalls = notifyMock.mock.calls.length;
+    expect(firstNotifyCalls).toBe(2);
+
+    // Duplicate webhook: payment already claimed -> count 0 -> no re-notify.
+    prismaMock.payment.updateMany.mockResolvedValue({ count: 0 });
+    const res = await confirmPaymentByTxRef('apex-order-1');
+    expect(res.updated).toBe(false);
+    expect(notifyMock.mock.calls.length).toBe(firstNotifyCalls);
+    verify.mockRestore();
   });
 });
 
@@ -230,5 +280,70 @@ describe('checkout payment flow', () => {
     }));
     expect(notifyMock).toHaveBeenCalledTimes(2);
     verify.mockRestore();
+  });
+});
+
+describe('escrow auto-release', () => {
+  const deliverable = {
+    id: 'order-rel',
+    clientId: 'client-1',
+    sellerId: 'seller-1',
+    title: 'Task',
+    amountEtb: 1000,
+    sellerNetEtb: 900,
+    platformFeeEtb: 100,
+    deliveredAt: new Date(),
+  };
+
+  it('claims DELIVERED -> COMPLETED before paying (CAS), then notifies once', async () => {
+    // reminder query returns none; release query returns one deliverable.
+    prismaMock.order.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([deliverable]);
+    prismaMock.transaction.findFirst.mockResolvedValue(null); // no prior payout
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 }); // CAS claim wins
+    prismaMock.wallet.upsert.mockResolvedValue({});
+    prismaMock.user.update.mockResolvedValue({});
+
+    const res = await autoReleaseEscrow();
+
+    expect(res.released).toBe(1);
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'order-rel', status: 'DELIVERED' },
+      data: expect.objectContaining({ status: 'COMPLETED' }),
+    }));
+    expect(prismaMock.transaction.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ type: 'ORDER_PAYOUT', relatedId: 'order-rel' }),
+    }));
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips an order already paid (0 rows claimed / dup payout) — no double payout', async () => {
+    prismaMock.order.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([deliverable]);
+    // A payout ledger entry already exists for this order -> skip.
+    prismaMock.transaction.findFirst.mockResolvedValue({ id: 'existing-payout' });
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+
+    const res = await autoReleaseEscrow();
+
+    expect(res.released).toBe(0);
+    expect(prismaMock.transaction.create).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('skips when a concurrent release already flipped the order to COMPLETED (0 rows)', async () => {
+    prismaMock.order.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([deliverable]);
+    prismaMock.transaction.findFirst.mockResolvedValue(null);
+    prismaMock.order.updateMany.mockResolvedValue({ count: 0 }); // lost the race
+
+    const res = await autoReleaseEscrow();
+
+    expect(res.released).toBe(0);
+    expect(prismaMock.transaction.create).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
   });
 });

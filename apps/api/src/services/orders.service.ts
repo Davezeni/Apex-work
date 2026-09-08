@@ -201,7 +201,9 @@ export async function confirmPaymentByTxRef(txRef: string) {
       },
     });
     // Race protection: only advance if we actually flipped a pending payment.
-    if (p.count === 0) return order;
+    // If another request (duplicate webhook) already claimed it, `p.count === 0`
+    // and we must NOT re-run the ledger/wallet mutations NOR re-notify.
+    if (p.count === 0) return { order, claimed: false };
 
     // Ensure the seller has a wallet.
     await tx.wallet.upsert({
@@ -239,29 +241,32 @@ export async function confirmPaymentByTxRef(txRef: string) {
       },
     });
 
-    return tx.order.update({
+    return { order: await tx.order.update({
       where: { id: order.id },
       data: { status: 'ACTIVE' },
+    }), claimed: true };
+  });
+
+  // Fire notifications ONLY when THIS request actually claimed the pending
+  // payment — a duplicate webhook that lost the race must not re-notify.
+  if (updatedOrder.claimed) {
+    await notify({
+      userId: order.sellerId,
+      type: 'ORDER_UPDATE',
+      title: 'New order! 🎉',
+      body: `${order.title} — get started to keep your rating high.`,
+      payload: { orderId: order.id },
     });
-  });
+    await notify({
+      userId: order.clientId,
+      type: 'PAYMENT',
+      title: 'Payment confirmed',
+      body: `Your payment for ${order.title} was successful.`,
+      payload: { orderId: order.id },
+    });
+  }
 
-  // Fire notifications post-commit (never inside the transaction — they use I/O).
-  await notify({
-    userId: order.sellerId,
-    type: 'ORDER_UPDATE',
-    title: 'New order! 🎉',
-    body: `${order.title} — get started to keep your rating high.`,
-    payload: { orderId: order.id },
-  });
-  await notify({
-    userId: order.clientId,
-    type: 'PAYMENT',
-    title: 'Payment confirmed',
-    body: `Your payment for ${order.title} was successful.`,
-    payload: { orderId: order.id },
-  });
-
-  return { order: updatedOrder, updated: true };
+  return { order: updatedOrder.order, updated: updatedOrder.claimed };
 }
 
 /** Client marks the delivery as accepted. Releases funds to seller balance. */
@@ -382,7 +387,18 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
   const next = transitionGuard(order.status, 'CANCEL', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
+    // Atomically claim PENDING/ACTIVE → CANCELLED. Only the request that flips
+    // exactly one row wins; a concurrent cancellation matches 0 rows and
+    // aborts — so the wallet/ledger refund below runs at most once.
+    const claimed = await tx.order.updateMany({
+      where: { id: order.id, status: { in: ['PENDING', 'ACTIVE'] } },
+      data: { status: next, cancelledAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictError('Order has already been cancelled or changed');
+    }
     // Refund pending funds to seller wallet ledger (if payment was captured).
+    // Only an ACTIVE order holds escrowed funds; PENDING holds none.
     if (order.status === 'ACTIVE') {
       await tx.wallet.update({
         where: { userId: order.sellerId },
@@ -398,10 +414,7 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
         },
       });
     }
-    return tx.order.update({
-      where: { id: order.id },
-      data: { status: next, cancelledAt: new Date() },
-    });
+    return tx.order.findUniqueOrThrow({ where: { id: order.id } });
   });
 
   const other = order.clientId === userId ? order.sellerId : order.clientId;
@@ -498,8 +511,25 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
   });
   let releasedCount = 0;
   for (const o of released) {
+    let outcome: 'released' | 'skipped' = 'skipped';
     try {
-      await prisma.$transaction(async (tx) => {
+      outcome = await prisma.$transaction(async (tx) => {
+        // Idempotency guard: this order may already have been paid (e.g. a
+        // concurrent auto-release or a manual accept that ran first).
+        const dup = await tx.transaction.findFirst({
+          where: { relatedId: o.id, type: 'ORDER_PAYOUT' },
+          select: { id: true },
+        });
+        if (dup) return 'skipped';
+        // Atomically claim DELIVERED → COMPLETED BEFORE paying. The request that
+        // matches exactly one row owns the payout; a concurrent one matches 0
+        // rows and returns 'skipped', so funds move at most once.
+        const claimed = await tx.order.updateMany({
+          where: { id: o.id, status: 'DELIVERED' },
+          data: { status: 'COMPLETED', completedAt: new Date() },
+        });
+        if (claimed.count === 0) return 'skipped';
+
         await tx.wallet.upsert({
           where: { userId: o.sellerId },
           create: { userId: o.sellerId, balanceEtb: o.sellerNetEtb, lifetimeEarnedEtb: o.sellerNetEtb },
@@ -519,11 +549,13 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
             description: `Auto-released: ${o.title}`, relatedId: o.id,
           },
         });
-        await tx.order.update({
-          where: { id: o.id },
-          data: { status: 'COMPLETED', completedAt: new Date() },
-        });
+        return 'released';
       });
+    } catch {
+      // Individual failure (e.g. transient DB error) shouldn't stop the batch.
+      continue;
+    }
+    if (outcome === 'released') {
       await notify({
         userId: o.sellerId, type: 'PAYMENT',
         title: 'Auto-released 💰',
@@ -531,8 +563,6 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         payload: { orderId: o.id, autoRelease: true },
       });
       releasedCount++;
-    } catch {
-      // Individual failure shouldn't stop the batch.
     }
   }
   return { released: releasedCount, reminded };

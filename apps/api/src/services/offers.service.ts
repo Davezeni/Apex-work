@@ -133,6 +133,16 @@ export async function respondToOffer(
   const sellerNet = offer.priceEtb - fee;
 
   const order = await prisma.$transaction(async (tx) => {
+    // Atomically claim PENDING → ACCEPTED (still unexpired). If a concurrent
+    // request already accepted/declined/cancelled it, this matches 0 rows and
+    // we abort — so only ONE order is ever created for an offer.
+    const claimed = await tx.customOffer.updateMany({
+      where: { id: offer.id, status: 'PENDING', expiresAt: { gt: new Date() } },
+      data: { status: 'ACCEPTED', respondedAt: new Date() },
+    });
+    if (claimed.count === 0) {
+      throw new ConflictError('This offer is no longer active');
+    }
     const o = await tx.order.create({
       data: {
         clientId: offer.recipientId,
@@ -151,7 +161,7 @@ export async function respondToOffer(
     });
     await tx.customOffer.update({
       where: { id: offer.id },
-      data: { status: 'ACCEPTED', respondedAt: new Date(), orderId: o.id },
+      data: { orderId: o.id },
     });
     return o;
   });

@@ -290,7 +290,24 @@ export async function acceptBid(bidId: string, clientId: string) {
     description: `Job: ${bid.job.title.slice(0, 40)}`,
   });
   if (!init.ok || !init.checkoutUrl) {
-    await prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
+    // Payment initialization failed — the provisional order is removed AND the
+    // job is restored to open so the client isn't left with a permanently
+    // closed job that has no payable order. Done transactionally.
+    await prisma.$transaction(async (tx) => {
+      await tx.order.delete({ where: { id: order.id } });
+      await tx.job.update({
+        where: { id: bid.jobId },
+        data: { isOpen: true, closedAt: null },
+      });
+    }).catch(() => {
+      // Belt-and-suspenders: if the transaction fails, at least remove the order
+      // and restore the job individually so the job is never permanently closed.
+      void prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
+      void prisma.job.update({
+        where: { id: bid.jobId },
+        data: { isOpen: true, closedAt: null },
+      }).catch(() => undefined);
+    });
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
   await prisma.payment.create({

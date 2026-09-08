@@ -3,6 +3,39 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Security & concurrency audit #2 (remaining README blockers)
+
+Fixes the remaining high-priority findings from the security/concurrency re-audit:
+
+- **Order cancellation race** (`orders.service.ts`) — `cancelOrder` now atomically
+  claims `PENDING/ACTIVE → CANCELLED` via a conditional CAS on the order status
+  and refunds (wallet/ledger) only when exactly one row is claimed. A concurrent
+  cancellation matches 0 rows and aborts, so funds are refunded at most once.
+- **Escrow auto-release race** (`orders.service.ts`) — `autoReleaseEscrow` now
+  claims `DELIVERED → COMPLETED` (CAS) BEFORE paying, and adds an order-based
+  idempotency guard (skips if an `ORDER_PAYOUT` ledger row already exists for
+  the order). A concurrent release or a manual accept can't double-pay.
+- **Custom-offer acceptance race** (`offers.service.ts`) — `respondToOffer`
+  claims `PENDING → ACCEPTED` (still unexpired) atomically before creating the
+  order; a concurrent accept/cancel matches 0 rows and aborts, so exactly one
+  order is ever created for an offer.
+- **Failed payment init no longer permanently closes a job** (`jobs.service.ts`)
+  — `acceptBid` now transactionally deletes the provisional order AND restores
+  `isOpen=true`/`closedAt=null` when Chapa initialization fails, with a
+  belt-and-suspenders fallback so a job is never left permanently closed.
+- **Saved Messages identity** (`chat.service.ts`) — `getSavedMessages` and the
+  conversation shaper now require an exact identity (1-member, non-group,
+  titled `'Saved Messages'`) so they can never match an ordinary DM.
+- **Duplicate payment notifications** (`orders.service.ts`) — `confirmPaymentByTxRef`
+  now notifies ONLY when the current request actually claimed the pending
+  payment (loser of a duplicate-webhook race is silent).
+- **Provider-side dispute refunds** — already documented as manual; kept as-is
+  (matches the live product contract where `CHAPA_TRANSFERS_ENABLED` is off).
+- Added regression tests: concurrent cancel, concurrent auto-release (idempotent),
+  duplicate payment webhook, offer accept race, job reopen on payment-init
+  failure. **236 unit tests pass** (44 files), api + web typecheck 0 errors,
+  api lint clean.
+
 ## [Unreleased] — PWA + desktop layout polish (power push #72)
 
 - **PWA notification icons** (`public/sw.js`) — fixed the push-notification

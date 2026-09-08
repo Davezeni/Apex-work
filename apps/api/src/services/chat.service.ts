@@ -112,8 +112,16 @@ export async function assertBothMembers(conversationId: string, a: string, b: st
  * conversation (only you). Used to bookmark messages, voice notes and files.
  */
 export async function getSavedMessages(userId: string) {
+  // Exact Saved-Messages identity: a 1-member, non-group conversation that is
+  // titled 'Saved Messages' and whose only member is the user. This guarantees
+  // we never mistake an ordinary single-person/conversation (or a DM) for the
+  // personal bookmarks chat.
   const existing = await prisma.conversation.findFirst({
-    where: { isGroup: false, members: { every: { userId } } },
+    where: {
+      isGroup: false,
+      title: 'Saved Messages',
+      members: { every: { userId } },
+    },
     include: conversationInclude(userId),
   });
   if (existing) {
@@ -189,7 +197,7 @@ export async function getConversation(conversationId: string, userId: string) {
   const shaped = shapeConversation(conv, userId, membership?.lastReadAt ?? null);
   return {
     ...shaped,
-    isSaved: !conv.isGroup && conv.members.length === 1,
+    isSaved: isSavedMessageConversation(conv),
     createdAt: conv.createdAt,
     members: conv.members.map((m) => ({
       userId: m.userId,
@@ -651,6 +659,16 @@ const conversationInclude = (_selfId: string) => ({
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/** A conversation is the user's personal Saved Messages only when it is a
+ * 1-member, non-group chat titled 'Saved Messages'. */
+function isSavedMessageConversation(conv: {
+  isGroup: boolean;
+  title: string | null;
+  members: unknown[];
+}): boolean {
+  return !conv.isGroup && conv.title === 'Saved Messages' && conv.members.length === 1;
+}
+
 function shapeConversation(conv: any, selfId: string, lastReadAt: Date | null) {
   const peer = conv.members.find((m: { userId: string }) => m.userId !== selfId)?.user;
   const lastMessage = conv.messages[0] ?? null;
