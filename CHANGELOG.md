@@ -3,6 +3,23 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Fix: AI support bubble + desktop Create (+) now always visible (power push #55)
+
+- **AI support bubble** is no longer hidden by the auth gate. Previously the
+  floating assistant was gated behind `isAuthed` (so it vanished whenever
+  `/me` returned 401/cleared session) and hidden on several routes. It now
+  shows on **every route for everyone** — signed-in or not — because the
+  fallback reply engine works without a session. It's still hidden only where
+  it would obstruct the core UI: `admin`, `login`, `signup`, `resume/preview`,
+  and *mobile* chat threads (the composer). On desktop it's visible even on
+  open threads.
+- **Desktop floating Create (+)** — a new bottom-right `+` FAB appears on
+  `md+` (the mobile center FAB is `md:hidden`, so desktop had no floating add
+  affordance). It opens the same Create bottom sheet. Flat violet, ring,
+  shadow + hover lift, consistent with the new flat-brand buttons.
+- The AI bubble sits above it (bottom-right), both clear of the sticky header
+  and sidebar.
+
 ## [Unreleased] — Brand sweep: drop the rainbow gradient + richer desktop browse (power push #54)
 
 The app no longer looks like a stock "vibe-coder" AI app. The loud

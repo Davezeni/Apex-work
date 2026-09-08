@@ -78,6 +78,19 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
       </motion.main>
       <PwaInstall />
 
+      {/* Desktop floating Create (+) — visible on md+ across the shell. On
+          mobile the center FAB in the bottom tab bar is the add affordance. */}
+      <button
+        onClick={() => {
+          haptic();
+          setSheetOpen(true);
+        }}
+        aria-label="Create"
+        className="fixed bottom-6 right-5 z-40 hidden h-14 w-14 grid-cols-1 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40 ring-1 ring-primary/30 transition-transform hover:scale-105 hover:brightness-110 active:scale-95 md:grid"
+      >
+        <Plus className="h-6 w-6" strokeWidth={2.5} />
+      </button>
+
       {showTabBar && (
         <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 md:hidden">
           <div className="mobile-bottom-nav__bar mx-auto grid max-w-md grid-cols-5 items-center px-4 pb-1.5 pt-1">

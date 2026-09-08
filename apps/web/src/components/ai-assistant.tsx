@@ -8,6 +8,19 @@ import { useAIChat, useAIStatus } from '@/hooks/use-ai';
 import { useMe } from '@/hooks/use-me';
 import { cn } from '@/lib/utils';
 
+/** Match a media query client-side (SSR-safe: defaults to false). */
+function useIsDesktop(): boolean {
+  const [is, setIs] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const on = () => setIs(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return is;
+}
+
 /**
  * Floating AI Chat Assistant — appears as a small bubble bottom-right on
  * every page. Tap to open a mini chat panel with product-aware answers.
@@ -65,6 +78,7 @@ function localAssistantReply(input: string): string {
 export function AIAssistant() {
   const pathname = usePathname();
   const { isAuthed } = useMe();
+  const isDesktop = useIsDesktop();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -72,8 +86,16 @@ export function AIAssistant() {
   const aiStatus = useAIStatus(open && isAuthed);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Hide on the routes above OR when signed out (bot is a logged-in feature).
-  const hidden = !isAuthed || HIDE_ON.some((p) => pathname.startsWith(p));
+  // The support bubble is always available (fallback replies work even when
+  // signed out). Hide only where it would obstruct core UI: on mobile chat
+  // threads (composer) and on admin/login/signup/resume-preview surfaces.
+  // On desktop it stays visible on every route, including open threads.
+  const hidden =
+    (!isDesktop && pathname.startsWith('/messages/')) ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/resume/preview');
 
   useEffect(() => {
     try {
