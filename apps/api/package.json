@@ -18,7 +18,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "db:reactivate": "node scripts/reactivate-user.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -228,6 +228,19 @@ function LoginInner() {
   // Step: otp — full verification
   // ---------------------------------------
   const submittingRef = useRef(false);
+  const handleLoginError = (err: unknown) => {
+    const e = err as ApiError;
+    // A suspended account (isActive=false) currently returns a bare "Account
+    // inactive" 401. Surface it as a clear, actionable message so the user isn't
+    // met with a dead-end, and point them to support/help.
+    if (e?.status === 401 && /inactive|suspend/i.test(e.message ?? '')) {
+      toast.error('This account is suspended. Contact support to have it restored.', {
+        duration: 6000,
+      });
+      return;
+    }
+    toast.error(e?.message ?? 'Login failed');
+  };
   const verifyAndLogin = async (submittedCode?: string) => {
     const c = submittedCode ?? code;
     // Guard against duplicate submission: pasting/typing the last digit fires
@@ -247,9 +260,8 @@ function LoginInner() {
       });
       finishLogin(result, phone);
     } catch (err) {
-      const e = err as ApiError;
       setCode('');
-      toast.error(e.message ?? 'Login failed');
+      handleLoginError(err);
     } finally {
       setLoading(false);
       submittingRef.current = false;
