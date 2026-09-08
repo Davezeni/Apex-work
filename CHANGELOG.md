@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Security hardening: AI rate-limit + HSTS (power push #62)
+
+- **AI rate limiter** — the whole `/v1/ai/*` namespace (including the public
+  `/ai/status` probe) is now capped at **20 calls / min / client** via a
+  Redis-backed `aiLimiter` that falls back to an in-memory counter during a
+  Redis outage (the existing resilient store). Every AI call hits an LLM
+  provider, so this guards cost + latency and abuse. New
+  `RATE_LIMITS.ai` constant in shared.
+- **Frontend security headers** — added `Strict-Transport-Security`
+  (`max-age=31536000; includeSubDomains`) and `X-DNS-Prefetch-Control` to the
+  web. The app already had `X-Frame-Options: SAMEORIGIN`, `nosniff`,
+  `Referrer-Policy`, and `Permissions-Policy` (camera/mic/geo).
+
 ## [Unreleased] — OTP/PIN login hardening (power push #61)
 
 Verified the phone OTP login flow end-to-end and hardened every code input.

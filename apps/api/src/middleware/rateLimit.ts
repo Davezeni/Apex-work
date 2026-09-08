@@ -113,6 +113,11 @@ export const otpLimiter = makeLimiter('otp', RATE_LIMITS.otp.window, RATE_LIMITS
   },
 });
 export const apiLimiter = makeLimiter('api', RATE_LIMITS.api.window, RATE_LIMITS.api.max);
+/**
+ * AI-limiter — tighter than the general limiter because every AI call hits an
+ * LLM provider (cost + latency). 20 calls / min per IP/user.
+ */
+export const aiLimiter = makeLimiter('ai', RATE_LIMITS.ai.window, RATE_LIMITS.ai.max);
 
 /**
  * PIN-specific limiter. PINs have only 1M possible values (6 digits), so an

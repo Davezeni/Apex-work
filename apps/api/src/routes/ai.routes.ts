@@ -14,6 +14,7 @@ import {
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
+import { aiLimiter } from '../middleware/rateLimit.js';
 import { success } from '../lib/response.js';
 import { env } from '../config/env.js';
 import * as ai from '../services/ai.service.js';
@@ -21,6 +22,10 @@ import * as studioAi from '../services/resumeStudioAi.service.js';
 import * as tailorAi from '../services/resumeTailorAi.service.js';
 
 const router: Router = Router();
+
+// Every AI call hits an LLM provider, so cap the whole /ai namespace (incl.
+// the public /status probe) tighter than the general API limiter.
+router.use(aiLimiter);
 
 /** Public, non-secret diagnostic so the UI can explain whether live AI is available. */
 router.get('/status', (_req, res) => {

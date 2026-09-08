@@ -47,6 +47,9 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Force HTTPS on the main domain (Vercel serves over TLS).
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
           // Allow same-origin usage of camera, mic, geolocation, and
           // display-capture (screen-share) so WebRTC calls, voice notes,
           // "Nearby" location search, and Fullscreen mode all work.

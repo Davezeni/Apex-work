@@ -111,6 +111,7 @@ export const RATE_LIMITS = {
   otp: { window: 60 * 60 * 1000, max: 15 }, // 15 OTPs / hour (raised from 5 for beta testing)
   api: { window: 15 * 60 * 1000, max: 300 }, // general API
   messages: { window: 60 * 1000, max: 60 }, // 60 msgs / min
+  ai: { window: 60 * 1000, max: 20 }, // 20 AI calls / min (calls an LLM — cost guard)
 } as const;
 
 /** File upload limits */
