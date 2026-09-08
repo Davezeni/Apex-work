@@ -5,7 +5,7 @@ import { success } from '../lib/response.js';
 import { NotFoundError } from '../lib/errors.js';
 import { SETTING_KEYS, getSetting } from '../services/admin/settings.service.js';
 import { sanitiseAnnouncement } from '../lib/announcement.js';
-import { getContentPage } from '../services/content.service.js';
+import { getContentPage, getSiteConfig } from '../services/content.service.js';
 
 const router: Router = Router();
 
@@ -18,7 +18,15 @@ router.get(
   }),
 );
 
-/** GET /content/:slug — an editable content page (privacy/terms/cookies/faq). */
+/** GET /content/site — brand + contact details used across the app. */
+router.get(
+  '/site',
+  asyncHandler(async (_req, res) => {
+    return success(res, await getSiteConfig());
+  }),
+);
+
+/** GET /content/:slug — an editable content page (about/contact/privacy/faq…). */
 router.get(
   '/:slug',
   asyncHandler(async (req, res) => {

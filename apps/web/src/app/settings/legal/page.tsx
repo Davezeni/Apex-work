@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, FileText, Shield, Cookie, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, Cookie, Trash2, Info, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useI18n } from '@/i18n';
 
@@ -12,7 +12,11 @@ export default function LegalPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">Legal & Privacy</h1>
@@ -27,10 +31,25 @@ export default function LegalPage() {
       </section>
 
       <div className="mx-3 mt-6 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-        <LegalRow href="/legal/terms" icon={<FileText className="h-4 w-4" />} label="Terms of Service" />
-        <LegalRow href="/legal/privacy" icon={<Shield className="h-4 w-4" />} label="Privacy Policy" />
+        <LegalRow href="/about" icon={<Info className="h-4 w-4" />} label="About us" />
+        <LegalRow href="/contact" icon={<MessageCircle className="h-4 w-4" />} label="Contact us" />
+        <LegalRow
+          href="/legal/terms"
+          icon={<FileText className="h-4 w-4" />}
+          label="Terms of Service"
+        />
+        <LegalRow
+          href="/legal/privacy"
+          icon={<Shield className="h-4 w-4" />}
+          label="Privacy Policy"
+        />
         <LegalRow href="/legal/cookies" icon={<Cookie className="h-4 w-4" />} label="Cookies" />
-        <LegalRow href="/settings/delete" icon={<Trash2 className="h-4 w-4" />} label="Delete my account" destructive />
+        <LegalRow
+          href="/settings/delete"
+          icon={<Trash2 className="h-4 w-4" />}
+          label="Delete my account"
+          destructive
+        />
       </div>
 
       <p className="mx-4 mt-8 text-center text-[11px] text-muted-foreground">
@@ -41,10 +60,21 @@ export default function LegalPage() {
 }
 
 function LegalRow({
-  href, icon, label, destructive,
-}: { href: string; icon: React.ReactNode; label: string; destructive?: boolean }) {
+  href,
+  icon,
+  label,
+  destructive,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  destructive?: boolean;
+}) {
   return (
-    <Link href={href} className="flex items-center gap-3 px-4 py-3.5 text-sm font-semibold active:bg-muted">
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-4 py-3.5 text-sm font-semibold active:bg-muted"
+    >
       <span className={destructive ? 'text-red-500' : 'text-muted-foreground'}>{icon}</span>
       <span className={destructive ? 'text-red-500' : ''}>{label}</span>
     </Link>

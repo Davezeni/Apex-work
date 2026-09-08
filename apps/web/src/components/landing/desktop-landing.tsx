@@ -66,9 +66,9 @@ export function DesktopLanding() {
 
   const navLinks = [
     { label: 'Browse', href: '/browse' },
-    { label: 'How it works', href: '/#how' },
+    { label: 'How it works', href: '/how-it-works' },
     { label: 'AI Tools', href: '/ai' },
-    { label: 'Pricing', href: '/#pricing' },
+    { label: 'About', href: '/about' },
   ];
 
   return (
@@ -354,7 +354,24 @@ export function DesktopLanding() {
               </span>
               © 2026 {APP_NAME} · Made with 🇪🇹 in Addis Ababa
             </div>
-            <div className="text-xs text-muted-foreground">Built on 100% open source</div>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <Link className="hover:text-foreground" href="/about">
+                About
+              </Link>
+              <Link className="hover:text-foreground" href="/contact">
+                Contact
+              </Link>
+              <Link className="hover:text-foreground" href="/trust-safety">
+                Trust & safety
+              </Link>
+              <Link className="hover:text-foreground" href="/legal/privacy">
+                Privacy
+              </Link>
+              <Link className="hover:text-foreground" href="/legal/terms">
+                Terms
+              </Link>
+              <span>Built on 100% open source</span>
+            </div>
           </div>
         </div>
       </footer>

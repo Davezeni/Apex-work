@@ -19,7 +19,10 @@ import {
   listContentPages,
   getContentPage,
   upsertContentPage,
+  getSiteConfig,
+  upsertSiteConfig,
   CONTENT_PAGES,
+  DEFAULT_SITE_CONFIG,
 } from './content.service.js';
 
 describe('content service', () => {
@@ -86,5 +89,41 @@ describe('content service', () => {
     await expect(
       upsertContentPage('nope', { title: 'X', markdown: 'Y' }, 'admin-1'),
     ).rejects.toThrow(/Unknown content page/);
+  });
+
+  it('returns the bundled site config defaults when unset', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue(null);
+    const cfg = await getSiteConfig();
+    expect(cfg).toEqual(DEFAULT_SITE_CONFIG);
+  });
+
+  it('returns a stored (edited) site config', async () => {
+    prismaMock.appSetting.findUnique.mockResolvedValue({
+      key: 'content.site',
+      value: { ...DEFAULT_SITE_CONFIG, supportEmail: 'hello@apex-work.com' },
+    });
+    const cfg = await getSiteConfig();
+    expect(cfg.supportEmail).toBe('hello@apex-work.com');
+    expect(cfg.brandName).toBe(DEFAULT_SITE_CONFIG.brandName);
+  });
+
+  it('persists a site config edit and invalidates the cache', async () => {
+    const { redis } = await import('../lib/redis.js');
+    prismaMock.appSetting.upsert.mockResolvedValue({
+      key: 'content.site',
+      value: DEFAULT_SITE_CONFIG,
+    });
+    const cfg = await upsertSiteConfig(
+      { ...DEFAULT_SITE_CONFIG, supportPhone: '+251900000000' },
+      'admin-1',
+    );
+    expect(cfg.supportPhone).toBe('+251900000000');
+    expect(redis.del).toHaveBeenCalledWith('apex-cache:content:site');
+  });
+
+  it('rejects an invalid site config (bad email)', async () => {
+    await expect(
+      upsertSiteConfig({ ...DEFAULT_SITE_CONFIG, supportEmail: 'nope' }, 'admin-1'),
+    ).rejects.toThrow();
   });
 });

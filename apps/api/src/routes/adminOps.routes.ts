@@ -919,17 +919,46 @@ router.post(
 
 // ================= EDITABLE CONTENT PAGES =================
 
-const contentPageSchema = z.object({
-  title: z.string().trim().min(1).max(120),
-  markdown: z.string().max(60_000),
+const siteConfigSchema = z.object({
+  brandName: z.string().trim().min(1).max(60),
+  tagline: z.string().trim().max(200),
+  supportEmail: z.string().trim().toLowerCase().email().max(160),
+  supportPhone: z.string().trim().max(30),
+  supportTelegram: z.string().trim().max(200),
+  privacyEmail: z.string().trim().toLowerCase().email().max(160),
+  legalEmail: z.string().trim().toLowerCase().email().max(160),
 });
 
-/** GET /admin/ops/content — all editable content pages (privacy, terms, faq…). */
+/** GET /admin/ops/content — all editable content pages (about, legal, faq…). */
 router.get(
   '/content',
   requireCapability('content:manage'),
   asyncHandler(async (_req, res) => {
-    return success(res, { items: await content.listContentPages() });
+    return success(res, {
+      items: await content.listContentPages(),
+      site: await content.getSiteConfig(),
+    });
+  }),
+);
+
+/** PUT /admin/ops/content/site — persist the brand & contact config. */
+router.put(
+  '/content/site',
+  requireCapability('content:manage'),
+  validate(siteConfigSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof siteConfigSchema>;
+    const actor = await loadActor(req);
+    const result = await content.upsertSiteConfig(body, actor.adminId);
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'CONTENT.SITE.UPSERT',
+      resourceType: 'CONTENT_SITE',
+      resourceId: 'site',
+      after: result,
+    });
+    return success(res, result);
   }),
 );
 
@@ -937,10 +966,10 @@ router.get(
 router.put(
   '/content/:slug',
   requireCapability('content:manage'),
-  validate(contentPageSchema),
+  validate(content.contentPageSchema),
   asyncHandler(async (req, res) => {
     const slug = (req.params as { slug?: string }).slug?.trim().toLowerCase() ?? '';
-    const body = req.body as z.infer<typeof contentPageSchema>;
+    const body = req.body as z.infer<typeof content.contentPageSchema>;
     const actor = await loadActor(req);
     const result = await content.upsertContentPage(slug, body, actor.adminId);
     await adminAudit({

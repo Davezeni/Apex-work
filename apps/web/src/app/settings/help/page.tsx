@@ -5,12 +5,14 @@ import { ArrowLeft, HelpCircle, Mail, MessageCircle, Phone, Loader2 } from 'luci
 import Link from 'next/link';
 import { useI18n } from '@/i18n';
 import { useContentPage } from '@/hooks/use-content-page';
+import { useSiteConfig } from '@/hooks/use-site-config';
 import { Markdown } from '@/components/markdown';
 
 export default function HelpPage() {
   const router = useRouter();
   const { t } = useI18n();
   const faq = useContentPage('faq', 'Frequently asked');
+  const site = useSiteConfig();
 
   return (
     <div className="min-h-dvh bg-background pb-24">
@@ -27,14 +29,14 @@ export default function HelpPage() {
 
       <section className="mx-3 mt-4 grid grid-cols-3 gap-2">
         <a
-          href="mailto:support@apex-work.com"
+          href={`mailto:${site.data?.supportEmail}`}
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
         >
           <Mail className="h-5 w-5 text-primary" />
           <span className="text-[11px] font-semibold">Email</span>
         </a>
         <a
-          href="https://t.me/apex_work_support"
+          href={site.data?.supportTelegram}
           target="_blank"
           rel="noreferrer"
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
@@ -43,7 +45,7 @@ export default function HelpPage() {
           <span className="text-[11px] font-semibold">Telegram</span>
         </a>
         <a
-          href="tel:+251911000000"
+          href={`tel:${site.data?.supportPhone}`}
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
         >
           <Phone className="h-5 w-5 text-primary" />
