@@ -132,7 +132,7 @@
      cycling). This is used for all primary Create/action chips. */
   .grad-hero {
     background:
-      linear-gradient(to bottom, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0) 55%), var(--primary);
+      linear-gradient(to bottom, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%), #7c3aed;
   }
   .grad-text {
     background: var(--primary);

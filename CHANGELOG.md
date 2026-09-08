@@ -3,6 +3,15 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Fix washed-out "+" (`.grad-hero` now constant deep violet) (power push #57)
+
+`.grad-hero` used `var(--primary)`, which is a LIGHT violet in dark mode; its
+surfaces hard-coded `text-white`, so the chip read as near-white and
+disappeared on the nav. `.grad-hero` now uses a **constant deep violet
+`#7c3aed`** (plus a subtle top highlight), so with white text it's legible and
+clearly visible in **both** light and dark mode. This fixes the mobile "+"
+Create FAB, the sidebar logo tile, chat headers and the send button.
+
 ## [Unreleased] — Make the "+" and AI-support chips unmistakable (power push #56)
 
 The add/create and AI-support floats were the same pale violet and washed
