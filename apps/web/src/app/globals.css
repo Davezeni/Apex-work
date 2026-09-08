@@ -59,11 +59,39 @@
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
-  /* Consistent, on-brand focus ring for every keyboard-visible control. */
-  :where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  /* Consistent, on-brand focus ring for every keyboard-visible control.
+     Covers the full set of focusable elements + ARIA role=button, and uses
+     :where() so it stays low-specificity and won't fight component utilities. */
+  :where(
+      button,
+      a,
+      input,
+      textarea,
+      select,
+      summary,
+      [tabindex],
+      [role='button'],
+      [contenteditable]
+    ):focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
     border-radius: max(var(--radius), 0.5rem);
+  }
+  /* Keep a keyboard-focused element from hiding under sticky headers/bars. */
+  :where(a, button, input, textarea, select, summary, [tabindex], [role='button']):focus-visible {
+    scroll-margin-top: 4rem;
+    scroll-margin-bottom: 4rem;
+  }
+  /* Respect users who disable animations/reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;

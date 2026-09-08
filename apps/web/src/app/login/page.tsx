@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -227,9 +227,14 @@ function LoginInner() {
   // ---------------------------------------
   // Step: otp — full verification
   // ---------------------------------------
+  const submittingRef = useRef(false);
   const verifyAndLogin = async (submittedCode?: string) => {
     const c = submittedCode ?? code;
-    if (c.length !== OTP_LENGTH) return;
+    // Guard against duplicate submission: pasting/typing the last digit fires
+    // onChange, Enter, and the button — a second call would find the OTP
+    // already consumed and show a spurious "expired".
+    if (c.length !== OTP_LENGTH || submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const { verifiedToken } = await apiFetch<{ verifiedToken: string }>('/auth/otp/verify', {
@@ -247,6 +252,7 @@ function LoginInner() {
       toast.error(e.message ?? 'Login failed');
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

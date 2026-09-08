@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, Crown, Loader2, Sparkles, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useMe } from '@/hooks/use-me';
 import { useBuyPro, useSubscription, useVerifyPro } from '@/hooks/use-subscription';
 import { formatEtb } from '@/lib/utils';
@@ -43,8 +44,17 @@ export default function ProPage() {
 
   if (meLoading || subscription.isLoading || !me)
     return (
-      <div className="grid min-h-dvh place-items-center">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="mx-auto min-h-dvh w-full max-w-3xl bg-background px-4 py-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-5 w-1/3" />
+        </div>
+        <Skeleton className="mt-6 h-24 w-full rounded-2xl bg-primary/10" />
+        <div className="mt-6 grid gap-3">
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+          <Skeleton className="h-40 w-full rounded-2xl" />
+        </div>
       </div>
     );
   const active = subscription.data?.subscription;

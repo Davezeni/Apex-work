@@ -127,19 +127,29 @@ export const requestOtp = async (
  * Verify OTP. On success, returns a short-lived token the client uses
  * to complete signup or perform actions like password reset.
  */
+/** A consumed code may be re-verified within this window (double-submit,
+ *  dropped response, or a retry after a flaky network) without a spurious
+ *  "expired" — the user just typed the correct code, so let it through. */
+const REVERIFY_GRACE_MS = 60 * 1000;
+
 export const verifyOtp = async (
   phone: string,
   code: string,
 ): Promise<{ verifiedToken: string; userId: string | null }> => {
   const codeHash = sha256(code);
+  const now = new Date();
 
-  // Grab most recent unconsumed OTP for phone
+  // Grab the most recent OTP for this phone. We intentionally don't filter on
+  // `consumedAt` here — a just-consumed correct code should re-verify (idempotent)
+  // rather than bounce back a misleading "expired" on a duplicate submit.
   const otp = await prisma.otp.findFirst({
-    where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
+    where: { phone },
     orderBy: { createdAt: 'desc' },
   });
 
-  if (!otp) throw new BadRequestError('Code expired or invalid. Request a new one.');
+  if (!otp || otp.expiresAt < now) {
+    throw new BadRequestError('Code expired or invalid. Request a new one.');
+  }
 
   // Constant-time compare via hash equality
   if (otp.codeHash !== codeHash) {
@@ -151,17 +161,26 @@ export const verifyOtp = async (
     if (updated.attempts >= 5) {
       await prisma.otp.update({
         where: { id: otp.id },
-        data: { consumedAt: new Date() },
+        data: { consumedAt: now },
       });
       throw new BadRequestError('Too many wrong attempts. Request a new code.');
     }
     throw new BadRequestError('Incorrect code');
   }
 
-  await prisma.otp.update({
-    where: { id: otp.id },
-    data: { consumedAt: new Date() },
-  });
+  // Idempotent re-verify: if the same correct code was already consumed just
+  // now, re-issue the token instead of rejecting it.
+  if (otp.consumedAt) {
+    const sinceConsumption = now.getTime() - otp.consumedAt.getTime();
+    if (sinceConsumption > REVERIFY_GRACE_MS) {
+      throw new BadRequestError('Code expired or invalid. Request a new one.');
+    }
+  } else {
+    await prisma.otp.update({
+      where: { id: otp.id },
+      data: { consumedAt: now },
+    });
+  }
 
   const existing = await prisma.user.findUnique({ where: { phone }, select: { id: true } });
 

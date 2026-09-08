@@ -930,7 +930,7 @@ export default function ConversationPage() {
       {/* Message list */}
       <div
         ref={listRef}
-        className="flex-1 space-y-2 overflow-y-auto px-3 pb-6 pt-4"
+        className="flex-1 overflow-y-auto px-3 pb-6 pt-4"
         aria-live="polite"
         onScroll={listOnScroll}
       >
@@ -970,7 +970,21 @@ export default function ConversationPage() {
         )}
         {effectiveMessages.map((m, i) => {
           const prev = effectiveMessages[i - 1];
+          const next = effectiveMessages[i + 1];
           const showDate = !prev || dateKey(prev.createdAt) !== dateKey(m.createdAt);
+          // Telegram-style grouping: consecutive messages from the same sender
+          // merge into one visual block (tighter gap + merged corners). A day
+          // change also starts a fresh group.
+          const groupStart =
+            !prev ||
+            showDate ||
+            prev.senderId !== m.senderId ||
+            prev.attachmentType !== m.attachmentType;
+          const groupEnd =
+            !next ||
+            dateKey(next.createdAt) !== dateKey(m.createdAt) ||
+            next.senderId !== m.senderId ||
+            next.attachmentType !== m.attachmentType;
           return (
             <div
               key={m.id}
@@ -979,11 +993,12 @@ export default function ConversationPage() {
               }}
               className={cn(
                 'flex flex-col rounded-xl transition-colors',
+                groupStart ? 'mt-2' : 'mt-0.5',
                 highlightId === m.id && 'bg-primary/10',
               )}
             >
               {showDate && (
-                <div className="my-3 flex justify-center">
+                <div className="my-2 flex justify-center">
                   <span className="rounded-full bg-card px-3 py-1 text-[11px] font-semibold text-muted-foreground shadow-sm">
                     {dateLabel(m.createdAt)}
                   </span>
@@ -997,6 +1012,8 @@ export default function ConversationPage() {
                 showAvatar={
                   m.senderId !== me?.id && (i === 0 || messages[i - 1]?.senderId !== m.senderId)
                 }
+                groupStart={groupStart}
+                groupEnd={groupEnd}
                 onImageClick={setViewerUrl}
                 onReactOpen={() => setReactingId(m.id)}
                 reactingOpen={reactingId === m.id}
@@ -2308,6 +2325,8 @@ function MessageBubble({
   isGroup,
   members,
   showAvatar,
+  groupStart = true,
+  groupEnd = true,
   onImageClick,
   onOpenActions,
   onReactOpen,
@@ -2326,6 +2345,10 @@ function MessageBubble({
   isGroup?: boolean;
   members?: { userId: string; fullName: string; avatarUrl?: string | null }[];
   showAvatar: boolean;
+  /** First of a same-sender run → normal top corners. */
+  groupStart?: boolean;
+  /** Last of a same-sender run → tail corner. */
+  groupEnd?: boolean;
   onImageClick?: (url: string) => void;
   onOpenActions?: () => void;
   onReactOpen?: () => void;
@@ -2499,12 +2522,21 @@ function MessageBubble({
           tabIndex={0}
           aria-label="Open message actions"
           className={cn(
-            'relative max-w-[80%] cursor-pointer overflow-hidden rounded-2xl text-sm leading-snug',
-            // Image bubbles are edge-to-edge; text/file bubbles keep padding.
+            'relative max-w-[80%] cursor-pointer overflow-hidden text-sm leading-snug',
+            // Telegram-style merged corners: flat edge stays small; the tail
+            // corner appears only on the last message of a run.
             isImage ? 'p-0' : 'px-3.5 py-2',
             isMine
-              ? 'grad-hero rounded-br-md text-white shadow-md shadow-primary/30'
-              : 'rounded-bl-md bg-card text-foreground',
+              ? cn(
+                  'grad-hero rounded-l-lg rounded-r-lg text-white shadow-md shadow-primary/30',
+                  groupStart ? 'rounded-tl-lg rounded-tr-lg' : 'rounded-tl-none rounded-tr-md',
+                  groupEnd ? 'rounded-br-md' : 'rounded-br-none rounded-tr-md',
+                )
+              : cn(
+                  'rounded-l-lg rounded-r-lg bg-card text-foreground',
+                  groupStart ? 'rounded-tl-lg rounded-tr-lg' : 'rounded-tl-md rounded-tr-none',
+                  groupEnd ? 'rounded-bl-md' : 'rounded-bl-none rounded-tl-md',
+                ),
           )}
         >
           <ReactionPicker

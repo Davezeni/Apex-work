@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, Phone, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,7 +34,8 @@ export default function VerifyPhonePage() {
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthed) router.replace(`/login?next=${encodeURIComponent('/settings/phone')}`);
+    if (!isLoading && !isAuthed)
+      router.replace(`/login?next=${encodeURIComponent('/settings/phone')}`);
   }, [isLoading, isAuthed, router]);
 
   useEffect(() => {
@@ -64,9 +65,12 @@ export default function VerifyPhonePage() {
     }
   };
 
+  const verifyingRef = useRef(false);
   const verify = async (submittedCode?: string) => {
     const value = submittedCode ?? code;
     if (value.length !== OTP_LENGTH || !token) return;
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setLoading(true);
     try {
       const { verifiedToken } = await apiFetch<{ verifiedToken: string }>('/auth/otp/verify', {
@@ -86,6 +90,7 @@ export default function VerifyPhonePage() {
       toast.error((error as ApiError).message ?? 'Phone verification failed');
     } finally {
       setLoading(false);
+      verifyingRef.current = false;
     }
   };
 
@@ -118,9 +123,12 @@ export default function VerifyPhonePage() {
           <>
             <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Add your phone number</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Verify an Ethiopian mobile number to unlock ordering, messaging, posting, payouts, and account recovery.
+              Verify an Ethiopian mobile number to unlock ordering, messaging, posting, payouts, and
+              account recovery.
             </p>
-            <label className="mt-8 block text-xs font-semibold text-muted-foreground">Ethiopian phone number</label>
+            <label className="mt-8 block text-xs font-semibold text-muted-foreground">
+              Ethiopian phone number
+            </label>
             <div className="relative mt-2">
               <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -133,8 +141,20 @@ export default function VerifyPhonePage() {
                 className="h-14 w-full rounded-2xl border border-border bg-card pl-11 pr-4 text-lg font-medium tracking-wider outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
             </div>
-            <Button variant="brand" size="lg" className="mt-6 w-full" onClick={() => void sendCode()} disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Send verification code <ArrowRight className="h-4 w-4" /></>}
+            <Button
+              variant="brand"
+              size="lg"
+              className="mt-6 w-full"
+              onClick={() => void sendCode()}
+              disabled={loading}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  Send verification code <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </>
         ) : (
@@ -153,10 +173,25 @@ export default function VerifyPhonePage() {
               onResend={() => void sendCode(true)}
               resending={resending}
             />
-            <Button variant="brand" size="lg" className="mt-6 w-full" onClick={() => void verify()} disabled={loading || code.length !== OTP_LENGTH}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Verify phone <ArrowRight className="h-4 w-4" /></>}
+            <Button
+              variant="brand"
+              size="lg"
+              className="mt-6 w-full"
+              onClick={() => void verify()}
+              disabled={loading || code.length !== OTP_LENGTH}
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  Verify phone <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
-            <button onClick={() => setStep('phone')} className="mt-4 text-sm text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setStep('phone')}
+              className="mt-4 text-sm text-muted-foreground hover:text-foreground"
+            >
               Use a different number
             </button>
           </>

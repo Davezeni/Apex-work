@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -91,12 +91,15 @@ function SignupInner() {
     }
   };
 
+  const verifyingRef = useRef(false);
   const verifyOtp = async (submittedCode?: string) => {
     const c = submittedCode ?? code;
     if (c.length !== OTP_LENGTH) {
       toast.error(`Enter the ${OTP_LENGTH}-digit code`);
       return;
     }
+    if (verifyingRef.current) return;
+    verifyingRef.current = true;
     setLoading(true);
     try {
       const { verifiedToken } = await apiFetch<{ verifiedToken: string }>('/auth/otp/verify', {
@@ -109,6 +112,7 @@ function SignupInner() {
       toast.error((err as ApiError).message ?? 'Invalid code');
     } finally {
       setLoading(false);
+      verifyingRef.current = false;
     }
   };
 

@@ -3,6 +3,39 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — OTP login fix + messenger & polish batch (power push #65)
+
+### Fixed
+- **OTP login said "expired" even when the code was fresh.** The root cause was a
+  duplicate submission race: typing/pasting the last digit fired `onChange`,
+  Enter, and the Verify button — the first call consumed the OTP, so any
+  subsequent call got a spurious "Code expired". Fixed on **both sides**:
+  - Client: a `useRef` guard in the login/signup/phone-verify flows ignores
+    overlapping `verifyAndLogin`/`verifyOtp`/`verify` calls.
+  - API: `verifyOtp` is now idempotent — the same correct code re-verifies
+    within a 60s grace window after consumption, so a double-submit or a
+    dropped-response retry never bounces as "expired". (Wrong codes still count
+    attempts and lock after 5.)
+- This also un-blocks **"remember me"/device + biometric**: a login that no
+  longer fails leaves a valid `deviceToken`, so the next visit auto-signs-in
+  via the trusted-device flow on the same phone.
+
+### Improved
+- **Telegram-style message grouping & date separators** — consecutive messages
+  from the same sender now merge into one visual block: tighter gap, rounded
+  outer corners with a "tail" corner only on the last message of a run. Day
+  changes insert a separator and start a fresh group.
+- **Scroll restoration** — a `ScrollRestore` component preserves the window
+  scroll position per route and restores it on back/forward, so Browse/Gigs no
+  longer jump to the top.
+- **Skeleton loading** — Browse and Pro dashboard now show shimmering skeleton
+  grids/cards instead of a bare spinner while data loads.
+- **Focus-visible + reduced-motion** — broader on-brand focus ring (covers
+  `summary`, `[role=button]`, `[contenteditable]`), `scroll-margin` so focused
+  controls aren't hidden under sticky headers, and `prefers-reduced-motion`
+  support.
+- Verified: api+web typecheck 0 errors, lints clean, 219 unit tests pass.
+
 ## [Unreleased] — Resilience & media batch: AI rate-limit UX, offline banner, WebP media (power push #64)
 
 - **AI assistant rate-limit UX** — when `/v1/ai/*` trips the 20/min limiter the

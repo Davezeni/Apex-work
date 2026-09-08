@@ -21,6 +21,7 @@ import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const VIEW_MODE_KEY = 'apex-gig-view';
 type ViewMode = 'list' | 'grid';
@@ -81,7 +82,9 @@ function BrowseInner() {
     .filter((g) => {
       const q = query.trim().toLowerCase();
       if (!q) return true;
-      return `${g.title} ${g.owner?.fullName ?? ''} ${g.categoryId ?? ''}`.toLowerCase().includes(q);
+      return `${g.title} ${g.owner?.fullName ?? ''} ${g.categoryId ?? ''}`
+        .toLowerCase()
+        .includes(q);
     })
     .sort((a, b) => {
       if (sort === 'rating') return b.rating - a.rating || b.ratingCount - a.ratingCount;
@@ -206,8 +209,25 @@ function BrowseInner() {
       </div>
 
       {isLoading && (
-        <div className="grid h-40 place-items-center">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <div
+          className={cn(
+            'grid gap-4 px-4 pb-8 transition-all',
+            view === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1',
+          )}
+          aria-hidden="true"
+        >
+          {Array.from({ length: view === 'grid' ? 8 : 4 }).map((_, i) => (
+            <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
+              <Skeleton
+                className={cn('w-full', view === 'grid' ? 'aspect-[4/3]' : 'aspect-[5/2]')}
+              />
+              <div className="space-y-2 p-3">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+                <Skeleton className="h-3 w-2/5" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
