@@ -283,6 +283,7 @@
     "scheduled": "scheduled",
     "scheduledNote": "Message scheduled",
     "searchInConvo": "Search in conversation",
+    "mediaGallery": "Media gallery",
     "seenBy": "Seen by {names}",
     "signInBody": "Chat with freelancers and clients in real time.",
     "signInPrompt": "Sign in to see messages",

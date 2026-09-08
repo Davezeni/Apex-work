@@ -599,11 +599,7 @@ export default function ConversationPage() {
         ) : peer ? (
           <Link
             href={`/u/${peer.username}`}
-            onClick={(e) => {
-              e.preventDefault();
-              router.push(`/u/${peer.username}`);
-            }}
-            aria-label={peer.fullName}
+            aria-label={`${peer.fullName} profile`}
             title={peer.fullName}
             className="block h-10 w-10 shrink-0"
           >
@@ -624,11 +620,8 @@ export default function ConversationPage() {
           {peer && !conv?.isGroup ? (
             <Link
               href={`/u/${peer.username}`}
-              onClick={(e) => {
-                e.preventDefault();
-                router.push(`/u/${peer.username}`);
-              }}
               className="block min-w-0 active:opacity-60"
+              aria-label={`${peer.fullName} profile`}
             >
               <h4 className="truncate text-sm font-semibold">{peer.fullName}</h4>
             </Link>
@@ -655,15 +648,6 @@ export default function ConversationPage() {
             </p>
           ) : null}
         </div>
-        {imageUrls.length > 0 && (
-          <button
-            onClick={() => setGalleryOpen(true)}
-            aria-label="Media gallery"
-            className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
-          >
-            <Images className="h-5 w-5" />
-          </button>
-        )}
         {!conv?.isGroup && (
           <>
             <button
@@ -703,6 +687,17 @@ export default function ConversationPage() {
                 >
                   <Search className="h-4 w-4" /> {t('chat.searchInConvo')}
                 </button>
+                {imageUrls.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setGalleryOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2.5 text-sm active:bg-muted"
+                  >
+                    <Images className="h-4 w-4" /> {t('chat.mediaGallery')}
+                  </button>
+                )}
                 {conv?.isGroup && (
                   <>
                     <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -2157,7 +2152,7 @@ export default function ConversationPage() {
           <button
             onClick={() => setGalleryOpen(false)}
             aria-label="Close gallery"
-            className="safe-top absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white active:scale-90"
+            className="safe-top absolute right-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white active:scale-90"
           >
             <X className="h-5 w-5" />
           </button>
@@ -2480,7 +2475,7 @@ function MessageBubble({
           )}
         </div>
       )}
-      <div className="group flex items-end gap-1">
+      <div className="group flex min-w-0 items-end gap-1">
         <div
           onClick={() => {
             if (longPressed.current) {
@@ -2526,7 +2521,7 @@ function MessageBubble({
           tabIndex={0}
           aria-label="Open message actions"
           className={cn(
-            'relative max-w-[80%] cursor-pointer overflow-hidden text-sm leading-snug',
+            'relative max-w-[min(80vw,720px)] cursor-pointer overflow-hidden text-sm leading-snug',
             // Telegram-style merged corners: flat edge stays small; the tail
             // corner appears only on the last message of a run.
             isImage ? 'p-0' : 'px-3.5 py-2',

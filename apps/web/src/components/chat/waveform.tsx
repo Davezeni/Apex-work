@@ -32,7 +32,11 @@ export function WaveformPlayer({
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (a.paused) { void a.play(); } else { a.pause(); }
+    if (a.paused) {
+      void a.play();
+    } else {
+      a.pause();
+    }
   };
 
   const dur = durationSec && durationSec > 0 ? durationSec : 0;
@@ -41,7 +45,10 @@ export function WaveformPlayer({
     <div className="flex items-center gap-2.5">
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); toggle(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggle();
+        }}
         aria-label={playing ? t('chat.pause') : t('chat.play')}
         className={cn(
           'grid h-9 w-9 shrink-0 place-items-center rounded-full transition-transform active:scale-90',
@@ -50,9 +57,9 @@ export function WaveformPlayer({
       >
         {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </button>
-      <div className="flex h-9 flex-1 items-center gap-[2px]">
+      <div className="flex h-9 min-w-0 flex-1 items-center gap-[2px] overflow-hidden">
         {waveform.map((v, i) => {
-          const filled = progress !== 0 && (i / waveform.length) <= progress;
+          const filled = progress !== 0 && i / waveform.length <= progress;
           return (
             <span
               key={i}
@@ -66,7 +73,12 @@ export function WaveformPlayer({
           );
         })}
       </div>
-      <span className={cn('shrink-0 text-[10px] font-mono', isMine ? 'text-white/70' : 'text-muted-foreground')}>
+      <span
+        className={cn(
+          'shrink-0 font-mono text-[10px]',
+          isMine ? 'text-white/70' : 'text-muted-foreground',
+        )}
+      >
         {fmt(dur * progress) || fmt(dur)}
       </span>
       <audio
@@ -75,7 +87,10 @@ export function WaveformPlayer({
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => { setPlaying(false); setProgress(0); }}
+        onEnded={() => {
+          setPlaying(false);
+          setProgress(0);
+        }}
         onTimeUpdate={(e) => {
           const a = e.currentTarget;
           setProgress(a.duration ? a.currentTime / a.duration : 0);
