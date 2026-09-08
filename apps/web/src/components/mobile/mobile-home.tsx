@@ -22,6 +22,7 @@ import { useI18n } from '@/i18n';
 import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendations';
+import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 import { toast } from 'sonner';
 import { NotificationsPanel } from '@/components/notifications-panel';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -94,6 +95,9 @@ export function MobileHome() {
           />
         </div>
       </div>
+
+      {/* Device-local recently viewed gigs (shown only when present) */}
+      <RecentlyViewedRow />
 
       {/* Jobs + Nearby shortcuts */}
       <div className="mb-5 grid grid-cols-2 gap-2 px-5">

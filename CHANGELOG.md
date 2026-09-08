@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Recently viewed gigs (power push #71)
+
+- **"Recently viewed" row** — viewing a gig now records it in a device-local
+  list (`use-recently-viewed.ts`, localStorage) so returning visitors can jump
+  straight back to the gigs they looked at, even before/without signing in.
+  - Tracked on the gig detail page (deferred 600 ms so first paint stays light).
+  - Rendered as a compact horizontal row on the **home** and **browse** pages.
+  - Deduped, newest-first, capped at 8; a **Clear** action resets the list.
+  - Shown only when the list is non-empty (never shows a bare empty section).
+  - i18n keys added (`home.recentlyViewed`, `home.clear`) in en + am.
+- Verified: web+api typecheck 0 errors, web lint clean, shared build 0,
+  227 unit tests pass.
+
 ## [Unreleased] — Desktop notifications dropdown + search polish (power push #70)
 
 - **Desktop notification dropdown** — the desktop sidebar's bottom user card

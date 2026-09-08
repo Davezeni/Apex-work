@@ -95,7 +95,9 @@
     "forYou": "✨ ላንታ",
     "searchPlaceholder": "ፍሪላንሰሮችን፣ ሥራዎችን፣ ክህሎቶችን ይፍለጉ…",
     "noGigsInCategory": "በዚህ ምድብ ውስጥ ዪዶች የለሙም",
-    "postFirst": "መጀመሪያ ይሁኑ — ትኬይ ላይ ለማውጣት ይለጥጁ።"
+    "postFirst": "መጀመሪያ ይሁኑ — ትኬይ ላይ ለማውጣት ይለጥጁ።",
+    "recentlyViewed": "በቅርብ የተመለከቷቸው",
+    "clear": "አጽዳ"
   },
   "gig": {
     "aboutFreelancer": "ስለ ፍሪላንሰሩ",

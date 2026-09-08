@@ -23,6 +23,7 @@ import { apiFetch } from '@/lib/api';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 
 const VIEW_MODE_KEY = 'apex-gig-view';
 type ViewMode = 'list' | 'grid';
@@ -221,6 +222,9 @@ function BrowseInner() {
           />
         ))}
       </div>
+
+      {/* Device-local recently viewed gigs — shown only when browsing unfiltered */}
+      {!category && !q && <RecentlyViewedRow dense />}
 
       {/* Sort + view toggle */}
       <div className="flex items-center justify-between gap-2 px-5 pb-3">

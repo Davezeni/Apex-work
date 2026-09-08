@@ -95,7 +95,9 @@
     "forYou": "✨ For you",
     "searchPlaceholder": "Search freelancers, gigs, skills…",
     "noGigsInCategory": "No gigs in this category yet",
-    "postFirst": "Be the first — post one to get noticed."
+    "postFirst": "Be the first — post one to get noticed.",
+    "recentlyViewed": "Recently viewed",
+    "clear": "Clear"
   },
   "gig": {
     "aboutFreelancer": "About the freelancer",

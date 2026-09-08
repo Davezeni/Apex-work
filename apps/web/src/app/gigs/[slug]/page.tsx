@@ -34,6 +34,7 @@ import { useStartConversation } from '@/hooks/use-chat';
 import { useCreateOrder } from '@/hooks/use-orders';
 import { usePaymentConfig } from '@/hooks/use-payment';
 import { useSaveGig, useSavedGigStatus, useUnsaveGig } from '@/hooks/use-saved-gigs';
+import { useTrackRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
@@ -80,6 +81,27 @@ export default function GigDetailPage() {
     if (!slug) return;
     void recordGigEvent(slug, 'VIEW', token);
   }, [slug, token]);
+
+  // Track this gig in the visitor's device-local "recently viewed" list so they
+  // can jump back to it from the home page. Deferred to keep first paint light.
+  const trackRecentlyViewed = useTrackRecentlyViewed();
+  useEffect(() => {
+    if (!gig) return;
+    const id = window.setTimeout(() => {
+      trackRecentlyViewed({
+        slug,
+        title: gig.title,
+        coverImageUrl: gig.coverImageUrl,
+        startingPriceEtb: gig.startingPriceEtb,
+        ownerUsername: gig.owner.username,
+        ownerName: gig.owner.fullName,
+        rating: gig.owner.rating,
+        ratingCount: gig.owner.ratingCount,
+      });
+    }, 600);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gig?.id]);
 
   const toggleSave = () => {
     if (!slug || savePending) return;
