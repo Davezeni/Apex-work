@@ -3,6 +3,24 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Realtime notifications: dropdown panel + toasts (power push #69)
+
+- **Notification dropdown panel** — the bell (home header) now opens an inline
+  dropdown showing the latest notifications with unread dots, a "Mark all
+  read" action (with success/error toasts), a "View all" link, and a friendly
+  empty state. Works on mobile and desktop; responsive width, outside-click +
+  Esc to close.
+- **Realtime in-app toasts** — the notification socket now fires a toast for
+  each new notification (order, bid, payment, system…), and a subtle "New
+  message" toast for chats, with a "View" action that jumps to the right
+  conversation/order. Shows only when you're not already on the notifications
+  page.
+- **Live socket on desktop too** — `useNotificationSocket` is now mounted once
+  in the Providers tree (removed from mobile-shell), so desktop users get the
+  same realtime stream + unread refresh.
+- Also refreshes the unread-count query on each event so badges stay live.
+- Verified: web+api typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — Global ⌘K command palette + keyboard shortcuts (power push #68)
 
 - **Global ⌘K / Ctrl+K command palette** — available on every route (mounted

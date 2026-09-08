@@ -3,10 +3,21 @@
 import { useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { io, type Socket } from 'socket.io-client';
+import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+export const ICON_EMOJI: Record<string, string> = {
+  ORDER_UPDATE: '📦',
+  NEW_MESSAGE: '💬',
+  NEW_BID: '📢',
+  PAYMENT: '💰',
+  SYSTEM: '⚙️',
+  REVIEW: '⭐',
+  REVIEW_REPLY: '💬',
+};
 
 export type NotificationType =
   | 'ORDER_UPDATE'
@@ -85,9 +96,30 @@ export function useNotificationSocket() {
     });
     socketRef.current = socket;
 
-    socket.on('notification:new', (_notif: AppNotification) => {
-      // Simply invalidate to refetch — cheap; keeps the client in sync.
+    socket.on('notification:new', (notif: AppNotification) => {
+      // Invalidate to refetch — keeps the client in sync.
       qc.invalidateQueries({ queryKey: ['notifications'] });
+      qc.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
+      // Show an in-app toast unless we're already on the notifications page;
+      // clicking it jumps to the notification. NEW_MESSAGE toasts are subtle.
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/notifications')) {
+        const title =
+          notif.type === 'NEW_MESSAGE' ? 'New message' : notif.title;
+        toast(title, {
+          description: notif.body ?? undefined,
+          icon: ICON_EMOJI[notif.type] ?? '🔔',
+          action: {
+            label: 'View',
+            onClick: () => {
+              const p = notif.payload ?? {};
+              if (typeof p.conversationId === 'string')
+                window.location.assign(`/messages/${p.conversationId}`);
+              else if (typeof p.orderId === 'string') window.location.assign(`/orders/${p.orderId}`);
+              else window.location.assign('/notifications');
+            },
+          },
+        });
+      }
     });
 
     return () => {

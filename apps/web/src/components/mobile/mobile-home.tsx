@@ -23,7 +23,7 @@ import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendations';
 import { toast } from 'sonner';
-import { NotificationsBell } from '@/components/notifications-bell';
+import { NotificationsPanel } from '@/components/notifications-panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
 import { gradientFor } from '@/components/ui/avatar-gradient';
@@ -68,7 +68,7 @@ export function MobileHome() {
           <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
         <div className="flex gap-2">
-          <NotificationsBell />
+          <NotificationsPanel />
           <Link
             href="/profile"
             className={cn(

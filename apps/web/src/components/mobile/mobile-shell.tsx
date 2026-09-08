@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Drawer } from 'vaul';
 import { cn } from '@/lib/utils';
 import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
-import { useNotificationSocket } from '@/hooks/use-notifications';
+
 import { useConversations } from '@/hooks/use-chat';
 import { PwaInstall } from '@/components/pwa-install';
 import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
@@ -36,8 +36,6 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
 
   // Auto-redirect freelancers who haven't finished onboarding.
   useOnboardingGuard();
-  // Subscribe to the user's realtime notification stream (silent when signed out).
-  useNotificationSocket();
   const { data: conversations } = useConversations();
   const unreadChats = conversations?.items.reduce((total, item) => total + item.unread, 0) ?? 0;
 

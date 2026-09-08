@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useState } from 'react';
 import { I18nProvider } from '@/i18n';
+import { useNotificationSocket } from '@/hooks/use-notifications';
 import { ServiceWorkerRegister } from './sw-register';
 import { AIAssistant } from './ai-assistant';
 import { PostHogInit } from './posthog-provider';
@@ -14,6 +15,9 @@ import { ScrollRestore } from './site/scroll-restore';
 import { GlobalCommandPalette } from './site/global-command-palette';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Live notification socket — mounted once, globally, so it works on both
+  // desktop and mobile (and fires in-app toasts for new activity).
+  useNotificationSocket();
   const [queryClient] = useState(
     () =>
       new QueryClient({
