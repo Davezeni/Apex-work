@@ -68,6 +68,15 @@ function BrowseInner() {
   // Localise the category label (name from constants stays English, but the
   // 'All categories' pseudo-option needs to translate).
 
+  // Debounced search term: the raw `query` updates instantly in the box, but
+  // we only hit the API after a short pause, so keystrokes don't spam the
+  // server. Empty matches "all" (server returns everything).
+  const [searchTerm, setSearchTerm] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
   // Cursor-paginated feed: keep the accumulated pages so "Load more" appends
   // instead of replacing. `items` holds everything fetched so far; when the
   // cursor/query/category changes we reset back to the first page.
@@ -78,6 +87,7 @@ function BrowseInner() {
   const { data, isLoading } = useGigs({
     category: category ?? undefined,
     limit: 30,
+    q: searchTerm || undefined,
   });
   // First page result — accuminates the fresh page, replacing any stale acc.
   useEffect(() => {
@@ -91,11 +101,14 @@ function BrowseInner() {
     if (loadingMore || !hasMore || !cursor) return;
     setLoadingMore(true);
     try {
+      const p = new URLSearchParams({ limit: '30', cursor });
+      if (category) p.set('category', category);
+      if (searchTerm) p.set('q', searchTerm);
       const next = await apiFetch<{
         items: GigListItem[];
         nextCursor: string | null;
         hasMore: boolean;
-      }>(`/gigs?limit=30${category ? `&category=${category}` : ''}&cursor=${cursor}`);
+      }>(`/gigs?${p.toString()}`);
       setItems((prev) => {
         const existing = new Set(prev.map((g) => g.id));
         return [...prev, ...next.items.filter((g) => !existing.has(g.id))];
@@ -131,20 +144,15 @@ function BrowseInner() {
     router.replace(`/browse${qs}`);
   };
 
-  const sorted = [...items]
-    .filter((g) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return true;
-      return `${g.title} ${g.owner?.fullName ?? ''} ${g.categoryId ?? ''}`
-        .toLowerCase()
-        .includes(q);
-    })
-    .sort((a, b) => {
-      if (sort === 'rating') return b.rating - a.rating || b.ratingCount - a.ratingCount;
-      if (sort === 'price_asc') return a.startingPriceEtb - b.startingPriceEtb;
-      if (sort === 'price_desc') return b.startingPriceEtb - a.startingPriceEtb;
-      return 0; // recent — API returns createdAt desc by default
-    });
+  // The server already filters by the search term + category, so `items` is a
+  // complete result set across all pages. We only re-sort locally for the
+  // price/rating toggle (the API default order is createdAt desc = "recent").
+  const sorted = [...items].sort((a, b) => {
+    if (sort === 'rating') return b.rating - a.rating || b.ratingCount - a.ratingCount;
+    if (sort === 'price_asc') return a.startingPriceEtb - b.startingPriceEtb;
+    if (sort === 'price_desc') return b.startingPriceEtb - a.startingPriceEtb;
+    return 0; // recent — API returns createdAt desc by default
+  });
 
   const activeCat = category ? CATEGORIES.find((c) => c.id === category) : null;
 

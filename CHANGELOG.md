@@ -3,6 +3,19 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Server-side search + gig gallery lightbox (power push #67)
+
+- **Server-side search on Browse** — typing in the search box now queries the
+  API (debounced 300ms) across the full catalog instead of only filtering the
+  currently-loaded pages, so results are found even beyond what's already
+  fetched. `Load more` carries the search term + category to the next page; the
+  local sort toggle still works on the complete result set.
+- **Gig image gallery + lightbox** — the gig detail page wasn't rendering
+  `galleryUrls` at all. It now shows a 3-column photo grid (deduped cover +
+  gallery) and opens a full-screen `ImageViewer` with swipe/nav through all
+  photos. Added `gig.gallery` i18n key (EN + Amharic).
+- Verified: web+api typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — Infinite-scroll browse + profile skeleton (power push #66)
 
 - **Infinite scroll on Browse** — the list now loads 30 gigs and keeps appending

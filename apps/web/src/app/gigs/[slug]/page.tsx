@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { toast } from 'sonner';
 import { useSimilarGigs } from '@/hooks/use-similar';
 import { RichViewer } from '@/components/ui/rich-viewer';
+import { ImageViewer } from '@/components/ui/image-viewer';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { recordGigEvent } from '@/hooks/use-gig-analytics';
 import { BoostSheet } from '@/components/gigs/boost-sheet';
@@ -63,6 +64,8 @@ export default function GigDetailPage() {
   const token = useAuthStore((s) => s.accessToken);
   const [tier, setTier] = useState<Tier>('BASIC');
   const [boostOpen, setBoostOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const savedStatus = useSavedGigStatus(slug);
   const saveGig = useSaveGig();
   const unsaveGig = useUnsaveGig();
@@ -131,6 +134,13 @@ export default function GigDetailPage() {
 
   const packages = gig.packages ?? [];
   const selected = packages.find((p) => p.tier === tier) ?? packages[0];
+  // Gallery = cover (if any) + any extra gallery images, de-duped, no empties.
+  const gallery: string[] = Array.from(
+    new Set(
+      [...(gig.coverImageUrl ? [gig.coverImageUrl] : []), ...((gig.galleryUrls ?? []) as string[])]
+        .filter((u): u is string => typeof u === 'string' && u.length > 0),
+    ),
+  );
   const canMessage = !!me && me.id !== gig.owner.id;
   const isOwnGig = me?.id === gig.owner.id;
 
@@ -418,6 +428,53 @@ export default function GigDetailPage() {
         </>
       )}
 
+      {/* Gallery */}
+      {gallery.length > 0 && (
+        <div className="mx-4 mt-8">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              {t('gig.gallery')}
+            </h2>
+            <span className="text-[11px] text-muted-foreground">{gallery.length} photos</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {gallery.slice(0, 6).map((url, i) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => {
+                  setGalleryIndex(i);
+                  setGalleryOpen(true);
+                }}
+                aria-label={`Open photo ${i + 1}`}
+                className="relative aspect-square overflow-hidden rounded-xl border border-border bg-muted transition-opacity active:opacity-80"
+              >
+                <Image
+                  src={url}
+                  alt={`${gig.title} photo ${i + 1}`}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 640px) 33vw, 160px"
+                  className="object-cover"
+                />
+              </button>
+            ))}
+          </div>
+          {gallery.length > 6 && (
+            <button
+              type="button"
+              onClick={() => {
+                setGalleryIndex(0);
+                setGalleryOpen(true);
+              }}
+              className="mt-2 text-xs font-semibold text-primary"
+            >
+              View all {gallery.length} photos →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Description */}
       <div className="mx-4 mt-6">
         <div className="mb-2 flex items-center justify-between">
@@ -574,6 +631,17 @@ export default function GigDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Gallery lightbox */}
+      <ImageViewer
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        url={gallery[galleryIndex] ?? null}
+        alt={gig.title}
+        images={gallery.length > 1 ? gallery : undefined}
+        imageIndex={galleryIndex}
+        onImageIndex={setGalleryIndex}
+      />
     </div>
   );
 }
