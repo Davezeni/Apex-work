@@ -11,6 +11,7 @@ import { PostHogInit } from './posthog-provider';
 import { ConsentBanner } from './site/consent-banner';
 import { NetworkStatusBanner } from './site/network-status-banner';
 import { ScrollRestore } from './site/scroll-restore';
+import { GlobalCommandPalette } from './site/global-command-palette';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -52,6 +53,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ConsentBanner />
           <NetworkStatusBanner />
           <ScrollRestore />
+          <GlobalCommandPalette />
           <AIAssistant />
         </I18nProvider>
       </QueryClientProvider>

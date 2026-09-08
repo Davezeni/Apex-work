@@ -186,6 +186,7 @@ function BrowseInner() {
           <div className="flex h-12 max-w-xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
             <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
             <input
+              id="browse-search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t('browse.searchPlaceholder')}

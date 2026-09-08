@@ -21,10 +21,12 @@ export function CommandPalette({
   open,
   onClose,
   actions,
+  placeholder = 'Search admin…',
 }: {
   open: boolean;
   onClose: () => void;
   actions: PaletteAction[];
+  placeholder?: string;
 }) {
   const [q, setQ] = useState('');
   const [index, setIndex] = useState(0);
@@ -80,7 +82,7 @@ export function CommandPalette({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Search admin…"
+            placeholder={placeholder}
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           <kbd className="rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">esc</kbd>

@@ -24,6 +24,7 @@ import { Drawer } from 'vaul';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/use-chat';
+import { useUnreadCount } from '@/hooks/use-notifications';
 import { useMe } from '@/hooks/use-me';
 import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -47,6 +48,8 @@ export function DesktopSidebar() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { data: conversations } = useConversations();
   const unreadChats = conversations?.items.reduce((total, item) => total + item.unread, 0) ?? 0;
+  const { data: notif } = useUnreadCount();
+  const unreadNotifs = notif?.count ?? 0;
 
   // Collapsed state is persisted so the user's preference sticks across visits.
   const [collapsed, setCollapsed] = useState(false);
@@ -77,7 +80,7 @@ export function DesktopSidebar() {
     { label: t('nav.chat'), icon: MessageCircle, href: '/messages', badge: unreadChats },
     { label: t('nav.jobs'), icon: Briefcase, href: '/jobs' },
     { label: t('nav.saved'), icon: Bookmark, href: '/saved' },
-    { label: t('nav.notifications'), icon: Bell, href: '/notifications' },
+    { label: t('nav.notifications'), icon: Bell, href: '/notifications', badge: unreadNotifs },
     { label: t('nav.wallet'), icon: Wallet, href: '/wallet' },
   ];
 
@@ -163,6 +166,23 @@ export function DesktopSidebar() {
           {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </div>
+
+      {/* Command launcher (⌘K / Ctrl+K) — a quick way to jump anywhere. */}
+      {!collapsed && (
+        <div className="px-4 pb-1">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event('apex:open-command-palette'))}
+            className="flex w-full items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="flex-1">Search or jump to…</span>
+            <kbd className="rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
 
       {/* Create */}
       <div className="px-4">

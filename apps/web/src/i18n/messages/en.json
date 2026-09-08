@@ -26,7 +26,8 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "wallet": "Wallet",
-    "workspace": "Workspace"
+    "workspace": "Workspace",
+    "achievements": "Achievements"
   },
   "common": {
     "back": "Back",

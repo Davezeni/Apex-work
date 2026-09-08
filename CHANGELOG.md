@@ -3,6 +3,23 @@
 All notable changes to Apex-Work will be documented in this file.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased] — Global ⌘K command palette + keyboard shortcuts (power push #68)
+
+- **Global ⌘K / Ctrl+K command palette** — available on every route (mounted
+  in the Providers tree), reusing the admin `CommandPalette` component
+  (now with a customisable placeholder). Jump to any primary route or compose a
+  gig straight from the keyboard. Esc closes; arrow keys navigate; Enter opens.
+- **Desktop sidebar ⌘K launcher** — a "Search or jump to…" button with a ⌘K
+  kbd hint in the sidebar opens the palette, so it's discoverable on desktop.
+- **Keyboard shortcut "/"** — on Browse, pressing `/` focuses the search box.
+- **Notification unread badge on the desktop sidebar** — the Notifications nav
+  item now shows the live unread count (reads the same `useUnreadCount` the
+  mobile bell uses), so desktop users see new alerts too.
+- Added `nav.achievements` i18n (EN + Amharic).
+- Note: the gig detail **sticky mobile checkout CTA** already existed, so no
+  change was needed there.
+- Verified: web+api typecheck 0 errors, web lint clean, 219 unit tests pass.
+
 ## [Unreleased] — Server-side search + gig gallery lightbox (power push #67)
 
 - **Server-side search on Browse** — typing in the search box now queries the
