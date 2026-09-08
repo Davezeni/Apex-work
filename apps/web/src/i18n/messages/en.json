@@ -717,6 +717,11 @@
     "help": "Help & support",
     "legal": "Legal & privacy",
     "deleteAccount": "Delete account",
-    "devices": "Trusted devices"
+    "devices": "Trusted devices",
+    "phone": "Phone & verification",
+    "availability": "Availability",
+    "paymentMethods": "Payment methods",
+    "savedSearches": "Saved searches",
+    "skills": "Skills"
   }
 }

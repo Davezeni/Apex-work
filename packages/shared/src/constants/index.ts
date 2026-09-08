@@ -54,6 +54,8 @@ export const ADMIN_CAPABILITIES = {
   'broadcast:send': ['ADMIN'],
   'subscriptions:manage': ['ADMIN', 'FINANCE'],
   'settings:manage': ['ADMIN'],
+  /** Editable site content (privacy/terms/cookies/faq). */
+  'content:manage': ['ADMIN'],
   'artifacts:view': ['ADMIN'],
   'audit:view': ['ADMIN'],
 } as const;

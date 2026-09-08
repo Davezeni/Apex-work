@@ -15,9 +15,18 @@ import { paginate } from '../lib/adminPage.js';
 import { loadActor, adminAudit } from '../lib/audit.js';
 import { prisma } from '../lib/prisma.js';
 import {
-  gigModerateSchema, jobModerateSchema, reviewModerateSchema, orderRefundSchema,
-  walletAdjustSchema, featuredSchema, broadcastSchema, userRoleSchema,
-  ticketReplySchema, ticketStatusSchema, settingUpsertSchema, type UserRole,
+  gigModerateSchema,
+  jobModerateSchema,
+  reviewModerateSchema,
+  orderRefundSchema,
+  walletAdjustSchema,
+  featuredSchema,
+  broadcastSchema,
+  userRoleSchema,
+  ticketReplySchema,
+  ticketStatusSchema,
+  settingUpsertSchema,
+  type UserRole,
 } from '@apex-work/shared';
 
 import * as mod from '../services/admin/moderation.service.js';
@@ -26,6 +35,7 @@ import * as community from '../services/admin/community.service.js';
 import * as support from '../services/admin/support.service.js';
 import * as ops from '../services/admin/ops.service.js';
 import * as settings from '../services/admin/settings.service.js';
+import * as content from '../services/content.service.js';
 import * as categories from '../services/categories.service.js';
 import * as kpi from '../services/kpiWatcher.service.js';
 import * as analytics from '../services/admin/analytics.service.js';
@@ -99,7 +109,10 @@ router.get(
   asyncHandler(async (req, res) => {
     const days = Math.min(365, Math.max(1, Number((req.query as { days?: string }).days) || 30));
     const limit = Math.min(50, Math.max(1, Number((req.query as { limit?: string }).limit) || 10));
-    const minOrders = Math.min(50, Math.max(1, Number((req.query as { minOrders?: string }).minOrders) || 3));
+    const minOrders = Math.min(
+      50,
+      Math.max(1, Number((req.query as { minOrders?: string }).minOrders) || 3),
+    );
     return success(res, await insights.conversionInsights(days, limit, minOrders));
   }),
 );
@@ -235,7 +248,11 @@ router.get(
         ? await exporter.exportAudit({ adminId: q.adminId, resourceType: q.resourceType })
         : kind === 'orders'
           ? await exporter.exportOrders({ status: q.status, q: q.q })
-          : await exporter.exportUsers({ role: q.role, q: q.q, suspended: q.suspended ? q.suspended === '1' : undefined });
+          : await exporter.exportUsers({
+              role: q.role,
+              q: q.q,
+              suspended: q.suspended ? q.suspended === '1' : undefined,
+            });
 
     res.setHeader('Content-Type', `${result.mime}; charset=utf-8`);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
@@ -272,7 +289,11 @@ router.post(
     const limit = Math.min(500, Math.max(1, Number((req.query as { limit?: string }).limit) || 50));
     const result = await mod.contentScan(limit);
     await adminAudit({
-      ...actor, ip: req.ip, action: 'MODERATION.SCAN', resourceType: 'SYSTEM', resourceId: `scan-${Date.now()}`,
+      ...actor,
+      ip: req.ip,
+      action: 'MODERATION.SCAN',
+      resourceType: 'SYSTEM',
+      resourceId: `scan-${Date.now()}`,
       after: { scanned: result.scanned, flagged: result.flagged },
     });
     return success(res, result);
@@ -288,7 +309,10 @@ router.get(
     const status = String((req.query as { status?: string }).status ?? '');
     const valid = ['QUEUED', 'IN_REVIEW', 'RESOLVED', 'DISMISSED'];
     const s = valid.includes(status) ? status : undefined;
-    const limit = Math.min(200, Math.max(1, Number((req.query as { limit?: string }).limit) || 100));
+    const limit = Math.min(
+      200,
+      Math.max(1, Number((req.query as { limit?: string }).limit) || 100),
+    );
     return success(res, { items: await mod.adminListFlagged({ moderationStatus: s, limit }) });
   }),
 );
@@ -307,12 +331,22 @@ router.post(
     const body = req.body as z.infer<typeof triageSchema>;
     const actor = await loadActor(req);
     const result = await mod.triageGig(id, body, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'MODERATION.TRIAGE', resourceType: 'GIG', resourceId: id, after: { status: body.status, assignee: body.assignee, notes: body.notes } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'MODERATION.TRIAGE',
+      resourceType: 'GIG',
+      resourceId: id,
+      after: { status: body.status, assignee: body.assignee, notes: body.notes },
+    });
     return success(res, result);
   }),
 );
 
-const bulkTriageSchema = z.object({ ids: z.array(z.string()).min(1).max(200), status: z.enum(['RESOLVED', 'DISMISSED']) });
+const bulkTriageSchema = z.object({
+  ids: z.array(z.string()).min(1).max(200),
+  status: z.enum(['RESOLVED', 'DISMISSED']),
+});
 router.post(
   '/flagged/bulk',
   requireCapability('moderation:content'),
@@ -321,7 +355,14 @@ router.post(
     const { ids, status } = req.body as z.infer<typeof bulkTriageSchema>;
     const actor = await loadActor(req);
     const result = await mod.bulkTriage(ids, status, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'MODERATION.BULK', resourceType: 'GIG', resourceId: `bulk-${ids[0]}`, after: { status, count: result.updated } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'MODERATION.BULK',
+      resourceType: 'GIG',
+      resourceId: `bulk-${ids[0]}`,
+      after: { status, count: result.updated },
+    });
     return success(res, result);
   }),
 );
@@ -336,8 +377,14 @@ router.post(
     const actor = await loadActor(req);
     const result = await mod.moderateGig(id, body);
     await adminAudit({
-      ...actor, ip: req.ip, action: 'GIG.MODERATE', resourceType: 'GIG', resourceId: id,
-      before: result.before ? { status: result.before.status, isFlagged: result.before.isFlagged } : undefined,
+      ...actor,
+      ip: req.ip,
+      action: 'GIG.MODERATE',
+      resourceType: 'GIG',
+      resourceId: id,
+      before: result.before
+        ? { status: result.before.status, isFlagged: result.before.isFlagged }
+        : undefined,
       after: { status: result.status, isFlagged: result.isFlagged, isFeatured: result.isFeatured },
     });
     delete (result as { before?: unknown }).before;
@@ -354,7 +401,14 @@ router.post(
     const body = req.body as z.infer<typeof featuredSchema>;
     const actor = await loadActor(req);
     const result = await ops.featureGig(id, body.days);
-    await adminAudit({ ...actor, ip: req.ip, action: 'GIG.FEATURE', resourceType: 'GIG', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'GIG.FEATURE',
+      resourceType: 'GIG',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -366,7 +420,14 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await ops.unfeatureGig(id);
-    await adminAudit({ ...actor, ip: req.ip, action: 'GIG.UNFEATURE', resourceType: 'GIG', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'GIG.UNFEATURE',
+      resourceType: 'GIG',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -380,7 +441,11 @@ router.get(
     const { open } = req.query as Record<string, string | undefined>;
     const q = await paginate(req, {
       fetch: (p) =>
-        mod.adminListJobs({ open: open === undefined ? undefined : open === '1', limit: p.limit, cursorWhere: p.cursorWhere }),
+        mod.adminListJobs({
+          open: open === undefined ? undefined : open === '1',
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
+        }),
     });
     return success(res, q);
   }),
@@ -394,7 +459,14 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await mod.moderateJob(id, req.body as z.infer<typeof jobModerateSchema>);
-    await adminAudit({ ...actor, ip: req.ip, action: 'JOB.MODERATE', resourceType: 'JOB', resourceId: id, after: { isOpen: result.isOpen, pinnedAt: result.pinnedAt } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'JOB.MODERATE',
+      resourceType: 'JOB',
+      resourceId: id,
+      after: { isOpen: result.isOpen, pinnedAt: result.pinnedAt },
+    });
     return success(res, result);
   }),
 );
@@ -425,7 +497,14 @@ router.post(
     const body = req.body as z.infer<typeof reviewModerateSchema>;
     const actor = await loadActor(req);
     const result = await mod.moderateReview(id, body.action, actor.adminId, body.reason);
-    await adminAudit({ ...actor, ip: req.ip, action: 'REVIEW.MODERATE', resourceType: 'REVIEW', resourceId: id, after: { hiddenAt: result.hiddenAt, hiddenReason: result.hiddenReason } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'REVIEW.MODERATE',
+      resourceType: 'REVIEW',
+      resourceId: id,
+      after: { hiddenAt: result.hiddenAt, hiddenReason: result.hiddenReason },
+    });
     return success(res, result);
   }),
 );
@@ -438,7 +517,13 @@ router.get(
   asyncHandler(async (req, res) => {
     const { status, q } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
-      fetch: (p) => money.adminListOrders({ status: status as never, q, limit: p.limit, cursorWhere: p.cursorWhere }),
+      fetch: (p) =>
+        money.adminListOrders({
+          status: status as never,
+          q,
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
+        }),
     });
     return success(res, result);
   }),
@@ -453,7 +538,14 @@ router.post(
     const body = req.body as z.infer<typeof orderRefundSchema>;
     const actor = await loadActor(req);
     const result = await money.refundOrder(id, body.amountEtb, body.reason);
-    await adminAudit({ ...actor, ip: req.ip, action: 'ORDER.REFUND', resourceType: 'ORDER', resourceId: id, after: { refundedEtb: result.refundedEtb, reason: body.reason } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'ORDER.REFUND',
+      resourceType: 'ORDER',
+      resourceId: id,
+      after: { refundedEtb: result.refundedEtb, reason: body.reason },
+    });
     return success(res, result);
   }),
 );
@@ -481,7 +573,14 @@ router.post(
     const body = req.body as z.infer<typeof walletAdjustSchema>;
     const actor = await loadActor(req);
     const result = await money.adjustWallet(userId, body.type, body.amountEtb, body.description);
-    await adminAudit({ ...actor, ip: req.ip, action: 'WALLET.ADJUST', resourceType: 'WALLET', resourceId: userId, after: { type: body.type, amountEtb: body.amountEtb, description: body.description } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'WALLET.ADJUST',
+      resourceType: 'WALLET',
+      resourceId: userId,
+      after: { type: body.type, amountEtb: body.amountEtb, description: body.description },
+    });
     return success(res, result);
   }),
 );
@@ -494,7 +593,12 @@ router.get(
   asyncHandler(async (req, res) => {
     const { status } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
-      fetch: (p) => money.adminListWithdrawals({ status: status as never, limit: p.limit, cursorWhere: p.cursorWhere }),
+      fetch: (p) =>
+        money.adminListWithdrawals({
+          status: status as never,
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
+        }),
     });
     return success(res, result);
   }),
@@ -513,8 +617,18 @@ router.post(
     const { id } = req.params as { id: string };
     const body = req.body as z.infer<typeof withdrawStatusSchema>;
     const actor = await loadActor(req);
-    const result = await money.markWithdrawalStatus(id, body.status, { providerRef: body.providerRef, failureReason: body.failureReason });
-    await adminAudit({ ...actor, ip: req.ip, action: 'WITHDRAWAL.STATUS', resourceType: 'WITHDRAWAL', resourceId: id, after: { status: body.status, providerRef: body.providerRef } });
+    const result = await money.markWithdrawalStatus(id, body.status, {
+      providerRef: body.providerRef,
+      failureReason: body.failureReason,
+    });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'WITHDRAWAL.STATUS',
+      resourceType: 'WITHDRAWAL',
+      resourceId: id,
+      after: { status: body.status, providerRef: body.providerRef },
+    });
     return success(res, result);
   }),
 );
@@ -529,10 +643,12 @@ router.get(
     const result = await paginate(req, {
       fetch: (p) =>
         community.adminListUsers({
-          q, role: role as never,
+          q,
+          role: role as never,
           suspended: suspended === undefined ? undefined : suspended === '1',
           unverified: unverified === '1',
-          limit: p.limit, cursorWhere: p.cursorWhere,
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
         }),
     });
     return success(res, result);
@@ -557,7 +673,14 @@ router.post(
     const body = req.body as z.infer<typeof userRoleSchema>;
     const actor = await loadActor(req);
     const result = await community.setUserRole(id, body.role);
-    await adminAudit({ ...actor, ip: req.ip, action: 'USER.ROLE', resourceType: 'USER', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'USER.ROLE',
+      resourceType: 'USER',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -571,7 +694,14 @@ router.post(
     const body = req.body as { suspend: boolean };
     const actor = await loadActor(req);
     const result = await community.suspendUser(id, body.suspend);
-    await adminAudit({ ...actor, ip: req.ip, action: 'USER.SUSPEND', resourceType: 'USER', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'USER.SUSPEND',
+      resourceType: 'USER',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -585,7 +715,14 @@ router.post(
     const body = req.body as { verify: boolean };
     const actor = await loadActor(req);
     const result = await community.verifyIdentity(id, body.verify);
-    await adminAudit({ ...actor, ip: req.ip, action: 'USER.VERIFY_ID', resourceType: 'USER', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'USER.VERIFY_ID',
+      resourceType: 'USER',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -647,7 +784,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const { status } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
-      fetch: (p) => ops.adminListSubscriptions({ status, limit: p.limit, cursorWhere: p.cursorWhere }),
+      fetch: (p) =>
+        ops.adminListSubscriptions({ status, limit: p.limit, cursorWhere: p.cursorWhere }),
     });
     return success(res, result);
   }),
@@ -661,7 +799,12 @@ router.get(
   asyncHandler(async (req, res) => {
     const { status } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
-      fetch: (p) => support.adminListTickets({ status: status as never, limit: p.limit, cursorWhere: p.cursorWhere }),
+      fetch: (p) =>
+        support.adminListTickets({
+          status: status as never,
+          limit: p.limit,
+          cursorWhere: p.cursorWhere,
+        }),
     });
     return success(res, result);
   }),
@@ -685,7 +828,14 @@ router.post(
     const body = req.body as z.infer<typeof ticketReplySchema>;
     const actor = await loadActor(req);
     const result = await support.replyToTicket(id, actor.adminId, body.body);
-    await adminAudit({ ...actor, ip: req.ip, action: 'TICKET.REPLY', resourceType: 'TICKET', resourceId: id, after: { status: result.status } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'TICKET.REPLY',
+      resourceType: 'TICKET',
+      resourceId: id,
+      after: { status: result.status },
+    });
     return success(res, result);
   }),
 );
@@ -699,7 +849,14 @@ router.post(
     const body = req.body as z.infer<typeof ticketStatusSchema>;
     const actor = await loadActor(req);
     const result = await support.setTicketStatus(id, body.status);
-    await adminAudit({ ...actor, ip: req.ip, action: 'TICKET.STATUS', resourceType: 'TICKET', resourceId: id, after: { status: result.status } });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'TICKET.STATUS',
+      resourceType: 'TICKET',
+      resourceId: id,
+      after: { status: result.status },
+    });
     return success(res, result);
   }),
 );
@@ -714,7 +871,13 @@ router.post(
     const body = req.body as z.infer<typeof broadcastSchema>;
     const actor = await loadActor(req);
     const result = await ops.broadcast({ title: body.title, body: body.body, scope: body.scope });
-    await adminAudit({ ...actor, ip: req.ip, action: 'BROADCAST.SEND', resourceType: 'SYSTEM', after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'BROADCAST.SEND',
+      resourceType: 'SYSTEM',
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -736,8 +899,58 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as z.infer<typeof settingUpsertSchema>;
     const actor = await loadActor(req);
-    const result = await settings.upsertSetting(body.key, body.value, actor.adminId, body.description);
-    await adminAudit({ ...actor, ip: req.ip, action: 'SETTING.UPSERT', resourceType: 'SETTING', resourceId: body.key, after: result });
+    const result = await settings.upsertSetting(
+      body.key,
+      body.value,
+      actor.adminId,
+      body.description,
+    );
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'SETTING.UPSERT',
+      resourceType: 'SETTING',
+      resourceId: body.key,
+      after: result,
+    });
+    return success(res, result);
+  }),
+);
+
+// ================= EDITABLE CONTENT PAGES =================
+
+const contentPageSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  markdown: z.string().max(60_000),
+});
+
+/** GET /admin/ops/content — all editable content pages (privacy, terms, faq…). */
+router.get(
+  '/content',
+  requireCapability('content:manage'),
+  asyncHandler(async (_req, res) => {
+    return success(res, { items: await content.listContentPages() });
+  }),
+);
+
+/** PUT /admin/ops/content/:slug — persist an edit to one content page. */
+router.put(
+  '/content/:slug',
+  requireCapability('content:manage'),
+  validate(contentPageSchema),
+  asyncHandler(async (req, res) => {
+    const slug = (req.params as { slug?: string }).slug?.trim().toLowerCase() ?? '';
+    const body = req.body as z.infer<typeof contentPageSchema>;
+    const actor = await loadActor(req);
+    const result = await content.upsertContentPage(slug, body, actor.adminId);
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'CONTENT.UPSERT',
+      resourceType: 'CONTENT_PAGE',
+      resourceId: slug,
+      after: { title: result.title, markdownLength: result.markdown.length },
+    });
     return success(res, result);
   }),
 );
@@ -768,7 +981,14 @@ router.patch(
     const body = req.body as z.infer<typeof categoryUpdateSchema>;
     const actor = await loadActor(req);
     const result = await categories.updateCategory(id, body, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'CATEGORY.UPDATE', resourceType: 'CATEGORY', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'CATEGORY.UPDATE',
+      resourceType: 'CATEGORY',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -780,7 +1000,14 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await categories.resetCategoryFee(id, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'CATEGORY.RESET_FEE', resourceType: 'CATEGORY', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'CATEGORY.RESET_FEE',
+      resourceType: 'CATEGORY',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -810,7 +1037,14 @@ router.put(
     const body = req.body as z.infer<typeof thresholdUpdateSchema>;
     const actor = await loadActor(req);
     const result = await kpi.updateKpiThreshold(id, body, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'KPI.THRESHOLD_UPDATE', resourceType: 'KPI', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'KPI.THRESHOLD_UPDATE',
+      resourceType: 'KPI',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -832,7 +1066,14 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await kpi.acknowledgeKpiAlert(id, actor.adminId);
-    await adminAudit({ ...actor, ip: req.ip, action: 'KPI.ALERT_ACK', resourceType: 'KPI', resourceId: id, after: result });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'KPI.ALERT_ACK',
+      resourceType: 'KPI',
+      resourceId: id,
+      after: result,
+    });
     return success(res, result);
   }),
 );
@@ -845,7 +1086,8 @@ router.get(
   asyncHandler(async (req, res) => {
     const { adminId, resourceType } = req.query as Record<string, string | undefined>;
     const result = await paginate(req, {
-      fetch: (p) => ops.listAudit({ adminId, resourceType, limit: p.limit, cursorWhere: p.cursorWhere }),
+      fetch: (p) =>
+        ops.listAudit({ adminId, resourceType, limit: p.limit, cursorWhere: p.cursorWhere }),
     });
     return success(res, result);
   }),
@@ -872,7 +1114,13 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await mediaReview.removeAvatar(id);
-    await adminAudit({ ...actor, ip: req.ip, action: 'MEDIA.REMOVE_AVATAR', resourceType: 'USER', resourceId: id });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'MEDIA.REMOVE_AVATAR',
+      resourceType: 'USER',
+      resourceId: id,
+    });
     return success(res, result);
   }),
 );
@@ -885,7 +1133,13 @@ router.post(
     const { id } = req.params as { id: string };
     const actor = await loadActor(req);
     const result = await mediaReview.flagGig(id);
-    await adminAudit({ ...actor, ip: req.ip, action: 'MEDIA.FLAG_GIG', resourceType: 'GIG', resourceId: id });
+    await adminAudit({
+      ...actor,
+      ip: req.ip,
+      action: 'MEDIA.FLAG_GIG',
+      resourceType: 'GIG',
+      resourceId: id,
+    });
     return success(res, result);
   }),
 );

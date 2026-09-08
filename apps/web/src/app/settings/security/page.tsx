@@ -29,7 +29,7 @@ import {
   useDeletePasskey,
   useRemovePin,
 } from '@/hooks/use-security';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, downloadViaAuth } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { startRegistration } from '@simplewebauthn/browser';
 import { timeAgo } from '@/lib/utils';
@@ -123,7 +123,9 @@ export default function SecuritySettingsPage() {
             {t('security.noDevices')}
           </p>
         )}
-        {devices.data?.items.map((d) => <DeviceRow key={d.id} d={d} />)}
+        {devices.data?.items.map((d) => (
+          <DeviceRow key={d.id} d={d} />
+        ))}
       </Section>
 
       {/* Danger zone */}
@@ -136,17 +138,7 @@ export default function SecuritySettingsPage() {
             const token = useAuthStore.getState().accessToken;
             if (!token) return;
             try {
-              const res = await fetch('/me/data-export', { headers: { Authorization: `Bearer ${token}` } });
-              if (!res.ok) throw new Error(`Export failed (${res.status})`);
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'apex-work-data-export.json';
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
+              await downloadViaAuth('/me/data-export', token, 'apex-work-data-export.json');
               toast.success('Your data is being downloaded');
             } catch (e) {
               toast.error((e as Error).message ?? 'Export failed');
@@ -393,11 +385,16 @@ function PasskeyRow({
 function guessDeviceLabel(): string {
   if (typeof navigator === 'undefined') return 'This device';
   const ua = navigator.userAgent;
-  const os =
-    /iPhone|iPad|iOS/i.test(ua) ? 'iPhone' :
-    /Android/i.test(ua) ? 'Android' :
-    /Mac OS X/i.test(ua) ? 'Mac' :
-    /Windows/i.test(ua) ? 'Windows' :
-    /Linux/i.test(ua) ? 'Linux' : 'Device';
+  const os = /iPhone|iPad|iOS/i.test(ua)
+    ? 'iPhone'
+    : /Android/i.test(ua)
+      ? 'Android'
+      : /Mac OS X/i.test(ua)
+        ? 'Mac'
+        : /Windows/i.test(ua)
+          ? 'Windows'
+          : /Linux/i.test(ua)
+            ? 'Linux'
+            : 'Device';
   return os;
 }

@@ -6,8 +6,6 @@ import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Button } from '@/components/ui/button';
 import {
   CheckCircle2,
-  CreditCard,
-  Calendar,
   Settings,
   LogOut,
   ChevronRight,
@@ -17,14 +15,11 @@ import {
   Package,
   Bell,
   ShieldCheck,
-  ImageIcon,
   BarChart3,
   Trophy,
   Gift,
   FileText,
-  Award,
   Users,
-  Search as SearchIcon,
   Bookmark,
   MapPin,
   LifeBuoy,
@@ -186,20 +181,8 @@ export default function ProfilePage() {
           subtitle="Alerts & activity"
           href="/notifications"
         />
-        <MenuItem
-          icon={<CreditCard className="h-4 w-4" />}
-          title={t('profile.paymentMethods')}
-          subtitle="Secure Chapa checkout options"
-          href="/settings/payment-methods"
-        />
         {me.role === 'FREELANCER' && (
           <>
-            <MenuItem
-              icon={<Calendar className="h-4 w-4" />}
-              title={t('profile.availability')}
-              subtitle="Working hours & vacation"
-              href="/settings/availability"
-            />
             <MenuItem
               icon={<BarChart3 className="h-4 w-4" />}
               title="Statistics"
@@ -211,6 +194,12 @@ export default function ProfilePage() {
               title="Achievements"
               subtitle="Badges & milestones"
               href="/achievements"
+            />
+            <MenuItem
+              icon={<FileText className="h-4 w-4" />}
+              title="Resume / CV"
+              subtitle="Build your professional CV"
+              href="/resume"
             />
           </>
         )}
@@ -225,12 +214,6 @@ export default function ProfilePage() {
           title="Refer friends"
           subtitle="Earn 100 ETB per invite"
           href="/referrals"
-        />
-        <MenuItem
-          icon={<SearchIcon className="h-4 w-4" />}
-          title="Saved searches"
-          subtitle="Get pinged when new matches appear"
-          href="/settings/saved-searches"
         />
         <MenuItem
           icon={<Bookmark className="h-4 w-4" />}
@@ -249,40 +232,6 @@ export default function ProfilePage() {
           title="Support tickets"
           subtitle="Get help beyond the AI bot"
           href="/support"
-        />
-        {me.role === 'FREELANCER' && (
-          <>
-            <MenuItem
-              icon={<ImageIcon className="h-4 w-4" />}
-              title={t('portfolio.title')}
-              subtitle={t('portfolio.menuSubtitle')}
-              href="/settings/portfolio"
-            />
-            <MenuItem
-              icon={<FileText className="h-4 w-4" />}
-              title="Resume / CV"
-              subtitle="Build your professional CV"
-              href="/resume"
-            />
-            <MenuItem
-              icon={<Award className="h-4 w-4" />}
-              title="Skills"
-              subtitle="Add and rank your skills"
-              href="/settings/skills"
-            />
-          </>
-        )}
-        <MenuItem
-          icon={<ShieldCheck className="h-4 w-4" />}
-          title={t('profile.security')}
-          subtitle={t('profile.securitySubtitle')}
-          href="/settings/security"
-        />
-        <MenuItem
-          icon={<ShieldCheck className="h-4 w-4" />}
-          title={t('block.listTitle')}
-          subtitle={t('block.menuSubtitle')}
-          href="/settings/blocks"
         />
         <MenuItem
           icon={<Settings className="h-4 w-4" />}

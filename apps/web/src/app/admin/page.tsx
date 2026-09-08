@@ -23,6 +23,7 @@ import {
   AlertTriangle as AlertTri,
   Award as AwardIcon,
   Cpu,
+  FileText,
   Menu,
   X as CloseIcon,
   Search,
@@ -46,6 +47,7 @@ import { SettingsTab } from '@/components/admin/settings-tab';
 import { AuditTab } from '@/components/admin/audit-tab';
 import { AdminsTab } from '@/components/admin/admins-tab';
 import { AgenciesTab } from '@/components/admin/agencies-tab';
+import { ContentTab } from '@/components/admin/content-tab';
 import { canRole } from '@/components/admin/rbac';
 import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
 import { ExportButton } from '@/components/admin/export-button';
@@ -60,7 +62,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-08.74';
+export const ADMIN_UI_BUILD = '2026-09-08.75';
 
 type Tab =
   | 'summary'
@@ -79,7 +81,8 @@ type Tab =
   | 'settings'
   | 'audit'
   | 'admins'
-  | 'agencies';
+  | 'agencies'
+  | 'content';
 
 export default function AdminPage() {
   const router = useRouter();
@@ -145,6 +148,7 @@ export default function AdminPage() {
       {tab === 'admins' && <AdminsTab />}
       {tab === 'agencies' && <AgenciesTab />}
       {tab === 'certs' && <CertsTab />}
+      {tab === 'content' && <ContentTab />}
       {tab === 'diagnostics' && <DiagnosticsTab />}
     </AdminShell>
   );
@@ -220,6 +224,12 @@ const NAV_ITEMS: { id: Tab; label: string; icon: React.ReactNode; cap: string }[
     label: 'Settings',
     icon: <ShieldCheck className="h-4 w-4" />,
     cap: 'settings:manage',
+  },
+  {
+    id: 'content',
+    label: 'Content',
+    icon: <FileText className="h-4 w-4" />,
+    cap: 'content:manage',
   },
   { id: 'audit', label: 'Audit log', icon: <BarChart3 className="h-4 w-4" />, cap: 'audit:view' },
   { id: 'admins', label: 'Admin team', icon: <Users className="h-4 w-4" />, cap: 'audit:view' },

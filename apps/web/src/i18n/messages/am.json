@@ -717,6 +717,11 @@
     "help": "እርዳታ እና ድጋፍ",
     "legal": "ህግ እና ግላዊነት",
     "deleteAccount": "አካውንት ሰርዝ",
-    "devices": "የታመኑ መሳሪያዎች"
+    "devices": "የታመኑ መሳሪያዎች",
+    "phone": "ስልክ እና ማረጋገጫ",
+    "availability": "መገኘት",
+    "paymentMethods": "የክፍያ ዘዴዎች",
+    "savedSearches": "የተቀመጡ ፍለጋዎች",
+    "skills": "ክህሎቶች"
   }
 }

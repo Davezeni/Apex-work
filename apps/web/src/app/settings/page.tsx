@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   User,
   Shield,
+  ShieldCheck,
   Bell,
   Globe,
   Palette,
@@ -20,6 +21,9 @@ import {
   ShieldOff,
   ImageIcon,
   Fingerprint,
+  CreditCard,
+  Calendar,
+  Bookmark,
 } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { useMe, useLogout } from '@/hooks/use-me';
@@ -44,34 +48,114 @@ export default function SettingsPage() {
       </header>
 
       <Section title={t('settings.account')}>
-        <Row icon={<User className="h-4 w-4" />} title={t('editProfile.title')} href="/settings/profile" />
+        <Row
+          icon={<User className="h-4 w-4" />}
+          title={t('editProfile.title')}
+          href="/settings/profile"
+        />
+        <Row
+          icon={<ShieldCheck className="h-4 w-4" />}
+          title={t('settings.phone')}
+          href="/settings/phone"
+        />
+        <Row
+          icon={<CreditCard className="h-4 w-4" />}
+          title={t('settings.paymentMethods')}
+          href="/settings/payment-methods"
+        />
         {me?.role === 'FREELANCER' && (
-          <Row icon={<ImageIcon className="h-4 w-4" />} title={t('portfolio.title')} href="/settings/portfolio" />
+          <>
+            <Row
+              icon={<ImageIcon className="h-4 w-4" />}
+              title={t('portfolio.title')}
+              href="/settings/portfolio"
+            />
+            <Row
+              icon={<Calendar className="h-4 w-4" />}
+              title={t('settings.availability')}
+              href="/settings/availability"
+            />
+            <Row
+              icon={<FileText className="h-4 w-4" />}
+              title={t('settings.skills')}
+              href="/settings/skills"
+            />
+          </>
         )}
       </Section>
 
       <Section title={t('settings.securityGroup')}>
-        <Row icon={<Shield className="h-4 w-4" />} title={t('security.title')} href="/settings/security" />
+        <Row
+          icon={<Shield className="h-4 w-4" />}
+          title={t('security.title')}
+          href="/settings/security"
+        />
         <Row icon={<KeyRound className="h-4 w-4" />} title={t('pin.set')} href="/settings/pin" />
-        <Row icon={<Fingerprint className="h-4 w-4" />} title={t('settings.devices')} href="/settings/devices" />
+        <Row
+          icon={<Fingerprint className="h-4 w-4" />}
+          title={t('settings.devices')}
+          href="/settings/devices"
+        />
       </Section>
 
       <Section title={t('settings.privacy')}>
-        <Row icon={<ShieldOff className="h-4 w-4" />} title={t('block.listTitle')} href="/settings/blocks" />
-        <Row icon={<Bell className="h-4 w-4" />} title={t('settings.notifications')} href="/settings/notifications" />
+        <Row
+          icon={<ShieldOff className="h-4 w-4" />}
+          title={t('block.listTitle')}
+          href="/settings/blocks"
+        />
+        <Row
+          icon={<Bell className="h-4 w-4" />}
+          title={t('settings.notifications')}
+          href="/settings/notifications"
+        />
+        <Row
+          icon={<Bookmark className="h-4 w-4" />}
+          title={t('settings.savedSearches')}
+          href="/settings/saved-searches"
+        />
       </Section>
 
       <Section title={t('settings.preferences')}>
-        <Row icon={<Globe className="h-4 w-4" />} title={t('settings.language')} href="/settings/language" />
-        <Row icon={<Palette className="h-4 w-4" />} title={t('settings.appearance')} href="/settings/appearance" />
-        <Row icon={<Database className="h-4 w-4" />} title={t('settings.dataStorage')} href="/settings/storage" />
-        <Row icon={<Link2 className="h-4 w-4" />} title={t('settings.connectedApps')} href="/settings/connected" />
+        <Row
+          icon={<Globe className="h-4 w-4" />}
+          title={t('settings.language')}
+          href="/settings/language"
+        />
+        <Row
+          icon={<Palette className="h-4 w-4" />}
+          title={t('settings.appearance')}
+          href="/settings/appearance"
+        />
+        <Row
+          icon={<Database className="h-4 w-4" />}
+          title={t('settings.dataStorage')}
+          href="/settings/storage"
+        />
+        <Row
+          icon={<Link2 className="h-4 w-4" />}
+          title={t('settings.connectedApps')}
+          href="/settings/connected"
+        />
       </Section>
 
       <Section title={t('settings.about')}>
-        <Row icon={<HelpCircle className="h-4 w-4" />} title={t('settings.help')} href="/settings/help" />
-        <Row icon={<FileText className="h-4 w-4" />} title={t('settings.legal')} href="/settings/legal" />
-        <Row icon={<Trash2 className="h-4 w-4" />} title={t('settings.deleteAccount')} href="/settings/delete" destructive />
+        <Row
+          icon={<HelpCircle className="h-4 w-4" />}
+          title={t('settings.help')}
+          href="/settings/help"
+        />
+        <Row
+          icon={<FileText className="h-4 w-4" />}
+          title={t('settings.legal')}
+          href="/settings/legal"
+        />
+        <Row
+          icon={<Trash2 className="h-4 w-4" />}
+          title={t('settings.deleteAccount')}
+          href="/settings/delete"
+          destructive
+        />
       </Section>
 
       <div className="mx-3 mt-6">
@@ -93,7 +177,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         {title}
       </h2>
-      <div className="overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border">
+      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
         {children}
       </div>
     </div>

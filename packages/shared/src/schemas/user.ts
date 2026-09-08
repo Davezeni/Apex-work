@@ -24,10 +24,12 @@ export type Me = z.infer<typeof meSchema>;
 
 export const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2).max(80).optional(),
-  bio: z.string().trim().max(2000).optional(),
-  city: z.string().trim().max(80).optional(),
-  hourlyRateEtb: z.number().int().min(0).max(1_000_000).optional(),
-  title: z.string().trim().max(120).optional(),
+  // The profile editor sends null to clear a field (e.g. "bio, city, title,
+  // rate"), so each of these must be nullable — not just optional.
+  bio: z.string().trim().max(2000).nullable().optional(),
+  city: z.string().trim().max(80).nullable().optional(),
+  hourlyRateEtb: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  title: z.string().trim().max(120).nullable().optional(),
   avatarUrl: z.string().url().max(500).nullable().optional(),
   email: z.string().trim().toLowerCase().email().max(160).nullable().optional(),
   /// Freelancer opts in to map discovery. Both set or both null.
