@@ -602,6 +602,10 @@ export default function ConversationPage() {
             aria-label={`${peer.fullName} profile`}
             title={peer.fullName}
             className="block h-10 w-10 shrink-0"
+            onClick={(e) => {
+              e.preventDefault();
+              router.push(`/u/${peer.username}`);
+            }}
           >
             <UserAvatar
               name={peer.fullName}
@@ -622,6 +626,10 @@ export default function ConversationPage() {
               href={`/u/${peer.username}`}
               className="block min-w-0 active:opacity-60"
               aria-label={`${peer.fullName} profile`}
+              onClick={(e) => {
+                e.preventDefault();
+                router.push(`/u/${peer.username}`);
+              }}
             >
               <h4 className="truncate text-sm font-semibold">{peer.fullName}</h4>
             </Link>
