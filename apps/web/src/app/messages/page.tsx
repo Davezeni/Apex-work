@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -26,11 +27,10 @@ import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { UserAvatar } from '@/components/ui/user-avatar';
-
 /** Build marker shown in the inbox header so users/reviewers can confirm a
  *  given device is running the latest deployed bundle (helps catch a stale
  *  service-worker cache). */
-const APP_BUILD = '2026-09-09.86';
+const APP_BUILD = '2026-09-09.87';
 
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
@@ -99,7 +99,7 @@ export default function MessagesPage() {
               setSearchOpen((open) => !open);
               if (searchOpen) setQuery('');
             }}
-            aria-label="Search conversations"
+            aria-label={dt('Search conversations')}
             aria-pressed={searchOpen}
             className={cn(
               'grid h-10 w-10 place-items-center rounded-full border border-border bg-card',
@@ -110,7 +110,7 @@ export default function MessagesPage() {
           </button>
           <Link
             href="/messages/new-group"
-            aria-label="New group"
+            aria-label={dt('New group')}
             className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
           >
             <Edit3 className="h-4 w-4" />
@@ -124,8 +124,8 @@ export default function MessagesPage() {
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search your conversations…"
-            aria-label="Search your conversations"
+            placeholder={dt('Search your conversations…')}
+            aria-label={dt('Search your conversations')}
             className="w-full rounded-full border border-border bg-card px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
         </div>
@@ -358,7 +358,7 @@ function ConvRow({
           {!c.isGroup && peer?.online && (
             <span
               className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-emerald-500"
-              title="Online"
+              title={dt('Online')}
             />
           )}
           {c.isGroup && (
@@ -409,7 +409,7 @@ function ConvRow({
               e.stopPropagation();
               setMenuOpen((v) => !v);
             }}
-            aria-label="Conversation actions"
+            aria-label={dt('Conversation actions')}
             aria-pressed={menuOpen}
             className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted active:scale-90"
           >

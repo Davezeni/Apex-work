@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Zap } from 'lucide-react';
@@ -8,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { useBoostGig } from '@/hooks/use-boost';
 import { BOOST_TIERS } from '@apex-work/shared';
 import { formatEtb, cn } from '@/lib/utils';
-
 interface Props {
   slug: string;
   open: boolean;
@@ -39,7 +39,7 @@ export function BoostSheet({ slug, open, onOpenChange }: Props) {
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title="Boost this gig"
+      title={dt('Boost this gig')}
       description="Pin your gig to the top of its category — paid from your wallet balance."
     >
       <div className="space-y-3">
@@ -52,30 +52,43 @@ export function BoostSheet({ slug, open, onOpenChange }: Props) {
               days === t.days ? 'border-primary bg-primary/10' : 'border-border bg-card',
             )}
           >
-            <div className={cn('grid h-11 w-11 place-items-center rounded-xl',
-              days === t.days ? 'grad-hero text-white' : 'bg-muted text-muted-foreground')}>
+            <div
+              className={cn(
+                'grid h-11 w-11 place-items-center rounded-xl',
+                days === t.days ? 'grad-hero text-white' : 'bg-muted text-muted-foreground',
+              )}
+            >
               <Zap className="h-5 w-5" />
             </div>
             <div className="flex-1">
               <div className="text-sm font-bold">{t.label}</div>
-              <div className="text-[11px] text-muted-foreground">Top of category feed</div>
+              <div className="text-[11px] text-muted-foreground">{dt('Top of category feed')}</div>
             </div>
             <div className="text-right">
               <div className="text-lg font-extrabold text-primary">{formatEtb(t.priceEtb)}</div>
-              <div className="text-[10px] text-muted-foreground">from wallet</div>
+              <div className="text-[10px] text-muted-foreground">{dt('from wallet')}</div>
             </div>
           </button>
         ))}
 
-        <Button variant="brand" size="lg" className="w-full" onClick={submit} disabled={boost.isPending}>
-          {boost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-            <><Zap className="h-4 w-4" /> Pay {formatEtb(tier.priceEtb)} · Boost {tier.label}</>
+        <Button
+          variant="brand"
+          size="lg"
+          className="w-full"
+          onClick={submit}
+          disabled={boost.isPending}
+        >
+          {boost.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <Zap className="h-4 w-4" /> Pay {formatEtb(tier.priceEtb)} · Boost {tier.label}
+            </>
           )}
         </Button>
         <p className="text-center text-[11px] text-muted-foreground">
-          If you don&rsquo;t have enough in your wallet, we&rsquo;ll show a
-          &ldquo;top up&rdquo; hint. Boosts stack — buying again extends
-          the current end-date.
+          If you don&rsquo;t have enough in your wallet, we&rsquo;ll show a &ldquo;top up&rdquo;
+          hint. Boosts stack — buying again extends the current end-date.
         </p>
       </div>
     </Sheet>

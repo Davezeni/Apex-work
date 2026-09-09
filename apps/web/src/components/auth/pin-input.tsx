@@ -1,8 +1,8 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-
 interface Props {
   value: string;
   onChange: (v: string) => void;
@@ -39,7 +39,7 @@ export function PinInput({ value, onChange, autoFocus, disabled, masked = true, 
         if (e.key === 'Enter' || e.key === ' ') focus();
       }}
       role="group"
-      aria-label="6-digit PIN"
+      aria-label={dt('6-digit PIN')}
     >
       {Array.from({ length: 6 }).map((_, i) => {
         const filled = i < value.length;
@@ -81,7 +81,7 @@ export function PinInput({ value, onChange, autoFocus, disabled, masked = true, 
         }}
         // Visually hidden but accessible + iOS keyboard-friendly
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        aria-label="Enter 6-digit PIN"
+        aria-label={dt('Enter 6-digit PIN')}
       />
     </div>
   );

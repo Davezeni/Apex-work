@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import {
   Search,
@@ -29,7 +30,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { UserAvatar } from '@/components/ui/user-avatar';
-
 /** Deterministic pick so a user's avatar color stays stable across renders. */
 
 function initialsOf(name: string): string {
@@ -455,7 +455,7 @@ function CardBody({ g, noTopPadding = false }: { g: GigListItem; noTopPadding?: 
             <span>({g.ratingCount})</span>
           </span>
         ) : (
-          <span className="text-muted-foreground/60">New</span>
+          <span className="text-muted-foreground/60">{dt('New')}</span>
         )}
         {g.owner.city && (
           <>

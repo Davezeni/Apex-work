@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import Link from 'next/link';
 import Image from 'next/image';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -31,7 +32,6 @@ import { LanguageSwitcher } from '@/components/language-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useI18n } from '@/i18n';
-
 export default function ProfilePage() {
   const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
   const logout = useLogout();
@@ -112,10 +112,10 @@ export default function ProfilePage() {
       {/* Actions */}
       <div className="mx-5 mt-4 flex gap-2">
         <Button asChild variant="brand" className="flex-1">
-          <Link href="/settings/profile">Edit profile</Link>
+          <Link href="/settings/profile">{dt('Edit profile')}</Link>
         </Button>
         <Button asChild variant="secondary" className="flex-1">
-          <Link href={`/u/${me.username}`}>Share</Link>
+          <Link href={`/u/${me.username}`}>{dt('Share')}</Link>
         </Button>
       </div>
 
@@ -123,13 +123,13 @@ export default function ProfilePage() {
         <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
           <ShieldCheck className="h-5 w-5 shrink-0 text-amber-500" />
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold">Verify your phone</div>
+            <div className="text-sm font-bold">{dt('Verify your phone')}</div>
             <p className="text-[11px] text-muted-foreground">
               Required before messaging, ordering, posting, or withdrawing.
             </p>
           </div>
           <Button asChild size="sm" variant="outline">
-            <Link href="/settings/phone?next=/profile">Verify</Link>
+            <Link href="/settings/phone?next=/profile">{dt('Verify')}</Link>
           </Button>
         </div>
       )}
@@ -171,66 +171,66 @@ export default function ProfilePage() {
       <div className="px-3 pb-8">
         <MenuItem
           icon={<Package className="h-4 w-4" />}
-          title="Orders"
-          subtitle="Your purchases and sales"
+          title={dt('Orders')}
+          subtitle={dt('Your purchases and sales')}
           href="/orders"
         />
         <MenuItem
           icon={<Bell className="h-4 w-4" />}
-          title="Notifications"
-          subtitle="Alerts & activity"
+          title={dt('Notifications')}
+          subtitle={dt('Alerts & activity')}
           href="/notifications"
         />
         {me.role === 'FREELANCER' && (
           <>
             <MenuItem
               icon={<BarChart3 className="h-4 w-4" />}
-              title="Statistics"
-              subtitle="Views, earnings, response rate"
+              title={dt('Statistics')}
+              subtitle={dt('Views, earnings, response rate')}
               href="/stats"
             />
             <MenuItem
               icon={<Trophy className="h-4 w-4" />}
-              title="Achievements"
-              subtitle="Badges & milestones"
+              title={dt('Achievements')}
+              subtitle={dt('Badges & milestones')}
               href="/achievements"
             />
             <MenuItem
               icon={<FileText className="h-4 w-4" />}
-              title="Resume / CV"
-              subtitle="Build your professional CV"
+              title={dt('Resume / CV')}
+              subtitle={dt('Build your professional CV')}
               href="/resume"
             />
           </>
         )}
         <MenuItem
           icon={<Users className="h-4 w-4" />}
-          title="Teams & agencies"
-          subtitle="Collaborate on larger projects"
+          title={dt('Teams & agencies')}
+          subtitle={dt('Collaborate on larger projects')}
           href="/teams"
         />
         <MenuItem
           icon={<Gift className="h-4 w-4" />}
-          title="Refer friends"
-          subtitle="Earn 100 ETB per invite"
+          title={dt('Refer friends')}
+          subtitle={dt('Earn 100 ETB per invite')}
           href="/referrals"
         />
         <MenuItem
           icon={<Bookmark className="h-4 w-4" />}
-          title="Saved gigs"
-          subtitle="Keep services you want to hire later"
+          title={dt('Saved gigs')}
+          subtitle={dt('Keep services you want to hire later')}
           href="/saved"
         />
         <MenuItem
           icon={<MapPin className="h-4 w-4" />}
-          title="Nearby freelancers"
-          subtitle="Discover local talent on a map"
+          title={dt('Nearby freelancers')}
+          subtitle={dt('Discover local talent on a map')}
           href="/nearby"
         />
         <MenuItem
           icon={<LifeBuoy className="h-4 w-4" />}
-          title="Support tickets"
-          subtitle="Get help beyond the AI bot"
+          title={dt('Support tickets')}
+          subtitle={dt('Get help beyond the AI bot')}
           href="/support"
         />
         <MenuItem
@@ -242,8 +242,8 @@ export default function ProfilePage() {
         {me.role === 'ADMIN' && (
           <MenuItem
             icon={<ShieldCheck className="h-4 w-4" />}
-            title="Admin panel"
-            subtitle="Reports, withdrawals, users"
+            title={dt('Admin panel')}
+            subtitle={dt('Reports, withdrawals, users')}
             href="/admin"
           />
         )}
@@ -285,7 +285,7 @@ function ProfileSavedGigs({ saved, isLoading }: { saved: SavedGig[]; isLoading: 
         </div>
       ) : saved.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
-          <p className="text-xs font-semibold">You have not saved a gig yet.</p>
+          <p className="text-xs font-semibold">{dt('You have not saved a gig yet.')}</p>
           <Link href="/browse" className="mt-2 inline-block text-xs font-bold text-primary">
             Browse gigs
           </Link>
@@ -332,7 +332,7 @@ function SignedOutView() {
       <div className="grad-hero grid h-16 w-16 place-items-center rounded-2xl text-2xl font-extrabold text-white shadow-lg shadow-primary/40">
         <Sparkles className="h-8 w-8" />
       </div>
-      <h2 className="mt-6 text-2xl font-extrabold tracking-tight">Join Apex-Work</h2>
+      <h2 className="mt-6 text-2xl font-extrabold tracking-tight">{dt('Join Apex-Work')}</h2>
       <p className="mt-2 max-w-xs text-sm text-muted-foreground">
         Sign in to see your profile, wallet, and manage your gigs.
       </p>

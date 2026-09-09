@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,7 +13,6 @@ import { useMe } from '@/hooks/use-me';
 import { useSavedGigs, useUnsaveGig, type SavedGig } from '@/hooks/use-saved-gigs';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
-
 export default function SavedGigsPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -46,7 +46,7 @@ export default function SavedGigsPage() {
             <ChevronRight className="h-5 w-5 rotate-180" />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-extrabold tracking-tight">Saved gigs</h1>
+            <h1 className="text-lg font-extrabold tracking-tight">{dt('Saved gigs')}</h1>
             <p className="text-[11px] text-muted-foreground">
               {saved.isLoading
                 ? 'Loading…'
@@ -64,7 +64,7 @@ export default function SavedGigsPage() {
 
         {saved.error && !saved.isLoading && (
           <div className="mx-4 mt-6 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-center">
-            <p className="text-sm font-semibold">Could not load saved gigs</p>
+            <p className="text-sm font-semibold">{dt('Could not load saved gigs')}</p>
             <p className="mt-1 text-xs text-muted-foreground">{saved.error.message}</p>
             <button
               onClick={() => void saved.refetch()}
@@ -80,7 +80,7 @@ export default function SavedGigsPage() {
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">
               <Heart className="h-8 w-8" />
             </div>
-            <h2 className="mt-4 text-base font-extrabold">No saved gigs yet</h2>
+            <h2 className="mt-4 text-base font-extrabold">{dt('No saved gigs yet')}</h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               Tap the heart on a gig you like and it will stay here across your devices.
             </p>
@@ -102,7 +102,7 @@ export default function SavedGigsPage() {
                 busy={remove.isPending}
                 onRemove={() => {
                   remove.mutate(item.gig.slug, {
-                    onSuccess: () => toast.success('Gig removed from saved'),
+                    onSuccess: () => toast.success(dt('Gig removed from saved')),
                     onError: (error) => toast.error(error.message),
                   });
                 }}
@@ -196,7 +196,7 @@ function SavedGigCard({
             )}
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
-            <span className="text-[10px] text-muted-foreground">Starting at</span>
+            <span className="text-[10px] text-muted-foreground">{dt('Starting at')}</span>
             <span className="text-sm font-extrabold text-primary">
               {formatEtb(gig.startingPriceEtb)}
             </span>

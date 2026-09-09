@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, Phone, ShieldCheck } from 'lucide-react';
@@ -12,7 +13,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
-
 type Step = 'phone' | 'otp';
 
 function safeNext(value: string | null): string {
@@ -83,7 +83,7 @@ export default function VerifyPhonePage() {
         body: { phone, otpToken: verifiedToken },
       });
       await queryClient.invalidateQueries({ queryKey: ['me'] });
-      toast.success('Phone verified successfully');
+      toast.success(dt('Phone verified successfully'));
       router.replace(next);
     } catch (error) {
       setCode('');
@@ -112,7 +112,7 @@ export default function VerifyPhonePage() {
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm font-semibold">Verify phone</span>
+        <span className="text-sm font-semibold">{dt('Verify phone')}</span>
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-10">
@@ -121,7 +121,9 @@ export default function VerifyPhonePage() {
         </div>
         {step === 'phone' ? (
           <>
-            <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Add your phone number</h1>
+            <h1 className="mt-6 text-3xl font-extrabold tracking-tight">
+              {dt('Add your phone number')}
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               Verify an Ethiopian mobile number to unlock ordering, messaging, posting, payouts, and
               account recovery.
@@ -137,7 +139,7 @@ export default function VerifyPhonePage() {
                 inputMode="tel"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                placeholder="+2519XXXXXXXX"
+                placeholder={dt('+2519XXXXXXXX')}
                 className="h-14 w-full rounded-2xl border border-border bg-card pl-11 pr-4 text-lg font-medium tracking-wider outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
             </div>
@@ -159,7 +161,9 @@ export default function VerifyPhonePage() {
           </>
         ) : (
           <>
-            <h1 className="mt-6 text-3xl font-extrabold tracking-tight">Enter verification code</h1>
+            <h1 className="mt-6 text-3xl font-extrabold tracking-tight">
+              {dt('Enter verification code')}
+            </h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               We sent a code to <span className="font-semibold text-foreground">{phone}</span>.
             </p>

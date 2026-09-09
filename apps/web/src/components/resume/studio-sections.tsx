@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import {
   Award,
@@ -17,7 +18,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAIResumeSkills } from '@/hooks/use-ai';
 import type { ResumeContent, ResumeProjectInput } from '@apex-work/shared';
-
 type Props = {
   content: ResumeContent;
   onChange: (content: ResumeContent) => void;
@@ -54,7 +54,7 @@ function SkillsSection({ content, onChange, targetRole, summary }: Props) {
       setName('');
       return;
     }
-    if (content.skills.length >= 40) return toast.error('You can add up to 40 skills');
+    if (content.skills.length >= 40) return toast.error(dt('You can add up to 40 skills'));
     onChange({ ...content, skills: [...content.skills, { name: normalized, level }] });
     setName('');
     setSuggestions((items) =>
@@ -63,7 +63,7 @@ function SkillsSection({ content, onChange, targetRole, summary }: Props) {
   };
 
   const runSuggest = () => {
-    if (targetRole.trim().length < 2) return toast.error('Add a target role first');
+    if (targetRole.trim().length < 2) return toast.error(dt('Add a target role first'));
     suggest.mutate(
       {
         targetRole,
@@ -85,8 +85,8 @@ function SkillsSection({ content, onChange, targetRole, summary }: Props) {
   return (
     <StudioSection
       icon={<Sparkles className="h-4 w-4" />}
-      title="Skills & strengths"
-      subtitle="Show recruiters what you can actually deliver"
+      title={dt('Skills & strengths')}
+      subtitle={dt('Show recruiters what you can actually deliver')}
     >
       <div className="flex gap-2">
         <input
@@ -98,7 +98,7 @@ function SkillsSection({ content, onChange, targetRole, summary }: Props) {
               add();
             }
           }}
-          placeholder="e.g. React, Figma, Copywriting"
+          placeholder={dt('e.g. React, Figma, Copywriting')}
           className="input flex-1"
         />
         <select
@@ -106,13 +106,13 @@ function SkillsSection({ content, onChange, targetRole, summary }: Props) {
           onChange={(event) => setLevel(Number(event.target.value))}
           className="input w-24"
         >
-          <option value={5}>Expert</option>
-          <option value={4}>Advanced</option>
-          <option value={3}>Strong</option>
-          <option value={2}>Working</option>
-          <option value={1}>Learning</option>
+          <option value={5}>{dt('Expert')}</option>
+          <option value={4}>{dt('Advanced')}</option>
+          <option value={3}>{dt('Strong')}</option>
+          <option value={2}>{dt('Working')}</option>
+          <option value={1}>{dt('Learning')}</option>
         </select>
-        <Button type="button" variant="outline" onClick={() => add()} aria-label="Add skill">
+        <Button type="button" variant="outline" onClick={() => add()} aria-label={dt('Add skill')}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
@@ -228,7 +228,7 @@ function ProjectsSection({
   };
 
   const save = () => {
-    if (draft.title.trim().length < 2) return toast.error('Project title is required');
+    if (draft.title.trim().length < 2) return toast.error(dt('Project title is required'));
     const next = [...content.projects];
     const value = {
       ...draft,
@@ -257,8 +257,8 @@ function ProjectsSection({
   return (
     <StudioSection
       icon={<ExternalLink className="h-4 w-4" />}
-      title="Projects & case studies"
-      subtitle="Evidence beats a list of responsibilities"
+      title={dt('Projects & case studies')}
+      subtitle={dt('Evidence beats a list of responsibilities')}
       action={
         <Button type="button" size="sm" variant="outline" onClick={startNew}>
           <Plus className="h-3 w-3" /> Add project
@@ -312,7 +312,7 @@ function ProjectsSection({
                       projects: content.projects.filter((_, itemIndex) => itemIndex !== index),
                     })
                   }
-                  aria-label="Delete project"
+                  aria-label={dt('Delete project')}
                   className="rounded-lg p-1 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -333,20 +333,20 @@ function ProjectsSection({
             <input
               value={draft.title}
               onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-              placeholder="Project name *"
+              placeholder={dt('Project name *')}
               className="input"
             />
             <input
               value={draft.role ?? ''}
               onChange={(event) => setDraft({ ...draft, role: event.target.value })}
-              placeholder="Your role"
+              placeholder={dt('Your role')}
               className="input"
             />
           </div>
           <textarea
             value={draft.description ?? ''}
             onChange={(event) => setDraft({ ...draft, description: event.target.value })}
-            placeholder="What did you build or solve?"
+            placeholder={dt('What did you build or solve?')}
             rows={3}
             className="input"
           />
@@ -354,7 +354,7 @@ function ProjectsSection({
             <input
               value={draft.url ?? ''}
               onChange={(event) => setDraft({ ...draft, url: event.target.value || null })}
-              placeholder="Project URL (optional)"
+              placeholder={dt('Project URL (optional)')}
               className="input flex-1"
             />
             <input
@@ -366,7 +366,7 @@ function ProjectsSection({
                   addTechnology();
                 }
               }}
-              placeholder="Tool / tech"
+              placeholder={dt('Tool / tech')}
               className="input w-32"
             />
             <Button type="button" variant="outline" onClick={addTechnology}>
@@ -402,7 +402,7 @@ function ProjectsSection({
                   addHighlight();
                 }
               }}
-              placeholder="Achievement / result"
+              placeholder={dt('Achievement / result')}
               className="input flex-1"
             />
             <Button type="button" variant="outline" onClick={addHighlight}>
@@ -459,15 +459,16 @@ function AchievementsSection({
   const [value, setValue] = useState('');
   const add = () => {
     if (value.trim().length < 2) return;
-    if (content.achievements.length >= 20) return toast.error('You can add up to 20 achievements');
+    if (content.achievements.length >= 20)
+      return toast.error(dt('You can add up to 20 achievements'));
     onChange({ ...content, achievements: [...content.achievements, value.trim()] });
     setValue('');
   };
   return (
     <StudioSection
       icon={<Award className="h-4 w-4" />}
-      title="Achievements"
-      subtitle="Awards, measurable wins and proof of impact"
+      title={dt('Achievements')}
+      subtitle={dt('Awards, measurable wins and proof of impact')}
     >
       <div className="flex gap-2">
         <input
@@ -479,7 +480,7 @@ function AchievementsSection({
               add();
             }
           }}
-          placeholder="e.g. Won 1st place in a national design challenge"
+          placeholder={dt('e.g. Won 1st place in a national design challenge')}
           className="input flex-1"
         />
         <Button type="button" variant="outline" onClick={add}>
@@ -533,7 +534,7 @@ function AdditionalSections({
     setPublication('');
   };
   const addVolunteer = () => {
-    if (!volunteer.organization.trim()) return toast.error('Organization is required');
+    if (!volunteer.organization.trim()) return toast.error(dt('Organization is required'));
     onChange({
       ...content,
       volunteer: [
@@ -550,8 +551,8 @@ function AdditionalSections({
   return (
     <StudioSection
       icon={<ChevronDown className="h-4 w-4" />}
-      title="Additional sections"
-      subtitle="Publications, volunteer work and references"
+      title={dt('Additional sections')}
+      subtitle={dt('Publications, volunteer work and references')}
       action={
         <button
           type="button"
@@ -565,12 +566,12 @@ function AdditionalSections({
       {open && (
         <div className="space-y-4">
           <div>
-            <h3 className="mb-2 text-xs font-bold">Publications / speaking</h3>
+            <h3 className="mb-2 text-xs font-bold">{dt('Publications / speaking')}</h3>
             <div className="flex gap-2">
               <input
                 value={publication}
                 onChange={(event) => setPublication(event.target.value)}
-                placeholder="Title, publication or talk"
+                placeholder={dt('Title, publication or talk')}
                 className="input flex-1"
               />
               <Button type="button" variant="outline" onClick={addPublication}>
@@ -601,27 +602,27 @@ function AdditionalSections({
             )}
           </div>
           <div>
-            <h3 className="mb-2 text-xs font-bold">Volunteer work</h3>
+            <h3 className="mb-2 text-xs font-bold">{dt('Volunteer work')}</h3>
             <div className="grid gap-2 sm:grid-cols-2">
               <input
                 value={volunteer.organization}
                 onChange={(event) =>
                   setVolunteer({ ...volunteer, organization: event.target.value })
                 }
-                placeholder="Organization"
+                placeholder={dt('Organization')}
                 className="input"
               />
               <input
                 value={volunteer.role}
                 onChange={(event) => setVolunteer({ ...volunteer, role: event.target.value })}
-                placeholder="Role"
+                placeholder={dt('Role')}
                 className="input"
               />
             </div>
             <textarea
               value={volunteer.description}
               onChange={(event) => setVolunteer({ ...volunteer, description: event.target.value })}
-              placeholder="What did you contribute?"
+              placeholder={dt('What did you contribute?')}
               rows={2}
               className="input mt-2"
             />

@@ -1,19 +1,12 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import {
-  ArrowLeft,
-  Loader2,
-  MapPin,
-  Send,
-  CheckCircle2,
-  Lock,
-  Star,
-} from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, Send, CheckCircle2, Lock, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJob, useCreateBid, useAcceptBid, useCloseJob } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
@@ -22,7 +15,6 @@ import { useI18n } from '@/i18n';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
 import { Sheet } from '@/components/ui/sheet';
 import { RichViewer } from '@/components/ui/rich-viewer';
-
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -43,7 +35,7 @@ export default function JobDetailPage() {
     return (
       <div className="grid min-h-dvh place-items-center bg-background">
         {error ? (
-          <p className="text-sm text-destructive">Job not found</p>
+          <p className="text-sm text-destructive">{dt('Job not found')}</p>
         ) : (
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         )}
@@ -59,10 +51,14 @@ export default function JobDetailPage() {
     if (msg.trim().length < 20) return toast.error(t('jobs.messagePlaceholder'));
     const p = Number(price);
     const d = Number(days);
-    if (!p || p < 100) return toast.error('Enter a valid price');
-    if (!d || d < 1 || d > 90) return toast.error('Delivery days 1–90');
+    if (!p || p < 100) return toast.error(dt('Enter a valid price'));
+    if (!d || d < 1 || d > 90) return toast.error(dt('Delivery days 1–90'));
     try {
-      await bid.mutateAsync({ message: msg.trim(), priceEtb: Math.floor(p), deliveryDays: Math.floor(d) });
+      await bid.mutateAsync({
+        message: msg.trim(),
+        priceEtb: Math.floor(p),
+        deliveryDays: Math.floor(d),
+      });
       toast.success(t('jobs.bidSent'));
       setBidOpen(false);
     } catch (err) {
@@ -129,10 +125,7 @@ export default function JobDetailPage() {
         <h2 className="text-2xl font-extrabold leading-tight tracking-tight">{job.title}</h2>
 
         {/* Client */}
-        <Link
-          href={`/u/${job.client.username}`}
-          className="mt-3 inline-flex items-center gap-2"
-        >
+        <Link href={`/u/${job.client.username}`} className="mt-3 inline-flex items-center gap-2">
           {job.client.avatarUrl ? (
             <Image
               src={job.client.avatarUrl}
@@ -149,7 +142,9 @@ export default function JobDetailPage() {
           )}
           <div className="text-xs">
             <div className="font-semibold">{job.client.fullName}</div>
-            <div className="text-[10px] text-muted-foreground">{t('jobs.posted', { when: timeAgo(job.createdAt) })}</div>
+            <div className="text-[10px] text-muted-foreground">
+              {t('jobs.posted', { when: timeAgo(job.createdAt) })}
+            </div>
           </div>
         </Link>
 
@@ -198,34 +193,56 @@ export default function JobDetailPage() {
         </h3>
         <RichViewer html={job.description} className="mt-2 text-sm" />
 
-        {'attachments' in job && Array.isArray((job as { attachments?: unknown }).attachments) && (job as { attachments: { url: string; name: string; sizeBytes: number; contentType: string }[] }).attachments.length > 0 && (
-          <>
-            <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Attachments
-            </h3>
-            <div className="mt-2 space-y-1.5">
-              {(job as { attachments: { url: string; name: string; sizeBytes: number; contentType: string }[] }).attachments.map((a, i) => (
-                <a
-                  key={i} href={a.url} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm active:bg-muted"
-                >
-                  <span className="text-lg">
-                    {a.contentType.startsWith('image/') ? '🖼' : a.contentType.includes('pdf') ? '📄' : '📎'}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{a.name}</span>
-                  <span className="text-[10px] text-muted-foreground">{(a.sizeBytes / 1024).toFixed(0)} KB</span>
-                </a>
-              ))}
-            </div>
-          </>
-        )}
+        {'attachments' in job &&
+          Array.isArray((job as { attachments?: unknown }).attachments) &&
+          (
+            job as {
+              attachments: { url: string; name: string; sizeBytes: number; contentType: string }[];
+            }
+          ).attachments.length > 0 && (
+            <>
+              <h3 className="mt-6 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Attachments
+              </h3>
+              <div className="mt-2 space-y-1.5">
+                {(
+                  job as {
+                    attachments: {
+                      url: string;
+                      name: string;
+                      sizeBytes: number;
+                      contentType: string;
+                    }[];
+                  }
+                ).attachments.map((a, i) => (
+                  <a
+                    key={i}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm active:bg-muted"
+                  >
+                    <span className="text-lg">
+                      {a.contentType.startsWith('image/')
+                        ? '🖼'
+                        : a.contentType.includes('pdf')
+                          ? '📄'
+                          : '📎'}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {(a.sizeBytes / 1024).toFixed(0)} KB
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
 
         {/* Bids */}
         {isOwner && job.bids.length > 0 && (
           <>
-            <h3 className="mt-8 text-sm font-bold">
-              {t('jobs.bids', { n: job.bids.length })}
-            </h3>
+            <h3 className="mt-8 text-sm font-bold">{t('jobs.bids', { n: job.bids.length })}</h3>
             <div className="mt-2 space-y-2">
               {job.bids.map((b) => (
                 <div key={b.id} className="rounded-2xl border border-border bg-card p-4">
@@ -416,11 +433,7 @@ export default function JobDetailPage() {
             onClick={submitBid}
             disabled={bid.isPending || msg.trim().length < 20}
           >
-            {bid.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              t('jobs.submitBid')
-            )}
+            {bid.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('jobs.submitBid')}
           </Button>
         </div>
       </Sheet>

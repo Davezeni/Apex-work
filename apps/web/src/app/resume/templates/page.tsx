@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,7 +28,6 @@ import {
 import { useI18n } from '@/i18n';
 import { formatEtb } from '@/lib/utils';
 import type { ResumeTemplateId } from '@apex-work/shared';
-
 export default function ResumeTemplatesPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -83,7 +83,7 @@ export default function ResumeTemplatesPage() {
     if (busy) return;
     if (owned) {
       select.mutate(id, {
-        onSuccess: () => toast.success('Template applied to your resume'),
+        onSuccess: () => toast.success(dt('Template applied to your resume')),
         onError: (error) => toast.error(error.message),
       });
       return;
@@ -91,7 +91,7 @@ export default function ResumeTemplatesPage() {
     buy.mutate(id, {
       onSuccess: ({ checkoutUrl }) => {
         if (checkoutUrl) window.location.assign(checkoutUrl);
-        else toast.success('Template is already unlocked');
+        else toast.success(dt('Template is already unlocked'));
       },
       onError: (error) => toast.error(error.message),
     });
@@ -111,7 +111,7 @@ export default function ResumeTemplatesPage() {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              <h1 className="text-lg font-extrabold tracking-tight">Apex Resume Studio</h1>
+              <h1 className="text-lg font-extrabold tracking-tight">{dt('Apex Resume Studio')}</h1>
             </div>
             <p className="text-[11px] text-muted-foreground">
               Templates, ATS-ready exports and an AI career coach
@@ -156,7 +156,7 @@ export default function ResumeTemplatesPage() {
 
         <div className="mt-7 flex items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold tracking-tight">Template marketplace</h2>
+            <h2 className="text-xl font-extrabold tracking-tight">{dt('Template marketplace')}</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               Free templates stay free forever. Pro templates are a one-time purchase in ETB.
             </p>
@@ -249,17 +249,17 @@ export default function ResumeTemplatesPage() {
         <section className="mt-8 grid gap-3 sm:grid-cols-3">
           <StudioFeature
             icon={<WalletCards className="h-5 w-5" />}
-            title="One-time pricing"
+            title={dt('One-time pricing')}
             body="Pay once through Chapa. No monthly subscription is required to keep an unlocked template."
           />
           <StudioFeature
             icon={<Palette className="h-5 w-5" />}
-            title="Four export modes"
+            title={dt('Four export modes')}
             body="A4, US Letter, one-page and portfolio PDF formats from the same saved content."
           />
           <StudioFeature
             icon={<Sparkles className="h-5 w-5" />}
-            title="AI career coach"
+            title={dt('AI career coach')}
             body="Get honest gaps, role keywords, bullet rewrites and case-study help without inventing facts."
           />
         </section>

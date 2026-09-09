@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
 /**
  * Voice search input. Uses the browser SpeechRecognition API when
  * available (Chrome / Edge / Safari) — falls back to a mic prompt with
@@ -43,7 +43,12 @@ interface Props {
   ariaLabel?: string;
 }
 
-export function VoiceSearch({ onResult, className, size = 'md', ariaLabel = 'Voice search' }: Props) {
+export function VoiceSearch({
+  onResult,
+  className,
+  size = 'md',
+  ariaLabel = 'Voice search',
+}: Props) {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -51,12 +56,21 @@ export function VoiceSearch({ onResult, className, size = 'md', ariaLabel = 'Voi
 
   useEffect(() => {
     setSupported(getCtor() != null);
-    return () => { try { recRef.current?.stop(); } catch { /* ignore */ } };
+    return () => {
+      try {
+        recRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+    };
   }, []);
 
   const start = () => {
     const Ctor = getCtor();
-    if (!Ctor) { toast.error('Voice input not supported on this browser'); return; }
+    if (!Ctor) {
+      toast.error(dt('Voice input not supported on this browser'));
+      return;
+    }
     setBusy(true);
     try {
       const rec = new Ctor();
@@ -67,18 +81,31 @@ export function VoiceSearch({ onResult, className, size = 'md', ariaLabel = 'Voi
         const first = e.results[0]?.[0]?.transcript ?? '';
         if (first) onResult(first.trim());
       };
-      rec.onerror = () => { toast.error('Could not hear you — try again'); setListening(false); setBusy(false); };
-      rec.onend = () => { setListening(false); setBusy(false); };
+      rec.onerror = () => {
+        toast.error(dt('Could not hear you — try again'));
+        setListening(false);
+        setBusy(false);
+      };
+      rec.onend = () => {
+        setListening(false);
+        setBusy(false);
+      };
       rec.start();
       recRef.current = rec;
       setListening(true);
     } catch {
-      toast.error('Voice input unavailable');
+      toast.error(dt('Voice input unavailable'));
       setBusy(false);
     }
   };
 
-  const stop = () => { try { recRef.current?.stop(); } catch { /* ignore */ } };
+  const stop = () => {
+    try {
+      recRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
+  };
 
   const dim = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';
   const icon = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
@@ -92,18 +119,20 @@ export function VoiceSearch({ onResult, className, size = 'md', ariaLabel = 'Voi
       title={supported ? 'Search by voice' : 'Voice not supported'}
       className={cn(
         'relative grid place-items-center rounded-full text-white transition-transform active:scale-90',
-        listening ? 'bg-red-500 animate-pulse' : 'grad-hero',
+        listening ? 'animate-pulse bg-red-500' : 'grad-hero',
         !supported && 'opacity-40',
         dim,
         className,
       )}
     >
-      {busy && !listening ? <Loader2 className={cn('animate-spin', icon)} />
-        : listening ? <MicOff className={icon} />
-          : <Mic className={icon} />}
-      {listening && (
-        <span className="absolute -inset-2 rounded-full border-2 border-red-500/40" />
+      {busy && !listening ? (
+        <Loader2 className={cn('animate-spin', icon)} />
+      ) : listening ? (
+        <MicOff className={icon} />
+      ) : (
+        <Mic className={icon} />
       )}
+      {listening && <span className="absolute -inset-2 rounded-full border-2 border-red-500/40" />}
     </button>
   );
 }

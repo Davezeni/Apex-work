@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, Link2 } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-
 export interface LinkPreviewData {
   url: string;
   domain: string;
@@ -82,7 +82,7 @@ export function LinkPreview({ url, isMine }: { url: string; isMine?: boolean }) 
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={image}
-          alt=""
+          alt={dt('')}
           loading="lazy"
           onError={() => setImgOk(false)}
           className="h-32 w-full object-cover"

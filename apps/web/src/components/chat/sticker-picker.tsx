@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { searchStickers, STICKER_CATEGORIES } from './emoji-data';
-
 export function StickerPicker({
   open,
   onClose,
@@ -34,8 +34,8 @@ export function StickerPicker({
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search stickers…"
-            aria-label="Search stickers"
+            placeholder={dt('Search stickers…')}
+            aria-label={dt('Search stickers')}
             className="h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -54,7 +54,9 @@ export function StickerPicker({
             </button>
           ))}
           {shown.length === 0 && (
-            <p className="w-full px-2 py-6 text-center text-xs text-muted-foreground">No stickers found.</p>
+            <p className="w-full px-2 py-6 text-center text-xs text-muted-foreground">
+              {dt('No stickers found.')}
+            </p>
           )}
         </div>
         {!q.trim() && (

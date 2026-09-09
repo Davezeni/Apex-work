@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -47,7 +48,6 @@ import { ResumeStudioSections } from '@/components/resume/studio-sections';
 import { ResumeVersionsPanel } from '@/components/resume/versions-panel';
 import { useI18n } from '@/i18n';
 import type { ResumeContent, ResumeTemplateId } from '@apex-work/shared';
-
 /**
  * Resume/CV builder. Sections:
  *   - Basics (headline + summary + contact + socials)
@@ -154,7 +154,7 @@ export default function ResumeBuilderPage() {
         languages: basics.languages,
         theme: basics.templateId,
       });
-      toast.success('Resume saved ✅');
+      toast.success(dt('Resume saved ✅'));
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Save failed');
     }
@@ -178,7 +178,7 @@ export default function ResumeBuilderPage() {
         })),
       },
       {
-        onSuccess: () => toast.success('Your Resume Coach report is ready'),
+        onSuccess: () => toast.success(dt('Your Resume Coach report is ready')),
         onError: (error) => toast.error(error.message),
       },
     );
@@ -186,7 +186,7 @@ export default function ResumeBuilderPage() {
 
   const runTailor = () => {
     if (jobDescription.trim().length < 30)
-      return toast.error('Paste a job description of at least 30 characters');
+      return toast.error(dt('Paste a job description of at least 30 characters'));
     tailor.mutate(
       {
         jobDescription,
@@ -207,7 +207,7 @@ export default function ResumeBuilderPage() {
         },
       },
       {
-        onSuccess: () => toast.success('Role-tailored recommendations are ready'),
+        onSuccess: () => toast.success(dt('Role-tailored recommendations are ready')),
         onError: (error) => toast.error(error.message),
       },
     );
@@ -220,7 +220,7 @@ export default function ResumeBuilderPage() {
       headline: tailor.data.tailoredHeadline || current.headline,
       summary: tailor.data.tailoredSummary || current.summary,
     }));
-    toast.success('Tailored headline and summary applied — save your resume');
+    toast.success(dt('Tailored headline and summary applied — save your resume'));
     setTailorOpen(false);
   };
 
@@ -228,7 +228,7 @@ export default function ResumeBuilderPage() {
     if (!aiTarget) return;
     try {
       const src = aiTarget.section === 'summary' ? basics.summary : '';
-      if (!src.trim()) return toast.error('Add some text first');
+      if (!src.trim()) return toast.error(dt('Add some text first'));
       const r = await enhance.mutateAsync({ section: aiTarget.section, text: src });
       aiTarget.onApply(r.text);
       toast.success(r.source === 'ai' ? 'Enhanced with AI ✨' : 'AI unavailable — kept original');
@@ -249,7 +249,7 @@ export default function ResumeBuilderPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-lg font-extrabold tracking-tight">Resume / CV</h1>
+          <h1 className="text-lg font-extrabold tracking-tight">{dt('Resume / CV')}</h1>
           <div className="text-[10px] text-muted-foreground">Build once — export or share</div>
         </div>
         <div className="flex gap-2">
@@ -302,7 +302,7 @@ export default function ResumeBuilderPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
             <div>
               <div className="flex items-center justify-between text-xs font-bold">
-                <span>Profile completeness</span>
+                <span>{dt('Profile completeness')}</span>
                 <span className="text-primary">
                   {Math.round(
                     ([
@@ -363,18 +363,18 @@ export default function ResumeBuilderPage() {
         <ResumeVersionsPanel targetRole={basics.targetRole} />
 
         {/* Basics */}
-        <Section title="Basics">
-          <Field label="Headline">
+        <Section title={dt('Basics')}>
+          <Field label={dt('Headline')}>
             <input
               value={basics.headline}
               onChange={(e) => setBasics((s) => ({ ...s, headline: e.target.value }))}
-              placeholder="Senior Full-stack Developer · 5+ yrs"
+              placeholder={dt('Senior Full-stack Developer · 5+ yrs')}
               className="input"
               maxLength={120}
             />
           </Field>
           <Field
-            label="Target role"
+            label={dt('Target role')}
             hint="The role you want next. Apex Coach uses it for ATS keywords and recommendations."
           >
             <div className="relative">
@@ -382,13 +382,13 @@ export default function ResumeBuilderPage() {
               <input
                 value={basics.targetRole}
                 onChange={(e) => setBasics((s) => ({ ...s, targetRole: e.target.value }))}
-                placeholder="e.g. Product Designer, Full-stack Developer"
+                placeholder={dt('e.g. Product Designer, Full-stack Developer')}
                 className="input pl-9"
                 maxLength={120}
               />
             </div>
           </Field>
-          <Field label="Summary" hint="1-2 short paragraphs. AI can polish this.">
+          <Field label={dt('Summary')} hint="1-2 short paragraphs. AI can polish this.">
             <textarea
               value={basics.summary}
               onChange={(e) => setBasics((s) => ({ ...s, summary: e.target.value }))}
@@ -410,14 +410,14 @@ export default function ResumeBuilderPage() {
             </button>
           </Field>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Phone">
+            <Field label={dt('Phone')}>
               <input
                 value={basics.phone}
                 onChange={(e) => setBasics((s) => ({ ...s, phone: e.target.value }))}
                 className="input"
               />
             </Field>
-            <Field label="Email">
+            <Field label={dt('Email')}>
               <input
                 value={basics.email}
                 onChange={(e) => setBasics((s) => ({ ...s, email: e.target.value }))}
@@ -425,28 +425,28 @@ export default function ResumeBuilderPage() {
                 className="input"
               />
             </Field>
-            <Field label="City">
+            <Field label={dt('City')}>
               <input
                 value={basics.city}
                 onChange={(e) => setBasics((s) => ({ ...s, city: e.target.value }))}
                 className="input"
               />
             </Field>
-            <Field label="Website">
+            <Field label={dt('Website')}>
               <input
                 value={basics.website}
                 onChange={(e) => setBasics((s) => ({ ...s, website: e.target.value }))}
                 className="input"
               />
             </Field>
-            <Field label="LinkedIn URL">
+            <Field label={dt('LinkedIn URL')}>
               <input
                 value={basics.linkedin}
                 onChange={(e) => setBasics((s) => ({ ...s, linkedin: e.target.value }))}
                 className="input"
               />
             </Field>
-            <Field label="GitHub URL">
+            <Field label={dt('GitHub URL')}>
               <input
                 value={basics.github}
                 onChange={(e) => setBasics((s) => ({ ...s, github: e.target.value }))}
@@ -455,7 +455,7 @@ export default function ResumeBuilderPage() {
             </Field>
           </div>
 
-          <Field label="Languages">
+          <Field label={dt('Languages')}>
             <div className="flex gap-2">
               <input
                 value={langInput}
@@ -472,7 +472,7 @@ export default function ResumeBuilderPage() {
                     setLangInput('');
                   }
                 }}
-                placeholder="English (Fluent)"
+                placeholder={dt('English (Fluent)')}
                 className="input flex-1"
               />
               <Button
@@ -500,7 +500,7 @@ export default function ResumeBuilderPage() {
                       onClick={() =>
                         setBasics((s) => ({ ...s, languages: s.languages.filter((x) => x !== l) }))
                       }
-                      aria-label="Remove"
+                      aria-label={dt('Remove')}
                     >
                       ×
                     </button>
@@ -510,7 +510,7 @@ export default function ResumeBuilderPage() {
             )}
           </Field>
 
-          <Field label="Design & sharing">
+          <Field label={dt('Design & sharing')}>
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-background p-3">
               <Palette className="h-4 w-4 text-primary" />
               <div className="min-w-0 flex-1">
@@ -523,12 +523,12 @@ export default function ResumeBuilderPage() {
                 </p>
               </div>
               <Button asChild size="sm" variant="outline">
-                <Link href="/resume/templates">Browse</Link>
+                <Link href="/resume/templates">{dt('Browse')}</Link>
               </Button>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-xs font-semibold">
-                <span>Accent</span>
+                <span>{dt('Accent')}</span>
                 <input
                   type="color"
                   value={basics.accentColor}
@@ -662,7 +662,7 @@ export default function ResumeBuilderPage() {
                   <WandSparkles className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-lg font-extrabold">Tailor your CV to a job</h2>
+                  <h2 className="text-lg font-extrabold">{dt('Tailor your CV to a job')}</h2>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     Paste the job description. Apex will reorder your strengths and rewrite your
                     headline and summary using only facts already in your resume.
@@ -671,7 +671,7 @@ export default function ResumeBuilderPage() {
                 <button
                   type="button"
                   onClick={() => setTailorOpen(false)}
-                  aria-label="Close"
+                  aria-label={dt('Close')}
                   className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <X className="h-4 w-4" />
@@ -682,7 +682,7 @@ export default function ResumeBuilderPage() {
                 onChange={(event) => setJobDescription(event.target.value)}
                 rows={7}
                 maxLength={6000}
-                placeholder="Paste the job description here…"
+                placeholder={dt('Paste the job description here…')}
                 className="input mt-4 min-h-[150px]"
               />
               <div className="mt-3 flex gap-2">
@@ -716,7 +716,7 @@ export default function ResumeBuilderPage() {
                       {tailor.data.matchScore}
                     </div>
                     <div>
-                      <h3 className="text-sm font-extrabold">Role match estimate</h3>
+                      <h3 className="text-sm font-extrabold">{dt('Role match estimate')}</h3>
                       <p className="text-[11px] text-muted-foreground">
                         {tailor.data.source === 'ai'
                           ? 'AI-tailored from your current facts'
@@ -744,7 +744,7 @@ export default function ResumeBuilderPage() {
                   </div>
                   {tailor.data.keywordGaps.length > 0 && (
                     <div className="mt-3">
-                      <div className="text-xs font-bold">Keyword gaps to review</div>
+                      <div className="text-xs font-bold">{dt('Keyword gaps to review')}</div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {tailor.data.keywordGaps.map((item) => (
                           <span
@@ -759,7 +759,7 @@ export default function ResumeBuilderPage() {
                   )}
                   {tailor.data.experienceBullets.length > 0 && (
                     <div className="mt-3">
-                      <div className="text-xs font-bold">Suggested bullet rewrites</div>
+                      <div className="text-xs font-bold">{dt('Suggested bullet rewrites')}</div>
                       <div className="mt-2 space-y-2">
                         {tailor.data.experienceBullets.map((item) => (
                           <div
@@ -857,7 +857,7 @@ function CoachReport({
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <h3 className="text-xs font-bold text-emerald-600">What is working</h3>
+          <h3 className="text-xs font-bold text-emerald-600">{dt('What is working')}</h3>
           <ul className="mt-2 space-y-1 text-xs">
             {report.strengths.slice(0, 4).map((item) => (
               <li key={item}>✓ {item}</li>
@@ -865,7 +865,7 @@ function CoachReport({
           </ul>
         </div>
         <div>
-          <h3 className="text-xs font-bold text-amber-600">Next improvements</h3>
+          <h3 className="text-xs font-bold text-amber-600">{dt('Next improvements')}</h3>
           <ul className="mt-2 space-y-1 text-xs">
             {report.improvements.slice(0, 5).map((item) => (
               <li key={item}>• {item}</li>
@@ -969,7 +969,8 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
     setEditing(id);
   };
   const save = async () => {
-    if (!form.company.trim() || !form.role.trim()) return toast.error('Company & role required');
+    if (!form.company.trim() || !form.role.trim())
+      return toast.error(dt('Company & role required'));
     const payload = {
       company: form.company.trim(),
       role: form.role.trim(),
@@ -984,7 +985,7 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
       if (editing === 'new') await add.mutateAsync(payload);
       else if (editing) await upd.mutateAsync({ id: editing, ...payload });
       setEditing(null);
-      toast.success('Saved');
+      toast.success(dt('Saved'));
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Save failed');
     }
@@ -1021,7 +1022,7 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
               <div className="flex gap-1">
                 <button
                   onClick={() => openEdit(e.id)}
-                  aria-label="Edit"
+                  aria-label={dt('Edit')}
                   className="grid h-7 w-7 place-items-center rounded-full text-muted-foreground active:bg-muted"
                 >
                   <Edit2 className="h-3.5 w-3.5" />
@@ -1030,7 +1031,7 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
                   onClick={() => {
                     if (window.confirm('Remove this experience?')) del.mutate(e.id);
                   }}
-                  aria-label="Delete"
+                  aria-label={dt('Delete')}
                   className="grid h-7 w-7 place-items-center rounded-full text-red-500 active:bg-red-500/10"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1040,7 +1041,9 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
           </div>
         ))}
         {(resume?.experiences ?? []).length === 0 && !editing && (
-          <p className="text-center text-xs text-muted-foreground">No experience added yet.</p>
+          <p className="text-center text-xs text-muted-foreground">
+            {dt('No experience added yet.')}
+          </p>
         )}
       </div>
 
@@ -1048,20 +1051,20 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
         <div className="mt-4 space-y-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
           <div className="grid grid-cols-2 gap-2">
             <input
-              placeholder="Role *"
+              placeholder={dt('Role *')}
               value={form.role}
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className="input"
             />
             <input
-              placeholder="Company *"
+              placeholder={dt('Company *')}
               value={form.company}
               onChange={(e) => setForm({ ...form, company: e.target.value })}
               className="input"
             />
           </div>
           <input
-            placeholder="Location"
+            placeholder={dt('Location')}
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
             className="input"
@@ -1069,21 +1072,21 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
           <div className="grid grid-cols-4 gap-2">
             <input
               type="number"
-              placeholder="From mo"
+              placeholder={dt('From mo')}
               value={form.startMonth}
               onChange={(e) => setForm({ ...form, startMonth: Number(e.target.value) })}
               className="input"
             />
             <input
               type="number"
-              placeholder="From yr"
+              placeholder={dt('From yr')}
               value={form.startYear}
               onChange={(e) => setForm({ ...form, startYear: Number(e.target.value) })}
               className="input"
             />
             <input
               type="number"
-              placeholder="To mo"
+              placeholder={dt('To mo')}
               value={form.endMonth ?? ''}
               onChange={(e) =>
                 setForm({ ...form, endMonth: e.target.value ? Number(e.target.value) : null })
@@ -1092,7 +1095,7 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
             />
             <input
               type="number"
-              placeholder="To yr"
+              placeholder={dt('To yr')}
               value={form.endYear ?? ''}
               onChange={(e) =>
                 setForm({ ...form, endYear: e.target.value ? Number(e.target.value) : null })
@@ -1102,7 +1105,7 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
           </div>
           <textarea
             rows={4}
-            placeholder="Achievements & responsibilities"
+            placeholder={dt('Achievements & responsibilities')}
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="input"
@@ -1161,7 +1164,7 @@ function EducationSection({ resume }: { resume: Resume | undefined }) {
   });
 
   const save = async () => {
-    if (!form.school.trim()) return toast.error('School required');
+    if (!form.school.trim()) return toast.error(dt('School required'));
     const payload = {
       school: form.school.trim(),
       degree: form.degree.trim() || null,
@@ -1174,7 +1177,7 @@ function EducationSection({ resume }: { resume: Resume | undefined }) {
       if (editing === 'new') await add.mutateAsync(payload);
       else if (editing) await upd.mutateAsync({ id: editing, ...payload });
       setEditing(null);
-      toast.success('Saved');
+      toast.success(dt('Saved'));
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Save failed');
     }
@@ -1222,7 +1225,7 @@ function EducationSection({ resume }: { resume: Resume | undefined }) {
                 onClick={() => {
                   if (window.confirm('Remove?')) del.mutate(e.id);
                 }}
-                aria-label="Delete"
+                aria-label={dt('Delete')}
                 className="grid h-7 w-7 place-items-center rounded-full text-red-500 active:bg-red-500/10"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -1234,20 +1237,20 @@ function EducationSection({ resume }: { resume: Resume | undefined }) {
       {editing && (
         <div className="mt-4 space-y-2 rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
           <input
-            placeholder="School *"
+            placeholder={dt('School *')}
             value={form.school}
             onChange={(e) => setForm({ ...form, school: e.target.value })}
             className="input"
           />
           <div className="grid grid-cols-2 gap-2">
             <input
-              placeholder="Degree"
+              placeholder={dt('Degree')}
               value={form.degree}
               onChange={(e) => setForm({ ...form, degree: e.target.value })}
               className="input"
             />
             <input
-              placeholder="Field of study"
+              placeholder={dt('Field of study')}
               value={form.fieldOfStudy}
               onChange={(e) => setForm({ ...form, fieldOfStudy: e.target.value })}
               className="input"
@@ -1256,14 +1259,14 @@ function EducationSection({ resume }: { resume: Resume | undefined }) {
           <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
-              placeholder="From yr"
+              placeholder={dt('From yr')}
               value={form.startYear}
               onChange={(e) => setForm({ ...form, startYear: Number(e.target.value) })}
               className="input"
             />
             <input
               type="number"
-              placeholder="To yr"
+              placeholder={dt('To yr')}
               value={form.endYear ?? ''}
               onChange={(e) =>
                 setForm({ ...form, endYear: e.target.value ? Number(e.target.value) : null })
@@ -1319,7 +1322,7 @@ function CertificationSection({ resume }: { resume: Resume | undefined }) {
     credentialUrl: '',
   });
   const save = async () => {
-    if (!form.name.trim() || !form.issuer.trim()) return toast.error('Name & issuer required');
+    if (!form.name.trim() || !form.issuer.trim()) return toast.error(dt('Name & issuer required'));
     try {
       await add.mutateAsync({
         name: form.name.trim(),
@@ -1336,7 +1339,7 @@ function CertificationSection({ resume }: { resume: Resume | undefined }) {
         issueMonth: null,
         credentialUrl: '',
       });
-      toast.success('Saved');
+      toast.success(dt('Saved'));
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Save failed');
     }
@@ -1367,7 +1370,7 @@ function CertificationSection({ resume }: { resume: Resume | undefined }) {
               onClick={() => {
                 if (window.confirm('Remove?')) del.mutate(c.id);
               }}
-              aria-label="Delete"
+              aria-label={dt('Delete')}
               className="grid h-7 w-7 place-items-center rounded-full text-red-500 active:bg-red-500/10"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -1378,13 +1381,13 @@ function CertificationSection({ resume }: { resume: Resume | undefined }) {
       {adding && (
         <div className="mt-4 space-y-2 rounded-xl border-2 border-primary/30 bg-primary/5 p-3">
           <input
-            placeholder="Certification name *"
+            placeholder={dt('Certification name *')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="input"
           />
           <input
-            placeholder="Issuer *"
+            placeholder={dt('Issuer *')}
             value={form.issuer}
             onChange={(e) => setForm({ ...form, issuer: e.target.value })}
             className="input"
@@ -1392,13 +1395,13 @@ function CertificationSection({ resume }: { resume: Resume | undefined }) {
           <div className="grid grid-cols-2 gap-2">
             <input
               type="number"
-              placeholder="Year"
+              placeholder={dt('Year')}
               value={form.issueYear}
               onChange={(e) => setForm({ ...form, issueYear: Number(e.target.value) })}
               className="input"
             />
             <input
-              placeholder="Credential URL (optional)"
+              placeholder={dt('Credential URL (optional)')}
               value={form.credentialUrl}
               onChange={(e) => setForm({ ...form, credentialUrl: e.target.value })}
               className="input"

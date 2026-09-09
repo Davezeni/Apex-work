@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -66,7 +67,7 @@ export default function OrderDetailPage() {
       verify
         .mutateAsync(id)
         .then((r) => {
-          if (r.updated) toast.success('Payment confirmed 🎉');
+          if (r.updated) toast.success(dt('Payment confirmed 🎉'));
         })
         .catch(() => {
           // silent — polling below will pick up when Chapa finalizes
@@ -92,9 +93,9 @@ export default function OrderDetailPage() {
         {error ? (
           <div className="text-center">
             <XCircle className="mx-auto h-8 w-8 text-destructive" />
-            <p className="mt-2 text-sm">Order not found</p>
+            <p className="mt-2 text-sm">{dt('Order not found')}</p>
             <Button asChild variant="brand" size="sm" className="mt-4">
-              <Link href="/orders">Back to orders</Link>
+              <Link href="/orders">{dt('Back to orders')}</Link>
             </Button>
           </div>
         ) : (
@@ -111,11 +112,11 @@ export default function OrderDetailPage() {
 
   const downloadInvoice = async () => {
     const element = document.getElementById(`invoice-${order.id}`);
-    if (!element) return toast.error('Receipt is not ready yet');
+    if (!element) return toast.error(dt('Receipt is not ready yet'));
     setInvoiceExporting(true);
     try {
       await downloadHtmlPdf(element, `apex-work-receipt-${order.orderNumber}.pdf`);
-      toast.success('Receipt downloaded');
+      toast.success(dt('Receipt downloaded'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Receipt download failed');
     } finally {
@@ -127,7 +128,7 @@ export default function OrderDetailPage() {
     setInvoiceExporting(true);
     try {
       await downloadViaAuth(`/orders/${order.id}/receipt`, token);
-      toast.success('Receipt downloaded');
+      toast.success(dt('Receipt downloaded'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Receipt download failed');
     } finally {
@@ -154,7 +155,7 @@ export default function OrderDetailPage() {
       const conv = await startConv.mutateAsync(other.id);
       router.push(`/messages/${conv.id}`);
     } catch {
-      toast.error('Could not open chat');
+      toast.error(dt('Could not open chat'));
     }
   };
 
@@ -164,13 +165,13 @@ export default function OrderDetailPage() {
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold">Order</div>
+          <div className="truncate text-sm font-semibold">{dt('Order')}</div>
           <div className="truncate font-mono text-[10px] text-muted-foreground">
             #{order.orderNumber.slice(0, 12)}
           </div>
@@ -178,7 +179,7 @@ export default function OrderDetailPage() {
         <Button asChild size="sm" variant="outline">
           <Link href={`/orders/${order.id}/workspace`}>
             <LayoutDashboard className="h-4 w-4" />{' '}
-            <span className="hidden sm:inline">Workspace</span>
+            <span className="hidden sm:inline">{dt('Workspace')}</span>
           </Link>
         </Button>
         <Button size="sm" variant="outline" onClick={downloadInvoice} disabled={invoiceExporting}>
@@ -187,15 +188,20 @@ export default function OrderDetailPage() {
           ) : (
             <Download className="h-4 w-4" />
           )}
-          <span className="hidden sm:inline">Receipt</span>
+          <span className="hidden sm:inline">{dt('Receipt')}</span>
         </Button>
-        <Button size="sm" variant="ghost" onClick={downloadServerReceipt} disabled={invoiceExporting}>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={downloadServerReceipt}
+          disabled={invoiceExporting}
+        >
           {invoiceExporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <FileText className="h-4 w-4" />
           )}
-          <span className="hidden sm:inline">HTML</span>
+          <span className="hidden sm:inline">{dt('HTML')}</span>
         </Button>
       </header>
 
@@ -244,7 +250,7 @@ export default function OrderDetailPage() {
               e.preventDefault();
               void startChat();
             }}
-            aria-label="Message"
+            aria-label={dt('Message')}
             className="grad-hero grid h-9 w-9 place-items-center rounded-full text-white"
           >
             <MessageCircle className="h-4 w-4" />
@@ -253,12 +259,12 @@ export default function OrderDetailPage() {
       </Section>
 
       {/* Escrow status timeline — where the money is right now */}
-      <Section title="Funds">
+      <Section title={dt('Funds')}>
         <EscrowTimeline status={order.status} />
       </Section>
 
       {/* Payment summary */}
-      <Section title="Payment">
+      <Section title={dt('Payment')}>
         <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
           <PaymentRow k="Order total" v={formatEtb(order.amountEtb)} bold />
           {isSeller && (
@@ -282,7 +288,7 @@ export default function OrderDetailPage() {
 
       {/* Milestones — only meaningful once escrow has funded (ACTIVE+). */}
       {order.status !== 'PENDING' && order.status !== 'CANCELLED' && (
-        <Section title="Milestones">
+        <Section title={dt('Milestones')}>
           <MilestonePanel
             orderId={order.id}
             amountEtb={order.amountEtb}
@@ -295,14 +301,14 @@ export default function OrderDetailPage() {
 
       {/* Dispute */}
       {['ACTIVE', 'IN_REVIEW', 'DELIVERED', 'DISPUTED'].includes(order.status) && (
-        <Section title="Trouble with this order?">
+        <Section title={dt('Trouble with this order?')}>
           <DisputeBox orderId={order.id} status={order.status} />
         </Section>
       )}
 
       {/* Requirements */}
       {order.requirements && (
-        <Section title="Requirements from client">
+        <Section title={dt('Requirements from client')}>
           <div className="whitespace-pre-line rounded-2xl border border-border bg-card p-4 text-sm">
             {order.requirements}
           </div>
@@ -311,7 +317,7 @@ export default function OrderDetailPage() {
 
       {/* Deliverables */}
       {order.deliverables && (
-        <Section title="Delivery">
+        <Section title={dt('Delivery')}>
           <div className="rounded-2xl border border-border bg-card p-4 text-sm">
             {order.deliverables.notes && (
               <p className="whitespace-pre-line">{order.deliverables.notes}</p>
@@ -338,7 +344,7 @@ export default function OrderDetailPage() {
 
       {/* Review — only shown after completion, only to the client */}
       {order.status === 'COMPLETED' && !isSeller && (
-        <Section title="Review">
+        <Section title={dt('Review')}>
           {myReview.data?.review ? (
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-center gap-2">
@@ -367,7 +373,7 @@ export default function OrderDetailPage() {
           ) : (
             <div className="rounded-2xl border border-border bg-card p-4 text-center">
               <Star className="mx-auto h-8 w-8 text-amber-400" />
-              <p className="mt-2 text-sm font-semibold">How was your experience?</p>
+              <p className="mt-2 text-sm font-semibold">{dt('How was your experience?')}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Your review helps {order.seller.fullName.split(' ')[0]} and other clients.
               </p>
@@ -521,17 +527,16 @@ function OrderActions({
 // -----------------------------------------------------------------------------
 import { AlertTriangle, Loader2 as SpinnerIcon } from 'lucide-react';
 import { useOpenDispute } from '@/hooks/use-disputes';
-
 function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const openDispute = useOpenDispute();
 
   const submit = async () => {
-    if (reason.trim().length < 20) return toast.error('Explain the issue (20+ chars)');
+    if (reason.trim().length < 20) return toast.error(dt('Explain the issue (20+ chars)'));
     try {
       await openDispute.mutateAsync({ orderId, reason: reason.trim() });
-      toast.success('Dispute opened — an admin will review within 48h');
+      toast.success(dt('Dispute opened — an admin will review within 48h'));
       setOpen(false);
       setReason('');
     } catch (err) {
@@ -575,7 +580,7 @@ function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
         onChange={(e) => setReason(e.target.value)}
         rows={4}
         maxLength={4000}
-        placeholder="Describe what went wrong — dates, deliverables, screenshots links…"
+        placeholder={dt('Describe what went wrong — dates, deliverables, screenshots links…')}
         className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/20"
       />
       <div className="mt-2 flex gap-2">
@@ -610,7 +615,12 @@ function EscrowTimeline({ status }: { status: string }) {
   const held = paid && !released && status !== 'CANCELLED';
   stages.push({ key: 'client', label: 'Client pays', done: paid, active: !paid });
   stages.push({ key: 'held', label: 'Held in escrow', done: held, active: paid && !held });
-  stages.push({ key: 'released', label: 'Released to seller', done: released, active: !released && !held });
+  stages.push({
+    key: 'released',
+    label: 'Released to seller',
+    done: released,
+    active: !released && !held,
+  });
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
@@ -618,21 +628,35 @@ function EscrowTimeline({ status }: { status: string }) {
         {stages.map((s, i) => (
           <div key={s.key} className="flex flex-1 items-center">
             <div className="flex flex-col items-center gap-1">
-              <div className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${
-                s.done ? 'bg-emerald-500 text-white' : s.active ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
-              }`}>
+              <div
+                className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-black ${
+                  s.done
+                    ? 'bg-emerald-500 text-white'
+                    : s.active
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-muted-foreground'
+                }`}
+              >
                 {s.done ? '✓' : i + 1}
               </div>
-              <span className={`text-center text-[9px] font-semibold leading-tight ${s.done ? 'text-emerald-600' : s.active ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <span
+                className={`text-center text-[9px] font-semibold leading-tight ${s.done ? 'text-emerald-600' : s.active ? 'text-foreground' : 'text-muted-foreground'}`}
+              >
                 {s.label}
               </span>
             </div>
-            {i < stages.length - 1 && <div className={`mx-1 mb-4 h-0.5 flex-1 rounded ${s.done ? 'bg-emerald-500/60' : 'bg-muted'}`} />}
+            {i < stages.length - 1 && (
+              <div
+                className={`mx-1 mb-4 h-0.5 flex-1 rounded ${s.done ? 'bg-emerald-500/60' : 'bg-muted'}`}
+              />
+            )}
           </div>
         ))}
       </div>
       {status === 'DISPUTED' && (
-        <p className="mt-2 text-center text-[11px] text-amber-600">Funds are held while this order is disputed.</p>
+        <p className="mt-2 text-center text-[11px] text-amber-600">
+          {dt('Funds are held while this order is disputed.')}
+        </p>
       )}
     </div>
   );

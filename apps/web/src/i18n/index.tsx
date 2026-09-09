@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import enMessages from './messages/en.json';
 import amMessages from './messages/am.json';
+import { setAutoLocale } from './auto';
 
 export type Locale = 'en' | 'am';
 type Messages = typeof enMessages;
@@ -52,6 +53,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // the user's saved preference on mount to avoid a hydration mismatch.
   const [locale, setLocaleState] = useState<Locale>('en');
 
+  // Mirror the active locale into the auto-translate module so hardcoded
+  // strings resolved through dt() follow the app language too.
+  useEffect(() => {
+    setAutoLocale(locale);
+  }, [locale]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
@@ -89,10 +96,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     [locale],
   );
 
-  const value = useMemo<I18nContextValue>(
-    () => ({ locale, setLocale, t }),
-    [locale, setLocale, t],
-  );
+  const value = useMemo<I18nContextValue>(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

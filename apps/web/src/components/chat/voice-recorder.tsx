@@ -1,12 +1,12 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Send, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUpload } from '@/hooks/use-upload';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
-
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 300; // 5 minutes
 
@@ -65,7 +65,10 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
     timerRef.current = null;
     if (samplerRef.current) clearInterval(samplerRef.current);
     samplerRef.current = null;
-    if (audioCtxRef.current) { void audioCtxRef.current.close().catch(() => {}); audioCtxRef.current = null; }
+    if (audioCtxRef.current) {
+      void audioCtxRef.current.close().catch(() => {});
+      audioCtxRef.current = null;
+    }
     analyserRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
@@ -86,7 +89,9 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
 
       // Best-effort waveform capture (optional; falls back to empty array).
       try {
-        const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        const Ctx =
+          window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
         if (Ctx) {
           const ctx = new Ctx();
           audioCtxRef.current = ctx;
@@ -177,7 +182,11 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
     setState('sending');
     try {
       const contentType = blob.type || 'audio/webm';
-      const ext = contentType.includes('mp4') ? 'm4a' : contentType.includes('mpeg') ? 'mp3' : 'webm';
+      const ext = contentType.includes('mp4')
+        ? 'm4a'
+        : contentType.includes('mpeg')
+          ? 'mp3'
+          : 'webm';
       const file = new File([blob], `voice-${Date.now()}.${ext}`, { type: contentType });
       const uploaded = await upload.mutateAsync({ file, bucket: 'chat-attachments' });
       await onSend({
@@ -235,22 +244,18 @@ export function VoiceRecorder({ onSend, disabled }: Props) {
           onClick={discard}
           disabled={sending || upload.isPending}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:text-destructive disabled:opacity-50"
-          aria-label="Discard"
+          aria-label={dt('Discard')}
         >
           <Trash2 className="h-4 w-4" />
         </button>
-        <audio src={previewUrl} controls preload="metadata" className="flex-1 h-8" />
+        <audio src={previewUrl} controls preload="metadata" className="h-8 flex-1" />
         <button
           onClick={send}
           disabled={sending}
           className="grad-hero grid h-9 w-9 shrink-0 place-items-center rounded-full text-white disabled:opacity-50"
           aria-label={t('common.post')}
         >
-          {sending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </div>
     );

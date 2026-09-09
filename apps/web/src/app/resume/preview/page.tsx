@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -81,11 +82,11 @@ export default function ResumePreviewPage() {
 
   const handlePdfDownload = async () => {
     const element = document.getElementById('resume-document');
-    if (!element) return toast.error('Resume preview is not ready yet');
+    if (!element) return toast.error(dt('Resume preview is not ready yet'));
     setExporting('pdf');
     try {
       await downloadResumePdf(element, me.fullName, format);
-      toast.success('PDF downloaded');
+      toast.success(dt('PDF downloaded'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'PDF export failed');
     } finally {
@@ -97,7 +98,7 @@ export default function ResumePreviewPage() {
     setExporting('docx');
     try {
       await downloadResumeDocx(resume, me.fullName, format);
-      toast.success('Editable DOCX downloaded');
+      toast.success(dt('Editable DOCX downloaded'));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'DOCX export failed');
     } finally {
@@ -116,7 +117,7 @@ export default function ResumePreviewPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold tracking-tight">Resume preview</h1>
+          <h1 className="text-lg font-extrabold tracking-tight">{dt('Resume preview')}</h1>
           <p className="truncate text-[10px] text-muted-foreground">
             {template?.name ?? 'Apex template'} · {formatName(format)}
           </p>
@@ -130,7 +131,7 @@ export default function ResumePreviewPage() {
           <select
             value={format}
             onChange={(event) => setFormat(safeFormat(event.target.value))}
-            aria-label="PDF format"
+            aria-label={dt('PDF format')}
             className="hidden h-9 rounded-lg border border-border bg-background px-2 text-xs font-semibold sm:block"
           >
             {RESUME_FORMATS.map((item) => (
@@ -143,30 +144,30 @@ export default function ResumePreviewPage() {
             size="sm"
             variant="outline"
             onClick={() => window.print()}
-            title="Print or save as PDF"
+            title={dt('Print or save as PDF')}
           >
-            <Printer className="h-4 w-4" /> <span className="hidden sm:inline">Print</span>
+            <Printer className="h-4 w-4" /> <span className="hidden sm:inline">{dt('Print')}</span>
           </Button>
           <Button
             size="sm"
             variant="outline"
             onClick={handleDocxDownload}
             disabled={!!exporting}
-            title="Download an editable Word document"
+            title={dt('Download an editable Word document')}
           >
             {exporting === 'docx' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <FileText className="h-4 w-4" />
             )}{' '}
-            <span className="hidden sm:inline">DOCX</span>
+            <span className="hidden sm:inline">{dt('DOCX')}</span>
           </Button>
           <Button
             size="sm"
             variant="brand"
             onClick={handlePdfDownload}
             disabled={!!exporting}
-            title="Download a PDF file"
+            title={dt('Download a PDF file')}
           >
             {exporting === 'pdf' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -356,7 +357,9 @@ function AtsCleanTheme({ resume, name }: { resume: Resume; name: string }) {
       <Header resume={resume} name={name} />
       {resume.summary && (
         <section className="mt-4">
-          <h2 className="text-sm font-bold uppercase tracking-wide">Professional Summary</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide">
+            {dt('Professional Summary')}
+          </h2>
           <p className="mt-1 whitespace-pre-wrap text-sm">{resume.summary}</p>
         </section>
       )}
@@ -484,19 +487,19 @@ function ExecutiveTheme({ resume, name }: { resume: Resume; name: string }) {
       </div>
       <div className="mt-5 grid grid-cols-3 gap-7">
         <div className="col-span-2">
-          <SummaryHeading title="Profile" accent={accent} />
+          <SummaryHeading title={dt('Profile')} accent={accent} />
           {resume.summary && <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>}
-          <SummaryHeading title="Experience" accent={accent} />
+          <SummaryHeading title={dt('Experience')} accent={accent} />
           <ExperienceItems resume={resume} />
-          <SummaryHeading title="Selected projects" accent={accent} />
+          <SummaryHeading title={dt('Selected projects')} accent={accent} />
           <ProjectList resume={resume} />
         </div>
         <aside className="col-span-1">
-          <SummaryHeading title="Expertise" accent={accent} />
+          <SummaryHeading title={dt('Expertise')} accent={accent} />
           <SkillList resume={resume} />
-          <SummaryHeading title="Education" accent={accent} />
+          <SummaryHeading title={dt('Education')} accent={accent} />
           <EducationList resume={resume} />
-          <SummaryHeading title="Awards" accent={accent} />
+          <SummaryHeading title={dt('Awards')} accent={accent} />
           <AchievementList resume={resume} />
         </aside>
       </div>
@@ -512,7 +515,9 @@ function CreativeTheme({ resume, name }: { resume: Resume; name: string }) {
         className="print:print-color-adjust-exact rounded-2xl p-6 text-white"
         style={{ background: `linear-gradient(135deg, ${accent}, #7c3aed)` }}
       >
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/70">Portfolio CV</p>
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-white/70">
+          {dt('Portfolio CV')}
+        </p>
         <h1 className="mt-2 text-4xl font-black">{name}</h1>
         {resume.headline && <p className="mt-1 text-sm text-white/85">{resume.headline}</p>}
         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/80">
@@ -565,23 +570,23 @@ function TechGridTheme({ resume, name }: { resume: Resume; name: string }) {
       </div>
       <div className="mt-6 grid grid-cols-2 gap-6">
         <div>
-          <TechHeading title="// summary" accent={accent} />
+          <TechHeading title={dt('// summary')} accent={accent} />
           {resume.summary && <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>}
-          <TechHeading title="// experience" accent={accent} />
+          <TechHeading title={dt('// experience')} accent={accent} />
           {resume.experiences.map((item) => (
             <ExperienceItem key={item.id} item={item} compact />
           ))}
-          <TechHeading title="// projects" accent={accent} />
+          <TechHeading title={dt('// projects')} accent={accent} />
           {resume.content.projects.map((item) => (
             <ProjectCard key={item.id ?? item.title} project={item} accent={accent} />
           ))}
         </div>
         <aside>
-          <TechHeading title="// skills" accent={accent} />
+          <TechHeading title={dt('// skills')} accent={accent} />
           <SkillList resume={resume} grid accent={accent} />
-          <TechHeading title="// education" accent={accent} />
+          <TechHeading title={dt('// education')} accent={accent} />
           <EducationList resume={resume} />
-          <TechHeading title="// achievements" accent={accent} />
+          <TechHeading title={dt('// achievements')} accent={accent} />
           <AchievementList resume={resume} />
         </aside>
       </div>
@@ -595,16 +600,18 @@ function AcademicTheme({ resume, name }: { resume: Resume; name: string }) {
       <Header resume={resume} name={name} />
       {resume.summary && (
         <section className="mt-5">
-          <h2 className="text-sm font-bold">Research profile</h2>
+          <h2 className="text-sm font-bold">{dt('Research profile')}</h2>
           <p className="mt-1 whitespace-pre-wrap text-sm">{resume.summary}</p>
         </section>
       )}
       <section className="mt-5">
-        <h2 className="border-b border-black pb-1 text-sm font-bold">Appointments & experience</h2>
+        <h2 className="border-b border-black pb-1 text-sm font-bold">
+          {dt('Appointments & experience')}
+        </h2>
         <ExperienceItems resume={resume} />
       </section>
       <section className="mt-5">
-        <h2 className="border-b border-black pb-1 text-sm font-bold">Education</h2>
+        <h2 className="border-b border-black pb-1 text-sm font-bold">{dt('Education')}</h2>
         <EducationList resume={resume} />
       </section>
       <section className="mt-5">
@@ -632,7 +639,7 @@ function CommonSections({ resume }: { resume: Resume }) {
   return (
     <>
       {resume.summary && (
-        <Block title="Summary">
+        <Block title={dt('Summary')}>
           <p className="whitespace-pre-wrap text-sm">{resume.summary}</p>
         </Block>
       )}
@@ -744,7 +751,7 @@ function EducationItem({ item }: { item: Resume['education'][number] }) {
 }
 function CertificationBlock({ resume }: { resume: Resume }) {
   return resume.certifications.length > 0 ? (
-    <Block title="Certifications">
+    <Block title={dt('Certifications')}>
       <ul className="ml-4 list-disc text-sm">
         {resume.certifications.map((item) => (
           <li key={item.id}>
@@ -822,7 +829,7 @@ function SkillList({
 }
 function AchievementBlock({ resume }: { resume: Resume }) {
   return resume.content.achievements.length > 0 ? (
-    <Block title="Achievements">
+    <Block title={dt('Achievements')}>
       <AchievementList resume={resume} />
     </Block>
   ) : null;
@@ -942,8 +949,8 @@ function TechHeading({ title, accent }: { title: string; accent: string }) {
 function PortfolioAppendix({ resume }: { resume: Resume }) {
   return (
     <section className="mt-8 border-t-2 border-black pt-5">
-      <h2 className="text-lg font-extrabold">Portfolio highlights</h2>
-      <p className="mt-1 text-xs text-neutral-500">Selected work from Apex Resume Studio</p>
+      <h2 className="text-lg font-extrabold">{dt('Portfolio highlights')}</h2>
+      <p className="mt-1 text-xs text-neutral-500">{dt('Selected work from Apex Resume Studio')}</p>
       <ProjectList resume={resume} card accent={resume.accentColor ?? '#7c3aed'} />
       <AchievementBlock resume={resume} />
     </section>

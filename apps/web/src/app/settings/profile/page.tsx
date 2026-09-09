@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -13,7 +14,6 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
 import { contentTypeForFile } from '@/lib/file-types';
-
 export default function EditProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -57,7 +57,8 @@ export default function EditProfilePage() {
 
   const captureLocation = () => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      toast.error('Geolocation not available'); return;
+      toast.error(dt('Geolocation not available'));
+      return;
     }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
@@ -65,13 +66,19 @@ export default function EditProfilePage() {
         setLatitude(Number(pos.coords.latitude.toFixed(6)));
         setLongitude(Number(pos.coords.longitude.toFixed(6)));
         setLocating(false);
-        toast.success('Location captured — save to publish');
+        toast.success(dt('Location captured — save to publish'));
       },
-      (err) => { setLocating(false); toast.error(err.message || 'Could not get location'); },
+      (err) => {
+        setLocating(false);
+        toast.error(err.message || 'Could not get location');
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   };
-  const clearLocation = () => { setLatitude(null); setLongitude(null); };
+  const clearLocation = () => {
+    setLatitude(null);
+    setLongitude(null);
+  };
 
   const onPickPhoto = () => fileRef.current?.click();
 
@@ -206,7 +213,7 @@ export default function EditProfilePage() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={120}
-            placeholder="Full-stack developer"
+            placeholder={dt('Full-stack developer')}
             className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
         </Field>
@@ -227,7 +234,7 @@ export default function EditProfilePage() {
               value={city}
               onChange={(e) => setCity(e.target.value)}
               maxLength={60}
-              placeholder="Addis Ababa"
+              placeholder={dt('Addis Ababa')}
               className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
             />
           </Field>
@@ -238,7 +245,7 @@ export default function EditProfilePage() {
                 value={rate}
                 onChange={(e) => setRate(e.target.value.replace(/[^0-9]/g, ''))}
                 inputMode="numeric"
-                placeholder="500"
+                placeholder={dt('500')}
                 className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
               />
             </Field>
@@ -250,32 +257,46 @@ export default function EditProfilePage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
-            placeholder="you@example.com"
+            placeholder={dt('you@example.com')}
             className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
         </Field>
 
         {me.role === 'FREELANCER' && (
-          <Field label="Show me on the nearby map">
+          <Field label={dt('Show me on the nearby map')}>
             <div className="rounded-2xl border border-border bg-card p-3">
               {latitude != null && longitude != null ? (
                 <div className="flex items-center gap-2">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">📍</div>
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">
+                    📍
+                  </div>
                   <div className="flex-1 text-xs">
-                    <div className="font-bold">Location captured</div>
+                    <div className="font-bold">{dt('Location captured')}</div>
                     <div className="text-muted-foreground">
                       {latitude.toFixed(4)}, {longitude.toFixed(4)}
                     </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={clearLocation}>Clear</Button>
+                  <Button size="sm" variant="outline" onClick={clearLocation}>
+                    {dt('Clear')}
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">
                     Opt in so clients looking for local talent can find you on the map.
                   </p>
-                  <Button size="sm" variant="brand" className="mt-2" onClick={captureLocation} disabled={locating}>
-                    {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : '📍 Use my current location'}
+                  <Button
+                    size="sm"
+                    variant="brand"
+                    className="mt-2"
+                    onClick={captureLocation}
+                    disabled={locating}
+                  >
+                    {locating ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      '📍 Use my current location'
+                    )}
                   </Button>
                 </div>
               )}

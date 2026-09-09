@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
-
 interface ModeratedSkill {
   id: string;
   name: string;
@@ -59,23 +59,23 @@ export default function AdminSkillsPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold">Skill moderation</h1>
+          <h1 className="text-lg font-extrabold">{dt('Skill moderation')}</h1>
           <p className="text-[10px] text-muted-foreground">
             Review freelancer-created catalog skills before public discovery.
           </p>
         </div>
         <div className="flex gap-2">
           <Button asChild size="sm" variant="outline">
-            <Link href="/admin/templates">Templates</Link>
+            <Link href="/admin/templates">{dt('Templates')}</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link href="/admin">Admin</Link>
+            <Link href="/admin">{dt('Admin')}</Link>
           </Button>
         </div>
       </header>

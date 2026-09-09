@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -35,7 +36,6 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { timeAgo } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
-
 export default function SecuritySettingsPage() {
   const router = useRouter();
   const { data: me, isLoading } = useMe();
@@ -76,7 +76,7 @@ export default function SecuritySettingsPage() {
       <Section title={t('security.signInMethods')}>
         <SettingRow
           icon={<LockKeyhole className="h-4 w-4" />}
-          title="PIN"
+          title={dt('PIN')}
           subtitle={hasPin ? t('security.pinChange') : t('security.pinAdd')}
           href="/settings/pin?next=/settings/security"
           cta={hasPin ? t('security.change') : t('security.add')}
@@ -129,17 +129,19 @@ export default function SecuritySettingsPage() {
       </Section>
 
       {/* Danger zone */}
-      <Section title="Data & privacy">
+      <Section title={dt('Data & privacy')}>
         <SettingRow
           icon={<Download className="h-4 w-4 text-primary" />}
-          title="Export my data"
-          subtitle="Download a JSON bundle of everything tied to your account — profile, gigs, jobs, orders, reviews."
+          title={dt('Export my data')}
+          subtitle={dt(
+            'Download a JSON bundle of everything tied to your account — profile, gigs, jobs, orders, reviews.',
+          )}
           onClick={async () => {
             const token = useAuthStore.getState().accessToken;
             if (!token) return;
             try {
               await downloadViaAuth('/me/data-export', token, 'apex-work-data-export.json');
-              toast.success('Your data is being downloaded');
+              toast.success(dt('Your data is being downloaded'));
             } catch (e) {
               toast.error((e as Error).message ?? 'Export failed');
             }
@@ -148,8 +150,8 @@ export default function SecuritySettingsPage() {
         />
         <SettingRow
           icon={<ShieldAlert className="h-4 w-4 text-muted-foreground" />}
-          title="GDPR rights"
-          subtitle="You can request deletion of your account and associated data at any time."
+          title={dt('GDPR rights')}
+          subtitle={dt('You can request deletion of your account and associated data at any time.')}
           href="/settings/delete"
           cta="Manage"
         />

@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 /**
  * Connected apps / integrations. Lists the account-backed passkeys and
  * Chapa checkout options, plus the live Google/GitHub sign-in entry point.
@@ -33,7 +34,6 @@ import {
 } from '@/hooks/use-oauth-accounts';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
-
 interface Passkey {
   id: string;
   label: string | null;
@@ -64,7 +64,7 @@ export default function ConnectedAppsPage() {
   const deletePasskey = useMutation({
     mutationFn: (id: string) => apiFetch(`/auth/passkey/${id}`, { method: 'DELETE', token }),
     onSuccess: () => {
-      toast.success('Passkey removed');
+      toast.success(dt('Passkey removed'));
       qc.invalidateQueries({ queryKey: ['passkeys'] });
     },
     onError: (e) => toast.error((e as Error).message),
@@ -89,8 +89,8 @@ export default function ConnectedAppsPage() {
       <section className="mx-3 mt-5">
         <SectionHeader
           icon={<KeyRound className="h-4 w-4" />}
-          title="Passkeys"
-          subtitle="Face ID, Touch ID, Windows Hello, YubiKey"
+          title={dt('Passkeys')}
+          subtitle={dt('Face ID, Touch ID, Windows Hello, YubiKey')}
         />
         {passkeys.isLoading ? (
           <div className="grid h-24 place-items-center rounded-2xl border border-border bg-card">
@@ -98,7 +98,7 @@ export default function ConnectedAppsPage() {
           </div>
         ) : pkItems.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-            <p className="text-sm font-semibold">No passkeys yet</p>
+            <p className="text-sm font-semibold">{dt('No passkeys yet')}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Add a passkey for lightning-fast sign-in without a password.
             </p>
@@ -124,7 +124,7 @@ export default function ConnectedAppsPage() {
                     if (window.confirm('Remove this passkey?')) deletePasskey.mutate(p.id);
                   }}
                   disabled={deletePasskey.isPending}
-                  aria-label="Remove passkey"
+                  aria-label={dt('Remove passkey')}
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -146,15 +146,15 @@ export default function ConnectedAppsPage() {
       <section className="mx-3 mt-6">
         <SectionHeader
           icon={<CreditCard className="h-4 w-4" />}
-          title="Payment methods"
-          subtitle="Telebirr, CBE, Awash, Chapa card"
+          title={dt('Payment methods')}
+          subtitle={dt('Telebirr, CBE, Awash, Chapa card')}
         />
         <Link
           href="/settings/payment-methods"
           className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm font-semibold active:bg-muted"
         >
           <CreditCard className="h-4 w-4 text-muted-foreground" />
-          <span>Manage payment methods</span>
+          <span>{dt('Manage payment methods')}</span>
           <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
         </Link>
       </section>
@@ -163,8 +163,8 @@ export default function ConnectedAppsPage() {
       <section className="mx-3 mt-6">
         <SectionHeader
           icon={<KeyRound className="h-4 w-4" />}
-          title="Social sign-in"
-          subtitle="Google & GitHub"
+          title={dt('Social sign-in')}
+          subtitle={dt('Google & GitHub')}
         />
         <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
           <OAuthRow
@@ -180,7 +180,7 @@ export default function ConnectedAppsPage() {
             onUnlink={() => {
               if (!window.confirm('Disconnect Google sign-in?')) return;
               unlinkOAuth.mutate('google', {
-                onSuccess: () => toast.success('Google sign-in disconnected'),
+                onSuccess: () => toast.success(dt('Google sign-in disconnected')),
                 onError: (error) => toast.error(error.message),
               });
             }}
@@ -198,7 +198,7 @@ export default function ConnectedAppsPage() {
             onUnlink={() => {
               if (!window.confirm('Disconnect GitHub sign-in?')) return;
               unlinkOAuth.mutate('github', {
-                onSuccess: () => toast.success('GitHub sign-in disconnected'),
+                onSuccess: () => toast.success(dt('GitHub sign-in disconnected')),
                 onError: (error) => toast.error(error.message),
               });
             }}
@@ -246,7 +246,7 @@ function OAuthRow({
             {account.email || account.profileName || 'Connected'}
           </div>
         ) : (
-          <div className="text-[11px] text-muted-foreground">Available at sign in</div>
+          <div className="text-[11px] text-muted-foreground">{dt('Available at sign in')}</div>
         )}
       </div>
       {account ? (

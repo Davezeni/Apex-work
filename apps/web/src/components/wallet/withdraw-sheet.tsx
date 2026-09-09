@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -9,14 +10,8 @@ import { useRequestWithdrawal } from '@/hooks/use-wallet';
 import { useI18n } from '@/i18n';
 import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
-
 type Destination =
-  | 'telebirr'
-  | 'cbebirr'
-  | 'cbe_bank'
-  | 'awash_bank'
-  | 'dashen_bank'
-  | 'bank_of_abyssinia';
+  'telebirr' | 'cbebirr' | 'cbe_bank' | 'awash_bank' | 'dashen_bank' | 'bank_of_abyssinia';
 
 const DESTINATIONS: { id: Destination; label: string; icon: string; isBank: boolean }[] = [
   { id: 'telebirr', label: 'Telebirr', icon: '📱', isBank: false },
@@ -114,7 +109,7 @@ export function WithdrawSheet({ open, onOpenChange, maxAmount }: Props) {
             pattern="[0-9]*"
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9]/g, ''))}
-            placeholder="0"
+            placeholder={dt('0')}
             className="w-full rounded-xl border border-border bg-card px-4 py-3 text-lg font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
           <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
@@ -151,7 +146,7 @@ export function WithdrawSheet({ open, onOpenChange, maxAmount }: Props) {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Dawit Tamiru"
+              placeholder={dt('Dawit Tamiru')}
               className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
             />
           </div>
@@ -170,11 +165,7 @@ export function WithdrawSheet({ open, onOpenChange, maxAmount }: Props) {
             (destMeta.isBank && name.trim().length < 2)
           }
         >
-          {request.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            t('wallet.confirm')
-          )}
+          {request.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('wallet.confirm')}
         </Button>
       </div>
     </Sheet>

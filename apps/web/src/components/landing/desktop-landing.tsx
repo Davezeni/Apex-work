@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,7 +11,6 @@ import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
-
 const DEFAULT_HOME: HomeConfig = {
   heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
   heroTitle: "Ethiopia's most powerful",
@@ -138,20 +138,20 @@ export function DesktopLanding() {
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background/50 transition-transform hover:rotate-12"
-              aria-label="Toggle theme"
+              aria-label={dt('Toggle theme')}
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
             <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">{dt('Sign in')}</Link>
             </Button>
             <Button asChild size="sm" className="hidden md:inline-flex">
-              <Link href="/signup">Join free</Link>
+              <Link href="/signup">{dt('Join free')}</Link>
             </Button>
             <button
               className="grid h-9 w-9 place-items-center rounded-full border border-border md:hidden"
               onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Menu"
+              aria-label={dt('Menu')}
             >
               {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
@@ -171,7 +171,7 @@ export function DesktopLanding() {
                 </Link>
               ))}
               <Button asChild variant="brand" className="mt-2">
-                <Link href="/signup">Join free</Link>
+                <Link href="/signup">{dt('Join free')}</Link>
               </Button>
             </div>
           </div>
@@ -245,7 +245,7 @@ export function DesktopLanding() {
             }}
             className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
             placeholder={home.searchPlaceholder}
-            aria-label="Search freelancers and services"
+            aria-label={dt('Search freelancers and services')}
           />
           <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
             Search
@@ -272,7 +272,7 @@ export function DesktopLanding() {
 
       {/* Categories */}
       <section className="container py-20">
-        <SectionHeader eyebrow="Explore" title="Digital skills, all in one place" />
+        <SectionHeader eyebrow="Explore" title={dt('Digital skills, all in one place')} />
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           {CATEGORIES.map((c) => (
             <Link
@@ -284,7 +284,7 @@ export function DesktopLanding() {
                 {c.icon}
               </div>
               <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Browse services</p>
+              <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
             </Link>
           ))}
         </div>
@@ -302,7 +302,7 @@ export function DesktopLanding() {
 
       {/* How it works */}
       <section id="how" className="container scroll-mt-24 py-20">
-        <SectionHeader eyebrow="Simple process" title="Hire in 3 steps" />
+        <SectionHeader eyebrow="Simple process" title={dt('Hire in 3 steps')} />
         <div className="grid gap-8 md:grid-cols-3">
           {home.howItWorks.map((s, idx) => (
             <div key={idx} className="text-center">
@@ -320,7 +320,7 @@ export function DesktopLanding() {
       <section id="pricing" className="container scroll-mt-24 py-20">
         <SectionHeader
           eyebrow="Simple pricing"
-          title="Keep more of what you earn"
+          title={dt('Keep more of what you earn')}
           description="Start free. Pay only when you complete a paid project."
         />
         <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
@@ -392,7 +392,7 @@ export function DesktopLanding() {
               <Link className="hover:text-foreground" href="/legal/terms">
                 Terms
               </Link>
-              <span>Built on 100% open source</span>
+              <span>{dt('Built on 100% open source')}</span>
             </div>
           </div>
         </div>
@@ -475,7 +475,7 @@ function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
             <span className="text-base font-extrabold text-foreground">{formatEtb(f.price)}</span>
           </div>
           <Button asChild size="sm">
-            <Link href="/browse">Hire</Link>
+            <Link href="/browse">{dt('Hire')}</Link>
           </Button>
         </div>
       </div>

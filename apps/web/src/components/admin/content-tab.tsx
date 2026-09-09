@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { SectionHead, Spinner, Empty } from './admin-ui';
 import { Markdown } from '@/components/markdown';
 import type { HomeConfig } from '@/hooks/use-home-config';
-
 type ContentPage = { slug: string; title: string; markdown: string; updatedAt: string | null };
 type SiteConfig = {
   brandName: string;
@@ -29,7 +29,7 @@ function SiteConfigCard({ site, token }: { site: SiteConfig; token: string | nul
     mutationFn: () =>
       apiFetch<SiteConfig>('/admin/ops/content/site', { method: 'PUT', token, body: f }),
     onSuccess: () => {
-      toast.success('Brand & contact saved');
+      toast.success(dt('Brand & contact saved'));
       qc.invalidateQueries({ queryKey: ['admin/content'] });
     },
     onError: (e) => toast.error((e as Error).message),
@@ -49,7 +49,7 @@ function SiteConfigCard({ site, token }: { site: SiteConfig; token: string | nul
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <div className="text-sm font-extrabold">Brand & contact</div>
+          <div className="text-sm font-extrabold">{dt('Brand & contact')}</div>
           <div className="text-[11px] text-muted-foreground">
             Used on the Help, Contact, legal and footer across the app.
           </div>
@@ -188,7 +188,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
     mutationFn: () =>
       apiFetch<HomeConfig>('/admin/ops/content/home', { method: 'PUT', token, body: f }),
     onSuccess: () => {
-      toast.success('Home page copy saved');
+      toast.success(dt('Home page copy saved'));
       qc.invalidateQueries({ queryKey: ['admin/content'] });
     },
     onError: (e) => toast.error((e as Error).message),
@@ -198,7 +198,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <div>
-          <div className="text-sm font-extrabold">Landing page</div>
+          <div className="text-sm font-extrabold">{dt('Landing page')}</div>
           <div className="text-[11px] text-muted-foreground">
             Hero, stats, how-it-works, featured freelancers, pricing & CTA.
           </div>
@@ -210,46 +210,48 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field
-          label="Hero badge"
+          label={dt('Hero badge')}
           value={f.heroBadge}
           onChange={(v) => setF({ ...f, heroBadge: v })}
         />
         <Field
-          label="Hero title"
+          label={dt('Hero title')}
           value={f.heroTitle}
           onChange={(v) => setF({ ...f, heroTitle: v })}
         />
         <Field
-          label="Hero accent"
+          label={dt('Hero accent')}
           value={f.heroTitleAccent}
           onChange={(v) => setF({ ...f, heroTitleAccent: v })}
         />
         <Field
-          label="Search placeholder"
+          label={dt('Search placeholder')}
           value={f.searchPlaceholder}
           onChange={(v) => setF({ ...f, searchPlaceholder: v })}
         />
         <Field
-          label="Hero CTA (primary)"
+          label={dt('Hero CTA (primary)')}
           value={f.heroCtaPrimary}
           onChange={(v) => setF({ ...f, heroCtaPrimary: v })}
         />
         <Field
-          label="Hero CTA (secondary)"
+          label={dt('Hero CTA (secondary)')}
           value={f.heroCtaSecondary}
           onChange={(v) => setF({ ...f, heroCtaSecondary: v })}
         />
       </div>
       <div className="mt-3">
         <Field
-          label="Hero subtitle"
+          label={dt('Hero subtitle')}
           value={f.heroSubtitle}
           onChange={(v) => setF({ ...f, heroSubtitle: v })}
         />
       </div>
 
       <div className="mt-4 border-t border-border pt-3">
-        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">Stats</div>
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">
+          {dt('Stats')}
+        </div>
         {f.stats.map((s, idx) => (
           <div key={idx} className="mb-2 grid grid-cols-2 gap-2">
             <input
@@ -262,7 +264,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
                 }));
               }}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              placeholder="12.4K"
+              placeholder={dt('12.4K')}
             />
             <input
               value={s.label}
@@ -274,7 +276,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
                 }));
               }}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              placeholder="Verified freelancers"
+              placeholder={dt('Verified freelancers')}
             />
           </div>
         ))}
@@ -304,7 +306,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
                 }));
               }}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              placeholder="Step title"
+              placeholder={dt('Step title')}
             />
             <input
               value={s.description}
@@ -318,7 +320,7 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
                 }));
               }}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-              placeholder="Step description"
+              placeholder={dt('Step description')}
             />
           </div>
         ))}
@@ -333,25 +335,27 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
       </div>
 
       <div className="mt-4 border-t border-border pt-3">
-        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">CTA</div>
+        <div className="mb-2 text-[11px] font-bold uppercase text-muted-foreground">
+          {dt('CTA')}
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Field
-            label="CTA title"
+            label={dt('CTA title')}
             value={f.cta.title}
             onChange={(v) => setF({ ...f, cta: { ...f.cta, title: v } })}
           />
           <Field
-            label="CTA subtitle"
+            label={dt('CTA subtitle')}
             value={f.cta.subtitle}
             onChange={(v) => setF({ ...f, cta: { ...f.cta, subtitle: v } })}
           />
           <Field
-            label="CTA primary"
+            label={dt('CTA primary')}
             value={f.cta.primary}
             onChange={(v) => setF({ ...f, cta: { ...f.cta, primary: v } })}
           />
           <Field
-            label="CTA secondary"
+            label={dt('CTA secondary')}
             value={f.cta.secondary}
             onChange={(v) => setF({ ...f, cta: { ...f.cta, secondary: v } })}
           />
@@ -376,17 +380,21 @@ function HomeConfigCard({ home, token }: { home: HomeConfig; token: string | nul
                 <div className="mb-2 text-xs font-bold capitalize">{k}</div>
                 <div className="space-y-2">
                   <Field
-                    label="Heading"
+                    label={dt('Heading')}
                     value={card.heading}
                     onChange={(v) => set({ heading: v })}
                   />
-                  <Field label="Price" value={card.price} onChange={(v) => set({ price: v })} />
                   <Field
-                    label="Description"
+                    label={dt('Price')}
+                    value={card.price}
+                    onChange={(v) => set({ price: v })}
+                  />
+                  <Field
+                    label={dt('Description')}
                     value={card.description}
                     onChange={(v) => set({ description: v })}
                   />
-                  <Field label="CTA" value={card.cta} onChange={(v) => set({ cta: v })} />
+                  <Field label={dt('CTA')} value={card.cta} onChange={(v) => set({ cta: v })} />
                 </div>
               </div>
             );
@@ -411,11 +419,11 @@ export function ContentTab() {
   return (
     <div className="space-y-4">
       <SectionHead
-        title="Site content"
-        subtitle="Editable pages, FAQ & contact info — served to the public, cached in Redis"
+        title={dt('Site content')}
+        subtitle={dt('Editable pages, FAQ & contact info — served to the public, cached in Redis')}
       />
       {isLoading ? (
-        <Spinner label="Loading content…" />
+        <Spinner label={dt('Loading content…')} />
       ) : !data?.items?.length ? (
         <Empty message="No content pages" />
       ) : (

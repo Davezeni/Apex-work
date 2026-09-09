@@ -1,8 +1,18 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Package, Star, Wallet, Bell, Sparkles, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  MessageCircle,
+  Package,
+  Star,
+  Wallet,
+  Bell,
+  Sparkles,
+  Loader2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
@@ -12,20 +22,47 @@ import {
   useNotificationPreferences,
   useUpdateNotificationPreferences,
 } from '@/hooks/use-notification-preferences';
-import {
-  DEFAULT_NOTIFICATION_PREFERENCES,
-  type NotificationPreferences,
-} from '@apex-work/shared';
+import { DEFAULT_NOTIFICATION_PREFERENCES, type NotificationPreferences } from '@apex-work/shared';
 
 type PrefKey = keyof NotificationPreferences;
 
 const KEYS: { key: PrefKey; icon: React.ReactNode; label: string; sub: string }[] = [
-  { key: 'messages', icon: <MessageCircle className="h-4 w-4" />, label: 'New messages', sub: 'When someone messages you' },
-  { key: 'orders', icon: <Package className="h-4 w-4" />, label: 'Order updates', sub: 'Status changes, deliveries, revisions' },
-  { key: 'reviews', icon: <Star className="h-4 w-4" />, label: 'Reviews', sub: 'New reviews and seller responses' },
-  { key: 'payments', icon: <Wallet className="h-4 w-4" />, label: 'Payments & payouts', sub: 'Withdrawals, escrow releases' },
-  { key: 'promotions', icon: <Sparkles className="h-4 w-4" />, label: 'Promotions', sub: 'New features, offers, tips' },
-  { key: 'system', icon: <Bell className="h-4 w-4" />, label: 'System alerts', sub: 'Security & account activity' },
+  {
+    key: 'messages',
+    icon: <MessageCircle className="h-4 w-4" />,
+    label: 'New messages',
+    sub: 'When someone messages you',
+  },
+  {
+    key: 'orders',
+    icon: <Package className="h-4 w-4" />,
+    label: 'Order updates',
+    sub: 'Status changes, deliveries, revisions',
+  },
+  {
+    key: 'reviews',
+    icon: <Star className="h-4 w-4" />,
+    label: 'Reviews',
+    sub: 'New reviews and seller responses',
+  },
+  {
+    key: 'payments',
+    icon: <Wallet className="h-4 w-4" />,
+    label: 'Payments & payouts',
+    sub: 'Withdrawals, escrow releases',
+  },
+  {
+    key: 'promotions',
+    icon: <Sparkles className="h-4 w-4" />,
+    label: 'Promotions',
+    sub: 'New features, offers, tips',
+  },
+  {
+    key: 'system',
+    icon: <Bell className="h-4 w-4" />,
+    label: 'System alerts',
+    sub: 'Security & account activity',
+  },
 ];
 
 export default function NotifSettingsPage() {
@@ -77,7 +114,7 @@ export default function NotifSettingsPage() {
         </button>
         <div>
           <h1 className="text-lg font-extrabold tracking-tight">{t('settings.notifications')}</h1>
-          <p className="text-[11px] text-muted-foreground">Synced across your devices</p>
+          <p className="text-[11px] text-muted-foreground">{dt('Synced across your devices')}</p>
         </div>
       </header>
 
@@ -88,13 +125,15 @@ export default function NotifSettingsPage() {
             <Bell className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <div className="text-sm font-bold">Browser push notifications</div>
+            <div className="text-sm font-bold">{dt('Browser push notifications')}</div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Get notified even when Apex-Work is in the background.
             </p>
           </div>
           {push.state === 'unsupported' ? (
-            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">N/A</span>
+            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">
+              {dt('N/A')}
+            </span>
           ) : push.subscribed ? (
             <Button size="sm" variant="outline" onClick={push.disable} disabled={push.busy}>
               {push.busy ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Disable'}
@@ -124,7 +163,9 @@ export default function NotifSettingsPage() {
         ))}
       </div>
       {preferences.isLoading && (
-        <p className="mt-3 text-center text-[11px] text-muted-foreground">Loading account preferences…</p>
+        <p className="mt-3 text-center text-[11px] text-muted-foreground">
+          Loading account preferences…
+        </p>
       )}
       {update.isPending && (
         <p className="mt-3 text-center text-[11px] text-primary">Saving preference…</p>

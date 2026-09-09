@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChartPie } from 'lucide-react';
 import { setConsent } from '@/lib/analytics';
-
 const CONSENT_KEY = 'apx-consent';
 
 /**
@@ -42,7 +42,7 @@ export function ConsentBanner() {
           <ChartPie className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">We use analytics</p>
+          <p className="text-sm font-semibold">{dt('We use analytics')}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             We use PostHog to understand how people use Apex-Work and improve the marketplace. No
             personal data is sold. You can change this at any time.

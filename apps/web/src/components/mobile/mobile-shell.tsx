@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,7 +14,6 @@ import { useConversations } from '@/hooks/use-chat';
 import { useI18n } from '@/i18n';
 import { PwaInstall } from '@/components/pwa-install';
 import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
-
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
 const TABS: { id: MobileTab; labelKey: string; icon: typeof Home; href: string }[] = [
@@ -85,7 +85,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
           haptic();
           setSheetOpen(true);
         }}
-        aria-label="Create"
+        aria-label={dt('Create')}
         className="fixed bottom-6 right-5 z-40 hidden h-14 w-14 grid-cols-1 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40 ring-1 ring-primary/30 transition-transform hover:scale-105 hover:brightness-110 active:scale-95 md:grid"
       >
         <Plus className="h-6 w-6" strokeWidth={2.5} />
@@ -117,7 +117,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   haptic();
                   setSheetOpen(true);
                 }}
-                aria-label="Create"
+                aria-label={dt('Create')}
                 className="mobile-bottom-nav__create-button grad-hero grid h-12 w-12 place-items-center rounded-full text-white shadow-xl shadow-primary/50 ring-1 ring-primary-foreground/20 transition-transform active:scale-90"
               >
                 <Plus className="h-5 w-5" strokeWidth={3} />

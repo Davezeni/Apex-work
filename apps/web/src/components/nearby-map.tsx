@@ -1,11 +1,19 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMapEvents, useMap } from 'react-leaflet';
+import { dt } from '@/i18n/auto';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Circle,
+  useMapEvents,
+  useMap,
+} from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect } from 'react';
 import type { NearbyFreelancer } from '@/hooks/use-nearby';
-
 /**
  * Leaflet + OSM map. No API key needed. Tiles served from OpenStreetMap
  * (please respect their Nominatim usage policy — we cache aggressively
@@ -64,29 +72,41 @@ function Recenter({ center }: { center: [number, number] }) {
 
 export function NearbyMap({ center, radiusKm, items, onMove }: Props) {
   return (
-    <MapContainer
-      center={center}
-      zoom={12}
-      className="h-full w-full"
-      scrollWheelZoom
-    >
+    <MapContainer center={center} zoom={12} className="h-full w-full" scrollWheelZoom>
       <TileLayer
-        attribution='&copy; OpenStreetMap contributors'
+        attribution="&copy; OpenStreetMap contributors"
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MoveListener onMove={onMove} />
       <Recenter center={center} />
       <Marker position={center} icon={YOU_ICON}>
-        <Popup>You are here</Popup>
+        <Popup>{dt('You are here')}</Popup>
       </Marker>
-      <Circle center={center} radius={radiusKm * 1000} pathOptions={{ color: '#7c3aed', fillOpacity: 0.06 }} />
+      <Circle
+        center={center}
+        radius={radiusKm * 1000}
+        pathOptions={{ color: '#7c3aed', fillOpacity: 0.06 }}
+      />
       {items.map((f) => (
         <Marker key={f.id} position={[f.latitude, f.longitude]} icon={AVATAR_ICON}>
           <Popup>
             <div style={{ fontSize: 13, fontWeight: 700 }}>{f.fullName}</div>
-            <div style={{ fontSize: 11, color: '#666', margin: '2px 0 4px' }}>{f.title ?? '@' + f.username}</div>
-            <div style={{ fontSize: 11 }}>{f.distanceKm.toFixed(1)} km · ⭐ {f.rating.toFixed(1)}</div>
-            <a href={`/u/${f.username}`} style={{ display: 'inline-block', marginTop: 6, fontSize: 12, color: '#7c3aed', fontWeight: 700 }}>
+            <div style={{ fontSize: 11, color: '#666', margin: '2px 0 4px' }}>
+              {f.title ?? '@' + f.username}
+            </div>
+            <div style={{ fontSize: 11 }}>
+              {f.distanceKm.toFixed(1)} km · ⭐ {f.rating.toFixed(1)}
+            </div>
+            <a
+              href={`/u/${f.username}`}
+              style={{
+                display: 'inline-block',
+                marginTop: 6,
+                fontSize: 12,
+                color: '#7c3aed',
+                fontWeight: 700,
+              }}
+            >
               View profile →
             </a>
           </Popup>

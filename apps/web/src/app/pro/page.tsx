@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -10,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useMe } from '@/hooks/use-me';
 import { useBuyPro, useSubscription, useVerifyPro } from '@/hooks/use-subscription';
 import { formatEtb } from '@/lib/utils';
-
 export default function ProPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -67,14 +67,16 @@ export default function ProPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold">Apex Pro</h1>
-          <p className="text-[10px] text-muted-foreground">More visibility, insight and AI power</p>
+          <h1 className="text-lg font-extrabold">{dt('Apex Pro')}</h1>
+          <p className="text-[10px] text-muted-foreground">
+            {dt('More visibility, insight and AI power')}
+          </p>
         </div>
         <Button asChild size="sm" variant="outline">
           <Link href="/resume">

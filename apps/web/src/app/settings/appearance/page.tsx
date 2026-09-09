@@ -1,12 +1,12 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Moon, Sun, Monitor, Type, WifiOff } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
-
 const SIZES = [
   { id: 'sm', label: 'Small', px: '14px' },
   { id: 'md', label: 'Default', px: '16px' },
@@ -124,7 +124,7 @@ export default function AppearancePage() {
             <WifiOff className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold">Use less data</div>
+            <div className="text-sm font-bold">{dt('Use less data')}</div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Reduces decorative animations and effects for faster loading on mobile data.
             </p>

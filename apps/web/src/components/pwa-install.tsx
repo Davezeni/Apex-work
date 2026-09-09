@@ -1,8 +1,8 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
-
 /**
  * Prompts the user to install the PWA to their home screen.
  *
@@ -29,7 +29,10 @@ export function PwaInstall() {
 
     // Already installed?
     if (window.matchMedia('(display-mode: standalone)').matches) return;
-    if ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone)
+    if (
+      'standalone' in window.navigator &&
+      (window.navigator as { standalone?: boolean }).standalone
+    )
       return;
 
     // Recently dismissed?
@@ -69,12 +72,12 @@ export function PwaInstall() {
   return (
     <div
       role="dialog"
-      aria-label="Install Apex-Work"
-      className="safe-bottom fixed inset-x-3 bottom-24 z-50 rounded-2xl border border-border bg-card p-4 shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:max-w-sm animate-fade-up"
+      aria-label={dt('Install Apex-Work')}
+      className="safe-bottom fixed inset-x-3 bottom-24 z-50 animate-fade-up rounded-2xl border border-border bg-card p-4 shadow-lg md:inset-x-auto md:bottom-6 md:right-6 md:max-w-sm"
     >
       <button
         onClick={dismiss}
-        aria-label="Dismiss"
+        aria-label={dt('Dismiss')}
         className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full text-muted-foreground hover:bg-muted"
       >
         <X className="h-4 w-4" />
@@ -84,7 +87,7 @@ export function PwaInstall() {
           <Download className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold">Install Apex-Work</div>
+          <div className="text-sm font-bold">{dt('Install Apex-Work')}</div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Add it to your home screen for a fast, native-app experience.
           </p>

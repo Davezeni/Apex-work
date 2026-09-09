@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -20,7 +21,6 @@ import { useMe } from '@/hooks/use-me';
 import { useOrder, type OrderStatus } from '@/hooks/use-orders';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb } from '@/lib/utils';
-
 const statusLabels: Record<OrderStatus, string> = {
   PENDING: 'Awaiting payment',
   ACTIVE: 'In progress',
@@ -47,9 +47,9 @@ export default function ProjectWorkspacePage() {
   if (error)
     return (
       <div className="grid min-h-dvh place-items-center p-6 text-center">
-        <p className="text-sm">Project workspace unavailable.</p>
+        <p className="text-sm">{dt('Project workspace unavailable.')}</p>
         <Button asChild variant="brand" className="mt-4">
-          <Link href="/orders">Back to orders</Link>
+          <Link href="/orders">{dt('Back to orders')}</Link>
         </Button>
       </div>
     );
@@ -72,7 +72,7 @@ export default function ProjectWorkspacePage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -93,7 +93,7 @@ export default function ProjectWorkspacePage() {
           <MessageCircle className="h-4 w-4" /> Chat
         </Button>
         <Button asChild size="sm" variant="brand">
-          <Link href={`/orders/${order.id}`}>Order</Link>
+          <Link href={`/orders/${order.id}`}>{dt('Order')}</Link>
         </Button>
       </header>
 
@@ -134,7 +134,7 @@ export default function ProjectWorkspacePage() {
           <div className="mt-5 grid gap-2 sm:grid-cols-4">
             <WorkspaceKpi
               icon={<WalletCards className="h-4 w-4" />}
-              label="Escrow"
+              label={dt('Escrow')}
               value={
                 order.payments[0]?.status === 'SUCCESS'
                   ? 'Funded'
@@ -145,17 +145,17 @@ export default function ProjectWorkspacePage() {
             />
             <WorkspaceKpi
               icon={<Clock3 className="h-4 w-4" />}
-              label="Deadline"
+              label={dt('Deadline')}
               value={order.deadline ? new Date(order.deadline).toLocaleDateString() : 'Not set'}
             />
             <WorkspaceKpi
               icon={<Package className="h-4 w-4" />}
-              label="Delivery"
+              label={dt('Delivery')}
               value={order.deliveredAt ? 'Delivered' : 'In progress'}
             />
             <WorkspaceKpi
               icon={<MessageCircle className="h-4 w-4" />}
-              label="Partner"
+              label={dt('Partner')}
               value={other.fullName}
             />
           </div>
@@ -163,13 +163,13 @@ export default function ProjectWorkspacePage() {
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
           <div className="space-y-4">
-            <WorkspaceCard icon={<FileText className="h-4 w-4" />} title="Requirements">
+            <WorkspaceCard icon={<FileText className="h-4 w-4" />} title={dt('Requirements')}>
               <div className="whitespace-pre-line rounded-xl bg-background p-3 text-sm leading-relaxed">
                 {order.requirements ||
                   'No written requirements were added yet. Use project chat to confirm scope before work begins.'}
               </div>
             </WorkspaceCard>
-            <WorkspaceCard icon={<Package className="h-4 w-4" />} title="Delivery files">
+            <WorkspaceCard icon={<Package className="h-4 w-4" />} title={dt('Delivery files')}>
               <div className="rounded-xl bg-background p-3 text-sm">
                 {order.deliverables?.files?.length ? (
                   <ul className="space-y-2">
@@ -187,7 +187,7 @@ export default function ProjectWorkspacePage() {
                     ))}
                   </ul>
                 ) : (
-                  <span className="text-muted-foreground">No delivery files yet.</span>
+                  <span className="text-muted-foreground">{dt('No delivery files yet.')}</span>
                 )}
                 {order.deliverables?.notes && (
                   <p className="mt-3 whitespace-pre-line text-xs text-muted-foreground">
@@ -200,7 +200,7 @@ export default function ProjectWorkspacePage() {
           <div className="space-y-4">
             <WorkspaceCard
               icon={<MessageCircle className="h-4 w-4" />}
-              title="Project communication"
+              title={dt('Project communication')}
             >
               <p className="text-xs leading-relaxed text-muted-foreground">
                 Use one conversation for scope decisions, feedback, files and handover. This keeps
@@ -216,7 +216,10 @@ export default function ProjectWorkspacePage() {
                 <MessageCircle className="h-4 w-4" /> Open project chat
               </Button>
             </WorkspaceCard>
-            <WorkspaceCard icon={<Milestone className="h-4 w-4" />} title="Escrow and milestones">
+            <WorkspaceCard
+              icon={<Milestone className="h-4 w-4" />}
+              title={dt('Escrow and milestones')}
+            >
               <p className="text-xs leading-relaxed text-muted-foreground">
                 Break larger work into checkpoints. Approvals release each milestone through the
                 existing escrow workflow.
@@ -239,14 +242,14 @@ export default function ProjectWorkspacePage() {
         </div>
 
         <section className="mt-4 rounded-2xl border border-border bg-card p-4">
-          <h2 className="text-sm font-extrabold">Project checklist</h2>
+          <h2 className="text-sm font-extrabold">{dt('Project checklist')}</h2>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <Checklist done={!!order.requirements} label="Scope confirmed" />
+            <Checklist done={!!order.requirements} label={dt('Scope confirmed')} />
             <Checklist
               done={!!order.payments[0] && order.payments[0].status === 'SUCCESS'}
-              label="Payment protected"
+              label={dt('Payment protected')}
             />
-            <Checklist done={!!order.deliveredAt} label="First delivery" />
+            <Checklist done={!!order.deliveredAt} label={dt('First delivery')} />
           </div>
         </section>
       </main>

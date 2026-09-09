@@ -1,11 +1,11 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { X, Download, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,7 +22,15 @@ interface Props {
  * working close button (the controls are layered above the image so clicks
  * always reach them). Closes on Escape / outside tap.
  */
-export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex = 0, onImageIndex }: Props) {
+export function ImageViewer({
+  open,
+  onOpenChange,
+  url,
+  alt,
+  images,
+  imageIndex = 0,
+  onImageIndex,
+}: Props) {
   const { t } = useI18n();
   const [zoomed, setZoomed] = useState(false);
 
@@ -35,7 +43,8 @@ export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex =
     setZoomed(false);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onOpenChange(false);
-      if (isMulti && e.key === 'ArrowLeft') onImageIndex?.((imageIndex - 1 + gallery.length) % gallery.length);
+      if (isMulti && e.key === 'ArrowLeft')
+        onImageIndex?.((imageIndex - 1 + gallery.length) % gallery.length);
       if (isMulti && e.key === 'ArrowRight') onImageIndex?.((imageIndex + 1) % gallery.length);
     };
     window.addEventListener('keydown', onKey);
@@ -62,8 +71,11 @@ export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex =
       {/* Top bar */}
       <div className="safe-top z-20 flex items-center justify-between px-4 py-3">
         <button
-          onClick={(e) => { e.stopPropagation(); setZoomed((z) => !z); }}
-          aria-label="Zoom"
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoomed((z) => !z);
+          }}
+          aria-label={dt('Zoom')}
           className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-lg active:scale-90"
         >
           {zoomed ? <ZoomOut className="h-5 w-5" /> : <ZoomIn className="h-5 w-5" />}
@@ -86,7 +98,10 @@ export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex =
             <Download className="h-5 w-5" />
           </a>
           <button
-            onClick={(e) => { e.stopPropagation(); onOpenChange(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenChange(false);
+            }}
             aria-label={t('viewer.close')}
             className="grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-lg active:scale-90"
           >
@@ -99,15 +114,21 @@ export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex =
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         {isMulti && (
           <button
-            onClick={(e) => { e.stopPropagation(); goPrev(); }}
-            aria-label="Previous image"
+            onClick={(e) => {
+              e.stopPropagation();
+              goPrev();
+            }}
+            aria-label={dt('Previous image')}
             className="absolute left-2 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-lg active:scale-90"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
         )}
         <button
-          onClick={(e) => { e.stopPropagation(); setZoomed((z) => !z); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setZoomed((z) => !z);
+          }}
           aria-label={zoomed ? 'Zoom out' : 'Zoom in'}
           className={cn('relative z-10 h-full w-full', zoomed ? 'overflow-auto' : '')}
         >
@@ -125,8 +146,11 @@ export function ImageViewer({ open, onOpenChange, url, alt, images, imageIndex =
         </button>
         {isMulti && (
           <button
-            onClick={(e) => { e.stopPropagation(); goNext(); }}
-            aria-label="Next image"
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
+            aria-label={dt('Next image')}
             className="absolute right-2 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur-lg active:scale-90"
           >
             <ChevronRight className="h-6 w-6" />

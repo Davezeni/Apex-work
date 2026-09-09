@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,7 +26,6 @@ import { useAuthStore, type AuthSessionTokens } from '@/stores/auth-store';
 import { getDeviceToken } from '@/lib/device';
 import { startAuthentication } from '@simplewebauthn/browser';
 import { useI18n } from '@/i18n';
-
 const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(/\/$/, '');
 
 type Step = 'phone' | 'pin' | 'otp' | 'no-account' | 'auto';
@@ -153,7 +153,7 @@ function LoginInner() {
       });
       finishLogin(result, phone);
     } catch {
-      toast.error('Trusted device expired. Please verify with a code.');
+      toast.error(dt('Trusted device expired. Please verify with a code.'));
       setStep('otp');
     } finally {
       setLoading(false);
@@ -183,7 +183,7 @@ function LoginInner() {
       const e = err as ApiError;
       setPin('');
       if (e.code === 'RATE_LIMITED') {
-        toast.error('Too many attempts. Try the code instead.');
+        toast.error(dt('Too many attempts. Try the code instead.'));
         setStep('otp');
         await submitPhone();
       } else {
@@ -198,7 +198,7 @@ function LoginInner() {
     setLoading(true);
     try {
       if (typeof window !== 'undefined' && !window.isSecureContext) {
-        toast.error('Face ID / Fingerprint requires a secure (https) connection.');
+        toast.error(dt('Face ID / Fingerprint requires a secure (https) connection.'));
         return;
       }
       const options = await apiFetch<unknown>('/auth/passkey/login-options', {

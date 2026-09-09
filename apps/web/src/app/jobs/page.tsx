@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,7 +12,6 @@ import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { CATEGORIES } from '@apex-work/shared';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-
 export default function JobsPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -52,7 +52,7 @@ export default function JobsPage() {
 
           <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
             <CategoryChip
-              label="All"
+              label={dt('All')}
               icon="✨"
               active={!category}
               onClick={() => setCategory(undefined)}
@@ -181,7 +181,8 @@ function JobCard({ job, isMe }: { job: JobSummary; isMe: boolean }) {
           </span>
         )}
         <span className="text-muted-foreground">
-          · {job._count.bids === 0
+          ·{' '}
+          {job._count.bids === 0
             ? t('jobs.bidsZero')
             : job._count.bids === 1
               ? t('jobs.bidsOne')

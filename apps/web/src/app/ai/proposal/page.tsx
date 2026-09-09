@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -7,7 +8,6 @@ import { ArrowLeft, Sparkles, Copy, RefreshCw, Loader2, Cpu } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { useAIProposal } from '@/hooks/use-ai';
-
 /**
  * AI Proposal Writer. The API uses the configured LLM when available and
  * returns a deterministic local template when the free-tier key is absent,
@@ -26,7 +26,7 @@ export default function AIProposalPage() {
 
   const generate = async () => {
     if (jobDesc.trim().length < 30) {
-      toast.error('Paste the job description first (30+ chars)');
+      toast.error(dt('Paste the job description first (30+ chars)'));
       return;
     }
     setOutput('');
@@ -49,49 +49,69 @@ export default function AIProposalPage() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(output);
-      toast.success('Proposal copied');
-    } catch { toast.error('Copy failed'); }
+      toast.success(dt('Proposal copied'));
+    } catch {
+      toast.error(dt('Copy failed'));
+    }
   };
 
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-lg font-extrabold tracking-tight">AI Proposal Writer</h1>
-          <div className="text-[10px] text-muted-foreground">Land more jobs · Draft in 5 seconds</div>
+          <h1 className="text-lg font-extrabold tracking-tight">{dt('AI Proposal Writer')}</h1>
+          <div className="text-[10px] text-muted-foreground">
+            Land more jobs · Draft in 5 seconds
+          </div>
         </div>
       </header>
 
       <div className="mx-3 mt-4 space-y-3">
-        <Field label="Job description (paste)">
+        <Field label={dt('Job description (paste)')}>
           <textarea
             value={jobDesc}
             onChange={(e) => setJobDesc(e.target.value)}
             rows={6}
             maxLength={4000}
-            placeholder="Paste the job post here…"
+            placeholder={dt('Paste the job post here…')}
             className="w-full resize-none rounded-xl border border-border bg-card p-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
         </Field>
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Your name">
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Kaleb" className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20" />
+          <Field label={dt('Your name')}>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={dt('Kaleb')}
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+            />
           </Field>
-          <Field label="Key skills">
-            <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="React, Next.js" className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20" />
+          <Field label={dt('Key skills')}>
+            <input
+              value={skills}
+              onChange={(e) => setSkills(e.target.value)}
+              placeholder={dt('React, Next.js')}
+              className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+            />
           </Field>
         </div>
-        <Field label="Tone">
+        <Field label={dt('Tone')}>
           <div className="flex gap-2">
             {(['friendly', 'professional', 'confident'] as const).map((t2) => (
               <button
                 key={t2}
                 onClick={() => setTone(t2)}
                 className={`flex-1 rounded-xl border-2 px-3 py-2 text-xs font-semibold capitalize ${
-                  tone === t2 ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card'
+                  tone === t2
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-card'
                 }`}
               >
                 {t2}
@@ -100,11 +120,21 @@ export default function AIProposalPage() {
           </div>
         </Field>
 
-        <Button variant="brand" size="lg" className="w-full" onClick={generate} disabled={ai.isPending}>
+        <Button
+          variant="brand"
+          size="lg"
+          className="w-full"
+          onClick={generate}
+          disabled={ai.isPending}
+        >
           {ai.isPending ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Generating…
+            </>
           ) : (
-            <><Sparkles className="h-4 w-4" /> Generate proposal</>
+            <>
+              <Sparkles className="h-4 w-4" /> Generate proposal
+            </>
           )}
         </Button>
       </div>
@@ -113,21 +143,34 @@ export default function AIProposalPage() {
         <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your proposal</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {dt('Your proposal')}
+              </div>
               {source === 'ai' && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                   <Cpu className="h-2.5 w-2.5" /> AI
                 </span>
               )}
               {source === 'fallback' && (
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">TEMPLATE</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                  {dt('TEMPLATE')}
+                </span>
               )}
             </div>
             <div className="flex gap-1">
-              <button onClick={generate} disabled={ai.isPending} aria-label="Regenerate" className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground active:bg-muted">
+              <button
+                onClick={generate}
+                disabled={ai.isPending}
+                aria-label={dt('Regenerate')}
+                className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground active:bg-muted"
+              >
                 <RefreshCw className={`h-4 w-4 ${ai.isPending ? 'animate-spin' : ''}`} />
               </button>
-              <button onClick={copy} aria-label="Copy" className="grid h-8 w-8 place-items-center rounded-lg text-primary active:bg-primary/10">
+              <button
+                onClick={copy}
+                aria-label={dt('Copy')}
+                className="grid h-8 w-8 place-items-center rounded-lg text-primary active:bg-primary/10"
+              >
                 <Copy className="h-4 w-4" />
               </button>
             </div>
@@ -142,7 +185,9 @@ export default function AIProposalPage() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </label>
       {children}
     </div>
   );

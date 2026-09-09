@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -46,28 +47,28 @@ export default function TeamsPage() {
     );
 
   const createTeam = () => {
-    if (newName.trim().length < 2) return toast.error('Give your team a name');
+    if (newName.trim().length < 2) return toast.error(dt('Give your team a name'));
     create.mutate(
       { name: newName, bio: newBio || undefined },
       {
         onSuccess: () => {
           setNewName('');
           setNewBio('');
-          toast.success('Team created');
+          toast.success(dt('Team created'));
         },
         onError: (error) => toast.error(error.message),
       },
     );
   };
   const inviteMember = (agencyId: string) => {
-    if (username.trim().length < 2) return toast.error('Enter a username');
+    if (username.trim().length < 2) return toast.error(dt('Enter a username'));
     invite.mutate(
       { agencyId, username, role: 'MEMBER' },
       {
         onSuccess: () => {
           setUsername('');
           setInviteFor(null);
-          toast.success('Member added');
+          toast.success(dt('Member added'));
         },
         onError: (error) => toast.error(error.message),
       },
@@ -80,13 +81,13 @@ export default function TeamsPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold">Teams & agencies</h1>
+          <h1 className="text-lg font-extrabold">{dt('Teams & agencies')}</h1>
           <p className="text-[10px] text-muted-foreground">
             Work together, share proof and manage client projects.
           </p>
@@ -104,7 +105,7 @@ export default function TeamsPage() {
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-black">Build with a team</h2>
+              <h2 className="text-xl font-black">{dt('Build with a team')}</h2>
               <p className="mt-1 text-xs text-muted-foreground">
                 Create an agency profile, invite collaborators and present a stronger service
                 operation.
@@ -115,13 +116,13 @@ export default function TeamsPage() {
             <input
               value={newName}
               onChange={(event) => setNewName(event.target.value)}
-              placeholder="Team name"
+              placeholder={dt('Team name')}
               className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
             <input
               value={newBio}
               onChange={(event) => setNewBio(event.target.value)}
-              placeholder="What does your team do?"
+              placeholder={dt('What does your team do?')}
               className="h-11 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
             />
             <Button type="button" variant="brand" onClick={createTeam} disabled={create.isPending}>
@@ -165,7 +166,7 @@ export default function TeamsPage() {
                     <input
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
-                      placeholder="Apex username"
+                      placeholder={dt('Apex username')}
                       className="h-10 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
                     />
                     <Button
@@ -207,13 +208,13 @@ export default function TeamsPage() {
                             remove.mutate(
                               { agencyId: team.id, memberId: member.user.id },
                               {
-                                onSuccess: () => toast.success('Member removed'),
+                                onSuccess: () => toast.success(dt('Member removed')),
                                 onError: (error) => toast.error(error.message),
                               },
                             )
                           }
                           className="p-2 text-muted-foreground hover:text-destructive"
-                          aria-label="Remove member"
+                          aria-label={dt('Remove member')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -226,7 +227,7 @@ export default function TeamsPage() {
           ) : (
             <div className="rounded-2xl border border-dashed border-border p-8 text-center">
               <Building2 className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-3 text-sm font-semibold">No teams yet</p>
+              <p className="mt-3 text-sm font-semibold">{dt('No teams yet')}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Create an agency or team to collaborate on larger projects.
               </p>

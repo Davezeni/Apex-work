@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, Loader2, Star, Sparkles } from 'lucide-react';
@@ -10,7 +11,6 @@ import { useMySkills, useAddSkill, useSetLevel, useRemoveSkill } from '@/hooks/u
 import { useSuggest } from '@/hooks/use-search';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
-
 const LEVELS = [
   { n: 1, label: 'Beginner' },
   { n: 2, label: 'Practiced' },
@@ -35,14 +35,19 @@ export default function SkillsManagerPage() {
     if (!meLoading && !isAuthed) router.replace('/login?next=/settings/skills');
   }, [meLoading, isAuthed, router]);
 
-  if (isLoading || !me) return <div className="grid min-h-dvh place-items-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  if (isLoading || !me)
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
 
   const addByName = async (name: string) => {
     if (!name.trim() || name.length > 40) return;
     try {
       await add.mutateAsync({ name, level });
       setInput('');
-      toast.success('Skill added');
+      toast.success(dt('Skill added'));
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Could not add skill');
     }
@@ -53,29 +58,51 @@ export default function SkillsManagerPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-lg font-extrabold tracking-tight">Skills</h1>
-          <div className="text-[10px] text-muted-foreground">Rank yourself · Show clients what you do</div>
+          <h1 className="text-lg font-extrabold tracking-tight">{dt('Skills')}</h1>
+          <div className="text-[10px] text-muted-foreground">
+            Rank yourself · Show clients what you do
+          </div>
         </div>
       </header>
 
       {/* Add */}
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Add a skill</div>
+        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {dt('Add a skill')}
+        </div>
         <div className="mt-2 flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="React, Amharic copywriting, Figma…"
+            placeholder={dt('React, Amharic copywriting, Figma…')}
             className="flex-1 rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
             maxLength={40}
-            onKeyDown={(e) => { if (e.key === 'Enter' && input.trim()) { e.preventDefault(); addByName(input.trim()); } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && input.trim()) {
+                e.preventDefault();
+                addByName(input.trim());
+              }
+            }}
           />
-          <Button variant="brand" size="default" disabled={!input.trim() || add.isPending} onClick={() => addByName(input.trim())}>
-            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          <Button
+            variant="brand"
+            size="default"
+            disabled={!input.trim() || add.isPending}
+            onClick={() => addByName(input.trim())}
+          >
+            {add.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
           </Button>
         </div>
         {skillSuggestions.length > 0 && (
@@ -94,7 +121,9 @@ export default function SkillsManagerPage() {
 
         {/* Level picker */}
         <div className="mt-3">
-          <div className="text-[10px] font-bold uppercase text-muted-foreground">Your level</div>
+          <div className="text-[10px] font-bold uppercase text-muted-foreground">
+            {dt('Your level')}
+          </div>
           <div className="mt-1 grid grid-cols-5 gap-1">
             {LEVELS.map((l) => (
               <button
@@ -102,7 +131,9 @@ export default function SkillsManagerPage() {
                 onClick={() => setLevelState(l.n)}
                 className={cn(
                   'rounded-lg border py-1.5 text-[11px] font-semibold',
-                  level === l.n ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background',
+                  level === l.n
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background',
                 )}
               >
                 {l.label}
@@ -128,8 +159,10 @@ export default function SkillsManagerPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => { if (window.confirm('Remove this skill?')) remove.mutate(row.skillId); }}
-                  aria-label="Remove"
+                  onClick={() => {
+                    if (window.confirm('Remove this skill?')) remove.mutate(row.skillId);
+                  }}
+                  aria-label={dt('Remove')}
                   className="grid h-8 w-8 place-items-center rounded-full text-red-500 active:bg-red-500/10"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -147,7 +180,9 @@ export default function SkillsManagerPage() {
                     <Star
                       className={cn(
                         'h-4 w-4',
-                        row.level >= l.n ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30',
+                        row.level >= l.n
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-muted-foreground/30',
                       )}
                     />
                   </button>
@@ -157,8 +192,10 @@ export default function SkillsManagerPage() {
           ))}
           {(data?.items.length ?? 0) === 0 && (
             <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-              <p className="text-sm font-semibold">No skills yet</p>
-              <p className="mt-1 text-xs text-muted-foreground">Add your first skill above — clients search by these.</p>
+              <p className="text-sm font-semibold">{dt('No skills yet')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Add your first skill above — clients search by these.
+              </p>
             </div>
           )}
         </div>

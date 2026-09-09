@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,7 +13,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
-
 const tools = [
   {
     href: '/ai/proposal',
@@ -27,7 +27,8 @@ const tools = [
     icon: BriefcaseBusiness,
     color: 'bg-emerald-500/15 text-emerald-400',
     title: 'AI Brief Generator',
-    description: 'Describe your project in plain language and get a structured job post with skills and budget.',
+    description:
+      'Describe your project in plain language and get a structured job post with skills and budget.',
     action: 'Create a brief',
   },
   {
@@ -35,7 +36,8 @@ const tools = [
     icon: FileSignature,
     color: 'bg-amber-500/15 text-amber-400',
     title: 'Contract Generator',
-    description: 'Create a simple service agreement with scope, delivery, payment, and revision terms.',
+    description:
+      'Create a simple service agreement with scope, delivery, payment, and revision terms.',
     action: 'Generate a contract',
   },
 ];
@@ -55,8 +57,10 @@ export default function AIToolsPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-lg font-extrabold tracking-tight">AI tools</h1>
-          <p className="text-[11px] text-muted-foreground">Work faster. Communicate clearly. Win more work.</p>
+          <h1 className="text-lg font-extrabold tracking-tight">{dt('AI tools')}</h1>
+          <p className="text-[11px] text-muted-foreground">
+            {dt('Work faster. Communicate clearly. Win more work.')}
+          </p>
         </div>
       </header>
 
@@ -67,9 +71,10 @@ export default function AIToolsPage() {
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-extrabold">Your built-in work assistant</h2>
+            <h2 className="text-base font-extrabold">{dt('Your built-in work assistant')}</h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Start with a sentence or paste a job post. Each tool gives you an editable result before anything is sent or published.
+              Start with a sentence or paste a job post. Each tool gives you an editable result
+              before anything is sent or published.
             </p>
           </div>
         </div>
@@ -84,14 +89,19 @@ export default function AIToolsPage() {
               href={tool.href}
               className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-lg active:scale-[.99]"
             >
-              <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${tool.color}`}>
+              <div
+                className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${tool.color}`}
+              >
                 <Icon className="h-6 w-6" />
               </div>
               <div className="min-w-0 flex-1">
                 <h2 className="text-sm font-bold">{tool.title}</h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{tool.description}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {tool.description}
+                </p>
                 <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary">
-                  {tool.action} <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                  {tool.action}{' '}
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </div>
             </Link>
@@ -100,9 +110,9 @@ export default function AIToolsPage() {
       </section>
 
       <div className="mx-3 mt-6 rounded-2xl border border-border bg-card p-4 text-center">
-        <p className="text-xs text-muted-foreground">Need to hire instead?</p>
+        <p className="text-xs text-muted-foreground">{dt('Need to hire instead?')}</p>
         <Button asChild variant="outline" size="sm" className="mt-3">
-          <Link href="/jobs/new">Post a job</Link>
+          <Link href="/jobs/new">{dt('Post a job')}</Link>
         </Button>
       </div>
     </div>

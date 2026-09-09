@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useMyResume, useUpdateResume } from '@/hooks/use-resume';
 import type { ResumeContent } from '@apex-work/shared';
-
 type Parsed = {
   headline: string;
   summary: string;
@@ -79,7 +79,7 @@ export default function ResumeImportPage() {
 
   const parse = () => {
     if (raw.trim().length < 20)
-      return toast.error('Paste at least a few lines from your CV or LinkedIn profile');
+      return toast.error(dt('Paste at least a few lines from your CV or LinkedIn profile'));
     setParsed(parseResumeText(raw));
   };
   const importData = async () => {
@@ -115,7 +115,7 @@ export default function ResumeImportPage() {
         languages: resume.languages,
         theme: resume.theme,
       });
-      toast.success('Imported into Resume Studio');
+      toast.success(dt('Imported into Resume Studio'));
       router.push('/resume');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Import failed');
@@ -128,13 +128,13 @@ export default function ResumeImportPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold">Import your career data</h1>
+          <h1 className="text-lg font-extrabold">{dt('Import your career data')}</h1>
           <p className="text-[10px] text-muted-foreground">
             Bring in a CV, LinkedIn About section or plain text. Review before saving.
           </p>
@@ -152,7 +152,7 @@ export default function ResumeImportPage() {
               <FileInput className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-black">Import, then polish.</h2>
+              <h2 className="text-2xl font-black">{dt('Import, then polish.')}</h2>
               <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
                 Paste text exported from LinkedIn or an old CV. We only parse obvious headings and
                 skills locally in your browser; nothing is saved until you approve it.
@@ -189,7 +189,7 @@ export default function ResumeImportPage() {
         </section>
         {parsed && (
           <section className="mt-4 rounded-2xl border border-border bg-card p-5">
-            <h2 className="text-sm font-extrabold">Review detected content</h2>
+            <h2 className="text-sm font-extrabold">{dt('Review detected content')}</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl bg-background p-3">
                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -221,7 +221,7 @@ export default function ResumeImportPage() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-muted-foreground">No skills detected</span>
+                  <span className="text-xs text-muted-foreground">{dt('No skills detected')}</span>
                 )}
               </div>
             </div>
@@ -233,7 +233,7 @@ export default function ResumeImportPage() {
                 {parsed.projects.length ? (
                   parsed.projects.map((item) => <li key={item.title}>{item.title}</li>)
                 ) : (
-                  <li>No project heading detected</li>
+                  <li>{dt('No project heading detected')}</li>
                 )}
               </ul>
             </div>

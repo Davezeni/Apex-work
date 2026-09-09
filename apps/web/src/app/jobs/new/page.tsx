@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -32,7 +33,9 @@ export default function NewJobPage() {
   const [skillInput, setSkillInput] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [isRemote, setIsRemote] = useState(true);
-  const [attachments, setAttachments] = useState<{ url: string; name: string; contentType: string; sizeBytes: number }[]>([]);
+  const [attachments, setAttachments] = useState<
+    { url: string; name: string; contentType: string; sizeBytes: number }[]
+  >([]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -51,10 +54,17 @@ export default function NewJobPage() {
     const bmax = searchParams.get('budgetMax');
     if (t2) setTitle(t2);
     if (d) setDescription(d);
-    if (s) setSkills(s.split(',').map((x) => x.trim()).filter(Boolean).slice(0, 15));
+    if (s)
+      setSkills(
+        s
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .slice(0, 15),
+      );
     if (bmin) setBudgetMin(bmin);
     if (bmax) setBudgetMax(bmax);
-    if (t2 || d) toast.success('Filled from your AI brief ✨');
+    if (t2 || d) toast.success(dt('Filled from your AI brief ✨'));
   }, [searchParams]);
 
   const stepIdx = STEPS.indexOf(step);
@@ -70,8 +80,7 @@ export default function NewJobPage() {
     const max = budgetMax.trim() ? Number(budgetMax) : undefined;
     if (min != null && min < MIN_GIG_PRICE_ETB)
       return toast.error(`Min budget ≥ ${MIN_GIG_PRICE_ETB} ETB`);
-    if (min != null && max != null && min > max)
-      return toast.error('Max budget must be ≥ min');
+    if (min != null && max != null && min > max) return toast.error(dt('Max budget must be ≥ min'));
     try {
       const job = await create.mutateAsync({
         title: title.trim(),
@@ -138,7 +147,10 @@ export default function NewJobPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold tracking-tight">{t(`jobs.${step}`)}</h1>
           {step === 'step1' && (
-            <Link href="/ai/brief" className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary active:scale-95">
+            <Link
+              href="/ai/brief"
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary active:scale-95"
+            >
               <Sparkles className="h-3 w-3" /> AI Brief
             </Link>
           )}
@@ -214,7 +226,7 @@ export default function NewJobPage() {
                   inputMode="numeric"
                   value={budgetMin}
                   onChange={(e) => setBudgetMin(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="1,000"
+                  placeholder={dt('1,000')}
                   className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
               </div>
@@ -226,7 +238,7 @@ export default function NewJobPage() {
                   inputMode="numeric"
                   value={budgetMax}
                   onChange={(e) => setBudgetMax(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="5,000"
+                  placeholder={dt('5,000')}
                   className="w-full rounded-xl border border-border bg-card px-3 py-3 text-sm font-semibold outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                 />
               </div>
@@ -283,10 +295,7 @@ export default function NewJobPage() {
               {t('jobs.remote')}
             </label>
 
-            <JobAttachmentsField
-              items={attachments}
-              onChange={setAttachments}
-            />
+            <JobAttachmentsField items={attachments} onChange={setAttachments} />
           </div>
         )}
       </main>
@@ -320,9 +329,9 @@ export default function NewJobPage() {
 // -----------------------------------------------------------------------------
 import { useUpload } from '@/hooks/use-upload';
 import { Paperclip, X as XClose } from 'lucide-react';
-
 function JobAttachmentsField({
-  items, onChange,
+  items,
+  onChange,
 }: {
   items: { url: string; name: string; contentType: string; sizeBytes: number }[];
   onChange: (next: { url: string; name: string; contentType: string; sizeBytes: number }[]) => void;
@@ -332,16 +341,19 @@ function JobAttachmentsField({
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (items.length >= 5) return toast.error('Max 5 attachments');
-    if (file.size > 25 * 1024 * 1024) return toast.error('Max 25 MB per file');
+    if (items.length >= 5) return toast.error(dt('Max 5 attachments'));
+    if (file.size > 25 * 1024 * 1024) return toast.error(dt('Max 25 MB per file'));
     try {
       const uploaded = await upload.mutateAsync({ file, bucket: 'chat-attachments' });
-      onChange([...items, {
-        url: uploaded.publicUrl,
-        name: file.name.slice(0, 200),
-        contentType: uploaded.contentType,
-        sizeBytes: uploaded.sizeBytes,
-      }]);
+      onChange([
+        ...items,
+        {
+          url: uploaded.publicUrl,
+          name: file.name.slice(0, 200),
+          contentType: uploaded.contentType,
+          sizeBytes: uploaded.sizeBytes,
+        },
+      ]);
     } catch (err) {
       toast.error((err as { message?: string }).message ?? 'Upload failed');
     }
@@ -352,14 +364,28 @@ function JobAttachmentsField({
         Reference files (optional)
       </label>
       <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-card px-3 py-4 text-sm text-muted-foreground hover:border-primary/40">
-        {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-        <span>{upload.isPending ? 'Uploading…' : 'Attach brief / mockups / spec (≤ 25MB × 5)'}</span>
-        <input type="file" className="hidden" onChange={onFile} disabled={upload.isPending || items.length >= 5} />
+        {upload.isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Paperclip className="h-4 w-4" />
+        )}
+        <span>
+          {upload.isPending ? 'Uploading…' : 'Attach brief / mockups / spec (≤ 25MB × 5)'}
+        </span>
+        <input
+          type="file"
+          className="hidden"
+          onChange={onFile}
+          disabled={upload.isPending || items.length >= 5}
+        />
       </label>
       {items.length > 0 && (
         <div className="mt-2 space-y-1.5">
           {items.map((a, i) => (
-            <div key={i} className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 text-xs">
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card px-2 py-1.5 text-xs"
+            >
               <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
               <span className="truncate">{a.name}</span>
               <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
@@ -367,7 +393,7 @@ function JobAttachmentsField({
               </span>
               <button
                 onClick={() => onChange(items.filter((_, j) => j !== i))}
-                aria-label="Remove"
+                aria-label={dt('Remove')}
                 className="grid h-6 w-6 place-items-center rounded-full text-red-500 active:bg-red-500/10"
               >
                 <XClose className="h-3 w-3" />

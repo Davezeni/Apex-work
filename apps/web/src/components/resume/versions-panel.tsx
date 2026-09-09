@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { History, Loader2, RotateCcw, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -28,7 +29,7 @@ export function ResumeVersionsPanel({ targetRole }: { targetRole: string }) {
         onSuccess: () => {
           setName('');
           setExpanded(true);
-          toast.success('Resume version saved');
+          toast.success(dt('Resume version saved'));
         },
         onError: (error) => toast.error(error.message),
       },
@@ -43,7 +44,7 @@ export function ResumeVersionsPanel({ targetRole }: { targetRole: string }) {
           <History className="h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-extrabold">Resume versions</h2>
+          <h2 className="text-sm font-extrabold">{dt('Resume versions')}</h2>
           <p className="text-[11px] text-muted-foreground">
             Save a safe snapshot before tailoring this CV for a new opportunity.
           </p>
@@ -107,7 +108,7 @@ export function ResumeVersionsPanel({ targetRole }: { targetRole: string }) {
                       )
                         return;
                       restore.mutate(item.id, {
-                        onSuccess: () => toast.success('Resume version restored'),
+                        onSuccess: () => toast.success(dt('Resume version restored')),
                         onError: (error) => toast.error(error.message),
                       });
                     }}

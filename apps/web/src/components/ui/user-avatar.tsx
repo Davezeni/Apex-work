@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { BadgeCheck } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from './avatar';
 import { cn, resolveMediaUrl } from '@/lib/utils';
 import { gradientFor } from '@/components/ui/avatar-gradient';
-
 /**
  * A user avatar that renders the real profile photo when available and falls
  * back to a gradient + initials otherwise. Use anywhere a person's picture
@@ -76,7 +76,7 @@ export function UserAvatar({
       {verified && (
         <span
           className="absolute -bottom-[3px] -right-[3px] grid place-items-center rounded-full bg-background p-[2px]"
-          title="Verified"
+          title={dt('Verified')}
           aria-label={`${name} is verified`}
         >
           <BadgeCheck className={cn(badgeCls, 'fill-cyan-400 text-white')} />

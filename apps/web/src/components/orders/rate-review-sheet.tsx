@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { Star, Loader2, Camera, X as XClose } from 'lucide-react';
@@ -10,7 +11,6 @@ import { useCreateReview } from '@/hooks/use-reviews';
 import { useUpload } from '@/hooks/use-upload';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/i18n';
-
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,9 +38,9 @@ export function RateReviewSheet({ open, onOpenChange, orderId, sellerName, onDon
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (photos.length >= 4) return toast.error('Max 4 photos');
-    if (file.size > 10 * 1024 * 1024) return toast.error('Max 10 MB per photo');
-    if (!/^image\//.test(file.type)) return toast.error('Photos only');
+    if (photos.length >= 4) return toast.error(dt('Max 4 photos'));
+    if (file.size > 10 * 1024 * 1024) return toast.error(dt('Max 10 MB per photo'));
+    if (!/^image\//.test(file.type)) return toast.error(dt('Photos only'));
     try {
       const r = await upload.mutateAsync({ file, bucket: 'chat-attachments' });
       setPhotos((p) => [...p, r.publicUrl]);
@@ -119,24 +119,34 @@ export function RateReviewSheet({ open, onOpenChange, orderId, sellerName, onDon
         placeholder={t('review.commentPlaceholder')}
         className="mt-6 min-h-[100px] w-full resize-none rounded-2xl border border-border bg-background p-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
       />
-      <p className="mt-1 text-right text-[11px] text-muted-foreground">
-        {comment.length}/2000
-      </p>
+      <p className="mt-1 text-right text-[11px] text-muted-foreground">{comment.length}/2000</p>
 
       {/* Optional photos */}
       <div className="mt-3">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Photos <span className="normal-case font-normal">(optional · max 4)</span>
+          Photos <span className="font-normal normal-case">(optional · max 4)</span>
         </div>
         <div className="flex flex-wrap gap-2">
           {photos.map((url, i) => (
-            <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-black/20">
-              <Image src={url} alt="" fill unoptimized sizes="64px" className="object-cover" />
+            <div
+              key={url}
+              className="relative h-16 w-16 overflow-hidden rounded-lg border border-border bg-black/20"
+            >
+              <Image
+                src={url}
+                alt={dt('')}
+                fill
+                unoptimized
+                sizes="64px"
+                className="object-cover"
+              />
               <button
                 onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
-                aria-label="Remove"
+                aria-label={dt('Remove')}
                 className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-black/80 text-white"
-              ><XClose className="h-3 w-3" /></button>
+              >
+                <XClose className="h-3 w-3" />
+              </button>
             </div>
           ))}
           {photos.length < 4 && (
@@ -144,9 +154,13 @@ export function RateReviewSheet({ open, onOpenChange, orderId, sellerName, onDon
               onClick={() => fileRef.current?.click()}
               disabled={upload.isPending}
               className="grid h-16 w-16 place-items-center rounded-lg border-2 border-dashed border-border bg-card text-muted-foreground active:scale-95"
-              aria-label="Add photo"
+              aria-label={dt('Add photo')}
             >
-              {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-5 w-5" />}
+              {upload.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5" />
+              )}
             </button>
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
@@ -160,11 +174,7 @@ export function RateReviewSheet({ open, onOpenChange, orderId, sellerName, onDon
         onClick={submit}
         disabled={rating < 1 || create.isPending}
       >
-        {create.isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          t('review.submit')
-        )}
+        {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('review.submit')}
       </Button>
     </Sheet>
   );

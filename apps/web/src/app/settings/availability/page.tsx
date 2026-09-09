@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, Loader2 } from 'lucide-react';
@@ -11,7 +12,6 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
 import { Copy } from 'lucide-react';
-
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = ['06', '08', '10', '12', '14', '16', '18', '20', '22'];
 
@@ -19,7 +19,13 @@ type WeekMap = Record<string, boolean[]>;
 
 const STORAGE = 'apex-availability-v1';
 const DEFAULT: WeekMap = Object.fromEntries(
-  DAYS.map((d) => [d, HOURS.map((_, i) => i >= 1 && i <= 6 && d !== 'Sat' && d !== 'Sun')] as [string, boolean[]]),
+  DAYS.map(
+    (d) =>
+      [d, HOURS.map((_, i) => i >= 1 && i <= 6 && d !== 'Sat' && d !== 'Sun')] as [
+        string,
+        boolean[],
+      ],
+  ),
 );
 
 export default function AvailabilityPage() {
@@ -38,7 +44,9 @@ export default function AvailabilityPage() {
         setGrid(parsed.grid ?? DEFAULT);
         setVacation(parsed.vacation ?? false);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const toggle = (day: string, hour: number) => {
@@ -54,10 +62,11 @@ export default function AvailabilityPage() {
       localStorage.setItem(STORAGE, JSON.stringify({ grid, vacation }));
       // Also persist server-side so it appears on the public profile.
       await apiFetch('/me/availability', {
-        method: 'PATCH', token,
+        method: 'PATCH',
+        token,
         body: { hours: grid, vacation, timezone: 'Africa/Addis_Ababa' },
       }).catch(() => undefined);
-      toast.success('Availability saved');
+      toast.success(dt('Availability saved'));
     } finally {
       setSaving(false);
     }
@@ -66,25 +75,39 @@ export default function AvailabilityPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">Availability</h1>
+        <h1 className="text-lg font-extrabold tracking-tight">{dt('Availability')}</h1>
       </header>
 
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-3">
           <Calendar className="h-5 w-5 text-primary" />
           <div className="flex-1">
-            <div className="text-sm font-bold">Vacation mode</div>
-            <div className="text-[11px] text-muted-foreground">Pause new orders while you&rsquo;re away.</div>
+            <div className="text-sm font-bold">{dt('Vacation mode')}</div>
+            <div className="text-[11px] text-muted-foreground">
+              Pause new orders while you&rsquo;re away.
+            </div>
           </div>
           <button
             onClick={() => setVacation((v) => !v)}
-            className={cn('h-6 w-11 rounded-full transition-colors', vacation ? 'bg-primary' : 'bg-muted')}
+            className={cn(
+              'h-6 w-11 rounded-full transition-colors',
+              vacation ? 'bg-primary' : 'bg-muted',
+            )}
             aria-pressed={vacation}
           >
-            <span className={cn('block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform', vacation && 'translate-x-5')} />
+            <span
+              className={cn(
+                'block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform',
+                vacation && 'translate-x-5',
+              )}
+            />
           </button>
         </div>
       </section>
@@ -98,7 +121,11 @@ export default function AvailabilityPage() {
             <thead>
               <tr>
                 <th className="w-12" />
-                {HOURS.map((h) => <th key={h} className="w-9 py-1 font-semibold text-muted-foreground">{h}</th>)}
+                {HOURS.map((h) => (
+                  <th key={h} className="w-9 py-1 font-semibold text-muted-foreground">
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -146,22 +173,29 @@ function IcsSubscribe() {
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('URL copied — paste into Google Calendar → Add via URL');
-    } catch { toast.error('Copy failed'); }
+      toast.success(dt('URL copied — paste into Google Calendar → Add via URL'));
+    } catch {
+      toast.error(dt('Copy failed'));
+    }
   };
   if (!me || me.role !== 'FREELANCER') return null;
   return (
     <section className="mx-3 mt-4">
-      <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">Subscribe from calendar</h2>
+      <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        {dt('Subscribe from calendar')}
+      </h2>
       <div className="rounded-2xl border border-border bg-card p-4">
         <p className="text-xs text-muted-foreground">
-          Paste this URL into Google Calendar → &ldquo;Other calendars → From URL&rdquo;
-          (or iCloud → Subscribe). Your working hours + vacation status will sync
-          automatically.
+          Paste this URL into Google Calendar → &ldquo;Other calendars → From URL&rdquo; (or iCloud
+          → Subscribe). Your working hours + vacation status will sync automatically.
         </p>
         <div className="mt-2 flex items-center gap-2 rounded-lg bg-muted/60 px-3 py-2">
           <div className="min-w-0 flex-1 truncate text-xs">{url}</div>
-          <button onClick={copy} aria-label="Copy" className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary active:scale-90">
+          <button
+            onClick={copy}
+            aria-label={dt('Copy')}
+            className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary active:scale-90"
+          >
             <Copy className="h-4 w-4" />
           </button>
         </div>

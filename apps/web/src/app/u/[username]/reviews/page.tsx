@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -16,7 +17,6 @@ import {
 } from '@/hooks/use-reviews';
 import { useI18n } from '@/i18n';
 import { cn, timeAgo } from '@/lib/utils';
-
 export default function AllReviewsPage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
@@ -38,7 +38,11 @@ export default function AllReviewsPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <h1 className="text-lg font-extrabold tracking-tight">{t('review.reviewsHeading')}</h1>
@@ -64,7 +68,9 @@ export default function AllReviewsPage() {
                   />
                 ))}
               </div>
-              <div className="mt-1 text-[10px] text-muted-foreground">{user.ratingCount} reviews</div>
+              <div className="mt-1 text-[10px] text-muted-foreground">
+                {user.ratingCount} reviews
+              </div>
             </div>
             <div className="flex-1 space-y-1.5">
               {dist.map((n, i) => {
@@ -95,11 +101,15 @@ export default function AllReviewsPage() {
         {!isLoading && items.length === 0 && (
           <div className="rounded-2xl border border-dashed border-border p-8 text-center">
             <Star className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-3 text-sm font-semibold">No reviews yet</p>
+            <p className="mt-3 text-sm font-semibold">{dt('No reviews yet')}</p>
           </div>
         )}
         {items.map((r) => (
-          <ReviewCardWithReply key={r.id} review={r} isOwner={isSignedIn && me?.id === r.subjectId} />
+          <ReviewCardWithReply
+            key={r.id}
+            review={r}
+            isOwner={isSignedIn && me?.id === r.subjectId}
+          />
         ))}
       </div>
     </div>
@@ -125,17 +135,32 @@ function ReviewCardWithReply({ review: r, isOwner }: { review: Review; isOwner: 
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center gap-2">
         <Link href={`/u/${r.author.username}`} aria-label={r.author.fullName}>
-          <UserAvatar name={r.author.fullName} avatarUrl={r.author.avatarUrl} id={r.author.id} verified={r.author.isVerified} className="h-8 w-8 text-[10px] font-bold" />
+          <UserAvatar
+            name={r.author.fullName}
+            avatarUrl={r.author.avatarUrl}
+            id={r.author.id}
+            verified={r.author.isVerified}
+            className="h-8 w-8 text-[10px] font-bold"
+          />
         </Link>
         <div className="min-w-0 flex-1">
-          <Link href={`/u/${r.author.username}`} className="flex items-center gap-1 truncate text-xs font-semibold hover:text-primary">
+          <Link
+            href={`/u/${r.author.username}`}
+            className="flex items-center gap-1 truncate text-xs font-semibold hover:text-primary"
+          >
             <span className="truncate">{r.author.fullName}</span>
           </Link>
           <div className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</div>
         </div>
         <div className="flex gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} className={cn('h-3 w-3', i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30')} />
+            <Star
+              key={i}
+              className={cn(
+                'h-3 w-3',
+                i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30',
+              )}
+            />
           ))}
         </div>
       </div>
@@ -143,8 +168,21 @@ function ReviewCardWithReply({ review: r, isOwner }: { review: Review; isOwner: 
       {r.photoUrls && r.photoUrls.length > 0 && (
         <div className="mt-2 flex gap-1.5">
           {r.photoUrls.map((url) => (
-            <a key={url} href={url} target="_blank" rel="noreferrer" className="relative h-16 w-16 overflow-hidden rounded-lg bg-black/20">
-              <Image src={url} alt="" fill unoptimized sizes="64px" className="object-cover" />
+            <a
+              key={url}
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="relative h-16 w-16 overflow-hidden rounded-lg bg-black/20"
+            >
+              <Image
+                src={url}
+                alt={dt('')}
+                fill
+                unoptimized
+                sizes="64px"
+                className="object-cover"
+              />
             </a>
           ))}
         </div>
@@ -206,7 +244,13 @@ function ReviewCardWithReply({ review: r, isOwner }: { review: Review; isOwner: 
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-muted-foreground">{text.length}/2000</span>
             <div className="flex gap-2">
-              <button onClick={() => { setEditing(false); setText(r.sellerReply ?? ''); }} className="rounded-xl border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground active:scale-95">
+              <button
+                onClick={() => {
+                  setEditing(false);
+                  setText(r.sellerReply ?? '');
+                }}
+                className="rounded-xl border border-border px-3 py-1.5 text-xs font-bold text-muted-foreground active:scale-95"
+              >
                 {t('review.cancelReply')}
               </button>
               <button
@@ -214,7 +258,11 @@ function ReviewCardWithReply({ review: r, isOwner }: { review: Review; isOwner: 
                 disabled={!text.trim() || upsert.isPending}
                 className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-white active:scale-95 disabled:opacity-50"
               >
-                {upsert.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('review.saveReply')}
+                {upsert.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  t('review.saveReply')
+                )}
               </button>
             </div>
           </div>

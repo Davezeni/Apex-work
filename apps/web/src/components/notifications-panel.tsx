@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell, CheckCheck, ExternalLink, Inbox } from 'lucide-react';
@@ -13,7 +14,6 @@ import {
 } from '@/hooks/use-notifications';
 import { useI18n } from '@/i18n';
 import { cn, timeAgo } from '@/lib/utils';
-
 function hrefFor(n: AppNotification): string | undefined {
   const p = n.payload ?? {};
   if (typeof p.orderId === 'string') return `/orders/${p.orderId}`;
@@ -86,8 +86,8 @@ export function NotificationsPanel({
 
   const doMarkAll = () => {
     markAllRead.mutate(undefined, {
-      onSuccess: () => toast.success('Marked all as read'),
-      onError: () => toast.error('Could not mark all as read'),
+      onSuccess: () => toast.success(dt('Marked all as read')),
+      onError: () => toast.error(dt('Could not mark all as read')),
     });
   };
 

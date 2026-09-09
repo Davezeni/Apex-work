@@ -1,8 +1,8 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import type { OrderDetail } from '@/hooks/use-orders';
 import { formatEtb } from '@/lib/utils';
-
 export function InvoiceDocument({ order, isSeller }: { order: OrderDetail; isSeller: boolean }) {
   const payment = order.payments[0];
   const party = isSeller ? order.client : order.seller;
@@ -13,7 +13,9 @@ export function InvoiceDocument({ order, isSeller }: { order: OrderDetail; isSel
     >
       <header className="flex items-start justify-between border-b-2 border-violet-600 pb-6">
         <div>
-          <div className="text-2xl font-black tracking-tight text-violet-700">APEX-WORK</div>
+          <div className="text-2xl font-black tracking-tight text-violet-700">
+            {dt('APEX-WORK')}
+          </div>
           <div className="mt-1 text-xs text-neutral-500">Ethiopia&apos;s freelance marketplace</div>
         </div>
         <div className="text-right">
@@ -47,31 +49,33 @@ export function InvoiceDocument({ order, isSeller }: { order: OrderDetail; isSel
       </section>
       <section className="mt-10 overflow-hidden rounded-xl border border-neutral-200">
         <div className="grid grid-cols-[1fr_auto] border-b border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-bold uppercase tracking-wide">
-          <span>Description</span>
-          <span>Amount</span>
+          <span>{dt('Description')}</span>
+          <span>{dt('Amount')}</span>
         </div>
         <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-5 text-sm">
           <div>
             <div className="font-bold">{order.title}</div>
-            <div className="mt-1 text-xs text-neutral-500">Apex-Work protected project payment</div>
+            <div className="mt-1 text-xs text-neutral-500">
+              {dt('Apex-Work protected project payment')}
+            </div>
           </div>
           <div className="font-bold">{formatEtb(order.amountEtb)}</div>
         </div>
       </section>
       <section className="ml-auto mt-6 w-72 space-y-2 text-sm">
         <div className="flex justify-between">
-          <span className="text-neutral-500">Order total</span>
+          <span className="text-neutral-500">{dt('Order total')}</span>
           <b>{formatEtb(order.amountEtb)}</b>
         </div>
         {isSeller && (
           <>
             <div className="flex justify-between text-neutral-500">
-              <span>Platform fee</span>
+              <span>{dt('Platform fee')}</span>
               <span>− {formatEtb(order.platformFeeEtb)}</span>
             </div>
             <div className="border-t border-neutral-300 pt-2">
               <div className="flex justify-between text-base">
-                <b>Your net</b>
+                <b>{dt('Your net')}</b>
                 <b className="text-emerald-600">{formatEtb(order.sellerNetEtb)}</b>
               </div>
             </div>

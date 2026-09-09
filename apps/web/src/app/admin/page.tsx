@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -62,7 +63,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.86';
+export const ADMIN_UI_BUILD = '2026-09-09.87';
 
 type Tab =
   | 'summary'
@@ -117,13 +118,13 @@ export default function AdminPage() {
       <div className="grid min-h-dvh place-items-center bg-background p-6 text-center">
         <div>
           <ShieldCheck className="mx-auto h-8 w-8 text-muted-foreground" />
-          <h1 className="mt-3 text-lg font-extrabold">Admins only</h1>
+          <h1 className="mt-3 text-lg font-extrabold">{dt('Admins only')}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Your account role is <b>{me.role}</b>. Sign out and back in if you were just promoted —
             the role is cached in your session token.
           </p>
           <Button asChild variant="brand" size="sm" className="mt-4">
-            <Link href="/">Go home</Link>
+            <Link href="/">{dt('Go home')}</Link>
           </Button>
         </div>
       </div>
@@ -323,7 +324,7 @@ function AdminShell({
           collapsed ? 'w-16' : 'w-60',
           'transition-[width] duration-200 ease-out',
         )}
-        aria-label="Admin navigation"
+        aria-label={dt('Admin navigation')}
       >
         <div className="flex items-center gap-2 border-b border-border px-3 py-4">
           <div className="grad-hero grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-extrabold text-white">
@@ -331,7 +332,7 @@ function AdminShell({
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="truncate text-sm font-extrabold">Admin</div>
+              <div className="truncate text-sm font-extrabold">{dt('Admin')}</div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Staff · {ADMIN_UI_BUILD}
               </div>
@@ -387,14 +388,14 @@ function AdminShell({
                 A
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-extrabold">Admin</div>
+                <div className="text-sm font-extrabold">{dt('Admin')}</div>
                 <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
                   Staff
                 </div>
               </div>
               <button
                 onClick={() => setMobileOpen(false)}
-                aria-label="Close"
+                aria-label={dt('Close')}
                 className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground"
               >
                 <CloseIcon className="h-4 w-4" />
@@ -429,25 +430,27 @@ function AdminShell({
         <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
           <button
             onClick={onBack}
-            aria-label="Back"
+            aria-label={dt('Back')}
             className="grid h-9 w-9 place-items-center rounded-full active:scale-90 md:hidden"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <button
             onClick={() => setMobileOpen(true)}
-            aria-label="Open menu"
+            aria-label={dt('Open menu')}
             className="grid h-9 w-9 place-items-center rounded-full active:scale-90 md:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Admin</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              {dt('Admin')}
+            </div>
             <h1 className="truncate text-lg font-extrabold tracking-tight">{active.label}</h1>
           </div>
           <button
             onClick={() => setPaletteOpen(true)}
-            aria-label="Command palette"
+            aria-label={dt('Command palette')}
             className="grid h-8 w-8 place-items-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
           >
             <Search className="h-4 w-4" />
@@ -647,7 +650,7 @@ function SummaryTab() {
   return (
     <div className="mx-3 mt-4 space-y-3">
       <div className="grad-hero rounded-2xl p-4 text-white shadow-xl shadow-primary/40">
-        <div className="text-xs opacity-90">Platform revenue (all-time)</div>
+        <div className="text-xs opacity-90">{dt('Platform revenue (all-time)')}</div>
         <div className="mt-1 text-3xl font-extrabold tracking-tight">
           {formatEtb(data.revenueEtb)}
         </div>
@@ -656,37 +659,37 @@ function SummaryTab() {
       <div className="grid grid-cols-2 gap-2">
         <KPI
           icon={<Users className="h-4 w-4" />}
-          label="Users"
+          label={dt('Users')}
           value={String(data.users.total)}
           sub={`${data.users.clients} clients · ${data.users.freelancers} pros`}
         />
         <KPI
           icon={<ShoppingBag className="h-4 w-4" />}
-          label="Gigs"
+          label={dt('Gigs')}
           value={String(data.gigs.active)}
           sub={`${data.gigs.total} total`}
         />
         <KPI
           icon={<Briefcase className="h-4 w-4" />}
-          label="Open jobs"
+          label={dt('Open jobs')}
           value={String(data.jobs.open)}
           sub={`${data.jobs.total} total`}
         />
         <KPI
           icon={<Package className="h-4 w-4" />}
-          label="Orders"
+          label={dt('Orders')}
           value={String(data.orders.active)}
           sub={`${data.orders.completed} done`}
         />
         <KPI
           icon={<Flag className="h-4 w-4 text-red-500" />}
-          label="Reports open"
+          label={dt('Reports open')}
           value={String(data.pending.reports)}
           sub="Needs review"
         />
         <KPI
           icon={<WalletIcon className="h-4 w-4 text-amber-500" />}
-          label="Withdrawals"
+          label={dt('Withdrawals')}
           value={String(data.pending.withdrawals)}
           sub="Pending"
         />
@@ -754,8 +757,8 @@ function SummaryTab() {
         <div className="space-y-3">
           <SectionHead2>Top performers · 30d</SectionHead2>
           <div className="grid gap-2 md:grid-cols-2">
-            <LbList title="Freelancers" rows={lb.freelancers} />
-            <LbList title="Clients" rows={lb.clients} />
+            <LbList title={dt('Freelancers')} rows={lb.freelancers} />
+            <LbList title={dt('Clients')} rows={lb.clients} />
           </div>
           {lb.risers.length > 0 && (
             <div>
@@ -788,25 +791,29 @@ function SummaryTab() {
           <SectionHead2>Retention · {ret.windowDays}d</SectionHead2>
           <div className="grid grid-cols-3 gap-2">
             <MiniStat
-              label="Activation"
+              label={dt('Activation')}
               value={`${(ret.stats.activationRate * 100).toFixed(0)}%`}
               tone="ok"
             />
-            <MiniStat label="Active users" value={String(ret.stats.activeUsers)} tone="info" />
             <MiniStat
-              label="Churn"
+              label={dt('Active users')}
+              value={String(ret.stats.activeUsers)}
+              tone="info"
+            />
+            <MiniStat
+              label={dt('Churn')}
               value={`${(ret.stats.churnRate * 100).toFixed(0)}%`}
               tone={ret.stats.churnRate > 0.5 ? 'info' : 'ok'}
             />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <MiniStat
-              label="D7 activation"
+              label={dt('D7 activation')}
               value={`${(ret.stats.d7 * 100).toFixed(0)}%`}
               tone="ok"
             />
-            <MiniStat label="D14" value={`${(ret.stats.d14 * 100).toFixed(0)}%`} tone="ok" />
-            <MiniStat label="D30" value={`${(ret.stats.d30 * 100).toFixed(0)}%`} tone="ok" />
+            <MiniStat label={dt('D14')} value={`${(ret.stats.d14 * 100).toFixed(0)}%`} tone="ok" />
+            <MiniStat label={dt('D30')} value={`${(ret.stats.d30 * 100).toFixed(0)}%`} tone="ok" />
           </div>
           <div className="rounded-2xl border border-border bg-card p-3">
             <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -860,7 +867,7 @@ function SummaryTab() {
       )}
       {fw && fw.items.length > 0 && (
         <div className="space-y-3">
-          <SectionHead2>Fraud / abuse watchlist</SectionHead2>
+          <SectionHead2>{dt('Fraud / abuse watchlist')}</SectionHead2>
           <div className="rounded-2xl border border-red-500/30 bg-card p-3">
             <div className="space-y-2">
               {fw.items.map((w) => (
@@ -888,9 +895,9 @@ function SummaryTab() {
           <SectionHead2>Conversion insights · 30d</SectionHead2>
           <div className="rounded-2xl border border-border bg-card p-3">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <FunnelCell label="Views" value={formatCompact(conv.funnel.views)} />
-              <FunnelCell label="Orders" value={formatCompact(conv.funnel.orders)} />
-              <FunnelCell label="Completed" value={formatCompact(conv.funnel.completed)} />
+              <FunnelCell label={dt('Views')} value={formatCompact(conv.funnel.views)} />
+              <FunnelCell label={dt('Orders')} value={formatCompact(conv.funnel.orders)} />
+              <FunnelCell label={dt('Completed')} value={formatCompact(conv.funnel.completed)} />
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>
@@ -930,7 +937,7 @@ function SummaryTab() {
                     </div>
                     <div className="shrink-0 text-right">
                       <div className="text-sm font-extrabold">{(f.winRate * 100).toFixed(0)}%</div>
-                      <div className="text-[10px] text-muted-foreground">win</div>
+                      <div className="text-[10px] text-muted-foreground">{dt('win')}</div>
                     </div>
                     <WinBar value={f.winRate} />
                   </Link>
@@ -993,7 +1000,9 @@ function RetentionBars({
   cohorts: { week: string; signups: number; activated: number; activationRate: number }[];
 }) {
   if (!cohorts.length)
-    return <div className="py-4 text-center text-xs text-muted-foreground">No signups yet.</div>;
+    return (
+      <div className="py-4 text-center text-xs text-muted-foreground">{dt('No signups yet.')}</div>
+    );
   const maxSignups = Math.max(...cohorts.map((c) => c.signups), 1);
   return (
     <div className="mt-2 space-y-1.5">
@@ -1383,7 +1392,7 @@ function UsersTab() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search users…"
+          placeholder={dt('Search users…')}
           className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
         />
         <UsersImportButton />
@@ -1564,7 +1573,6 @@ function CertsTab() {
 // ---------- DISPUTES ----------
 import { useAdminDisputes, useResolveDispute, type Dispute } from '@/hooks/use-disputes';
 import { AlertTriangle } from 'lucide-react';
-
 function DisputesTab() {
   const [status, setStatus] = useState<string>('OPEN');
   const { data, isLoading } = useAdminDisputes(status);
@@ -1590,7 +1598,7 @@ function DisputesTab() {
     resolve.mutate(
       { id: d.id, ruling, clientPayoutEtb, sellerPayoutEtb, adminNotes: adminNotes || undefined },
       {
-        onSuccess: () => toast.success('Dispute resolved'),
+        onSuccess: () => toast.success(dt('Dispute resolved')),
         onError: (e) => toast.error(e.message ?? 'Failed'),
       },
     );
@@ -1755,7 +1763,7 @@ function DiagnosticsTab() {
         token,
       }),
     onSuccess: () => {
-      toast.success('TURN cache cleared + re-fetched');
+      toast.success(dt('TURN cache cleared + re-fetched'));
       qc.invalidateQueries({ queryKey: ['admin', 'diagnostics'] });
     },
     onError: (e) => toast.error((e as Error).message ?? 'Failed'),
@@ -1790,25 +1798,27 @@ function DiagnosticsTab() {
   return (
     <div className="mx-3 mt-4 space-y-2">
       <StatusRow
-        label="Supabase Storage"
+        label={dt('Supabase Storage')}
         ok={s.supabase}
         note="uploads, avatars, chat attachments"
       />
-      <StatusRow label="Chapa payments" ok={s.chapa} note="checkout + webhooks" />
-      <StatusRow label="AfroMessage SMS" ok={s.afromessage} note="OTPs" />
-      <StatusRow label="Groq LLM" ok={s.groq} note="AI assistant, proposals, translation" />
-      <StatusRow label="Web Push (VAPID)" ok={s.vapidPush} note="browser notifications" />
-      <StatusRow label="Resend email" ok={s.resend} note={`from: ${s.email.from}`} />
+      <StatusRow label={dt('Chapa payments')} ok={s.chapa} note="checkout + webhooks" />
+      <StatusRow label={dt('AfroMessage SMS')} ok={s.afromessage} note="OTPs" />
+      <StatusRow label={dt('Groq LLM')} ok={s.groq} note="AI assistant, proposals, translation" />
+      <StatusRow label={dt('Web Push (VAPID)')} ok={s.vapidPush} note="browser notifications" />
+      <StatusRow label={dt('Resend email')} ok={s.resend} note={`from: ${s.email.from}`} />
       {s.resend && (
         <div className="rounded-2xl border border-border bg-card p-3">
-          <label className="text-xs font-semibold text-muted-foreground">Send test email to</label>
+          <label className="text-xs font-semibold text-muted-foreground">
+            {dt('Send test email to')}
+          </label>
           <div className="mt-1.5 flex gap-2">
             <input
               type="email"
               inputMode="email"
               value={emailTo}
               onChange={(e) => setEmailTo(e.target.value)}
-              placeholder="you@example.com (blank = your admin email)"
+              placeholder={dt('you@example.com (blank = your admin email)')}
               className="min-w-0 flex-1 rounded-full border border-input bg-background px-3 py-1.5 text-xs"
             />
             <Button
@@ -1832,20 +1842,20 @@ function DiagnosticsTab() {
           className="rounded-2xl border border-border bg-card p-3 text-xs"
           open={!!s.email.lastError}
         >
-          <summary className="cursor-pointer font-semibold">Email debug details</summary>
+          <summary className="cursor-pointer font-semibold">{dt('Email debug details')}</summary>
           <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
-            <div className="text-muted-foreground">from</div>
+            <div className="text-muted-foreground">{dt('from')}</div>
             <div>{s.email.from}</div>
             {s.email.lastSuccess && (
               <>
                 <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-emerald-500">
                   Last success
                 </div>
-                <div className="text-muted-foreground">at</div>
+                <div className="text-muted-foreground">{dt('at')}</div>
                 <div>{s.email.lastSuccess.at}</div>
-                <div className="text-muted-foreground">to</div>
+                <div className="text-muted-foreground">{dt('to')}</div>
                 <div className="break-all">{s.email.lastSuccess.to}</div>
-                <div className="text-muted-foreground">provider id</div>
+                <div className="text-muted-foreground">{dt('provider id')}</div>
                 <div className="break-all">{s.email.lastSuccess.providerId ?? '—'}</div>
               </>
             )}
@@ -1854,11 +1864,11 @@ function DiagnosticsTab() {
                 <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">
                   Last error
                 </div>
-                <div className="text-muted-foreground">at</div>
+                <div className="text-muted-foreground">{dt('at')}</div>
                 <div>{s.email.lastError.at}</div>
-                <div className="text-muted-foreground">to</div>
+                <div className="text-muted-foreground">{dt('to')}</div>
                 <div className="break-all">{s.email.lastError.to}</div>
-                <div className="text-muted-foreground">message</div>
+                <div className="text-muted-foreground">{dt('message')}</div>
                 <div className="break-all">{s.email.lastError.message}</div>
               </>
             )}
@@ -1866,7 +1876,7 @@ function DiagnosticsTab() {
         </details>
       )}
       <StatusRow
-        label="Metered TURN"
+        label={dt('Metered TURN')}
         ok={s.turn.cachedServerCount > 3}
         note={
           s.turn.fallbackActive
@@ -1893,17 +1903,17 @@ function DiagnosticsTab() {
           className="rounded-2xl border border-border bg-card p-3 text-xs"
           open={!!s.turn.lastError}
         >
-          <summary className="cursor-pointer font-semibold">TURN debug details</summary>
+          <summary className="cursor-pointer font-semibold">{dt('TURN debug details')}</summary>
           <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11px]">
-            <div className="text-muted-foreground">app name</div>
+            <div className="text-muted-foreground">{dt('app name')}</div>
             <div>{s.turn.appName}</div>
-            <div className="text-muted-foreground">api key</div>
+            <div className="text-muted-foreground">{dt('api key')}</div>
             <div className="break-all">{s.turn.keyPreview ?? '—'}</div>
-            <div className="text-muted-foreground">cached at</div>
+            <div className="text-muted-foreground">{dt('cached at')}</div>
             <div>{s.turn.cachedAt ?? '—'}</div>
-            <div className="text-muted-foreground">servers</div>
+            <div className="text-muted-foreground">{dt('servers')}</div>
             <div>{s.turn.cachedServerCount}</div>
-            <div className="text-muted-foreground">last ok url</div>
+            <div className="text-muted-foreground">{dt('last ok url')}</div>
             <div className="break-all">{s.turn.lastSuccessUrl ?? '—'}</div>
             {s.turn.lastAttempts?.length > 0 && (
               <>
@@ -1925,11 +1935,11 @@ function DiagnosticsTab() {
                 <div className="col-span-2 mt-1 border-t border-border pt-1 text-[10px] text-red-500">
                   Last error
                 </div>
-                <div className="text-muted-foreground">at</div>
+                <div className="text-muted-foreground">{dt('at')}</div>
                 <div>{s.turn.lastError.at}</div>
-                <div className="text-muted-foreground">url</div>
+                <div className="text-muted-foreground">{dt('url')}</div>
                 <div className="break-all">{s.turn.lastError.url}</div>
-                <div className="text-muted-foreground">message</div>
+                <div className="text-muted-foreground">{dt('message')}</div>
                 <div className="break-all">{s.turn.lastError.message}</div>
               </>
             )}
@@ -1945,7 +1955,7 @@ function DiagnosticsTab() {
               dashboard.metered.ca
             </a>{' '}
             → sidebar → TURN Server → Manage Credentials → open the credential row →{' '}
-            <b>Show API Key</b>. Copy that credential-specific API key into{' '}
+            <b>{dt('Show API Key')}</b>. Copy that credential-specific API key into{' '}
             <code>METERED_API_KEY</code> on Render. The Developers → Secret Key is a management key
             and returns 401 here; calls remain available through the OpenRelay fallback.
           </p>

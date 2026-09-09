@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -38,7 +39,6 @@ import { useTrackRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
-
 function initialsOf(name: string): string {
   return (
     name
@@ -123,11 +123,11 @@ export default function GigDetailPage() {
         await navigator.share({ title: gig?.title ?? 'Apex-Work gig', url });
       } else {
         await navigator.clipboard.writeText(url);
-        toast.success('Link copied');
+        toast.success(dt('Link copied'));
       }
     } catch (error) {
       if ((error as { name?: string }).name !== 'AbortError')
-        toast.error('Could not share this gig');
+        toast.error(dt('Could not share this gig'));
     }
   };
 
@@ -159,8 +159,10 @@ export default function GigDetailPage() {
   // Gallery = cover (if any) + any extra gallery images, de-duped, no empties.
   const gallery: string[] = Array.from(
     new Set(
-      [...(gig.coverImageUrl ? [gig.coverImageUrl] : []), ...((gig.galleryUrls ?? []) as string[])]
-        .filter((u): u is string => typeof u === 'string' && u.length > 0),
+      [
+        ...(gig.coverImageUrl ? [gig.coverImageUrl] : []),
+        ...((gig.galleryUrls ?? []) as string[]),
+      ].filter((u): u is string => typeof u === 'string' && u.length > 0),
     ),
   );
   const canMessage = !!me && me.id !== gig.owner.id;
@@ -195,7 +197,7 @@ export default function GigDetailPage() {
       return;
     }
     if (payment.data?.enabled === false) {
-      toast.error('Secure checkout is temporarily unavailable. Please try again later.');
+      toast.error(dt('Secure checkout is temporarily unavailable. Please try again later.'));
       return;
     }
     if (isOwnGig) {
@@ -351,13 +353,15 @@ export default function GigDetailPage() {
           <header className="safe-top sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
             <button
               onClick={() => router.back()}
-              aria-label="Back"
+              aria-label={dt('Back')}
               className="grid h-9 w-9 place-items-center rounded-full text-foreground active:scale-90"
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Gig</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                {dt('Gig')}
+              </div>
               <div className="truncate text-sm font-bold">
                 {translation.data?.title ?? gig.title}
               </div>
@@ -379,7 +383,7 @@ export default function GigDetailPage() {
             </button>
             <button
               onClick={() => void shareGig()}
-              aria-label="Share"
+              aria-label={dt('Share')}
               className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground"
             >
               <Share2 className="h-5 w-5" />
@@ -623,7 +627,7 @@ export default function GigDetailPage() {
               className="h-12 w-12 p-0"
               onClick={handleMessageFreelancer}
               disabled={startConversation.isPending}
-              aria-label="Message freelancer"
+              aria-label={dt('Message freelancer')}
             >
               {startConversation.isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -748,7 +752,7 @@ function HeaderActions({
     >
       <button
         onClick={() => router.back()}
-        aria-label="Back"
+        aria-label={dt('Back')}
         className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -771,7 +775,7 @@ function HeaderActions({
         </button>
         <button
           onClick={() => void onShare()}
-          aria-label="Share"
+          aria-label={dt('Share')}
           className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
         >
           <Share2 className="h-5 w-5" />

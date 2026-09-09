@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -37,7 +38,6 @@ import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
 import { gradientFor } from '@/components/ui/avatar-gradient';
-
 function initialsOf(name: string): string {
   return (
     name
@@ -133,7 +133,7 @@ export default function PublicProfilePage() {
         <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
           <button
             onClick={() => router.back()}
-            aria-label="Back"
+            aria-label={dt('Back')}
             className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -141,7 +141,7 @@ export default function PublicProfilePage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleShare}
-              aria-label="Share"
+              aria-label={dt('Share')}
               className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
             >
               <Share2 className="h-5 w-5" />
@@ -150,7 +150,7 @@ export default function PublicProfilePage() {
               <div className="relative">
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
-                  aria-label="More"
+                  aria-label={dt('More')}
                   className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
                 >
                   <MoreVertical className="h-5 w-5" />
@@ -325,26 +325,26 @@ export default function PublicProfilePage() {
 
       {/* Track record / hire history */}
       {stats && user.role === 'CLIENT' && (
-        <Section title="Client track record">
+        <Section title={dt('Client track record')}>
           <div className="grid grid-cols-3 gap-2">
-            <MiniKpi label="Hires" value={String(stats.asClient.hires)} />
-            <MiniKpi label="Total spent" value={formatEtb(stats.asClient.totalSpentEtb)} />
+            <MiniKpi label={dt('Hires')} value={String(stats.asClient.hires)} />
+            <MiniKpi label={dt('Total spent')} value={formatEtb(stats.asClient.totalSpentEtb)} />
             <MiniKpi
-              label="Member since"
+              label={dt('Member since')}
               value={new Date(user.createdAt).getFullYear().toString()}
             />
           </div>
         </Section>
       )}
       {stats && user.role === 'FREELANCER' && (
-        <Section title="Freelancer stats">
+        <Section title={dt('Freelancer stats')}>
           <div className="grid grid-cols-3 gap-2">
-            <MiniKpi label="Orders done" value={String(stats.asFreelancer.completedOrders)} />
+            <MiniKpi label={dt('Orders done')} value={String(stats.asFreelancer.completedOrders)} />
             <MiniKpi
-              label="Lifetime earned"
+              label={dt('Lifetime earned')}
               value={formatEtb(stats.asFreelancer.lifetimeEarnedEtb)}
             />
-            <MiniKpi label="Reviews" value={String(stats.ratingCount)} />
+            <MiniKpi label={dt('Reviews')} value={String(stats.ratingCount)} />
           </div>
         </Section>
       )}
@@ -354,7 +354,7 @@ export default function PublicProfilePage() {
 
       {/* Availability */}
       {user.role === 'FREELANCER' && stats?.availability?.hours && (
-        <Section title="Availability">
+        <Section title={dt('Availability')}>
           <AvailabilityGrid data={stats.availability} />
         </Section>
       )}
@@ -479,7 +479,7 @@ function PortfolioTile({
 function TrustCard({ trust }: { trust: TrustProfile }) {
   const complete = trust.checks.filter((check) => check.complete);
   return (
-    <Section title="Apex Trust">
+    <Section title={dt('Apex Trust')}>
       <div className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center gap-3">
           <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-4 border-primary/20 bg-primary/5 text-lg font-black text-primary">
@@ -626,7 +626,7 @@ function GigMiniCard({ g, owner }: { g: PublicUser['gigs'][number]; owner: Publi
               {g.ratingCount})
             </span>
           ) : (
-            <span>New</span>
+            <span>{dt('New')}</span>
           )}
           <span>·</span>
           <span>@{owner.username}</span>

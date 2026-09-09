@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,7 +23,6 @@ import { formatEtb, formatCompact } from '@/lib/utils';
 import { useProfileAnalytics } from '@/hooks/use-profile-analytics';
 import { useAuthStore } from '@/stores/auth-store';
 import { downloadViaAuth } from '@/lib/api';
-
 /**
  * Freelancer analytics dashboard — profile views, response rate, earnings
  * trend, order pipeline. Numbers come from denormalized aggregates on the
@@ -75,7 +75,7 @@ export default function StatsPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight">Statistics</h1>
+        <h1 className="text-lg font-extrabold tracking-tight">{dt('Statistics')}</h1>
       </header>
 
       <div className="mx-3 mt-4">
@@ -86,38 +86,38 @@ export default function StatsPage() {
       <div className="mx-3 mt-4 grid grid-cols-2 gap-2">
         <KPI
           icon={<Eye className="h-4 w-4" />}
-          label="Profile views"
+          label={dt('Profile views')}
           value={formatCompact(analytics?.totals.profileViews ?? 0)}
           delta="Last 30 days"
           trend="up"
         />
         <KPI
           icon={<Star className="h-4 w-4" />}
-          label="Rating"
+          label={dt('Rating')}
           value={me.rating > 0 ? me.rating.toFixed(1) : '—'}
           delta={`${me.ratingCount} reviews`}
         />
         <KPI
           icon={<Package className="h-4 w-4" />}
-          label="Orders"
+          label={dt('Orders')}
           value={String(me.completedOrders)}
           delta="Completed"
         />
         <KPI
           icon={<Clock className="h-4 w-4" />}
-          label="Response time"
+          label={dt('Response time')}
           value="~2h"
           delta="Median"
         />
         <KPI
           icon={<MessageCircle className="h-4 w-4" />}
-          label="Response rate"
+          label={dt('Response rate')}
           value="94%"
           delta="Last 30 days"
         />
         <KPI
           icon={<TrendingUp className="h-4 w-4" />}
-          label="This week"
+          label={dt('This week')}
           value={formatEtb(series.reduce((s, n) => s + n, 0))}
           delta="Earnings"
           trend="up"
@@ -125,19 +125,22 @@ export default function StatsPage() {
       </div>
 
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="text-sm font-bold">Career asset reach</div>
+        <div className="text-sm font-bold">{dt('Career asset reach')}</div>
         <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
-          <AssetMetric label="CV views" value={formatCompact(analytics?.totals.cvViews ?? 0)} />
           <AssetMetric
-            label="CV downloads"
+            label={dt('CV views')}
+            value={formatCompact(analytics?.totals.cvViews ?? 0)}
+          />
+          <AssetMetric
+            label={dt('CV downloads')}
             value={formatCompact(analytics?.totals.cvDownloads ?? 0)}
           />
           <AssetMetric
-            label="Portfolio views"
+            label={dt('Portfolio views')}
             value={formatCompact(analytics?.totals.portfolioViews ?? 0)}
           />
           <AssetMetric
-            label="Portfolio downloads"
+            label={dt('Portfolio downloads')}
             value={formatCompact(analytics?.totals.portfolioDownloads ?? 0)}
           />
         </div>
@@ -185,11 +188,11 @@ export default function StatsPage() {
 
       {/* Order pipeline */}
       <section className="mx-3 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="text-sm font-bold">Order pipeline</div>
+        <div className="text-sm font-bold">{dt('Order pipeline')}</div>
         <div className="mt-3 space-y-2 text-xs">
-          <PipelineRow label="Active" count={0} color="bg-blue-500" />
-          <PipelineRow label="Delivered" count={0} color="bg-emerald-500" />
-          <PipelineRow label="In review" count={0} color="bg-violet-500" />
+          <PipelineRow label={dt('Active')} count={0} color="bg-blue-500" />
+          <PipelineRow label={dt('Delivered')} count={0} color="bg-emerald-500" />
+          <PipelineRow label={dt('In review')} count={0} color="bg-violet-500" />
         </div>
       </section>
     </div>
@@ -249,19 +252,29 @@ function PipelineRow({ label, count, color }: { label: string; count: number; co
 }
 
 // Monthly earnings statement download (freelancer-facing).
-const inputCls = 'rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30';
+const inputCls =
+  'rounded-xl border border-border bg-card px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30';
 function EarningsStatement() {
   const token = useAuthStore((s) => s.accessToken);
   const [month, setMonth] = useState(defaultMonth());
   const [busy, setBusy] = useState(false);
-  const [summary, setSummary] = useState<{ grossEtb: number; feesEtb: number; netEtb: number; orders: number } | null>(null);
+  const [summary, setSummary] = useState<{
+    grossEtb: number;
+    feesEtb: number;
+    netEtb: number;
+    orders: number;
+  } | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
 
   const download = async (m: string) => {
     setBusy(true);
     try {
-      await downloadViaAuth(`/me/earnings/statement?month=${m}`, token, `apex-work-earnings-${m}.html`);
-      toast.success('Statement downloaded');
+      await downloadViaAuth(
+        `/me/earnings/statement?month=${m}`,
+        token,
+        `apex-work-earnings-${m}.html`,
+      );
+      toast.success(dt('Statement downloaded'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not download statement');
     } finally {
@@ -286,14 +299,16 @@ function EarningsStatement() {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Monthly earnings statement</div>
+      <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+        {dt('Monthly earnings statement')}
+      </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-2">
         <input
           type="month"
           value={month}
           onChange={(e) => setMonth(e.target.value || defaultMonth())}
           className={inputCls}
-          aria-label="Statement month"
+          aria-label={dt('Statement month')}
         />
         <button
           onClick={() => download(month)}
@@ -308,27 +323,40 @@ function EarningsStatement() {
           disabled={loadingSummary}
           className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-sm font-bold text-muted-foreground disabled:opacity-50"
         >
-          {loadingSummary ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+          {loadingSummary ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Package className="h-4 w-4" />
+          )}
           Show totals
         </button>
       </div>
       {summary && (
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <StatSheet label="Orders" value={String(summary.orders)} />
-          <StatSheet label="Gross" value={formatEtb(summary.grossEtb)} />
-          <StatSheet label="Fees" value={formatEtb(summary.feesEtb)} />
-          <StatSheet label="Net" value={formatEtb(summary.netEtb)} tone />
+          <StatSheet label={dt('Orders')} value={String(summary.orders)} />
+          <StatSheet label={dt('Gross')} value={formatEtb(summary.grossEtb)} />
+          <StatSheet label={dt('Fees')} value={formatEtb(summary.feesEtb)} />
+          <StatSheet label={dt('Net')} value={formatEtb(summary.netEtb)} tone />
         </div>
       )}
-      <p className="mt-2 text-[11px] text-muted-foreground">Statement covers completed orders in the selected month. Open it in a browser to also print or save as PDF.</p>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Statement covers completed orders in the selected month. Open it in a browser to also print
+        or save as PDF.
+      </p>
     </div>
   );
 }
 function StatSheet({ label, value, tone }: { label: string; value: string; tone?: boolean }) {
   return (
     <div className="rounded-xl border border-border bg-card p-2.5">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`mt-0.5 text-lg font-extrabold tracking-tight ${tone ? 'text-emerald-600' : ''}`}>{value}</div>
+      <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={`mt-0.5 text-lg font-extrabold tracking-tight ${tone ? 'text-emerald-600' : ''}`}
+      >
+        {value}
+      </div>
     </div>
   );
 }

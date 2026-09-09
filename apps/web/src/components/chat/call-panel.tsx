@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { PhoneOff, Mic, MicOff, Video, VideoOff, Loader2, Users, CircleAlert } from 'lucide-react';
@@ -7,7 +8,6 @@ import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
 import { cn } from '@/lib/utils';
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 /**
@@ -33,10 +33,26 @@ const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:global.stun.twilio.com:3478' },
   { urls: 'stun:stun.relay.metered.ca:80' },
-  { urls: 'turn:global.relay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:global.relay.metered.ca:80?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:global.relay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turns:global.relay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  {
+    urls: 'turn:global.relay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
 async function fetchIceServers(): Promise<RTCIceServer[]> {
@@ -75,8 +91,12 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   // Fetch fresh ICE servers (may include TURN) once on mount.
   useEffect(() => {
     let cancelled = false;
-    fetchIceServers().then((s) => { if (!cancelled) iceRef.current = s; });
-    return () => { cancelled = true; };
+    fetchIceServers().then((s) => {
+      if (!cancelled) iceRef.current = s;
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const localVideoOk = mode === 'video' && !cameraOff;
@@ -93,28 +113,37 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
           throw new Error('This browser does not support camera or microphone access.');
         }
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true, video: mode === 'video',
+          audio: true,
+          video: mode === 'video',
         });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         setLocalStream(stream);
         setPhase('connecting');
       } catch (err) {
         const mediaError = err as { name?: string; message?: string };
         let message = mediaError.message || 'Microphone / camera access was denied.';
         if (mediaError.name === 'NotAllowedError' || mediaError.name === 'SecurityError') {
-          message = 'Permission denied. Tap the lock icon in the address bar, open Site settings, allow Camera and Microphone, then reopen the call.';
+          message =
+            'Permission denied. Tap the lock icon in the address bar, open Site settings, allow Camera and Microphone, then reopen the call.';
         } else if (mediaError.name === 'NotFoundError') {
-          message = mode === 'video'
-            ? 'No camera or microphone was found on this device.'
-            : 'No microphone was found on this device.';
+          message =
+            mode === 'video'
+              ? 'No camera or microphone was found on this device.'
+              : 'No microphone was found on this device.';
         } else if (mediaError.name === 'NotReadableError') {
-          message = 'Your camera or microphone is being used by another app. Close it and try again.';
+          message =
+            'Your camera or microphone is being used by another app. Close it and try again.';
         }
         setError(message);
         setPhase('error');
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [mode]);
 
   // ---- Attach local stream to <video> -----
@@ -127,56 +156,63 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   }, [localStream]);
 
   // ---- Socket + signaling -----
-  const buildPeer = useCallback((targetUserId: string, sendOffer: boolean) => {
-    if (pcsRef.current[targetUserId]) return pcsRef.current[targetUserId];
-    const pc = new RTCPeerConnection({ iceServers: iceRef.current });
+  const buildPeer = useCallback(
+    (targetUserId: string, sendOffer: boolean) => {
+      if (pcsRef.current[targetUserId]) return pcsRef.current[targetUserId];
+      const pc = new RTCPeerConnection({ iceServers: iceRef.current });
 
-    // Push our local tracks.
-    localStream?.getTracks().forEach((t) => pc.addTrack(t, localStream));
+      // Push our local tracks.
+      localStream?.getTracks().forEach((t) => pc.addTrack(t, localStream));
 
-    pc.ontrack = (e) => {
-      // Every remote peer sends up to one audio + one video track. Accumulate.
-      setRemotes((prev) => {
-        const existing = prev[targetUserId] ?? new MediaStream();
-        e.streams[0]?.getTracks().forEach((t) => {
-          if (!existing.getTracks().find((x) => x.id === t.id)) existing.addTrack(t);
-        });
-        return { ...prev, [targetUserId]: existing };
-      });
-    };
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        socketRef.current?.emit('call:signal', {
-          conversationId, targetUserId,
-          payload: { type: 'ice', candidate: e.candidate.toJSON() },
-        });
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') setPhase('live');
-      if (pc.connectionState === 'failed') {
-        toast.error('Call peer disconnected');
-      }
-    };
-
-    pcsRef.current[targetUserId] = pc;
-
-    if (sendOffer) {
-      pc.createOffer()
-        .then((offer) => pc.setLocalDescription(offer).then(() => offer))
-        .then((offer) => {
-          socketRef.current?.emit('call:signal', {
-            conversationId, targetUserId,
-            payload: { type: 'offer', sdp: offer.sdp },
+      pc.ontrack = (e) => {
+        // Every remote peer sends up to one audio + one video track. Accumulate.
+        setRemotes((prev) => {
+          const existing = prev[targetUserId] ?? new MediaStream();
+          e.streams[0]?.getTracks().forEach((t) => {
+            if (!existing.getTracks().find((x) => x.id === t.id)) existing.addTrack(t);
           });
-        })
-        .catch((e) => { toast.error('Failed to negotiate call: ' + (e as Error).message); });
-    }
+          return { ...prev, [targetUserId]: existing };
+        });
+      };
 
-    return pc;
-  }, [conversationId, localStream]);
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          socketRef.current?.emit('call:signal', {
+            conversationId,
+            targetUserId,
+            payload: { type: 'ice', candidate: e.candidate.toJSON() },
+          });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') setPhase('live');
+        if (pc.connectionState === 'failed') {
+          toast.error(dt('Call peer disconnected'));
+        }
+      };
+
+      pcsRef.current[targetUserId] = pc;
+
+      if (sendOffer) {
+        pc.createOffer()
+          .then((offer) => pc.setLocalDescription(offer).then(() => offer))
+          .then((offer) => {
+            socketRef.current?.emit('call:signal', {
+              conversationId,
+              targetUserId,
+              payload: { type: 'offer', sdp: offer.sdp },
+            });
+          })
+          .catch((e) => {
+            toast.error('Failed to negotiate call: ' + (e as Error).message);
+          });
+      }
+
+      return pc;
+    },
+    [conversationId, localStream],
+  );
 
   useEffect(() => {
     if (!token || !localStream) return;
@@ -215,28 +251,38 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
     sock.on('call:end', () => onEnd());
 
     // Signaling relay.
-    sock.on('call:signal', async ({ from, payload }: { from: string; payload: { type: string; sdp?: string; candidate?: RTCIceCandidateInit } }) => {
-      if (!from || from === me?.id) return;
-      const pc = buildPeer(from, false);
-      try {
-        if (payload.type === 'offer' && payload.sdp) {
-          await pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          sock.emit('call:signal', {
-            conversationId, targetUserId: from,
-            payload: { type: 'answer', sdp: answer.sdp },
-          });
-        } else if (payload.type === 'answer' && payload.sdp) {
-          await pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
-        } else if (payload.type === 'ice' && payload.candidate) {
-          await pc.addIceCandidate(payload.candidate);
+    sock.on(
+      'call:signal',
+      async ({
+        from,
+        payload,
+      }: {
+        from: string;
+        payload: { type: string; sdp?: string; candidate?: RTCIceCandidateInit };
+      }) => {
+        if (!from || from === me?.id) return;
+        const pc = buildPeer(from, false);
+        try {
+          if (payload.type === 'offer' && payload.sdp) {
+            await pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            sock.emit('call:signal', {
+              conversationId,
+              targetUserId: from,
+              payload: { type: 'answer', sdp: answer.sdp },
+            });
+          } else if (payload.type === 'answer' && payload.sdp) {
+            await pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
+          } else if (payload.type === 'ice' && payload.candidate) {
+            await pc.addIceCandidate(payload.candidate);
+          }
+        } catch (e) {
+          // Rarely fatal — often just a race on ICE add before remote-desc is set.
+          console.warn('signal error', e);
         }
-      } catch (e) {
-        // Rarely fatal — often just a race on ICE add before remote-desc is set.
-        console.warn('signal error', e);
-      }
-    });
+      },
+    );
 
     return () => {
       sock.emit('call:leave', conversationId);
@@ -255,13 +301,17 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
     if (!localStream) return;
     const next = !muted;
     setMuted(next);
-    localStream.getAudioTracks().forEach((t) => { t.enabled = !next; });
+    localStream.getAudioTracks().forEach((t) => {
+      t.enabled = !next;
+    });
   };
   const toggleCamera = () => {
     if (!localStream) return;
     const next = !cameraOff;
     setCameraOff(next);
-    localStream.getVideoTracks().forEach((t) => { t.enabled = !next; });
+    localStream.getVideoTracks().forEach((t) => {
+      t.enabled = !next;
+    });
   };
 
   const remoteEntries = useMemo(() => Object.entries(remotes), [remotes]);
@@ -269,13 +319,18 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   return (
     <div className="fixed inset-0 z-[110] bg-black text-white">
       {/* Grid */}
-      <div className={cn(
-        'grid h-full w-full gap-1 p-1',
-        remoteEntries.length === 0 ? 'grid-cols-1' :
-          remoteEntries.length === 1 ? 'grid-cols-1' :
-          remoteEntries.length <= 4 ? 'grid-cols-2' :
-          'grid-cols-3',
-      )}>
+      <div
+        className={cn(
+          'grid h-full w-full gap-1 p-1',
+          remoteEntries.length === 0
+            ? 'grid-cols-1'
+            : remoteEntries.length === 1
+              ? 'grid-cols-1'
+              : remoteEntries.length <= 4
+                ? 'grid-cols-2'
+                : 'grid-cols-3',
+        )}
+      >
         {remoteEntries.map(([userId, stream]) => (
           <RemoteTile key={userId} userId={userId} stream={stream} />
         ))}
@@ -285,7 +340,9 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
               {phase === 'error' ? (
                 <>
                   <CircleAlert className="mx-auto h-10 w-10 text-amber-300" />
-                  <div className="mt-4 text-base font-bold">Camera or microphone unavailable</div>
+                  <div className="mt-4 text-base font-bold">
+                    {dt('Camera or microphone unavailable')}
+                  </div>
                   <p className="mt-2 text-sm leading-relaxed text-white/75">{error}</p>
                   <button
                     onClick={onEnd}
@@ -298,8 +355,11 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
                 <>
                   <Loader2 className="mx-auto h-8 w-8 animate-spin opacity-60" />
                   <div className="mt-3 text-sm opacity-80">
-                    {phase === 'starting' ? 'Starting camera / mic…' :
-                      phase === 'connecting' ? 'Waiting for others to join…' : 'Connecting…'}
+                    {phase === 'starting'
+                      ? 'Starting camera / mic…'
+                      : phase === 'connecting'
+                        ? 'Waiting for others to join…'
+                        : 'Connecting…'}
                   </div>
                   <div className="mt-1 text-[11px] opacity-60">
                     <Users className="mr-1 inline h-3 w-3" /> Everyone in this chat can join
@@ -315,27 +375,42 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
       {localVideoOk && (
         <video
           ref={localRef}
-          autoPlay muted playsInline
+          autoPlay
+          muted
+          playsInline
           className="safe-top absolute right-3 top-3 h-32 w-24 rounded-xl object-cover shadow-lg ring-2 ring-white/40"
         />
       )}
 
       {/* Controls */}
       <div className="safe-bottom absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-6">
-        <button onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}
-          className={cn('grid h-14 w-14 place-items-center rounded-full text-white transition-transform active:scale-90',
-            muted ? 'bg-white/25 backdrop-blur' : 'bg-white/15 backdrop-blur')}>
+        <button
+          onClick={toggleMute}
+          aria-label={muted ? 'Unmute' : 'Mute'}
+          className={cn(
+            'grid h-14 w-14 place-items-center rounded-full text-white transition-transform active:scale-90',
+            muted ? 'bg-white/25 backdrop-blur' : 'bg-white/15 backdrop-blur',
+          )}
+        >
           {muted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
         </button>
         {mode === 'video' && (
-          <button onClick={toggleCamera} aria-label={cameraOff ? 'Turn on camera' : 'Turn off camera'}
-            className={cn('grid h-14 w-14 place-items-center rounded-full text-white transition-transform active:scale-90',
-              cameraOff ? 'bg-white/25 backdrop-blur' : 'bg-white/15 backdrop-blur')}>
+          <button
+            onClick={toggleCamera}
+            aria-label={cameraOff ? 'Turn on camera' : 'Turn off camera'}
+            className={cn(
+              'grid h-14 w-14 place-items-center rounded-full text-white transition-transform active:scale-90',
+              cameraOff ? 'bg-white/25 backdrop-blur' : 'bg-white/15 backdrop-blur',
+            )}
+          >
             {cameraOff ? <VideoOff className="h-6 w-6" /> : <Video className="h-6 w-6" />}
           </button>
         )}
-        <button onClick={onEnd} aria-label="End call"
-          className="grid h-14 w-14 place-items-center rounded-full bg-red-600 text-white shadow-xl active:scale-90">
+        <button
+          onClick={onEnd}
+          aria-label={dt('End call')}
+          className="grid h-14 w-14 place-items-center rounded-full bg-red-600 text-white shadow-xl active:scale-90"
+        >
           <PhoneOff className="h-6 w-6" />
         </button>
       </div>
@@ -346,7 +421,10 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
 function RemoteTile({ userId, stream }: { userId: string; stream: MediaStream }) {
   const ref = useRef<HTMLVideoElement | null>(null);
   useEffect(() => {
-    if (ref.current) { ref.current.srcObject = stream; void ref.current.play().catch(() => undefined); }
+    if (ref.current) {
+      ref.current.srcObject = stream;
+      void ref.current.play().catch(() => undefined);
+    }
   }, [stream]);
   return (
     <div className="relative overflow-hidden rounded-xl bg-neutral-800">

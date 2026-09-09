@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -24,7 +25,6 @@ import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
-
 const VIEW_MODE_KEY = 'apex-gig-view';
 type ViewMode = 'list' | 'grid';
 
@@ -248,7 +248,7 @@ function BrowseInner() {
           <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
             <button
               onClick={() => setViewMode('list')}
-              aria-label="List view"
+              aria-label={dt('List view')}
               className={cn(
                 'grid h-7 w-7 place-items-center rounded-full transition-colors',
                 view === 'list'
@@ -260,7 +260,7 @@ function BrowseInner() {
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
+              aria-label={dt('Grid view')}
               className={cn(
                 'grid h-7 w-7 place-items-center rounded-full transition-colors',
                 view === 'grid'

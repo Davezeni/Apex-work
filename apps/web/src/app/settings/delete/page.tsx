@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, AlertTriangle, Trash2, Loader2 } from 'lucide-react';
@@ -9,7 +10,6 @@ import { useI18n } from '@/i18n';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
-
 export default function DeleteAccountPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -28,13 +28,13 @@ export default function DeleteAccountPage() {
     setBusy(true);
     try {
       await apiFetch('/me', { method: 'DELETE', token });
-      toast.success('Account deleted');
+      toast.success(dt('Account deleted'));
       logout.mutate(true);
     } catch (err) {
       const e = err as { message?: string; status?: number };
       if (e.status === 404) {
         // Endpoint not built yet — still let the user sign out.
-        toast.error('Deletion queued — you have been signed out. Contact support.');
+        toast.error(dt('Deletion queued — you have been signed out. Contact support.'));
         logout.mutate(true);
       } else {
         toast.error(e.message ?? 'Could not delete account');
@@ -47,10 +47,16 @@ export default function DeleteAccountPage() {
   return (
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
-        <button onClick={() => router.back()} aria-label={t('common.back')} className="grid h-9 w-9 place-items-center rounded-full active:scale-90">
+        <button
+          onClick={() => router.back()}
+          aria-label={t('common.back')}
+          className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-lg font-extrabold tracking-tight text-red-500">Delete account</h1>
+        <h1 className="text-lg font-extrabold tracking-tight text-red-500">
+          {dt('Delete account')}
+        </h1>
       </header>
 
       <div className="mx-4 mt-6 rounded-2xl border border-red-500/40 bg-red-500/5 p-5">

@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import {
   useEffect,
   useRef,
@@ -114,7 +115,6 @@ import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
 import { REACTION_EMOJIS, type ReactionEmoji } from '@apex-work/shared';
 import { gradientFor } from '@/components/ui/avatar-gradient';
-
 function initialsOf(name: string): string {
   return (
     name
@@ -596,7 +596,7 @@ export default function ConversationPage() {
         <button
           onClick={() => router.back()}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
-          aria-label="Back"
+          aria-label={dt('Back')}
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -604,7 +604,7 @@ export default function ConversationPage() {
           <button
             onClick={() => setMembersOpen(true)}
             className={`grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br text-sm font-bold text-white active:scale-90 ${conv?.id ? gradientFor(conv.id) : 'bg-primary'}`}
-            aria-label="Group members"
+            aria-label={dt('Group members')}
           >
             <Users className="h-5 w-5" />
           </button>
@@ -663,7 +663,7 @@ export default function ConversationPage() {
         {!conv?.isGroup && (
           <>
             <button
-              aria-label="Voice call"
+              aria-label={dt('Voice call')}
               onClick={() => {
                 setIncoming(null);
                 setCallMode('audio');
@@ -673,7 +673,7 @@ export default function ConversationPage() {
               <Phone className="h-5 w-5" />
             </button>
             <button
-              aria-label="Video call"
+              aria-label={dt('Video call')}
               onClick={() => {
                 setIncoming(null);
                 setCallMode('video');
@@ -687,7 +687,7 @@ export default function ConversationPage() {
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label="More"
+            aria-label={dt('More')}
             className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
           >
             <MoreVertical className="h-5 w-5" />
@@ -738,7 +738,7 @@ export default function ConversationPage() {
                             const link = `https://apex-work-gold.vercel.app/messages/join/${r.token}`;
                             setInviteLink(link);
                             void navigator.clipboard?.writeText(link).catch(() => {});
-                            toast.success('Invite link copied');
+                            toast.success(dt('Invite link copied'));
                           },
                           onError: (e) => toast.error((e as Error).message),
                         });
@@ -865,8 +865,8 @@ export default function ConversationPage() {
             autoFocus
             value={searchQ}
             onChange={(e) => setSearchQ(e.target.value)}
-            placeholder="Search in this conversation…"
-            aria-label="Search in this conversation"
+            placeholder={dt('Search in this conversation…')}
+            aria-label={dt('Search in this conversation')}
             className="w-full rounded-full border border-border bg-card px-4 py-2 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
           {searchQ.trim().length >= 2 && (
@@ -923,7 +923,7 @@ export default function ConversationPage() {
           >
             <Pin className="h-3.5 w-3.5 shrink-0 text-primary" />
             <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
-              <span className="font-bold text-foreground">Pinned</span> ·{' '}
+              <span className="font-bold text-foreground">{dt('Pinned')}</span> ·{' '}
               {top.body ?? (top.attachmentType === 'image' ? '🖼️ Photo' : '📎 Attachment')}
             </span>
           </button>
@@ -960,7 +960,7 @@ export default function ConversationPage() {
           <div className="grid h-full place-items-center text-center text-muted-foreground">
             <div>
               <div className="text-3xl">👋</div>
-              <p className="mt-2 text-sm">Say hi to start the conversation</p>
+              <p className="mt-2 text-sm">{dt('Say hi to start the conversation')}</p>
             </div>
           </div>
         )}
@@ -1061,7 +1061,7 @@ export default function ConversationPage() {
       {!atBottom && (
         <button
           onClick={jumpToBottom}
-          aria-label="Jump to latest messages"
+          aria-label={dt('Jump to latest messages')}
           className="absolute bottom-24 right-4 z-20 flex items-center gap-1.5 rounded-full border border-border bg-background/95 px-3 py-2 text-xs font-bold text-foreground shadow-lg backdrop-blur active:scale-95"
         >
           {missedCount > 0 && (
@@ -1142,7 +1142,7 @@ export default function ConversationPage() {
             </div>
             <button
               onClick={() => setReplyTo(null)}
-              aria-label="Cancel reply"
+              aria-label={dt('Cancel reply')}
               className="grid h-6 w-6 place-items-center rounded-full text-muted-foreground active:bg-muted"
             >
               <X className="h-3.5 w-3.5" />
@@ -1213,7 +1213,7 @@ export default function ConversationPage() {
                       </button>
                       <button
                         onClick={() => removeReply(r.id)}
-                        aria-label="Delete reply"
+                        aria-label={dt('Delete reply')}
                         className="text-muted-foreground opacity-0 hover:text-red-500 group-hover:opacity-100"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1351,7 +1351,7 @@ export default function ConversationPage() {
               <div className="flex min-h-11 flex-1 items-center gap-1 overflow-hidden rounded-2xl border border-border bg-card px-2 py-1.5 dark:border-white/10 dark:bg-background/60 dark:shadow-inner">
                 <button
                   onClick={() => setEmojiOpen((v) => !v)}
-                  aria-label="Emoji"
+                  aria-label={dt('Emoji')}
                   aria-pressed={emojiOpen}
                   className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform hover:bg-muted hover:text-foreground active:scale-90"
                 >
@@ -1550,7 +1550,7 @@ export default function ConversationPage() {
             <button
               onClick={() => setIncoming(null)}
               className="grid h-10 w-10 place-items-center rounded-full bg-red-600 text-white active:scale-90"
-              aria-label="Decline"
+              aria-label={dt('Decline')}
             >
               <X className="h-5 w-5" />
             </button>
@@ -1560,7 +1560,7 @@ export default function ConversationPage() {
                 setIncoming(null);
               }}
               className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white active:scale-90"
-              aria-label="Accept"
+              aria-label={dt('Accept')}
             >
               <Phone className="h-5 w-5" />
             </button>
@@ -1589,7 +1589,7 @@ export default function ConversationPage() {
               <button
                 onClick={() => setMembersOpen(false)}
                 className="grid h-8 w-8 place-items-center rounded-full active:bg-muted"
-                aria-label="Close"
+                aria-label={dt('Close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1716,7 +1716,7 @@ export default function ConversationPage() {
                   <button
                     onClick={() => setReadReceiptId(null)}
                     className="grid h-8 w-8 place-items-center rounded-full active:bg-muted"
-                    aria-label="Close"
+                    aria-label={dt('Close')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1846,7 +1846,7 @@ export default function ConversationPage() {
                   <button
                     onClick={() => setReactionInfo(null)}
                     className="grid h-8 w-8 place-items-center rounded-full active:bg-muted"
-                    aria-label="Close"
+                    aria-label={dt('Close')}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1933,7 +1933,7 @@ export default function ConversationPage() {
               <button
                 onClick={() => setForwardMsg(null)}
                 className="grid h-8 w-8 place-items-center rounded-full active:bg-muted"
-                aria-label="Close"
+                aria-label={dt('Close')}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1954,7 +1954,7 @@ export default function ConversationPage() {
                         { messageId: forwardMsg.id, targetConversationId: c.id },
                         {
                           onSuccess: () => {
-                            toast.success('Forwarded');
+                            toast.success(dt('Forwarded'));
                             setForwardMsg(null);
                           },
                           onError: (e) => {
@@ -2007,7 +2007,7 @@ export default function ConversationPage() {
             className="w-full max-w-md rounded-t-3xl border border-b-0 border-border bg-card py-3"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
-            aria-label="Message actions"
+            aria-label={dt('Message actions')}
           >
             <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted" />
             <div className="mx-5 mb-3 flex items-center gap-2 rounded-xl border-l-2 border-primary bg-muted/40 px-3 py-2">
@@ -2169,13 +2169,13 @@ export default function ConversationPage() {
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-lg">
           <button
             onClick={() => setGalleryOpen(false)}
-            aria-label="Close gallery"
+            aria-label={dt('Close gallery')}
             className="safe-top absolute right-4 top-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-black/60 text-white active:scale-90"
           >
             <X className="h-5 w-5" />
           </button>
           <div className="safe-top absolute inset-0 overflow-y-auto p-4 pt-16">
-            <h2 className="mb-3 text-sm font-bold text-white/80">Media in this chat</h2>
+            <h2 className="mb-3 text-sm font-bold text-white/80">{dt('Media in this chat')}</h2>
             <div className="grid grid-cols-3 gap-1">
               {imageUrls
                 .slice()
@@ -2191,7 +2191,7 @@ export default function ConversationPage() {
                   >
                     <Image
                       src={url}
-                      alt=""
+                      alt={dt('')}
                       fill
                       unoptimized
                       sizes="(max-width: 640px) 33vw, 128px"
@@ -2537,7 +2537,7 @@ function MessageBubble({
           onContextMenu={(e) => e.preventDefault()}
           role="button"
           tabIndex={0}
-          aria-label="Open message actions"
+          aria-label={dt('Open message actions')}
           className={cn(
             'relative max-w-[min(80vw,720px)] cursor-pointer overflow-hidden text-sm leading-snug',
             // Telegram-style merged corners: flat edge stays small; the tail
@@ -2615,7 +2615,7 @@ function MessageBubble({
                     full preview instead of being blocked by remotePatterns. */}
                 <Image
                   src={m.attachmentUrl}
-                  alt="Attachment"
+                  alt={dt('Attachment')}
                   fill
                   unoptimized
                   sizes="256px"

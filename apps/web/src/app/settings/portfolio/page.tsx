@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -149,7 +150,7 @@ export default function PortfolioPage() {
     try {
       if (editingId) {
         await updateItem.mutateAsync({ id: editingId, ...payload });
-        toast.success('Portfolio project updated');
+        toast.success(dt('Portfolio project updated'));
       } else {
         await addItem.mutateAsync(payload);
         toast.success(t('portfolio.added'));
@@ -183,7 +184,7 @@ export default function PortfolioPage() {
 
   const generateCaseStudy = () => {
     if (title.trim().length < 2 || description.trim().length < 10) {
-      toast.error('Add a project title and a few facts first');
+      toast.error(dt('Add a project title and a few facts first'));
       return;
     }
     caseStudy.mutate(
@@ -287,17 +288,17 @@ export default function PortfolioPage() {
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl bg-background p-3">
             <div className="text-lg font-black text-primary">{items.length}</div>
-            <div className="text-[11px] text-muted-foreground">Curated projects</div>
+            <div className="text-[11px] text-muted-foreground">{dt('Curated projects')}</div>
           </div>
           <div className="rounded-xl bg-background p-3">
             <div className="text-lg font-black text-emerald-500">
               {items.filter((item) => !!item.externalUrl).length}
             </div>
-            <div className="text-[11px] text-muted-foreground">Live project links</div>
+            <div className="text-[11px] text-muted-foreground">{dt('Live project links')}</div>
           </div>
           <div className="rounded-xl bg-background p-3">
-            <div className="text-lg font-black text-amber-500">AI</div>
-            <div className="text-[11px] text-muted-foreground">Case-study assistant</div>
+            <div className="text-lg font-black text-amber-500">{dt('AI')}</div>
+            <div className="text-[11px] text-muted-foreground">{dt('Case-study assistant')}</div>
           </div>
         </div>
       </section>
@@ -381,7 +382,7 @@ export default function PortfolioPage() {
               {pendingImage.isImage ? (
                 <Image
                   src={pendingImage.url || pendingImage.localPreview}
-                  alt="Preview"
+                  alt={dt('Preview')}
                   fill
                   sizes="400px"
                   className="object-cover"
@@ -403,7 +404,7 @@ export default function PortfolioPage() {
                 >
                   <FileText className="h-12 w-12" />
                   <span className="break-all text-sm font-semibold">{pendingImage.name}</span>
-                  <span className="text-xs text-muted-foreground">Open file preview</span>
+                  <span className="text-xs text-muted-foreground">{dt('Open file preview')}</span>
                 </a>
               )}
               {upload.isPending && (
@@ -428,33 +429,35 @@ export default function PortfolioPage() {
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               maxLength={1600}
-              placeholder="What was the problem, what did you deliver, and how did you solve it?"
+              placeholder={dt(
+                'What was the problem, what did you deliver, and how did you solve it?',
+              )}
               className="mt-2 min-h-[70px] w-full resize-none rounded-xl border border-border bg-background p-3 text-sm outline-none focus:border-primary"
             />
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               <input
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                placeholder="Your role (e.g. Lead designer)"
+                placeholder={dt('Your role (e.g. Lead designer)')}
                 className="h-10 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
               />
               <input
                 value={tools}
                 onChange={(e) => setTools(e.target.value)}
-                placeholder="Tools / skills, comma separated"
+                placeholder={dt('Tools / skills, comma separated')}
                 className="h-10 rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
               />
             </div>
             <input
               value={outcome}
               onChange={(e) => setOutcome(e.target.value)}
-              placeholder="Outcome or result (optional — do not invent numbers)"
+              placeholder={dt('Outcome or result (optional — do not invent numbers)')}
               className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
             />
             <input
               value={externalUrl}
               onChange={(e) => setExternalUrl(e.target.value)}
-              placeholder="Live project URL (optional)"
+              placeholder={dt('Live project URL (optional)')}
               className="mt-2 h-10 w-full rounded-xl border border-border bg-background px-3 text-xs outline-none focus:border-primary"
             />
             <label className="mt-2 flex items-center gap-2 text-xs font-semibold">
@@ -524,7 +527,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 import { useReorderPortfolio } from '@/hooks/use-portfolio';
 import { useEffect as useEffectRe, useState as useStateRe } from 'react';
-
 function SortablePortfolio({
   items,
   onRemove,
@@ -604,7 +606,7 @@ function PortfolioTile({
         ) : isVideoType('', it.imageUrl) ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 bg-black/80 text-white">
             <Video className="h-8 w-8" />
-            <span className="text-[10px] font-semibold">Video</span>
+            <span className="text-[10px] font-semibold">{dt('Video')}</span>
           </div>
         ) : (
           <a
@@ -644,21 +646,21 @@ function PortfolioTile({
       <button
         {...attributes}
         {...listeners}
-        aria-label="Drag to reorder"
+        aria-label={dt('Drag to reorder')}
         className="absolute left-2 top-2 grid h-7 w-7 cursor-grab place-items-center rounded-full bg-black/60 text-white backdrop-blur active:cursor-grabbing sm:opacity-0 sm:group-hover:opacity-100"
       >
         <GripVertical className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => onEdit(it)}
-        aria-label="Edit project"
+        aria-label={dt('Edit project')}
         className="absolute right-11 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
       <button
         onClick={() => onRemove(it.id)}
-        aria-label="Delete"
+        aria-label={dt('Delete')}
         className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white backdrop-blur sm:opacity-0 sm:group-hover:opacity-100"
       >
         <Trash2 className="h-3.5 w-3.5" />

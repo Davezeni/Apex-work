@@ -1,10 +1,10 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
-
 /**
  * Downloads an admin CSV export (`GET /admin/ops/export/:kind`). Fetches with
  * the caller's Bearer token, then triggers a browser download from the blob —
@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 export function ExportButton({
   kind,
   params = {},
-  label = 'Export CSV',
+  label,
   className,
 }: {
   kind: 'audit' | 'orders' | 'users';
@@ -48,7 +48,7 @@ export function ExportButton({
       a.click();
       a.remove();
       URL.revokeObjectURL(objectUrl);
-      toast.success('CSV downloaded');
+      toast.success(dt('CSV downloaded'));
     } catch (e) {
       toast.error((e as Error).message ?? 'Export failed');
     } finally {

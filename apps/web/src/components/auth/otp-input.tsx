@@ -1,9 +1,9 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { OTP_LENGTH } from '@apex-work/shared';
-
 const RESEND_COOLDOWN_SEC = 60;
 
 interface Props {
@@ -72,7 +72,7 @@ export function OtpInput({ phone, code, onChange, onResend, resending, onSubmit 
             onSubmit();
           }
         }}
-        placeholder="••••••"
+        placeholder={dt('••••••')}
         className="mt-8 h-16 w-full rounded-2xl border border-border bg-card text-center text-3xl font-extrabold tracking-[0.5em] outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
         aria-label={`${OTP_LENGTH}-digit verification code`}
       />

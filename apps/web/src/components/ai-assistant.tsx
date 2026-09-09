@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Sparkles, X, Send, Loader2, Cpu } from 'lucide-react';
@@ -8,7 +9,6 @@ import { useAIChat, useAIStatus } from '@/hooks/use-ai';
 import { useMe } from '@/hooks/use-me';
 import { ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
-
 /** Match a media query client-side (SSR-safe: defaults to false). */
 function useIsDesktop(): boolean {
   const [is, setIs] = useState(false);
@@ -172,7 +172,7 @@ export function AIAssistant() {
           from the violet Create "+" so the two never get confused. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="AI assistant"
+        aria-label={dt('AI assistant')}
         className={cn(
           'safe-bottom fixed bottom-24 right-4 z-40 flex h-14 items-center gap-2 rounded-full px-4 text-sm font-bold text-white shadow-xl shadow-emerald-500/40 ring-1 ring-emerald-300/50 transition-all hover:scale-105 hover:brightness-110 active:scale-95',
           'bg-emerald-600',
@@ -180,7 +180,7 @@ export function AIAssistant() {
         )}
       >
         {open ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" strokeWidth={2.4} />}
-        {!open && <span className="hidden sm:inline">Help</span>}
+        {!open && <span className="hidden sm:inline">{dt('Help')}</span>}
       </button>
 
       <AnimatePresence>
@@ -205,7 +205,7 @@ export function AIAssistant() {
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-extrabold">Apex Assistant</div>
+                  <div className="text-sm font-extrabold">{dt('Apex Assistant')}</div>
                   <div className="text-[10px] opacity-80">
                     {aiStatus.data?.providerReachable === true
                       ? 'AI online · Apex-Work help'
@@ -264,7 +264,9 @@ export function AIAssistant() {
                     >
                       {m.content}
                       {m.role === 'assistant' && m.source === 'fallback' && (
-                        <div className="mt-1 text-[10px] opacity-70">Apex fallback reply</div>
+                        <div className="mt-1 text-[10px] opacity-70">
+                          {dt('Apex fallback reply')}
+                        </div>
                       )}
                       {m.role === 'assistant' && m.source === 'rate' && (
                         <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-amber-500">
@@ -310,7 +312,7 @@ export function AIAssistant() {
                       }
                     }}
                     rows={1}
-                    placeholder="Ask me anything…"
+                    placeholder={dt('Ask me anything…')}
                     className="max-h-24 flex-1 resize-none rounded-2xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
                   />
                   <button

@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -16,7 +17,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePublicResume } from '@/hooks/use-resume';
 import { usePublicUser } from '@/hooks/use-public-user';
-
 export default function PublicResumePage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
@@ -43,12 +43,12 @@ export default function PublicResumePage() {
       <div className="grid min-h-dvh place-items-center px-6 text-center">
         <div>
           <FileText className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h1 className="mt-4 text-xl font-extrabold">CV not available</h1>
+          <h1 className="mt-4 text-xl font-extrabold">{dt('CV not available')}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             This freelancer has not published a Resume Studio CV yet.
           </p>
           <Button asChild variant="brand" className="mt-5">
-            <Link href={`/u/${username}`}>View profile</Link>
+            <Link href={`/u/${username}`}>{dt('View profile')}</Link>
           </Button>
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function PublicResumePage() {
       }
     }
     await navigator.clipboard?.writeText(window.location.href);
-    toast.success('CV link copied');
+    toast.success(dt('CV link copied'));
   };
 
   return (
@@ -77,7 +77,7 @@ export default function PublicResumePage() {
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl print:hidden">
         <button
           onClick={() => router.back()}
-          aria-label="Back"
+          aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -139,12 +139,12 @@ export default function PublicResumePage() {
           </header>
 
           {data.summary && (
-            <ResumeSection title="Profile" accent={accent}>
+            <ResumeSection title={dt('Profile')} accent={accent}>
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{data.summary}</p>
             </ResumeSection>
           )}
           {data.content.skills.length > 0 && (
-            <ResumeSection title="Skills" accent={accent}>
+            <ResumeSection title={dt('Skills')} accent={accent}>
               <div className="flex flex-wrap gap-2">
                 {data.content.skills.map((skill) => (
                   <span
@@ -159,7 +159,7 @@ export default function PublicResumePage() {
             </ResumeSection>
           )}
           {data.experiences.length > 0 && (
-            <ResumeSection title="Experience" accent={accent}>
+            <ResumeSection title={dt('Experience')} accent={accent}>
               {data.experiences.map((item) => (
                 <div key={item.id} className="mb-4">
                   <div className="flex flex-wrap justify-between gap-2 text-sm font-bold">
@@ -183,7 +183,7 @@ export default function PublicResumePage() {
             </ResumeSection>
           )}
           {data.content.projects.length > 0 && (
-            <ResumeSection title="Selected projects" accent={accent}>
+            <ResumeSection title={dt('Selected projects')} accent={accent}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {data.content.projects.map((item) => (
                   <div
@@ -197,7 +197,7 @@ export default function PublicResumePage() {
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Open project"
+                          aria-label={dt('Open project')}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
@@ -231,7 +231,7 @@ export default function PublicResumePage() {
             </ResumeSection>
           )}
           {data.education.length > 0 && (
-            <ResumeSection title="Education" accent={accent}>
+            <ResumeSection title={dt('Education')} accent={accent}>
               {data.education.map((item) => (
                 <div key={item.id} className="mb-2">
                   <div className="flex justify-between gap-2 text-sm font-bold">
@@ -249,7 +249,7 @@ export default function PublicResumePage() {
             </ResumeSection>
           )}
           {data.content.achievements.length > 0 && (
-            <ResumeSection title="Achievements" accent={accent}>
+            <ResumeSection title={dt('Achievements')} accent={accent}>
               <ul className="list-disc space-y-1 pl-5 text-sm">
                 {data.content.achievements.map((item) => (
                   <li key={item}>{item}</li>
@@ -258,7 +258,7 @@ export default function PublicResumePage() {
             </ResumeSection>
           )}
           {data.certifications.length > 0 && (
-            <ResumeSection title="Certifications" accent={accent}>
+            <ResumeSection title={dt('Certifications')} accent={accent}>
               <ul className="list-disc space-y-1 pl-5 text-sm">
                 {data.certifications.map((item) => (
                   <li key={item.id}>
@@ -277,7 +277,7 @@ export default function PublicResumePage() {
             </p>
           </div>
           <Button asChild size="sm" variant="brand">
-            <Link href={`/u/${profile.username}`}>View profile</Link>
+            <Link href={`/u/${profile.username}`}>{dt('View profile')}</Link>
           </Button>
         </div>
       </main>

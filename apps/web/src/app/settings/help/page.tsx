@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, HelpCircle, Mail, MessageCircle, Phone, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -7,7 +8,6 @@ import { useI18n } from '@/i18n';
 import { useContentPage } from '@/hooks/use-content-page';
 import { useSiteConfig } from '@/hooks/use-site-config';
 import { Markdown } from '@/components/markdown';
-
 export default function HelpPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -33,7 +33,7 @@ export default function HelpPage() {
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
         >
           <Mail className="h-5 w-5 text-primary" />
-          <span className="text-[11px] font-semibold">Email</span>
+          <span className="text-[11px] font-semibold">{dt('Email')}</span>
         </a>
         <a
           href={site.data?.supportTelegram}
@@ -42,14 +42,14 @@ export default function HelpPage() {
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
         >
           <MessageCircle className="h-5 w-5 text-primary" />
-          <span className="text-[11px] font-semibold">Telegram</span>
+          <span className="text-[11px] font-semibold">{dt('Telegram')}</span>
         </a>
         <a
           href={`tel:${site.data?.supportPhone}`}
           className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 active:scale-95"
         >
           <Phone className="h-5 w-5 text-primary" />
-          <span className="text-[11px] font-semibold">Call</span>
+          <span className="text-[11px] font-semibold">{dt('Call')}</span>
         </a>
       </section>
 
@@ -64,12 +64,12 @@ export default function HelpPage() {
             <Markdown>{faq.data.markdown}</Markdown>
           ) : (
             <div className="flex flex-col gap-3 py-4">
-              <p className="text-sm font-semibold">How do I get paid on Apex-Work?</p>
+              <p className="text-sm font-semibold">{dt('How do I get paid on Apex-Work?')}</p>
               <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
                 When a client releases funds from escrow, we credit your wallet within minutes. From
                 there you can withdraw to Telebirr, CBE Birr, or your bank.
               </p>
-              <p className="text-sm font-semibold">What is the platform fee?</p>
+              <p className="text-sm font-semibold">{dt('What is the platform fee?')}</p>
               <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
                 We take 10% of every completed order — half of what Fiverr and Upwork charge. No
                 monthly fees.

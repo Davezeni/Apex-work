@@ -1,5 +1,6 @@
 'use client';
 
+import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
@@ -19,7 +20,6 @@ import {
 } from 'lucide-react';
 import { CommandPalette, type PaletteAction } from '@/components/admin/command-palette';
 import { useI18n } from '@/i18n';
-
 /**
  * Global ⌘K / Ctrl+K command palette, mounted once in the app shell so it's
  * available on every route. Reuses the admin CommandPalette component and
@@ -49,7 +49,10 @@ export function GlobalCommandPalette() {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         // Allow the browser-level "open something" if already typing in an input.
         const target = e.target as HTMLElement | null;
-        const inField = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+        const inField =
+          target?.tagName === 'INPUT' ||
+          target?.tagName === 'TEXTAREA' ||
+          target?.isContentEditable;
         if (inField) {
           // Still let ⌘K work in inputs, but don't preventDefault so native find
           // isn't broken when explicitly toggling. For simplicity we toggle.
@@ -63,7 +66,10 @@ export function GlobalCommandPalette() {
       // "/" -> focus search on browse.
       if (e.key === '/' && pathname.startsWith('/browse')) {
         const target = e.target as HTMLElement | null;
-        const inField = target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA' || target?.isContentEditable;
+        const inField =
+          target?.tagName === 'INPUT' ||
+          target?.tagName === 'TEXTAREA' ||
+          target?.isContentEditable;
         if (!inField) {
           e.preventDefault();
           document.getElementById('browse-search')?.focus();
@@ -75,18 +81,90 @@ export function GlobalCommandPalette() {
   }, [pathname]);
 
   const actions: PaletteAction[] = [
-    { id: 'home', label: t('nav.home'), hint: 'Home', icon: <Home className="h-4 w-4" />, onSelect: () => router.push('/') },
-    { id: 'browse', label: t('nav.browse'), hint: 'Explore gigs', icon: <Compass className="h-4 w-4" />, onSelect: () => router.push('/browse') },
-    { id: 'search', label: t('nav.search'), hint: 'Search everything', icon: <Search className="h-4 w-4" />, onSelect: () => router.push('/search') },
-    { id: 'messages', label: t('nav.chat'), hint: 'Messages', icon: <MessageCircle className="h-4 w-4" />, onSelect: () => router.push('/messages') },
-    { id: 'jobs', label: t('nav.jobs'), hint: 'Job board', icon: <Briefcase className="h-4 w-4" />, onSelect: () => router.push('/jobs') },
-    { id: 'saved', label: t('nav.saved'), hint: 'Saved gigs', icon: <Bookmark className="h-4 w-4" />, onSelect: () => router.push('/saved') },
-    { id: 'notifications', label: t('nav.notifications'), hint: 'Notifications', icon: <Bell className="h-4 w-4" />, onSelect: () => router.push('/notifications') },
-    { id: 'wallet', label: t('nav.wallet'), hint: 'Wallet & earnings', icon: <Wallet className="h-4 w-4" />, onSelect: () => router.push('/wallet') },
-    { id: 'profile', label: t('nav.profile'), hint: 'Your profile', icon: <User className="h-4 w-4" />, onSelect: () => router.push('/profile') },
-    { id: 'settings', label: t('nav.settings'), hint: 'Settings', icon: <Settings className="h-4 w-4" />, onSelect: () => router.push('/settings') },
-    { id: 'new-gig', label: t('nav.postGig'), hint: 'Compose', icon: <Plus className="h-4 w-4" />, onSelect: () => router.push('/gigs/new') },
-    { id: 'achievements', label: t('nav.achievements'), hint: 'Milestones', icon: <Award className="h-4 w-4" />, onSelect: () => router.push('/achievements') },
+    {
+      id: 'home',
+      label: t('nav.home'),
+      hint: 'Home',
+      icon: <Home className="h-4 w-4" />,
+      onSelect: () => router.push('/'),
+    },
+    {
+      id: 'browse',
+      label: t('nav.browse'),
+      hint: 'Explore gigs',
+      icon: <Compass className="h-4 w-4" />,
+      onSelect: () => router.push('/browse'),
+    },
+    {
+      id: 'search',
+      label: t('nav.search'),
+      hint: 'Search everything',
+      icon: <Search className="h-4 w-4" />,
+      onSelect: () => router.push('/search'),
+    },
+    {
+      id: 'messages',
+      label: t('nav.chat'),
+      hint: 'Messages',
+      icon: <MessageCircle className="h-4 w-4" />,
+      onSelect: () => router.push('/messages'),
+    },
+    {
+      id: 'jobs',
+      label: t('nav.jobs'),
+      hint: 'Job board',
+      icon: <Briefcase className="h-4 w-4" />,
+      onSelect: () => router.push('/jobs'),
+    },
+    {
+      id: 'saved',
+      label: t('nav.saved'),
+      hint: 'Saved gigs',
+      icon: <Bookmark className="h-4 w-4" />,
+      onSelect: () => router.push('/saved'),
+    },
+    {
+      id: 'notifications',
+      label: t('nav.notifications'),
+      hint: 'Notifications',
+      icon: <Bell className="h-4 w-4" />,
+      onSelect: () => router.push('/notifications'),
+    },
+    {
+      id: 'wallet',
+      label: t('nav.wallet'),
+      hint: 'Wallet & earnings',
+      icon: <Wallet className="h-4 w-4" />,
+      onSelect: () => router.push('/wallet'),
+    },
+    {
+      id: 'profile',
+      label: t('nav.profile'),
+      hint: 'Your profile',
+      icon: <User className="h-4 w-4" />,
+      onSelect: () => router.push('/profile'),
+    },
+    {
+      id: 'settings',
+      label: t('nav.settings'),
+      hint: 'Settings',
+      icon: <Settings className="h-4 w-4" />,
+      onSelect: () => router.push('/settings'),
+    },
+    {
+      id: 'new-gig',
+      label: t('nav.postGig'),
+      hint: 'Compose',
+      icon: <Plus className="h-4 w-4" />,
+      onSelect: () => router.push('/gigs/new'),
+    },
+    {
+      id: 'achievements',
+      label: t('nav.achievements'),
+      hint: 'Milestones',
+      icon: <Award className="h-4 w-4" />,
+      onSelect: () => router.push('/achievements'),
+    },
   ];
 
   return (
@@ -94,7 +172,7 @@ export function GlobalCommandPalette() {
       open={open}
       onClose={() => setOpen(false)}
       actions={actions}
-      placeholder="Search or jump to…"
+      placeholder={dt('Search or jump to…')}
     />
   );
 }
