@@ -53,31 +53,48 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // the user's saved preference on mount to avoid a hydration mismatch.
   const [locale, setLocaleState] = useState<Locale>('en');
 
-  // Mirror the active locale into the auto-translate module so hardcoded
-  // strings resolved through dt() follow the app language too.
-  useEffect(() => {
-    setAutoLocale(locale);
-  }, [locale]);
+  // Apply the locale to both React state and the module-level auto-translator
+  // synchronously, so components that render via dt() pick the right language
+  // on the SAME render (no stale-English frame). Keying the subtree by locale
+  // below also forces every component — including ones that only use dt() and
+  // never call useI18n() — to re-render when the language changes.
+  const applyLocale = useCallback((l: Locale) => {
+    setAutoLocale(l);
+    setLocaleState(l);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, l);
+      } catch {
+        /* ignore */
+      }
+      document.documentElement.lang = l;
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved === 'en' || saved === 'am') setLocaleState(saved);
+    if (saved === 'en' || saved === 'am') applyLocale(saved);
     else {
       // Optional: default to Amharic for users with Amharic in Accept-Language.
       const preferred = navigator.language?.toLowerCase();
-      if (preferred?.startsWith('am')) setLocaleState('am');
+      if (preferred?.startsWith('am')) applyLocale('am');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setLocale = useCallback((l: Locale) => {
-    setLocaleState(l);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(STORAGE_KEY, l);
-      // Update <html lang="…"> for a11y + browser translation heuristics.
-      document.documentElement.lang = l;
-    }
-  }, []);
+  // Keep the module-level auto-translator in step if locale changes by any
+  // other path (e.g. toggling) so dt() is always correct.
+  useEffect(() => {
+    setAutoLocale(locale);
+  }, [locale]);
+
+  const setLocale = useCallback(
+    (l: Locale) => {
+      applyLocale(l);
+    },
+    [applyLocale],
+  );
 
   useEffect(() => {
     if (typeof document !== 'undefined') document.documentElement.lang = locale;
@@ -98,7 +115,15 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<I18nContextValue>(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
-  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+  // Key the subtree by locale so a language switch re-renders every component,
+  // including ones that use dt() but never call useI18n() themselves.
+  return (
+    <I18nContext.Provider value={value}>
+      <div key={locale} style={{ display: 'contents' }}>
+        {children}
+      </div>
+    </I18nContext.Provider>
+  );
 }
 
 /**
