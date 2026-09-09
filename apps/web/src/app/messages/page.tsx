@@ -27,6 +27,11 @@ import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { UserAvatar } from '@/components/ui/user-avatar';
 
+/** Build marker shown in the inbox header so users/reviewers can confirm a
+ *  given device is running the latest deployed bundle (helps catch a stale
+ *  service-worker cache). */
+const APP_BUILD = '2026-09-09.82';
+
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();
   const { data, isLoading, error } = useConversations();
@@ -82,7 +87,12 @@ export default function MessagesPage() {
   return (
     <MobileShell activeTab="chat">
       <header className="safe-top mx-auto flex w-full max-w-2xl items-center justify-between px-5 pb-3 pt-4 md:pt-6">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('chat.messages')}</h1>
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight">{t('chat.messages')}</h1>
+          <span className="text-[10px] font-semibold text-muted-foreground/50">
+            build {APP_BUILD}
+          </span>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={() => {

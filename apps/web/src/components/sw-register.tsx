@@ -36,6 +36,16 @@ export function ServiceWorkerRegister() {
         .catch(() => {
           // A registration failure is never worth interrupting the user.
         });
+
+      // When a freshly-activated SW takes control it wipes the old caches.
+      // Reload the page exactly once so we land on the NEW bundle immediately,
+      // instead of forcing the user to reload a second time by hand.
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
     };
 
     if (document.readyState === 'complete') register();
