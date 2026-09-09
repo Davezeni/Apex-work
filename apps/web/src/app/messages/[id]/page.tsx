@@ -253,7 +253,14 @@ export default function ConversationPage() {
     return () => clearTimeout(timer);
   }, [searchQ, searchOpen, searchMessages]);
   const socket = useChatSocket(id, {
-    onIncomingCall: (from, mode) => setIncoming({ from, mode }),
+    onIncomingCall: (from, mode) => {
+      // Ignore our own call ring: when we dial, the server broadcasts
+      // `call:start` to every socket in the room (including our other chat
+      // socket), so without this guard we'd flash an "incoming call" for a
+      // call we just placed — most visibly after hanging up.
+      if (from === me?.id) return;
+      setIncoming({ from, mode });
+    },
     onTyping: (status, userId) => {
       setTypingUsers((prev) => {
         const next = { ...prev };
@@ -337,6 +344,11 @@ export default function ConversationPage() {
   };
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
+  // Clear any stale "incoming call" ring whenever a call session starts or
+  // ends, so a ring can't linger on screen after we hang up (or while dialling).
+  useEffect(() => {
+    if (callMode) setIncoming(null);
+  }, [callMode]);
   const blockUser = useBlockUser();
   const toggleReaction = useToggleReaction(id);
   const { pending } = useOutboxSync(); // flush queued messages when we come back online
@@ -652,14 +664,20 @@ export default function ConversationPage() {
           <>
             <button
               aria-label="Voice call"
-              onClick={() => setCallMode('audio')}
+              onClick={() => {
+                setIncoming(null);
+                setCallMode('audio');
+              }}
               className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
             >
               <Phone className="h-5 w-5" />
             </button>
             <button
               aria-label="Video call"
-              onClick={() => setCallMode('video')}
+              onClick={() => {
+                setIncoming(null);
+                setCallMode('video');
+              }}
               className="grid h-9 w-9 place-items-center rounded-full text-muted-foreground active:scale-90"
             >
               <VideoIcon className="h-5 w-5" />
