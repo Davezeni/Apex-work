@@ -205,7 +205,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
             });
           })
           .catch((e) => {
-            toast.error('Failed to negotiate call: ' + (e as Error).message);
+            toast.error(dt('Failed to negotiate call: ') + (e as Error).message);
           });
       }
 
