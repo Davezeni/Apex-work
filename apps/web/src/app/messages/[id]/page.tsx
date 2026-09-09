@@ -211,16 +211,6 @@ export default function ConversationPage() {
   const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading, error } = useMessages(id);
   const { data: conv } = useConversation(id);
-  // Open a peer's public profile. Guarded so a tap that fires both pointer and
-  // click handlers navigates exactly once, and so it never fires during a swipe.
-  const navGuard = useRef(0);
-  const openPeerProfile = (username?: string | null) => {
-    if (!username) return;
-    const now = Date.now();
-    if (now - navGuard.current < 700) return;
-    navGuard.current = now;
-    router.push(`/u/${username}`);
-  };
   const messages = data?.items ?? [];
   // Peer from the conversation detail (works even when there are no messages
   // yet); fall back to the latest incoming sender, then null.
@@ -607,12 +597,10 @@ export default function ConversationPage() {
             <Users className="h-5 w-5" />
           </button>
         ) : peer ? (
-          <button
-            type="button"
+          <a
+            href={`/u/${peer.username}`}
             aria-label={`${peer.fullName} profile`}
             title={peer.fullName}
-            onClick={() => openPeerProfile(peer.username)}
-            onPointerUp={() => openPeerProfile(peer.username)}
             className="block h-10 w-10 shrink-0 cursor-pointer rounded-full active:scale-90"
           >
             <UserAvatar
@@ -622,7 +610,7 @@ export default function ConversationPage() {
               verified={peer.isVerified}
               className="h-10 w-10 text-sm font-bold"
             />
-          </button>
+          </a>
         ) : (
           <div className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
             ?
@@ -630,15 +618,13 @@ export default function ConversationPage() {
         )}
         <div className="min-w-0 flex-1">
           {peer && !conv?.isGroup ? (
-            <button
-              type="button"
-              onClick={() => openPeerProfile(peer.username)}
-              onPointerUp={() => openPeerProfile(peer.username)}
+            <a
+              href={`/u/${peer.username}`}
               className="block min-w-0 cursor-pointer text-left active:opacity-60"
               aria-label={`${peer.fullName} profile`}
             >
               <h4 className="truncate text-sm font-semibold">{peer.fullName}</h4>
-            </button>
+            </a>
           ) : (
             <h4 className="truncate text-sm font-semibold">{conv?.title ?? 'Conversation'}</h4>
           )}
