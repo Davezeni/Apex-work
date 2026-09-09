@@ -122,8 +122,10 @@ export function MobileHome() {
           className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-violet-500/10 p-3 transition-transform active:scale-[0.98]"
         >
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">🗺</div>
-          <div className="text-xs font-extrabold">Nearby</div>
-          <div className="line-clamp-1 text-[10px] text-muted-foreground">Freelancers near you</div>
+          <div className="text-xs font-extrabold">{t('home.nearby')}</div>
+          <div className="line-clamp-1 text-[10px] text-muted-foreground">
+            {t('home.nearbySub')}
+          </div>
         </Link>
       </div>
 
@@ -386,6 +388,7 @@ function HomeSaveButton({
 }) {
   const router = useRouter();
   const token = useAuthStore((state) => state.accessToken);
+  const { t } = useI18n();
   const save = useSaveGig();
   const unsave = useUnsaveGig();
   const busy = save.isPending || unsave.isPending;
@@ -407,7 +410,7 @@ function HomeSaveButton({
     setLocalSaved(nextSaved);
     const mutation = nextSaved ? save : unsave;
     mutation.mutate(slug, {
-      onSuccess: () => toast.success(nextSaved ? 'Gig saved' : 'Gig removed from saved'),
+      onSuccess: () => toast.success(nextSaved ? t('gigs.saved') : t('gigs.removedSaved')),
       onError: (error) => {
         setLocalSaved(!nextSaved);
         toast.error(error.message);

@@ -10,16 +10,17 @@ import { cn } from '@/lib/utils';
 import { useOnboardingGuard } from '@/hooks/use-onboarding-guard';
 
 import { useConversations } from '@/hooks/use-chat';
+import { useI18n } from '@/i18n';
 import { PwaInstall } from '@/components/pwa-install';
 import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
 
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
-const TABS: { id: MobileTab; label: string; icon: typeof Home; href: string }[] = [
-  { id: 'home', label: 'Home', icon: Home, href: '/' },
-  { id: 'search', label: 'Search', icon: Search, href: '/search' },
-  { id: 'chat', label: 'Chat', icon: MessageCircle, href: '/messages' },
-  { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
+const TABS: { id: MobileTab; labelKey: string; icon: typeof Home; href: string }[] = [
+  { id: 'home', labelKey: 'nav.home', icon: Home, href: '/' },
+  { id: 'search', labelKey: 'nav.search', icon: Search, href: '/search' },
+  { id: 'chat', labelKey: 'nav.chat', icon: MessageCircle, href: '/messages' },
+  { id: 'profile', labelKey: 'nav.profile', icon: User, href: '/profile' },
 ];
 
 interface Props {
@@ -33,6 +34,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useI18n();
 
   // Auto-redirect freelancers who haven't finished onboarding.
   useOnboardingGuard();
@@ -142,15 +144,15 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
           <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-3xl border border-b-0 border-border bg-card focus:outline-none">
             <div className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-muted" />
             <div className="p-6">
-              <Drawer.Title className="text-xl font-extrabold">Create</Drawer.Title>
+              <Drawer.Title className="text-xl font-extrabold">{t('create.title')}</Drawer.Title>
               <Drawer.Description className="mt-1 text-sm text-muted-foreground">
-                What would you like to do today?
+                {t('chat.createToday')}
               </Drawer.Description>
               <div className="mt-5 flex flex-col gap-2">
                 <SheetAction
                   icon="💼"
-                  title="Post a Gig"
-                  subtitle="Sell your service · Fixed price"
+                  title={t('create.postGig')}
+                  subtitle={t('create.postGigSub')}
                   onClick={() => {
                     setSheetOpen(false);
                     router.push('/gigs/new');
@@ -159,8 +161,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                 />
                 <SheetAction
                   icon="📢"
-                  title="Post a Job"
-                  subtitle="Hire freelancers · Get bids"
+                  title={t('create.postJob')}
+                  subtitle={t('create.postJobSub')}
                   onClick={() => {
                     setSheetOpen(false);
                     router.push('/jobs/new');
@@ -169,8 +171,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                 />
                 <SheetAction
                   icon="✨"
-                  title="AI Proposal"
-                  subtitle="Let AI write your proposal"
+                  title={t('create.aiProposal')}
+                  subtitle={t('create.aiProposalSub')}
                   onClick={() => {
                     setSheetOpen(false);
                     router.push('/ai/proposal');
@@ -179,8 +181,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                 />
                 <SheetAction
                   icon="💬"
-                  title="Send Quick Offer"
-                  subtitle="Custom offer to a client"
+                  title={t('create.quickOffer')}
+                  subtitle={t('create.quickOfferSub')}
                   onClick={() => {
                     setSheetOpen(false);
                     router.push('/messages');
@@ -208,6 +210,7 @@ function TabButton({
   badge?: number;
 }) {
   const Icon = tab.icon;
+  const { t } = useI18n();
   return (
     <Link
       href={tab.href}
@@ -223,7 +226,7 @@ function TabButton({
       >
         <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
       </motion.div>
-      <span>{tab.label}</span>
+      <span>{t(tab.labelKey)}</span>
       <AnimatePresence>
         {badge !== undefined && badge > 0 && (
           <motion.span

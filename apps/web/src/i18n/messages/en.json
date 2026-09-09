@@ -27,7 +27,8 @@
     "signOut": "Sign out",
     "wallet": "Wallet",
     "workspace": "Workspace",
-    "achievements": "Achievements"
+    "achievements": "Achievements",
+    "viewAll": "View all"
   },
   "common": {
     "back": "Back",
@@ -97,7 +98,9 @@
     "noGigsInCategory": "No gigs in this category yet",
     "postFirst": "Be the first — post one to get noticed.",
     "recentlyViewed": "Recently viewed",
-    "clear": "Clear"
+    "clear": "Clear",
+    "nearby": "Nearby",
+    "nearbySub": "Freelancers near you"
   },
   "gig": {
     "aboutFreelancer": "About the freelancer",
@@ -299,7 +302,8 @@
     "unpin": "Unpin",
     "unread": "Unread",
     "voice": "Voice message",
-    "voiceHint": "Hold the mic to record a voice message"
+    "voiceHint": "Hold the mic to record a voice message",
+    "createToday": "What would you like to do today?"
   },
   "pin": {
     "createTitle": "Create a 6-digit PIN",
@@ -448,7 +452,8 @@
     "aiProposal": "AI Proposal",
     "aiProposalSub": "Let AI write your proposal",
     "quickOffer": "Send Quick Offer",
-    "quickOfferSub": "Custom offer to a client"
+    "quickOfferSub": "Custom offer to a client",
+    "desc": "Create"
   },
   "postGig": {
     "step1": "What service do you offer?",
@@ -640,7 +645,8 @@
     "publish": "Publish job",
     "publishing": "Publishing…",
     "published": "Job published 🚀",
-    "publishFailed": "Could not publish job"
+    "publishFailed": "Could not publish job",
+    "nearby": "Nearby"
   },
   "offer": {
     "title": "Send a custom offer",
@@ -724,5 +730,9 @@
     "paymentMethods": "Payment methods",
     "savedSearches": "Saved searches",
     "skills": "Skills"
+  },
+  "gigs": {
+    "saved": "Gig saved",
+    "removedSaved": "Gig removed from saved"
   }
 }

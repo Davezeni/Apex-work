@@ -27,7 +27,8 @@
     "signOut": "ውጣ",
     "wallet": "ዋሌት",
     "workspace": "የሥራ ቦታ",
-    "achievements": "ስኬቶች"
+    "achievements": "ስኬቶች",
+    "viewAll": "ሁሉንም ይመልከቱ"
   },
   "common": {
     "back": "ተመለስ",
@@ -97,7 +98,9 @@
     "noGigsInCategory": "በዚህ ምድብ ውስጥ ዪዶች የለሙም",
     "postFirst": "መጀመሪያ ይሁኑ — ትኬይ ላይ ለማውጣት ይለጥጁ።",
     "recentlyViewed": "በቅርብ የተመለከቷቸው",
-    "clear": "አጽዳ"
+    "clear": "አጽዳ",
+    "nearby": "በአቅራቢያ",
+    "nearbySub": "በአንተ አጠገብ ያሉ ፍሪላንሰሮች"
   },
   "gig": {
     "aboutFreelancer": "ስለ ፍሪላንሰሩ",
@@ -299,7 +302,8 @@
     "unpin": "ይንቀሉት",
     "unread": "ያልተነበቡ",
     "voice": "ድምጽ መልእክት",
-    "voiceHint": "የድምጽ መልእክት ለመቅዳት ማይክ ይያዙ"
+    "voiceHint": "የድምጽ መልእክት ለመቅዳት ማይክ ይያዙ",
+    "createToday": "ዛሬ ምን ማድረግ ይፈልጋሉ?"
   },
   "pin": {
     "createTitle": "የ6 አመራር ቅብብክ ሮር ይጽፈሉ",
@@ -439,16 +443,17 @@
     "clear": "አጽዳ"
   },
   "create": {
-    "title": "መስራት",
+    "title": "ፍጠር",
     "subtitle": "ኺር ምን ማድረግ ይፈልጋሉ?",
-    "postGig": "ሥራ ይላክሉ",
-    "postGigSub": "አገልግሎትዎን ይያጡ · ቀትታይ ዋጋ",
-    "postJob": "ሥራ ይላክሉ",
-    "postJobSub": "ፍሪላንሰሮችን ይቀጥሩ · ብድር ይቀብሉ",
-    "aiProposal": "AI ያስጐባኛ",
-    "aiProposalSub": "AI መሰነያን ይጽፍልዎ",
-    "quickOffer": "አስቸካይ ያርኢ ይላክ",
-    "quickOfferSub": "ለአሳራጅ የላኬ ይርኢ"
+    "postGig": "ሥራ ለጥፍ",
+    "postGigSub": "አገልግሎትህን ሽጥ · ቋሚ ዋጋ",
+    "postJob": "ሥራ ተለጥፍ",
+    "postJobSub": "ፍሪላንሰሮችን ቅጥር · ቅናሽ አግኝ",
+    "aiProposal": "የAI ፕሮፖዛል",
+    "aiProposalSub": "AI ፕሮፖዛልህን ይጽፍልህ",
+    "quickOffer": "ፈጣን ቅናሽ ላክ",
+    "quickOfferSub": "ለደንበኛ ልዩ ቅናሽ",
+    "desc": "ፍጠር"
   },
   "postGig": {
     "step1": "ምን አገልግሎት ትሰጣለህ?",
@@ -640,7 +645,8 @@
     "publish": "ስራ አትም",
     "publishing": "እየታተመ…",
     "published": "ስራ ታትሟል 🚀",
-    "publishFailed": "ስራ ማተም አልተቻለም"
+    "publishFailed": "ስራ ማተም አልተቻለም",
+    "nearby": "በአቅራቢያ"
   },
   "offer": {
     "title": "ብጁ ቅናሽ ላክ",
@@ -724,5 +730,9 @@
     "paymentMethods": "የክፍያ ዘዴዎች",
     "savedSearches": "የተቀመጡ ፍለጋዎች",
     "skills": "ክህሎቶች"
+  },
+  "gigs": {
+    "saved": "ሥራ ተቀምጧል",
+    "removedSaved": "ሥራ ከተቀመጡት ተወግዷል"
   }
 }

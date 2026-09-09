@@ -51,7 +51,13 @@ function Row({ n }: { n: AppNotification }) {
  * desktop: clicking shows the latest notifications inline with a "mark all
  * read" action and a link to the full page. Hides itself when signed out.
  */
-export function NotificationsPanel({ className, align = 'right' }: { className?: string; align?: 'left' | 'right' }) {
+export function NotificationsPanel({
+  className,
+  align = 'right',
+}: {
+  className?: string;
+  align?: 'left' | 'right';
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -103,7 +109,15 @@ export function NotificationsPanel({ className, align = 'right' }: { className?:
       </button>
 
       {open && (
-        <div className={cn('absolute top-12 z-50 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl', align === 'right' ? 'right-0' : 'left-0')}>
+        <div
+          className={cn(
+            'z-50 overflow-hidden rounded-2xl border border-border bg-card shadow-2xl',
+            // Mobile: a fixed, viewport-centered panel that can never overflow
+            // left/right regardless of the bell's position on the screen.
+            'fixed left-1/2 top-14 w-[calc(100vw-1.75rem)] -translate-x-1/2 sm:absolute sm:left-auto sm:top-12 sm:w-80 sm:max-w-[calc(100vw-1.5rem)] sm:translate-x-0',
+            align === 'right' ? 'sm:right-0' : 'sm:left-0',
+          )}
+        >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <span className="text-sm font-bold">{t('nav.notifications')}</span>
             {unread > 0 && (
@@ -112,7 +126,7 @@ export function NotificationsPanel({ className, align = 'right' }: { className?:
                 onClick={doMarkAll}
                 className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary"
               >
-                <CheckCheck className="h-3 w-3" /> Mark all read
+                <CheckCheck className="h-3 w-3" /> {t('notifications.markAllRead')}
               </button>
             )}
           </div>
@@ -131,7 +145,7 @@ export function NotificationsPanel({ className, align = 'right' }: { className?:
             onClick={() => setOpen(false)}
             className="flex items-center justify-center gap-1 border-t border-border px-4 py-2.5 text-xs font-semibold text-primary"
           >
-            View all <ExternalLink className="h-3 w-3" />
+            {t('nav.viewAll')} <ExternalLink className="h-3 w-3" />
           </Link>
         </div>
       )}
