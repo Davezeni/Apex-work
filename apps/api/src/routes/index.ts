@@ -40,6 +40,7 @@ import recommendationsRoutes from './recommendations.routes.js';
 import subscriptionsRoutes from './subscriptions.routes.js';
 import agenciesRoutes from './agencies.routes.js';
 import referralsRoutes from './referrals.routes.js';
+import translateRoutes from './translate.routes.js';
 import { prisma } from '../lib/prisma.js';
 import { redis } from '../lib/redis.js';
 import { logger } from '../config/logger.js';
@@ -127,5 +128,6 @@ router.use('/recommendations', recommendationsRoutes);
 router.use('/referrals', referralsRoutes);
 router.use('/me/subscription', subscriptionsRoutes);
 router.use('/me/teams', agenciesRoutes);
+router.use('/translate', translateRoutes);
 
 export default router;

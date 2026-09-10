@@ -8,7 +8,7 @@ import { Sheet } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useRequestWithdrawal } from '@/hooks/use-wallet';
 import { useI18n } from '@/i18n';
-import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
+import { MIN_WITHDRAWAL_ETB, withdrawalFeeEtb } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 type Destination =
   'telebirr' | 'cbebirr' | 'cbe_bank' | 'awash_bank' | 'dashen_bank' | 'bank_of_abyssinia';
@@ -38,6 +38,9 @@ export function WithdrawSheet({ open, onOpenChange, maxAmount }: Props) {
 
   const destMeta = DESTINATIONS.find((d) => d.id === dest)!;
   const parsedAmount = Number(amount || 0);
+  // Upfront, honest fee: same schedule the API charges — shown BEFORE confirm.
+  const fee =
+    parsedAmount >= MIN_WITHDRAWAL_ETB ? withdrawalFeeEtb(dest, Math.floor(parsedAmount)) : 0;
 
   const submit = async () => {
     if (parsedAmount < MIN_WITHDRAWAL_ETB) {
@@ -122,6 +125,16 @@ export function WithdrawSheet({ open, onOpenChange, maxAmount }: Props) {
               Max: {formatEtb(maxAmount)}
             </button>
           </div>
+          {parsedAmount >= MIN_WITHDRAWAL_ETB && (
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">
+                {t('wallet.fee')}: {formatEtb(fee)}
+              </span>
+              <span className="font-bold text-foreground">
+                {t('wallet.youReceive')}: {formatEtb(Math.max(0, Math.floor(parsedAmount) - fee))}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Account number */}

@@ -14,7 +14,7 @@
 import type { Prisma, WithdrawalStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
-import { MIN_WITHDRAWAL_ETB } from '@apex-work/shared';
+import { MIN_WITHDRAWAL_ETB, withdrawalFeeEtb } from '@apex-work/shared';
 import { notify } from './notifications.service.js';
 import { chapa } from './chapa.service.js';
 import { logger } from '../config/logger.js';
@@ -29,9 +29,9 @@ const DESTINATION_TO_ENUM = {
 } as const;
 type IncomingDestination = keyof typeof DESTINATION_TO_ENUM;
 
-/** Small fixed fee to cover Chapa payout overhead. Tweak per rail later. */
-function feeFor(): number {
-  return 0; // v1: eat the fee ourselves to reduce checkout friction
+/** Per-rail payout fee — same schedule the user sees in the withdraw sheet. */
+function feeFor(destination: IncomingDestination, amountEtb: number): number {
+  return withdrawalFeeEtb(destination, amountEtb);
 }
 
 export async function requestWithdrawal(input: {
@@ -51,7 +51,7 @@ export async function requestWithdrawal(input: {
   if (!user || !user.phone || !user.isPhoneVerified) {
     throw new ConflictError('Verify your phone number before requesting a withdrawal');
   }
-  const fee = feeFor();
+  const fee = feeFor(input.destination, input.amountEtb);
   const net = input.amountEtb - fee;
 
   const wd = await prisma.$transaction(async (tx) => {
@@ -122,10 +122,16 @@ async function tryAutomatedPayout(
 ): Promise<void> {
   const bankCode = await chapa.findBankCode(input.destination);
   if (!bankCode) {
-    logger.warn({ withdrawalId, destination: input.destination }, 'No Chapa bank code found; leaving payout for admin review');
+    logger.warn(
+      { withdrawalId, destination: input.destination },
+      'No Chapa bank code found; leaving payout for admin review',
+    );
     await prisma.withdrawal.update({
       where: { id: withdrawalId },
-      data: { failureReason: 'Automatic payout could not resolve this destination; admin review required.' },
+      data: {
+        failureReason:
+          'Automatic payout could not resolve this destination; admin review required.',
+      },
     });
     return;
   }
@@ -170,7 +176,9 @@ async function tryAutomatedPayout(
   // provider may have accepted the transfer even if our request timed out.
   await prisma.withdrawal.update({
     where: { id: withdrawalId },
-    data: { failureReason: 'Chapa transfer status is unknown; admin review required before retrying.' },
+    data: {
+      failureReason: 'Chapa transfer status is unknown; admin review required before retrying.',
+    },
   });
 }
 
@@ -217,12 +225,7 @@ export async function syncProcessingWithdrawals(limit = 25) {
 
 /** Legal state-machine edges for a withdrawal along with whether a refund applies. */
 const WITHDRAWAL_TRANSITIONS: Record<WithdrawalStatus, { to: WithdrawalStatus }[]> = {
-  PENDING: [
-    { to: 'PROCESSING' },
-    { to: 'SUCCESS' },
-    { to: 'FAILED' },
-    { to: 'CANCELLED' },
-  ],
+  PENDING: [{ to: 'PROCESSING' }, { to: 'SUCCESS' }, { to: 'FAILED' }, { to: 'CANCELLED' }],
   PROCESSING: [{ to: 'SUCCESS' }, { to: 'FAILED' }, { to: 'CANCELLED' }],
   SUCCESS: [],
   FAILED: [],

@@ -303,7 +303,11 @@
     "unread": "ያልተነበቡ",
     "voice": "ድምጽ መልእክት",
     "voiceHint": "የድምጽ መልእክት ለመቅዳት ማይክ ይያዙ",
-    "createToday": "ዛሬ ምን ማድረግ ይፈልጋሉ?"
+    "createToday": "ዛሬ ምን ማድረግ ይፈልጋሉ?",
+    "translate": "ተርጉም",
+    "translated": "ተተርጉሟል",
+    "showOriginal": "ዋናውን አሳይ",
+    "translationFailed": "ትርጉም አይገኝም"
   },
   "pin": {
     "createTitle": "የ6 አመራር ቅብብክ ሮር ይጽፈሉ",
@@ -491,7 +495,9 @@
   "language": {
     "label": "ቅሣ",
     "english": "English",
-    "amharic": "አማርኛ"
+    "amharic": "አማርኛ",
+    "oromiffa": "ኦሮምኛ",
+    "tigrinya": "ትግርኛ"
   },
   "publicProfile": {
     "about": "ስሊ",
@@ -574,7 +580,9 @@
     "status.PROCESSING": "በሂደት ላይ",
     "status.SUCCESS": "ተልኳል",
     "status.FAILED": "አልተሳካም",
-    "status.CANCELLED": "ተሰርዟል"
+    "status.CANCELLED": "ተሰርዟል",
+    "fee": "ክፍያ",
+    "youReceive": "የሚገባዎት"
   },
   "editProfile": {
     "title": "መገለጫ አርትዕ",

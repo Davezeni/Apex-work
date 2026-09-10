@@ -6,7 +6,7 @@ import { useI18n, type Locale } from '@/i18n';
 import { LOCALE_LABELS } from '@apex-work/shared';
 import { cn } from '@/lib/utils';
 
-const LOCALES: Locale[] = ['en', 'am'];
+const LOCALES: Locale[] = ['en', 'am', 'om', 'ti'];
 
 export default function LanguageSettingsPage() {
   const router = useRouter();
@@ -32,16 +32,20 @@ export default function LanguageSettingsPage() {
             onClick={() => setLocale(l)}
             className={cn(
               'flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-4 text-left transition-colors',
-              locale === l
-                ? 'border-primary bg-primary/10'
-                : 'border-border bg-card',
+              locale === l ? 'border-primary bg-primary/10' : 'border-border bg-card',
             )}
           >
-            <div className="text-2xl">{l === 'am' ? '🇪🇹' : '🌍'}</div>
+            <div className="text-2xl">{l === 'en' ? '🌍' : '🇪🇹'}</div>
             <div className="flex-1">
               <div className="text-sm font-bold">{LOCALE_LABELS[l]}</div>
               <div className="text-[11px] text-muted-foreground">
-                {l === 'am' ? 'አማርኛ' : 'English'}
+                {l === 'en'
+                  ? 'English'
+                  : l === 'am'
+                    ? 'አማርኛ'
+                    : l === 'om'
+                      ? 'Afaan Oromoo'
+                      : 'ትግርኛ'}
               </div>
             </div>
             {locale === l && <Check className="h-5 w-5 text-primary" />}

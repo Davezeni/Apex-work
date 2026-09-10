@@ -3,14 +3,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import enMessages from './messages/en.json';
 import amMessages from './messages/am.json';
+import omMessages from './messages/om.json';
+import tiMessages from './messages/ti.json';
 import { setAutoLocale } from './auto';
+import { LOCALES, type Locale as SharedLocale } from '@apex-work/shared';
 
-export type Locale = 'en' | 'am';
+export type Locale = SharedLocale;
 type Messages = typeof enMessages;
 
 const BUNDLES: Record<Locale, Messages> = {
   en: enMessages,
   am: amMessages as Messages,
+  om: omMessages as Messages,
+  ti: tiMessages as Messages,
 };
 
 const STORAGE_KEY = 'apex-work-locale';
@@ -74,11 +79,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved === 'en' || saved === 'am') applyLocale(saved);
+    if (saved && (LOCALES as readonly string[]).includes(saved)) applyLocale(saved as Locale);
     else {
       // Optional: default to Amharic for users with Amharic in Accept-Language.
       const preferred = navigator.language?.toLowerCase();
-      if (preferred?.startsWith('am')) applyLocale('am');
+      if (preferred?.startsWith('om')) applyLocale('om');
+      else if (preferred?.startsWith('ti')) applyLocale('ti');
+      else if (preferred?.startsWith('am')) applyLocale('am');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -57,6 +57,7 @@ import {
   Eye,
   Sparkles,
   KeyRound,
+  Languages,
 } from 'lucide-react';
 import { cn, timeAgo } from '@/lib/utils';
 import { apiFetch } from '@/lib/api';
@@ -283,7 +284,7 @@ export default function ConversationPage() {
     if (peer) map[peer.id] = !!peer.online;
     setPresence((prev) => ({ ...prev, ...map }));
   }, [conv, peer]);
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const draft = useMessageDraft(id);
   const text = draft.text;
   const setText = draft.setText;
@@ -299,6 +300,21 @@ export default function ConversationPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [actionMsg, setActionMsg] = useState<ChatMessage | null>(null);
+  // One-tap message translation: messageId -> translated text.
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const translateMsg = async (m: ChatMessage) => {
+    if (!m.body || translations[m.id]) return;
+    const target = locale !== 'en' ? locale : 'am';
+    try {
+      const r = await apiFetch<{ translated: string }>('/translate', {
+        method: 'POST',
+        body: JSON.stringify({ text: m.body, target }),
+      });
+      setTranslations((prev) => ({ ...prev, [m.id]: r.translated }));
+    } catch {
+      toast.error(t('chat.translationFailed'));
+    }
+  };
   const [stickerOpen, setStickerOpen] = useState(false);
   const [timerSec, setTimerSec] = useState<number>(0);
   const [scheduledOpen, setScheduledOpen] = useState(false);
@@ -1020,6 +1036,7 @@ export default function ConversationPage() {
                 m={m}
                 isMine={m.senderId === me?.id}
                 isGroup={!!conv?.isGroup}
+                translation={translations[m.id]}
                 members={conv?.members ?? []}
                 showAvatar={i === 0 || messages[i - 1]?.senderId !== m.senderId}
                 groupStart={groupStart}
@@ -2103,6 +2120,16 @@ export default function ConversationPage() {
                   }}
                 />
               )}
+              {actionMsg.body && (
+                <ActionRow
+                  icon={<Languages className="h-4 w-4" />}
+                  label={translations[actionMsg.id] ? t('chat.translated') : t('chat.translate')}
+                  onClick={() => {
+                    void translateMsg(actionMsg);
+                    setActionMsg(null);
+                  }}
+                />
+              )}
               {actionMsg.senderId === me?.id &&
                 (actionMsg.readByTotal ?? 0) > 0 &&
                 conv?.members && (
@@ -2349,6 +2376,7 @@ function MessageBubble({
   onReadTap,
   onReactionInfo,
   highlight,
+  translation,
 }: {
   m: ChatMessage;
   isMine: boolean;
@@ -2371,8 +2399,11 @@ function MessageBubble({
   onReadTap?: (m: ChatMessage) => void;
   onReactionInfo?: (m: ChatMessage, emoji: string) => void;
   highlight?: string | null;
+  /** One-tap translation of the message body (from the actions sheet). */
+  translation?: string;
 }) {
   const { t } = useI18n();
+  const [showTranslation, setShowTranslation] = useState(true);
   const isImage = m.attachmentType === 'image';
   const isAudio = m.attachmentType === 'audio';
   const isFile = m.attachmentType === 'file' || m.attachmentType === 'video';
@@ -2712,6 +2743,47 @@ function MessageBubble({
                 highlight={highlight}
                 className={isImage ? 'p-3' : undefined}
               />
+            ))}
+          {translation &&
+            m.body &&
+            !sticker &&
+            (showTranslation ? (
+              <div
+                className={cn(
+                  'mt-1 rounded-lg px-2 py-1',
+                  isImage ? 'mx-3 mb-1' : '',
+                  isMine ? 'bg-white/10' : 'bg-muted/60',
+                )}
+              >
+                <div
+                  className={cn(
+                    'text-[10px] font-bold uppercase tracking-wide',
+                    isMine ? 'text-white/70' : 'text-muted-foreground',
+                  )}
+                >
+                  {t('chat.translated')}
+                </div>
+                <div className="text-[13px] leading-snug">{translation}</div>
+                <button
+                  onClick={() => setShowTranslation(false)}
+                  className={cn(
+                    'mt-0.5 text-[10px] font-semibold underline-offset-2 hover:underline',
+                    isMine ? 'text-white/70' : 'text-muted-foreground',
+                  )}
+                >
+                  {t('chat.showOriginal')}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowTranslation(true)}
+                className={cn(
+                  'mt-1 text-[10px] font-semibold underline-offset-2 hover:underline',
+                  isMine ? 'text-white/70' : 'text-muted-foreground',
+                )}
+              >
+                {t('chat.translated')}
+              </button>
             ))}
           {(() => {
             const u = m.body ? firstUrlIn(m.body) : null;

@@ -999,10 +999,10 @@ export const AUTO_DICT: Record<string, string> = {
   'Your role (e.g. Lead designer)': 'ሚናዎ (ለምሳሌ መሪ ንድፍ አውጪ)',
   Zoom: 'አጉላ',
 };
-let currentLocale: 'en' | 'am' = 'en';
+let currentLocale: 'en' | 'am' | 'om' | 'ti' = 'en';
 
 /** Called by the I18n provider whenever the locale changes. */
-export function setAutoLocale(locale: 'en' | 'am'): void {
+export function setAutoLocale(locale: 'en' | 'am' | 'om' | 'ti'): void {
   currentLocale = locale;
 }
 
@@ -1010,7 +1010,7 @@ export function setAutoLocale(locale: 'en' | 'am'): void {
  * Works anywhere (components, event handlers, toasts) without needing a hook
  * because the locale is mirrored into a module-level variable. */
 export function dt(source: string, params?: Record<string, string | number>): string {
-  if (currentLocale === 'en') return interpolate(source, params);
+  if (currentLocale !== 'am') return interpolate(source, params);
   const translated = AUTO_DICT[source];
   return interpolate(translated ?? source, params);
 }

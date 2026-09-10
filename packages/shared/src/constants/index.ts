@@ -7,7 +7,7 @@ export const APP_NAME = 'Apex-Work' as const;
 export const APP_TAGLINE = "Ethiopia's most powerful freelance marketplace" as const;
 
 /** Supported UI languages (BCP-47) */
-export const LOCALES = ['en', 'am', 'om'] as const;
+export const LOCALES = ['en', 'am', 'om', 'ti'] as const;
 export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = 'en';
 
@@ -15,6 +15,7 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   en: 'English',
   am: 'አማርኛ',
   om: 'Afaan Oromoo',
+  ti: 'ትግርኛ',
 };
 
 /** User roles */
@@ -114,6 +115,7 @@ export const RATE_LIMITS = {
   api: { window: 15 * 60 * 1000, max: 300 }, // general API
   messages: { window: 60 * 1000, max: 60 }, // 60 msgs / min
   ai: { window: 60 * 1000, max: 20 }, // 20 AI calls / min (calls an LLM — cost guard)
+  translate: { window: 60 * 1000, max: 30 }, // 30 translations / min (free provider quota guard)
 } as const;
 
 /** File upload limits */
@@ -145,3 +147,42 @@ export const OTP_TTL_SECONDS = 5 * 60; // 5 minutes
 
 export * from './resume.js';
 export * from './plans.js';
+
+/**
+ * Payout fee schedule per rail, shown to the user BEFORE they confirm a
+ * withdrawal (no surprise deductions). Mobile-money rails (Telebirr / CBE
+ * Birr) mirror typical person-to-person transfer pricing; bank rails use a
+ * small flat fee to cover the Chapa B2C payout overhead.
+ */
+export interface WithdrawalFeeRule {
+  /** Percentage of the amount (0.01 === 1%). */
+  pct: number;
+  /** Minimum fee in ETB. */
+  minEtb: number;
+  /** Maximum fee in ETB (cap so small amounts are never eaten alive). */
+  maxEtb: number;
+  /** Flat fee in ETB — used when pct === 0. */
+  flatEtb: number;
+}
+
+/** Keys mirror the shared withdrawal schema (lowercase rail ids). */
+export const WITHDRAWAL_FEES: Record<string, WithdrawalFeeRule> = {
+  telebirr: { pct: 0.01, minEtb: 5, maxEtb: 25, flatEtb: 0 },
+  cbebirr: { pct: 0.01, minEtb: 5, maxEtb: 25, flatEtb: 0 },
+  cbe_bank: { pct: 0, minEtb: 0, maxEtb: 0, flatEtb: 10 },
+  awash_bank: { pct: 0, minEtb: 0, maxEtb: 0, flatEtb: 10 },
+  dashen_bank: { pct: 0, minEtb: 0, maxEtb: 0, flatEtb: 10 },
+  bank_of_abyssinia: { pct: 0, minEtb: 0, maxEtb: 0, flatEtb: 10 },
+};
+
+/**
+ * Compute the payout fee (whole ETB) for a rail + amount. Falls back to the
+ * mobile-money rule for unknown rails so the caller can never under-charge.
+ */
+export function withdrawalFeeEtb(destination: string, amountEtb: number): number {
+  const rule = WITHDRAWAL_FEES[destination] ?? WITHDRAWAL_FEES.telebirr;
+  if (!rule) return 0;
+  if (rule.pct === 0) return rule.flatEtb;
+  const raw = Math.ceil(amountEtb * rule.pct);
+  return Math.min(rule.maxEtb, Math.max(rule.minEtb, raw));
+}

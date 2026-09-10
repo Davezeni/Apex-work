@@ -303,7 +303,11 @@
     "unread": "Unread",
     "voice": "Voice message",
     "voiceHint": "Hold the mic to record a voice message",
-    "createToday": "What would you like to do today?"
+    "createToday": "What would you like to do today?",
+    "translate": "Translate",
+    "translated": "Translated",
+    "showOriginal": "Show original",
+    "translationFailed": "Translation unavailable"
   },
   "pin": {
     "createTitle": "Create a 6-digit PIN",
@@ -491,7 +495,9 @@
   "language": {
     "label": "Language",
     "english": "English",
-    "amharic": "አማርኛ"
+    "amharic": "አማርኛ",
+    "oromiffa": "Afaan Oromoo",
+    "tigrinya": "Tigrinya"
   },
   "publicProfile": {
     "about": "About",
@@ -574,7 +580,9 @@
     "status.PROCESSING": "Processing",
     "status.SUCCESS": "Sent",
     "status.FAILED": "Failed",
-    "status.CANCELLED": "Cancelled"
+    "status.CANCELLED": "Cancelled",
+    "fee": "Fee",
+    "youReceive": "You receive"
   },
   "editProfile": {
     "title": "Edit profile",

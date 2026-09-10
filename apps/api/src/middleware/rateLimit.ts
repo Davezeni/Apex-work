@@ -119,6 +119,13 @@ export const apiLimiter = makeLimiter('api', RATE_LIMITS.api.window, RATE_LIMITS
  */
 export const aiLimiter = makeLimiter('ai', RATE_LIMITS.ai.window, RATE_LIMITS.ai.max);
 
+/** Chat message translation — free provider, keep well inside quota. */
+export const translateLimiter = makeLimiter(
+  'translate',
+  RATE_LIMITS.translate.window,
+  RATE_LIMITS.translate.max,
+);
+
 /**
  * PIN-specific limiter. PINs have only 1M possible values (6 digits), so an
  * attacker with a stolen device token could brute-force in minutes without

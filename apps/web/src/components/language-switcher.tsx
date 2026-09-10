@@ -12,8 +12,10 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   const { locale, setLocale, t } = useI18n();
 
   const options: { value: Locale; label: string }[] = [
-    { value: 'en', label: t('language.english') },
-    { value: 'am', label: t('language.amharic') },
+    { value: 'en', label: 'EN' },
+    { value: 'am', label: 'አማ' },
+    { value: 'om', label: 'Oro' },
+    { value: 'ti', label: 'ትግ' },
   ];
 
   return (
