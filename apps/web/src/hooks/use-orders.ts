@@ -6,13 +6,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { track } from '@/lib/analytics';
 
 export type OrderStatus =
-  | 'PENDING'
-  | 'ACTIVE'
-  | 'IN_REVIEW'
-  | 'DELIVERED'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'DISPUTED';
+  'PENDING' | 'ACTIVE' | 'IN_REVIEW' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
 
 export interface OrderPartyMini {
   id: string;
@@ -53,6 +47,13 @@ export interface OrderDetail extends OrderSummary {
     createdAt: string;
   }[];
   gig: { slug: string; title: string; coverImageUrl: string | null } | null;
+  milestones?: {
+    id: string;
+    title: string;
+    amountEtb: number;
+    status: 'PENDING' | 'DELIVERED' | 'APPROVED' | 'DISPUTED';
+    dueDate: string | null;
+  }[];
 }
 
 export function useMyOrders(role: 'client' | 'seller' = 'client') {
@@ -79,14 +80,23 @@ export function useCreateOrder() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { gigId: string; packageTier: 'BASIC' | 'STANDARD' | 'PREMIUM'; requirements?: string }) =>
+    mutationFn: (input: {
+      gigId: string;
+      packageTier: 'BASIC' | 'STANDARD' | 'PREMIUM';
+      requirements?: string;
+    }) =>
       apiFetch<{ order: OrderSummary; checkoutUrl: string | null; devSkipped?: boolean }>(
         '/orders',
         { method: 'POST', body: input, token },
       ),
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ['orders'] });
-      track('order_request', { gigId: vars.gigId, packageTier: vars.packageTier, checkoutUrl: !!data.checkoutUrl, devSkipped: !!data.devSkipped });
+      track('order_request', {
+        gigId: vars.gigId,
+        packageTier: vars.packageTier,
+        checkoutUrl: !!data.checkoutUrl,
+        devSkipped: !!data.devSkipped,
+      });
     },
   });
 }

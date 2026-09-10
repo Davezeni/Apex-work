@@ -23,12 +23,7 @@ import { prisma } from '../lib/prisma.js';
 import { computeOrderSplit } from '@apex-work/shared';
 import { getCategoryFeePercent } from './categories.service.js';
 import { assertOrderTransition, type OrderAction, type OrderState } from '@apex-work/shared';
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-} from '../lib/errors.js';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
 import { ledgerOnce } from './financialIdempotency.js';
 
@@ -113,7 +108,13 @@ export async function createOrderAndInitiatePayment(
     const providerRef = `apex-${o.id}`;
     await tx.payment.upsert({
       where: { providerRef },
-      create: { orderId: o.id, amountEtb: pkg.priceEtb, provider: 'chapa', providerRef, status: 'PENDING' },
+      create: {
+        orderId: o.id,
+        amountEtb: pkg.priceEtb,
+        provider: 'chapa',
+        providerRef,
+        status: 'PENDING',
+      },
       // If a prior attempt already recorded this payment, keep it as-is (never
       // downgrade a SUCCESS/FAILED row back to PENDING).
       update: {},
@@ -484,6 +485,10 @@ export async function getOrder(orderId: string, userId: string) {
       client: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       seller: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       payments: true,
+      milestones: {
+        orderBy: { position: 'asc' },
+        select: { id: true, title: true, amountEtb: true, status: true, dueDate: true },
+      },
     },
   });
   if (!order) throw new NotFoundError('Order');
@@ -529,20 +534,36 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
     // Zero-amount marker so we don't double-remind. Uses its own ledger type
     // (ESCROW_REMINDER) so it can never collide with the client's real
     // ORDER_PAYMENT row for the same order under the idempotency unique key.
-    await prisma.transaction.createMany({
-      data: [{
-        userId: o.clientId, type: 'ESCROW_REMINDER', amountEtb: 0,
-        description: `Escrow reminder for ${o.title}`, relatedId: o.id,
-      }],
-      skipDuplicates: true,
-    }).catch(() => undefined);
+    await prisma.transaction
+      .createMany({
+        data: [
+          {
+            userId: o.clientId,
+            type: 'ESCROW_REMINDER',
+            amountEtb: 0,
+            description: `Escrow reminder for ${o.title}`,
+            relatedId: o.id,
+          },
+        ],
+        skipDuplicates: true,
+      })
+      .catch(() => undefined);
     reminded++;
   }
 
   // 2. Auto-release when past 7 days.
   const released = await prisma.order.findMany({
     where: { status: 'DELIVERED', deliveredAt: { lte: new Date(now - 7 * day) } },
-    select: { id: true, clientId: true, sellerId: true, title: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true, deliveredAt: true },
+    select: {
+      id: true,
+      clientId: true,
+      sellerId: true,
+      title: true,
+      amountEtb: true,
+      sellerNetEtb: true,
+      platformFeeEtb: true,
+      deliveredAt: true,
+    },
   });
   let releasedCount = 0;
   for (const o of released) {
@@ -565,13 +586,20 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         const { applied } = await ledgerOnce(
           tx,
           {
-            userId: o.sellerId, type: 'ORDER_PAYOUT', amountEtb: o.sellerNetEtb,
-            description: `Auto-released: ${o.title}`, relatedId: o.id,
+            userId: o.sellerId,
+            type: 'ORDER_PAYOUT',
+            amountEtb: o.sellerNetEtb,
+            description: `Auto-released: ${o.title}`,
+            relatedId: o.id,
           },
           async () => {
             await tx.wallet.upsert({
               where: { userId: o.sellerId },
-              create: { userId: o.sellerId, balanceEtb: o.sellerNetEtb, lifetimeEarnedEtb: o.sellerNetEtb },
+              create: {
+                userId: o.sellerId,
+                balanceEtb: o.sellerNetEtb,
+                lifetimeEarnedEtb: o.sellerNetEtb,
+              },
               update: {
                 pendingEtb: { decrement: o.sellerNetEtb },
                 balanceEtb: { increment: o.sellerNetEtb },
@@ -594,7 +622,8 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
     }
     if (outcome === 'released') {
       await notify({
-        userId: o.sellerId, type: 'PAYMENT',
+        userId: o.sellerId,
+        type: 'PAYMENT',
         title: 'Auto-released 💰',
         body: `${o.title} — funds moved to your balance`,
         payload: { orderId: o.id, autoRelease: true },

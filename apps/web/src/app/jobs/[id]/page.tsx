@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, MapPin, Send, CheckCircle2, Lock, Star } from 'lucide-react';
+import { ArrowLeft, Loader2, MapPin, Send, CheckCircle2, Lock, Sparkles, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useJob, useCreateBid, useAcceptBid, useCloseJob } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
@@ -361,17 +361,25 @@ export default function JobDetailPage() {
         </div>
       ) : !isOwner && job.isOpen && isFreelancer ? (
         <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">
-          <Button
-            variant="brand"
-            size="lg"
-            className="w-full"
-            onClick={() => {
-              setPrice(String(job.budgetMinEtb ?? job.budgetMaxEtb ?? 1000));
-              setBidOpen(true);
-            }}
-          >
-            <Send className="h-4 w-4" /> {myBid ? t('jobs.yourBid') : t('jobs.sendBid')}
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="lg" className="shrink-0">
+              <Link href={`/ai/proposal?job=${job.id}`}>
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="hidden sm:inline">{dt('AI Proposal')}</span>
+              </Link>
+            </Button>
+            <Button
+              variant="brand"
+              size="lg"
+              className="flex-1"
+              onClick={() => {
+                setPrice(String(job.budgetMinEtb ?? job.budgetMaxEtb ?? 1000));
+                setBidOpen(true);
+              }}
+            >
+              <Send className="h-4 w-4" /> {myBid ? t('jobs.yourBid') : t('jobs.sendBid')}
+            </Button>
+          </div>
         </div>
       ) : !me?.id ? (
         <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">

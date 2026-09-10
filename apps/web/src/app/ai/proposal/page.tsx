@@ -1,28 +1,66 @@
 'use client';
 
 import { dt } from '@/i18n/auto';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, Sparkles, Copy, RefreshCw, Loader2, Cpu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n';
 import { useAIProposal } from '@/hooks/use-ai';
+import { useJob } from '@/hooks/use-jobs';
+import { useMe } from '@/hooks/use-me';
 /**
  * AI Proposal Writer. The API uses the configured LLM when available and
  * returns a deterministic local template when the free-tier key is absent,
  * so the tool remains usable in every environment.
+ *
+ * Accepts ?job=<id> to auto-fill the description, skills, budget, and the
+ * user's own name straight from a posted job (one tap from the job page).
  */
 export default function AIProposalPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProposalInner />
+    </Suspense>
+  );
+}
+
+function ProposalInner() {
   const router = useRouter();
   const { t } = useI18n();
+  const params = useSearchParams();
+  const jobId = params.get('job') ?? undefined;
+  const { data: job } = useJob(jobId);
+  const { data: me } = useMe();
   const [jobDesc, setJobDesc] = useState('');
   const [name, setName] = useState('');
   const [skills, setSkills] = useState('');
   const [tone, setTone] = useState<'friendly' | 'professional' | 'confident'>('friendly');
   const [output, setOutput] = useState('');
   const [source, setSource] = useState<'ai' | 'fallback' | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
   const ai = useAIProposal();
+
+  // One-tap prefill from the job page (?job=<id>).
+  useEffect(() => {
+    if (!job || prefilled) return;
+    const budget =
+      job.budgetMinEtb != null || job.budgetMaxEtb != null
+        ? `\nBudget: ${job.budgetMinEtb ?? '?'}–${job.budgetMaxEtb ?? '?'} ETB`
+        : '';
+    const reqSkills = job.requiredSkills?.length
+      ? `\nRequired skills: ${job.requiredSkills.join(', ')}`
+      : '';
+    setJobDesc((v) => v || `${job.title}${budget}${reqSkills}\n\n${job.description}`);
+    if (job.requiredSkills?.length) setSkills((v) => v || job.requiredSkills.join(', '));
+    setPrefilled(true);
+  }, [job, prefilled]);
+
+  // Prefill the user's own name once we know who they are.
+  useEffect(() => {
+    if (me?.fullName) setName((v) => v || me.fullName);
+  }, [me?.fullName]);
 
   const generate = async () => {
     if (jobDesc.trim().length < 30) {
@@ -74,6 +112,14 @@ export default function AIProposalPage() {
       </header>
 
       <div className="mx-3 mt-4 space-y-3">
+        {job && (
+          <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">
+              {dt('Loaded from job')}: {job.title}
+            </span>
+          </div>
+        )}
         <Field label={dt('Job description (paste)')}>
           <textarea
             value={jobDesc}

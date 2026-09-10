@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import {
   ArrowLeft,
+  FileSpreadsheet,
   Loader2,
   CheckCircle,
   MessageCircle,
@@ -27,7 +28,7 @@ import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
 import { MilestonePanel } from '@/components/orders/milestone-panel';
 import { useAuthStore } from '@/stores/auth-store';
 import { downloadViaAuth } from '@/lib/api';
-import { InvoiceDocument } from '@/components/orders/invoice-document';
+import { InvoiceDocument, invoiceCsv } from '@/components/orders/invoice-document';
 import { downloadHtmlPdf } from '@/lib/resume-export';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useState } from 'react';
@@ -136,6 +137,22 @@ export default function OrderDetailPage() {
     }
   };
 
+  const downloadCsv = () => {
+    try {
+      const csv = invoiceCsv(order, isSeller);
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `apex-work-invoice-${order.orderNumber}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(dt('CSV downloaded'));
+    } catch {
+      toast.error(dt('Could not export CSV'));
+    }
+  };
+
   const doAction = async (input: Record<string, unknown>, successMsg: string) => {
     try {
       await action.mutateAsync(input);
@@ -202,6 +219,9 @@ export default function OrderDetailPage() {
             <FileText className="h-4 w-4" />
           )}
           <span className="hidden sm:inline">{dt('HTML')}</span>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={downloadCsv} aria-label={dt('Export CSV')}>
+          <FileSpreadsheet className="h-4 w-4" />
         </Button>
       </header>
 

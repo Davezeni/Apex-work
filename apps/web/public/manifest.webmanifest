@@ -1,12 +1,17 @@
 {
+  "id": "/",
   "name": "Apex-Work",
   "short_name": "Apex-Work",
   "description": "Ethiopia's most powerful freelance marketplace",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0a0a0f",
   "theme_color": "#7c3aed",
   "orientation": "portrait",
+  "lang": "en",
+  "dir": "ltr",
   "categories": ["business", "productivity"],
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
@@ -14,7 +19,9 @@
     { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "shortcuts": [
+    { "name": "Messages", "url": "/messages", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
     { "name": "Post a job", "url": "/jobs/new", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Messages", "url": "/messages", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Post a gig", "url": "/create", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Wallet", "url": "/wallet", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
   ]
 }
