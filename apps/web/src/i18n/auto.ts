@@ -2,12 +2,15 @@
 
 /**
  * Auto-translation for hardcoded English strings that are shown in the UI but
- * historically bypassed the `t()` key system. `useDt()` looks up an English
- * source string in a flat EN→AM dictionary and returns the Amharic text for
- * the current locale, interpolating {placeholders}. If the string isn't in the
- * dictionary (or the locale is English) it returns the original string, so the
- * app always renders and never shows missing-key artifacts.
+ * historically bypassed the `t()` key system. `dt()` looks up an English
+ * source string in a flat EN→<locale> dictionary and returns the translated
+ * text for the current locale, interpolating {placeholders}. If the string
+ * isn't in the dictionary (or the locale is English) it returns the original
+ * string, so the app always renders and never shows missing-key artifacts.
  */
+
+import { AUTO_DICT_OM } from './dict-om';
+import { AUTO_DICT_TI } from './dict-ti';
 
 export const AUTO_DICT: Record<string, string> = {
   '••••••': '••••••',
@@ -1024,10 +1027,14 @@ export function setAutoLocale(locale: 'en' | 'am' | 'om' | 'ti'): void {
 
 /** Translate a hardcoded English UI string into the current locale.
  * Works anywhere (components, event handlers, toasts) without needing a hook
- * because the locale is mirrored into a module-level variable. */
+ * because the locale is mirrored into a module-level variable. Every shipped
+ * locale has its own dictionary; a missing entry falls back to the English
+ * source so the app always renders something sensible. */
 export function dt(source: string, params?: Record<string, string | number>): string {
-  if (currentLocale !== 'am') return interpolate(source, params);
-  const translated = AUTO_DICT[source];
+  if (currentLocale === 'en') return interpolate(source, params);
+  const dict =
+    currentLocale === 'am' ? AUTO_DICT : currentLocale === 'om' ? AUTO_DICT_OM : AUTO_DICT_TI;
+  const translated = dict[source];
   return interpolate(translated ?? source, params);
 }
 

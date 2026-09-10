@@ -300,11 +300,23 @@ export default function ConversationPage() {
   const [membersOpen, setMembersOpen] = useState(false);
   const [forwardMsg, setForwardMsg] = useState<ChatMessage | null>(null);
   const [actionMsg, setActionMsg] = useState<ChatMessage | null>(null);
-  // One-tap message translation: messageId -> translated text.
+  // One-tap message translation: messageId -> translated text. The API has a
+  // server-side provider chain; if it is unavailable (quota/IP blocks) we
+  // retry once directly from the browser (MyMemory is CORS-enabled and each
+  // user has their own free quota) before showing an error.
   const [translations, setTranslations] = useState<Record<string, string>>({});
+  const decodeEntities = (text: string) =>
+    text
+      .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&');
   const translateMsg = async (m: ChatMessage) => {
     if (!m.body || translations[m.id]) return;
     const target = locale !== 'en' ? locale : 'am';
+    const source = /[\u1200-\u137F]/.test(m.body) ? 'am' : 'en';
     try {
       const r = await apiFetch<{ translated: string }>('/translate', {
         method: 'POST',
@@ -312,7 +324,26 @@ export default function ConversationPage() {
       });
       setTranslations((prev) => ({ ...prev, [m.id]: r.translated }));
     } catch {
-      toast.error(t('chat.translationFailed'));
+      try {
+        const url =
+          'https://api.mymemory.translated.net/get?mt=1&langpair=' +
+          encodeURIComponent(`${source}|${target}`) +
+          '&q=' +
+          encodeURIComponent(m.body);
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        const d = (await res.json()) as {
+          responseData?: { translatedText?: string };
+          quotaFinished?: boolean;
+          responseStatus?: number;
+        };
+        const translated = d.responseData?.translatedText;
+        if (!res.ok || d.quotaFinished || (d.responseStatus ?? 200) !== 200 || !translated) {
+          throw new Error('no translation');
+        }
+        setTranslations((prev) => ({ ...prev, [m.id]: decodeEntities(translated) }));
+      } catch {
+        toast.error(t('chat.translationFailed'));
+      }
     }
   };
   const [stickerOpen, setStickerOpen] = useState(false);

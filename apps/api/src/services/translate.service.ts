@@ -32,6 +32,19 @@ export function detectSource(text: string): 'am' | 'en' {
   return /[\u1200-\u137F]/.test(text) ? 'am' : 'en';
 }
 
+/** MyMemory sometimes returns HTML-escaped text — decode common entities. */
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h: string) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&');
+}
+
 class TranslationError extends Error {
   constructor(
     message: string,
@@ -89,7 +102,7 @@ async function myMemoryTranslate(text: string, source: string, target: string): 
   if (data.quotaFinished || !translated || String(data.responseStatus ?? '200') !== '200') {
     throw new TranslationError('Translation quota reached — try again later', 503);
   }
-  return translated;
+  return decodeEntities(translated);
 }
 
 export async function translateText(
