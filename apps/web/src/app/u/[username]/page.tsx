@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { usePublicUser, type PublicUser } from '@/hooks/use-public-user';
+import { sellerBadge } from '@apex-work/shared';
 import { usePublicUserStats } from '@/hooks/use-public-stats';
 import { usePublicTrust, type TrustProfile } from '@/hooks/use-trust';
 import { useMe } from '@/hooks/use-me';
@@ -213,9 +214,24 @@ export default function PublicProfilePage() {
             className="h-20 w-20 text-2xl font-bold ring-4 ring-card"
           />
           <div className="min-w-0 flex-1 pt-1">
-            <h1 className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight">
+            <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-extrabold tracking-tight">
               {user.fullName}
               {user.isVerified && <CheckCircle2 className="h-4 w-4 shrink-0 text-cyan-400" />}
+              {sellerBadge(user, { createdAt: user.createdAt, isPro: user.isPro }) === 'top' && (
+                <span className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                  🔥 {dt('Top rated')}
+                </span>
+              )}
+              {sellerBadge(user, { createdAt: user.createdAt, isPro: user.isPro }) === 'pro' && (
+                <span className="rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                  ⭐ {dt('Pro')}
+                </span>
+              )}
+              {sellerBadge(user, { createdAt: user.createdAt, isPro: user.isPro }) === 'rising' && (
+                <span className="rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                  🌱 {dt('Rising talent')}
+                </span>
+              )}
             </h1>
             <p className="text-xs text-muted-foreground">@{user.username}</p>
             {user.title && <p className="mt-1 text-sm font-semibold">{user.title}</p>}

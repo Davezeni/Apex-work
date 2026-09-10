@@ -81,6 +81,13 @@ router.get(
     });
 
     if (!user) throw new NotFoundError('User');
+
+    // Active Pro subscription → 'pro' trust badge candidate.
+    const proSub = await prisma.subscription.findFirst({
+      where: { userId: user.id, status: 'ACTIVE', expiresAt: { gt: new Date() } },
+      select: { id: true },
+    });
+
     void profileAnalytics.recordEvent({
       subjectUserId: user.id,
       type: 'PROFILE_VIEW',
@@ -91,6 +98,7 @@ router.get(
     return success(res, {
       ...rest,
       isVerified: isPhoneVerified && isIdVerified,
+      isPro: !!proSub,
       skills: skills.map((s) => s.skill),
       createdAt: user.createdAt.toISOString(),
     });

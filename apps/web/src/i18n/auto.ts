@@ -199,6 +199,8 @@ export const AUTO_DICT: Record<string, string> = {
   'AI Proposal': 'የAI አመልካች',
   'Loaded from job': 'ከስራው ተጭኗል',
   'Required skills': 'የሚያስፈልጉ ክህሎቶች',
+  'Rising talent': 'የሚያድግ ተራጋጋፊ',
+  Pro: 'ፕሮ',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',

@@ -17,7 +17,15 @@ import { sendPush } from './push.service.js';
 async function assertOrderParty(orderId: string, userId: string) {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, clientId: true, sellerId: true, status: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true },
+    select: {
+      id: true,
+      clientId: true,
+      sellerId: true,
+      status: true,
+      amountEtb: true,
+      sellerNetEtb: true,
+      platformFeeEtb: true,
+    },
   });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== userId && order.sellerId !== userId) throw new ForbiddenError();
@@ -51,7 +59,9 @@ export async function setMilestones(orderId: string, userId: string, input: Mile
   if (anyApproved > 0) throw new BadRequestError('Cannot re-plan after a milestone is approved');
 
   return prisma.$transaction(async (tx) => {
-    await tx.milestone.deleteMany({ where: { orderId, status: { in: ['PENDING', 'DELIVERED', 'DISPUTED'] } } });
+    await tx.milestone.deleteMany({
+      where: { orderId, status: { in: ['PENDING', 'DELIVERED', 'DISPUTED'] } },
+    });
     for (let i = 0; i < input.length; i++) {
       const m = input[i]!;
       await tx.milestone.create({
@@ -76,7 +86,8 @@ export async function markDelivered(milestoneId: string, userId: string) {
     include: { order: { select: { id: true, clientId: true, sellerId: true, title: true } } },
   });
   if (!m) throw new NotFoundError('Milestone');
-  if (m.order.sellerId !== userId) throw new ForbiddenError('Only the freelancer can mark delivered');
+  if (m.order.sellerId !== userId)
+    throw new ForbiddenError('Only the freelancer can mark delivered');
   if (m.status !== 'PENDING' && m.status !== 'DISPUTED') {
     throw new BadRequestError(`Cannot deliver from status ${m.status}`);
   }
@@ -92,8 +103,10 @@ export async function markDelivered(milestoneId: string, userId: string) {
     payload: { orderId: m.order.id, milestoneId: m.id },
   });
   void sendPush(m.order.clientId, {
-    title: 'Milestone delivered', body: m.title,
-    url: `/orders/${m.order.id}`, tag: `ms-${m.id}`,
+    title: 'Milestone delivered',
+    body: m.title,
+    url: `/orders/${m.order.id}`,
+    tag: `ms-${m.id}`,
   });
   return updated;
 }
@@ -106,12 +119,46 @@ export async function markDelivered(milestoneId: string, userId: string) {
 export async function approve(milestoneId: string, userId: string) {
   const m = await prisma.milestone.findUnique({
     where: { id: milestoneId },
-    include: { order: { select: { id: true, clientId: true, sellerId: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true, title: true } } },
+    include: {
+      order: {
+        select: {
+          id: true,
+          clientId: true,
+          sellerId: true,
+          amountEtb: true,
+          sellerNetEtb: true,
+          platformFeeEtb: true,
+          title: true,
+        },
+      },
+    },
   });
   if (!m) throw new NotFoundError('Milestone');
   if (m.order.clientId !== userId) throw new ForbiddenError('Only the client can approve');
   if (m.status !== 'DELIVERED') throw new BadRequestError('Milestone must be delivered first');
+  return approveMilestoneCore(milestoneId, m);
+}
 
+/**
+ * Shared payout core for milestone approval (client-approved OR cron
+ * auto-release). Caller must have already verified permissions and the
+ * DELIVERED status; the CAS inside makes the payout exactly-once.
+ */
+async function approveMilestoneCore(
+  milestoneId: string,
+  m: {
+    id: string;
+    order: {
+      id: string;
+      sellerId: string;
+      amountEtb: number;
+      sellerNetEtb: number;
+      platformFeeEtb: number;
+    };
+    amountEtb: number;
+    title: string;
+  },
+) {
   // Pro-rated payout: this milestone's slice of sellerNetEtb.
   const ratio = m.amountEtb / m.order.amountEtb;
   const payout = Math.round(m.order.sellerNetEtb * ratio);
@@ -163,8 +210,14 @@ export async function approve(milestoneId: string, userId: string) {
       where: { orderId: m.order.id, status: { not: 'APPROVED' } },
     });
     if (remaining === 0) {
-      await tx.order.update({ where: { id: m.order.id }, data: { status: 'COMPLETED', completedAt: new Date() } });
-      await tx.user.update({ where: { id: m.order.sellerId }, data: { completedOrders: { increment: 1 } } });
+      await tx.order.update({
+        where: { id: m.order.id },
+        data: { status: 'COMPLETED', completedAt: new Date() },
+      });
+      await tx.user.update({
+        where: { id: m.order.sellerId },
+        data: { completedOrders: { increment: 1 } },
+      });
     }
     return updated;
   });
@@ -204,4 +257,92 @@ export async function dispute(milestoneId: string, userId: string, reason?: stri
     payload: { orderId: m.orderId, milestoneId: m.id },
   });
   return updated;
+}
+
+/**
+ * Milestone escrow automation (cron):
+ *  1. Remind the client at 3 days after a milestone is delivered.
+ *  2. Auto-approve at 5 days — same exactly-once payout core as a manual
+ *     approval, so funds can never release twice. Mirrors the order-level
+ *     escrow policy but per milestone, keeping money moving without the
+ *     client having to click.
+ */
+export async function autoReleaseMilestones(): Promise<{ released: number; reminded: number }> {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+
+  // 1. Reminders between day 3 and day 5 (one per milestone — the
+  //    (userId,type,relatedId) ledger unique key is the idempotency marker).
+  const remindCandidates = await prisma.milestone.findMany({
+    where: {
+      status: 'DELIVERED',
+      deliveredAt: { lte: new Date(now - 3 * day), gt: new Date(now - 5 * day) },
+    },
+    include: { order: { select: { id: true, clientId: true, title: true } } },
+  });
+  let reminded = 0;
+  for (const m of remindCandidates) {
+    const already = await prisma.transaction.findFirst({
+      where: { relatedId: m.id, description: { startsWith: 'Milestone reminder' } },
+      select: { id: true },
+    });
+    if (already) continue;
+    await notify({
+      userId: m.order.clientId,
+      type: 'ORDER_UPDATE',
+      title: 'Review the delivered milestone',
+      body: `"${m.title}" auto-releases in 2 days if you don't approve or dispute.`,
+      payload: { orderId: m.order.id, milestoneId: m.id, autoReleaseIn: '2 days' },
+    });
+    await prisma.transaction
+      .create({
+        data: {
+          userId: m.order.clientId,
+          type: 'ESCROW_REMINDER',
+          amountEtb: 0,
+          description: `Milestone reminder for ${m.title}`,
+          relatedId: m.id,
+        },
+      })
+      .catch(() => undefined);
+    reminded++;
+  }
+
+  // 2. Auto-approve past 5 days. Re-read status so a client approval that
+  //    landed between query and payout is honoured (the core CAS re-checks).
+  const due = await prisma.milestone.findMany({
+    where: { status: 'DELIVERED', deliveredAt: { lte: new Date(now - 5 * day) } },
+    include: {
+      order: {
+        select: {
+          id: true,
+          clientId: true,
+          sellerId: true,
+          amountEtb: true,
+          sellerNetEtb: true,
+          platformFeeEtb: true,
+          title: true,
+        },
+      },
+    },
+    take: 50,
+  });
+  let released = 0;
+  for (const m of due) {
+    try {
+      await approveMilestoneCore(m.id, m);
+      await notify({
+        userId: m.order.clientId,
+        type: 'ORDER_UPDATE',
+        title: 'Milestone auto-released',
+        body: `"${m.title}" was auto-approved after 5 days and the freelancer has been paid.`,
+        payload: { orderId: m.order.id, milestoneId: m.id, auto: true },
+      });
+      released++;
+    } catch (e) {
+      // Already approved/disputed concurrently — safe to skip.
+      if (!(e instanceof BadRequestError)) throw e;
+    }
+  }
+  return { released, reminded };
 }
