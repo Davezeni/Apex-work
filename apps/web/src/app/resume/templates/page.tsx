@@ -1,11 +1,12 @@
 'use client';
 
 import { dt } from '@/i18n/auto';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
+  X,
   Check,
   Crown,
   Eye,
@@ -17,6 +18,11 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  ResumeSampleThumb,
+  ResumeTemplate,
+  SAMPLE_RESUME,
+} from '@/components/resume/resume-document';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import {
@@ -78,6 +84,8 @@ export default function ResumeTemplatesPage() {
 
   const items = templates.data?.templates ?? [];
   const busy = select.isPending || buy.isPending || verify.isPending;
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewTemplate = items.find((item) => item.id === previewId) ?? null;
 
   const choose = (id: ResumeTemplateId, owned: boolean) => {
     if (busy) return;
@@ -170,16 +178,22 @@ export default function ResumeTemplatesPage() {
               key={template.id}
               className={`group flex flex-col overflow-hidden rounded-2xl border bg-card transition-shadow hover:shadow-lg ${!template.available ? 'opacity-60 grayscale' : ''} ${template.active ? 'border-primary shadow-md shadow-primary/10' : 'border-border'}`}
             >
-              <div className="relative flex h-32 items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-card to-primary/5">
-                <div className="absolute inset-x-5 top-5 h-2 rounded-full bg-foreground/10" />
-                <div className="absolute inset-x-8 top-10 space-y-2">
-                  <div className="h-1.5 w-3/4 rounded-full bg-foreground/10" />
-                  <div className="h-1.5 w-1/2 rounded-full bg-foreground/10" />
-                  <div className="mt-4 h-1.5 w-full rounded-full bg-primary/30" />
-                  <div className="h-1.5 w-5/6 rounded-full bg-foreground/10" />
-                </div>
-                <span className="relative z-10 mt-20 text-2xl font-black text-primary/80">
-                  {template.emoji}
+              {/* LIVE sample preview — the real template renderer with sample
+                  data, scaled down. Tap to inspect before buying. */}
+              <button
+                type="button"
+                onClick={() => setPreviewId(template.id)}
+                disabled={!template.available}
+                aria-label={dt('Preview with sample data')}
+                className="relative block h-44 w-full overflow-hidden bg-neutral-200"
+              >
+                <ResumeSampleThumb
+                  templateId={template.id}
+                  scale={0.3}
+                  className="absolute left-1/2 top-2 -translate-x-1/2"
+                />
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-3 pb-2 pt-6 text-left text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+                  {dt('Tap to preview')}
                 </span>
                 <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold shadow-sm">
                   {template.tier === 'pro' ? (
@@ -201,7 +215,7 @@ export default function ResumeTemplatesPage() {
                     Current
                   </span>
                 ) : null}
-              </div>
+              </button>
               <div className="flex flex-1 flex-col p-4">
                 <h3 className="font-extrabold">{template.name}</h3>
                 <p className="mt-1 min-h-10 text-xs leading-relaxed text-muted-foreground">
@@ -264,6 +278,63 @@ export default function ResumeTemplatesPage() {
           />
         </section>
       </main>
+
+      {/* Full-size sample preview sheet (see the template before buying) */}
+      {previewTemplate && (
+        <div
+          className="fixed inset-0 z-[90] flex items-stretch justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setPreviewId(null)}
+          role="dialog"
+          aria-label={`${previewTemplate.name} — ${dt('Preview with sample data')}`}
+        >
+          <div
+            className="relative flex w-full max-w-2xl flex-col bg-background shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="safe-top flex items-center gap-2 border-b border-border bg-background px-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-extrabold">{previewTemplate.name}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {dt('Sample content — your CV data will replace this')}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="brand"
+                disabled={busy || !previewTemplate.available}
+                onClick={() => {
+                  setPreviewId(null);
+                  choose(previewTemplate.id, previewTemplate.owned);
+                }}
+              >
+                {previewTemplate.owned ? (
+                  <>{previewTemplate.active ? 'Applied' : dt('Use this template')}</>
+                ) : (
+                  <>
+                    <Lock className="h-3.5 w-3.5" /> Unlock {formatEtb(previewTemplate.priceEtb)}
+                  </>
+                )}
+              </Button>
+              <button
+                onClick={() => setPreviewId(null)}
+                aria-label={t('common.back')}
+                className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-neutral-200 p-3 sm:p-6">
+              <div className="mx-auto w-full max-w-xl bg-white p-6 text-black shadow-xl sm:p-9">
+                <ResumeTemplate
+                  templateId={previewTemplate.id}
+                  resume={SAMPLE_RESUME}
+                  name="Hanna Getachew"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

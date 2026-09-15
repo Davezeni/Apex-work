@@ -213,6 +213,10 @@ export const AUTO_DICT: Record<string, string> = {
   'Resume strength': 'የCV ጥንካሬ',
   'Add and verify your phone number to start selling — for now you can browse and hire as a client.':
     'ለመሸጥ ስልክዎን ያረጋግጡ — አሁን ግን እንደ ደንበኛ ማሰስና መቅጠር ይችላሉ።',
+  'Preview with sample data': 'በናሙና ውሂብ ይመልከቱ',
+  'Tap to preview': 'ለማየት ይንኩ',
+  'Sample content — your CV data will replace this': 'ናሙና ይዘት — እውነተኛው CVዎ ይተካዋል',
+  'Use this template': 'ይህን ቴምፕሌት ተጠቀም',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',
