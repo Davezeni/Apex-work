@@ -132,11 +132,18 @@ export function ResumeSampleThumb({
   return (
     <div
       aria-hidden
-      className={cn('pointer-events-none select-none', className)}
-      style={{ transform: `scale(${scale})` }}
+      className={cn('pointer-events-none select-none overflow-hidden', className)}
+      style={{ width: Math.round(760 * scale), height: Math.round(1075 * scale) }}
     >
-      <div className="w-[760px] origin-top bg-white p-8 text-black">
-        <ResumeTemplate templateId={templateId} resume={SAMPLE_RESUME} name="Hanna Getachew" />
+      {/* Scale the paper itself from its top-left corner so the visible area
+          is always the top of the page — never a blank margin. */}
+      <div
+        className="w-[760px] bg-white text-black shadow-lg ring-1 ring-black/10"
+        style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+      >
+        <div className="min-h-[1075px] p-8">
+          <ResumeTemplate templateId={templateId} resume={SAMPLE_RESUME} name="Hanna Getachew" />
+        </div>
       </div>
     </div>
   );

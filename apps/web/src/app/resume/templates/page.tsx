@@ -189,11 +189,13 @@ export default function ResumeTemplatesPage() {
               >
                 <ResumeSampleThumb
                   templateId={template.id}
-                  scale={0.3}
+                  scale={0.15}
                   className="absolute left-1/2 top-2 -translate-x-1/2"
                 />
                 <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-3 pb-2 pt-6 text-left text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  {dt('Tap to preview')}
+                  {template.tier === 'pro' && !template.owned
+                    ? dt('Unlock to view')
+                    : dt('Tap to preview')}
                 </span>
                 <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-2 py-1 text-[10px] font-bold shadow-sm">
                   {template.tier === 'pro' ? (
@@ -324,13 +326,55 @@ export default function ResumeTemplatesPage() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto bg-neutral-200 p-3 sm:p-6">
-              <div className="mx-auto w-full max-w-xl bg-white p-6 text-black shadow-xl sm:p-9">
-                <ResumeTemplate
-                  templateId={previewTemplate.id}
-                  resume={SAMPLE_RESUME}
-                  name="Hanna Getachew"
-                />
-              </div>
+              {previewTemplate.tier === 'pro' && !previewTemplate.owned ? (
+                /* Locked pro template: blurred teaser + paywall — paying unlocks the full view */
+                <div className="relative mx-auto w-full max-w-xl">
+                  <div
+                    aria-hidden
+                    className="pointer-events-none h-[420px] select-none overflow-hidden bg-white p-6 text-black blur-[7px] sm:p-9"
+                  >
+                    <ResumeTemplate
+                      templateId={previewTemplate.id}
+                      resume={SAMPLE_RESUME}
+                      name="Hanna Getachew"
+                    />
+                  </div>
+                  <div className="absolute inset-0 grid place-items-center p-4">
+                    <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 text-center shadow-xl">
+                      <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-amber-100">
+                        <Lock className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <h3 className="mt-3 text-sm font-extrabold">{dt('Premium template')}</h3>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {dt('Unlock to see this template in full')}
+                      </p>
+                      <p className="mt-1 text-[10px] text-muted-foreground">
+                        {dt('One-time purchase — no subscription')}
+                      </p>
+                      <Button
+                        className="mt-4 w-full"
+                        variant="brand"
+                        disabled={busy}
+                        onClick={() => {
+                          setPreviewId(null);
+                          choose(previewTemplate.id, false);
+                        }}
+                      >
+                        <Lock className="h-3.5 w-3.5" /> Unlock{' '}
+                        {formatEtb(previewTemplate.priceEtb)}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mx-auto w-full max-w-xl bg-white p-6 text-black shadow-xl sm:p-9">
+                  <ResumeTemplate
+                    templateId={previewTemplate.id}
+                    resume={SAMPLE_RESUME}
+                    name="Hanna Getachew"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
