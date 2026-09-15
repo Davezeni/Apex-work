@@ -44,6 +44,7 @@ export default function ResumeTemplatesPage() {
   const buy = useBuyResumeTemplate();
   const verify = useVerifyResumeTemplate();
   const processedPurchase = useRef<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const purchaseId = params.get('purchase');
   const purchaseTemplate = params.get('template') as ResumeTemplateId | null;
 
@@ -84,7 +85,6 @@ export default function ResumeTemplatesPage() {
 
   const items = templates.data?.templates ?? [];
   const busy = select.isPending || buy.isPending || verify.isPending;
-  const [previewId, setPreviewId] = useState<string | null>(null);
   const previewTemplate = items.find((item) => item.id === previewId) ?? null;
 
   const choose = (id: ResumeTemplateId, owned: boolean) => {
