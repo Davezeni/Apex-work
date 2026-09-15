@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
+  AlertCircle,
   ArrowLeft,
   CheckCircle2,
   Loader2,
@@ -103,13 +104,14 @@ export default function ResumeBuilderPage() {
   const [langInput, setLangInput] = useState('');
   const [tailorOpen, setTailorOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   // Autosave: once the server copy has hydrated, any local edit is saved
   // automatically (debounced) so nothing is ever lost by navigating away.
+  // `lastSavedRef` is a JSON snapshot of the last-known-saved state; it is
+  // the single source of truth for "is there an unsaved change", so refetch
+  // re-renders (new object identities) can never trigger a redundant PATCH.
   const hydratedRef = useRef(false);
-  const dirtyRef = useRef(false);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const saveNow = useRef<(silent?: boolean) => Promise<void>>(async () => {});
+  const lastSavedRef = useRef('');
   const [aiTarget, setAiTarget] = useState<null | {
     section: 'summary' | 'experience' | 'education';
     onApply: (s: string) => void;
@@ -117,7 +119,7 @@ export default function ResumeBuilderPage() {
 
   useEffect(() => {
     if (!resume) return;
-    setBasics({
+    const next = {
       headline: resume.headline ?? '',
       summary: resume.summary ?? '',
       phone: resume.phone ?? '',
@@ -131,21 +133,38 @@ export default function ResumeBuilderPage() {
       templateId: (resume.templateId || resume.theme || 'classic') as ResumeTemplateId,
       isPublic: resume.isPublic ?? true,
       languages: resume.languages ?? [],
-    });
-    setContent(resume.content ?? EMPTY_RESUME_CONTENT);
-    // let the hydration effect settle before enabling autosave
-    requestAnimationFrame(() => {
+    };
+    const nextContent = resume.content ?? EMPTY_RESUME_CONTENT;
+    const snap = JSON.stringify({ b: next, c: nextContent });
+    // First load: adopt the server copy.
+    if (!hydratedRef.current) {
       hydratedRef.current = true;
-      dirtyRef.current = false;
-    });
-  }, [resume]);
+      lastSavedRef.current = snap;
+      setBasics(next);
+      setContent(nextContent);
+      return;
+    }
+    // Later refetches: never clobber in-flight local edits. "Dirty" means the
+    // LIVE local state differs from the last-saved snapshot — the user typed
+    // something not yet on the server, so this refetch (focus refetch,
+    // section-save invalidation, …) must not overwrite it.
+    const localDirty = JSON.stringify({ b: basics, c: content }) !== lastSavedRef.current;
+    if (localDirty) return;
+    // No local edits: adopt the server copy only when it actually changed
+    // (external edit from another device). Otherwise this is a no-op, which
+    // also prevents refetch re-renders from triggering a redundant PATCH loop.
+    if (snap === lastSavedRef.current) return;
+    lastSavedRef.current = snap;
+    setBasics(next);
+    setContent(nextContent);
+  }, [resume, basics, content]);
 
   // Central save — used by the buttons AND the autosave loop. `silent` skips
   // toasts (autosave shows state via the header chip instead).
   const saveBasics = useCallback(
     async (silent = false) => {
+      const snapshot = JSON.stringify({ b: basics, c: content });
       try {
-        dirtyRef.current = false;
         setSaveState('saving');
         await update.mutateAsync({
           headline: basics.headline || null,
@@ -164,34 +183,45 @@ export default function ResumeBuilderPage() {
           languages: basics.languages,
           theme: basics.templateId,
         });
+        lastSavedRef.current = snapshot;
         setSaveState('saved');
         if (!silent) toast.success(dt('Resume saved ✅'));
       } catch (err) {
-        setSaveState('idle');
+        // Keep lastSavedRef untouched so a later edit/flush still retries.
+        setSaveState('error');
         if (!silent) toast.error((err as { message?: string }).message ?? 'Save failed');
       }
     },
     [basics, content, update],
   );
 
-  // Debounced autosave — fires 1.5s after the last edit, silently.
+  // Debounced autosave — fires 1.5s after the last REAL change. Compares a
+  // JSON snapshot against the last-saved snapshot, so refetch re-renders
+  // (new object identities, same data) never trigger a redundant PATCH loop.
   useEffect(() => {
     if (!hydratedRef.current) return;
-    dirtyRef.current = true;
+    if (JSON.stringify({ b: basics, c: content }) === lastSavedRef.current) return;
     const timer = setTimeout(() => {
-      if (dirtyRef.current) void saveBasics(true);
+      void saveBasics(true);
     }, 1500);
     return () => clearTimeout(timer);
   }, [basics, content, saveBasics]);
 
-  // Flush pending edits when leaving the page.
+  // Flush pending edits when leaving the page or backgrounding the app
+  // (mobile browsers fire visibilitychange more reliably than pagehide).
   useEffect(() => {
     const flush = () => {
-      if (dirtyRef.current) void saveBasics(true);
+      if (JSON.stringify({ b: basics, c: content }) !== lastSavedRef.current) {
+        void saveBasics(true);
+      }
     };
     window.addEventListener('pagehide', flush);
-    return () => window.removeEventListener('pagehide', flush);
-  }, [saveBasics]);
+    document.addEventListener('visibilitychange', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', flush);
+    };
+  }, [basics, content, saveBasics]);
 
   if (isLoading || !me || !resume) {
     return (
@@ -302,6 +332,14 @@ export default function ResumeBuilderPage() {
               <span className="inline-flex items-center gap-1 font-semibold text-emerald-500">
                 <CheckCircle2 className="h-3 w-3" /> {dt('All changes saved')}
               </span>
+            )}
+            {saveState === 'error' && (
+              <button
+                onClick={() => void saveBasics()}
+                className="inline-flex items-center gap-1 font-semibold text-red-500 underline-offset-2 hover:underline"
+              >
+                <AlertCircle className="h-3 w-3" /> {dt('Not saved — tap to retry')}
+              </button>
             )}
           </div>
         </div>

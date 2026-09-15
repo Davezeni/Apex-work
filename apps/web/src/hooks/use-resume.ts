@@ -40,6 +40,11 @@ export function useMyResume() {
     queryKey: ['me', 'resume'],
     queryFn: () => apiFetch('/me/resume', { token }),
     enabled: !!token,
+    // The app-wide default is refetchOnMount:false, which made the preview
+    // render a stale cached resume (just-added experience/education/skills
+    // appeared "missing"). Always refetch on mount — it's a single cheap GET.
+    refetchOnMount: 'always',
+    staleTime: 5 * 1000,
   });
 }
 
