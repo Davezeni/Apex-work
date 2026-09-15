@@ -1,7 +1,7 @@
 'use client';
 import { dt } from '@/i18n/auto';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -42,6 +42,9 @@ export default function OnboardingPage() {
   const [rate, setRate] = useState<number>(500);
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  // The `me` query object changes identity on background refetches, which
+  // would re-run the guards below — fire the phone notice only ONCE.
+  const phoneNoticeShown = useRef(false);
 
   useEffect(() => {
     // Redirect if not logged in or already onboarded.
@@ -50,11 +53,15 @@ export default function OnboardingPage() {
     if (!isLoading && me && me.role !== 'FREELANCER') router.replace('/');
     // Freelancer accounts without a verified phone can't sell or withdraw —
     // send them to the client experience with a hint instead of a dead end.
-    if (!isLoading && me && me.role === 'FREELANCER' && !me.phone) {
+    // The toast id also dedupes: even if this runs twice, sonner replaces
+    // the existing toast instead of stacking a new one.
+    if (!isLoading && me && me.role === 'FREELANCER' && !me.phone && !phoneNoticeShown.current) {
+      phoneNoticeShown.current = true;
       toast.error(
         dt(
           'Add and verify your phone number to start selling — for now you can browse and hire as a client.',
         ),
+        { id: 'freelancer-phone-required' },
       );
       router.replace('/');
     }
