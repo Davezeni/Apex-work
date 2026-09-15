@@ -125,6 +125,20 @@ router.post(
   }),
 );
 
+/**
+ * POST /users/:id/delete — permanently remove a user (ADMIN only via
+ * users:manage). Users with order/withdrawal history are anonymized instead
+ * of hard-deleted so financial ledgers stay intact.
+ */
+router.post(
+  '/users/:id/delete',
+  requireCapability('users:manage'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await admin.deleteUser(id));
+  }),
+);
+
 // ---------------- skill moderation ----------------
 import { prisma } from '../lib/prisma.js';
 

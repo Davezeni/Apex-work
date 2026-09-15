@@ -4,16 +4,25 @@
  * role at the boundary (routes) via `requireAdmin` middleware.
  */
 import { prisma } from '../lib/prisma.js';
+import { ConflictError, NotFoundError } from '../lib/errors.js';
 import type { ReportStatus, WithdrawalStatus } from '@prisma/client';
 import { markStatus as markWithdrawalStatus } from './withdrawals.service.js';
 
 // ---------------- Dashboard summary ----------------
 export async function dashboardSummary() {
   const [
-    totalUsers, totalClients, totalFreelancers,
-    totalGigs, totalActiveGigs, totalJobs, totalOpenJobs,
-    totalOrders, completedOrders, activeOrders,
-    pendingReports, pendingWithdrawals,
+    totalUsers,
+    totalClients,
+    totalFreelancers,
+    totalGigs,
+    totalActiveGigs,
+    totalJobs,
+    totalOpenJobs,
+    totalOrders,
+    completedOrders,
+    activeOrders,
+    pendingReports,
+    pendingWithdrawals,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { role: 'CLIENT' } }),
@@ -59,10 +68,7 @@ export async function listReports(status?: ReportStatus, limit = 50) {
 }
 
 /** Admin resolves a report. `ACTIONED` = took punitive action; `DISMISSED` = no violation. */
-export async function resolveReport(
-  id: string,
-  action: 'REVIEWED' | 'DISMISSED' | 'ACTIONED',
-) {
+export async function resolveReport(id: string, action: 'REVIEWED' | 'DISMISSED' | 'ACTIONED') {
   return prisma.report.update({
     where: { id },
     data: {
@@ -95,20 +101,30 @@ export async function updateWithdrawalStatus(
 // ---------------- Users ----------------
 export async function listUsers(q?: string, limit = 50) {
   return prisma.user.findMany({
-    where: q ? {
-      OR: [
-        { username: { contains: q, mode: 'insensitive' } },
-        { fullName: { contains: q, mode: 'insensitive' } },
-        { phone: { contains: q } },
-      ],
-    } : {},
+    where: q
+      ? {
+          OR: [
+            { username: { contains: q, mode: 'insensitive' } },
+            { fullName: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q } },
+          ],
+        }
+      : {},
     orderBy: { createdAt: 'desc' },
     take: limit,
     select: {
-      id: true, username: true, fullName: true, phone: true, role: true,
-      isPhoneVerified: true, isIdVerified: true,
-      isActive: true, suspendedAt: true, rating: true,
-      completedOrders: true, createdAt: true,
+      id: true,
+      username: true,
+      fullName: true,
+      phone: true,
+      role: true,
+      isPhoneVerified: true,
+      isIdVerified: true,
+      isActive: true,
+      suspendedAt: true,
+      rating: true,
+      completedOrders: true,
+      createdAt: true,
     },
   });
 }
@@ -122,4 +138,64 @@ export async function suspendUser(userId: string, suspend: boolean) {
     },
     select: { id: true, isActive: true, suspendedAt: true },
   });
+}
+
+/**
+ * Admin user deletion with data-integrity handling:
+ *  - No financial history (orders/withdrawals) → hard delete. Prisma
+ *    cascades sessions, devices, gigs, messages, etc.
+ *  - Has financial history → the ledger must stay intact, so the account is
+ *    anonymized instead: PII wiped, sessions/devices/push revoked, account
+ *    deactivated. Admin-visible as "deleted user".
+ * Admins can never be deleted through this path (use role management first).
+ */
+export async function deleteUser(userId: string, opts: { forbidAdmin?: boolean } = {}) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, username: true },
+  });
+  if (!user) throw new NotFoundError('User');
+  if (opts.forbidAdmin !== false && user.role === 'ADMIN') {
+    throw new ConflictError('Admin accounts cannot be deleted — demote the account first');
+  }
+
+  const [orders, withdrawals] = await Promise.all([
+    prisma.order.count({ where: { OR: [{ clientId: userId }, { sellerId: userId }] } }),
+    prisma.withdrawal.count({ where: { userId } }),
+  ]);
+
+  if (orders === 0 && withdrawals === 0) {
+    await prisma.user.delete({ where: { id: userId } });
+    return { deleted: true, anonymized: false };
+  }
+
+  const suffix = Math.random().toString(36).slice(2, 10);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: 'Deleted user',
+        username: `deleted-${suffix}`,
+        phone: null,
+        email: null,
+        avatarUrl: null,
+        bio: null,
+        title: null,
+        city: null,
+        hourlyRateEtb: null,
+        isActive: false,
+        suspendedAt: new Date(),
+        isOnboarded: false,
+      },
+    }),
+    // Revoke every way back in.
+    prisma.session.deleteMany({ where: { userId } }),
+    prisma.refreshToken.deleteMany({ where: { userId } }),
+    prisma.trustedDevice.deleteMany({ where: { userId } }),
+    prisma.passkey.deleteMany({ where: { userId } }),
+    prisma.pushSubscription.deleteMany({ where: { userId } }),
+    prisma.oAuthAccount.deleteMany({ where: { userId } }),
+    prisma.messageDraft.deleteMany({ where: { userId } }),
+  ]);
+  return { deleted: false, anonymized: true };
 }

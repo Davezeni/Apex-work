@@ -1,4 +1,5 @@
 'use client';
+import { dt } from '@/i18n/auto';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -47,6 +48,16 @@ export default function OnboardingPage() {
     if (!isLoading && !me) router.replace('/login');
     if (!isLoading && me?.isOnboarded) router.replace('/profile');
     if (!isLoading && me && me.role !== 'FREELANCER') router.replace('/');
+    // Freelancer accounts without a verified phone can't sell or withdraw —
+    // send them to the client experience with a hint instead of a dead end.
+    if (!isLoading && me && me.role === 'FREELANCER' && !me.phone) {
+      toast.error(
+        dt(
+          'Add and verify your phone number to start selling — for now you can browse and hire as a client.',
+        ),
+      );
+      router.replace('/');
+    }
   }, [isLoading, me, router]);
 
   const step = STEPS[stepIdx]!;

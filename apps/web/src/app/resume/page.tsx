@@ -1,11 +1,12 @@
 'use client';
 
 import { dt } from '@/i18n/auto';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  CheckCircle2,
   Loader2,
   Plus,
   Share2,
@@ -102,6 +103,13 @@ export default function ResumeBuilderPage() {
   const [langInput, setLangInput] = useState('');
   const [tailorOpen, setTailorOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  // Autosave: once the server copy has hydrated, any local edit is saved
+  // automatically (debounced) so nothing is ever lost by navigating away.
+  const hydratedRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveNow = useRef<(silent?: boolean) => Promise<void>>(async () => {});
   const [aiTarget, setAiTarget] = useState<null | {
     section: 'summary' | 'experience' | 'education';
     onApply: (s: string) => void;
@@ -125,7 +133,65 @@ export default function ResumeBuilderPage() {
       languages: resume.languages ?? [],
     });
     setContent(resume.content ?? EMPTY_RESUME_CONTENT);
+    // let the hydration effect settle before enabling autosave
+    requestAnimationFrame(() => {
+      hydratedRef.current = true;
+      dirtyRef.current = false;
+    });
   }, [resume]);
+
+  // Central save — used by the buttons AND the autosave loop. `silent` skips
+  // toasts (autosave shows state via the header chip instead).
+  const saveBasics = useCallback(
+    async (silent = false) => {
+      try {
+        dirtyRef.current = false;
+        setSaveState('saving');
+        await update.mutateAsync({
+          headline: basics.headline || null,
+          summary: basics.summary || null,
+          phone: basics.phone || null,
+          email: basics.email || null,
+          city: basics.city || null,
+          website: basics.website || null,
+          linkedin: basics.linkedin || null,
+          github: basics.github || null,
+          targetRole: basics.targetRole || null,
+          accentColor: basics.accentColor || null,
+          templateId: basics.templateId,
+          isPublic: basics.isPublic,
+          content,
+          languages: basics.languages,
+          theme: basics.templateId,
+        });
+        setSaveState('saved');
+        if (!silent) toast.success(dt('Resume saved ✅'));
+      } catch (err) {
+        setSaveState('idle');
+        if (!silent) toast.error((err as { message?: string }).message ?? 'Save failed');
+      }
+    },
+    [basics, content, update],
+  );
+
+  // Debounced autosave — fires 1.5s after the last edit, silently.
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    dirtyRef.current = true;
+    const timer = setTimeout(() => {
+      if (dirtyRef.current) void saveBasics(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [basics, content, saveBasics]);
+
+  // Flush pending edits when leaving the page.
+  useEffect(() => {
+    const flush = () => {
+      if (dirtyRef.current) void saveBasics(true);
+    };
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, [saveBasics]);
 
   if (isLoading || !me || !resume) {
     return (
@@ -134,31 +200,6 @@ export default function ResumeBuilderPage() {
       </div>
     );
   }
-
-  const saveBasics = async () => {
-    try {
-      await update.mutateAsync({
-        headline: basics.headline || null,
-        summary: basics.summary || null,
-        phone: basics.phone || null,
-        email: basics.email || null,
-        city: basics.city || null,
-        website: basics.website || null,
-        linkedin: basics.linkedin || null,
-        github: basics.github || null,
-        targetRole: basics.targetRole || null,
-        accentColor: basics.accentColor || null,
-        templateId: basics.templateId,
-        isPublic: basics.isPublic,
-        content,
-        languages: basics.languages,
-        theme: basics.templateId,
-      });
-      toast.success(dt('Resume saved ✅'));
-    } catch (err) {
-      toast.error((err as { message?: string }).message ?? 'Save failed');
-    }
-  };
 
   const runReview = () => {
     review.mutate(
@@ -250,7 +291,19 @@ export default function ResumeBuilderPage() {
         </button>
         <div className="flex-1">
           <h1 className="text-lg font-extrabold tracking-tight">{dt('Resume / CV')}</h1>
-          <div className="text-[10px] text-muted-foreground">Build once — export or share</div>
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+            <span>Build once — export or share</span>
+            {saveState === 'saving' && (
+              <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                <Loader2 className="h-3 w-3 animate-spin" /> {dt('Saving…')}
+              </span>
+            )}
+            {saveState === 'saved' && (
+              <span className="inline-flex items-center gap-1 font-semibold text-emerald-500">
+                <CheckCircle2 className="h-3 w-3" /> {dt('All changes saved')}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
@@ -285,6 +338,34 @@ export default function ResumeBuilderPage() {
                 Build one source of truth, tailor it for every role, and export a professional PDF
                 in seconds.
               </p>
+              {(() => {
+                const checks = [
+                  !!basics.headline.trim(),
+                  !!basics.summary.trim(),
+                  resume.experiences.length > 0,
+                  resume.education.length > 0,
+                  content.skills.length > 0,
+                  basics.languages.length > 0,
+                  !!basics.city.trim(),
+                ];
+                const pct = Math.round((checks.filter(Boolean).length / checks.length) * 100);
+                return (
+                  <div className="mt-4 max-w-sm">
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <span>{dt('Resume strength')}</span>
+                      <span className={pct >= 80 ? 'text-emerald-500' : 'text-primary'}>
+                        {pct}%
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-emerald-500 transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex gap-2">
               <Button asChild variant="outline" size="sm">
@@ -536,6 +617,20 @@ export default function ResumeBuilderPage() {
                   className="h-8 w-10 cursor-pointer rounded border border-border bg-background p-1"
                 />
               </label>
+              <span className="flex items-center gap-1.5">
+                {['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0f172a'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`${dt('Accent')} ${c}`}
+                    onClick={() => setBasics((s) => ({ ...s, accentColor: c }))}
+                    className={`h-5 w-5 rounded-full ring-offset-2 ring-offset-background transition-transform hover:scale-110 ${
+                      basics.accentColor?.toLowerCase() === c ? 'ring-2 ring-primary' : ''
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </span>
               <label className="flex items-center gap-2 text-xs font-semibold">
                 <input
                   type="checkbox"
@@ -554,7 +649,7 @@ export default function ResumeBuilderPage() {
             variant="brand"
             size="lg"
             className="w-full"
-            onClick={saveBasics}
+            onClick={() => void saveBasics()}
             disabled={update.isPending}
           >
             {update.isPending ? (
@@ -579,7 +674,7 @@ export default function ResumeBuilderPage() {
             variant="brand"
             size="lg"
             className="w-full"
-            onClick={saveBasics}
+            onClick={() => void saveBasics()}
             disabled={update.isPending}
           >
             {update.isPending ? (

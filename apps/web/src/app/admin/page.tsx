@@ -17,6 +17,7 @@ import {
   ShieldOff,
   ShieldCheck,
   Loader2,
+  Trash2,
   CheckCircle,
   XCircle,
   TrendingUp,
@@ -63,7 +64,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.93';
+export const ADMIN_UI_BUILD = '2026-09-09.94';
 
 type Tab =
   | 'summary'
@@ -1386,6 +1387,24 @@ function UsersTab() {
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
   });
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const del = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch<{ deleted: boolean; anonymized: boolean }>(`/admin/users/${id}/delete`, {
+        method: 'POST',
+        token,
+      }),
+    onSuccess: (result, id) => {
+      setConfirmDeleteId(null);
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] });
+      toast.success(
+        result.deleted
+          ? dt('User permanently deleted')
+          : `${dt('User has order history — account anonymized')} (${id.slice(-6)})`,
+      );
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
   return (
     <div className="mx-3 mt-4">
       <div className="mb-2 flex items-center gap-2">
@@ -1436,6 +1455,35 @@ function UsersTab() {
             >
               {u.isActive ? <ShieldOff className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />}
             </Button>
+            {confirmDeleteId === u.id ? (
+              <span className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => del.mutate(u.id)}
+                  disabled={del.isPending}
+                >
+                  {del.isPending ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    dt('Confirm delete')
+                  )}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDeleteId(null)}>
+                  {dt('Cancel')}
+                </Button>
+              </span>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={dt('Delete user')}
+                title={dt('Delete user')}
+                onClick={() => setConfirmDeleteId(u.id)}
+              >
+                <Trash2 className="h-3 w-3 text-red-500" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
