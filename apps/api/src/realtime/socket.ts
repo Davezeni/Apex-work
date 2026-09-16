@@ -6,6 +6,8 @@ import { logger } from '../config/logger.js';
 import { env } from '../config/env.js';
 import { assertMember, assertBothMembers, markAsRead } from '../services/chat.service.js';
 import { markOnline, markOffline, maybePersistLastSeen } from '../services/presence.service.js';
+import { prisma } from '../lib/prisma.js';
+import { sendPush } from '../services/push.service.js';
 
 interface AuthedSocket extends Socket {
   userId?: string;
@@ -98,7 +100,9 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
         await assertMember(conversationId, socket.userId!);
         socket.join(`conv:${conversationId}`);
         // Tell the room this member just came online (open threads update live).
-        socket.to(`conv:${conversationId}`).emit('presence:update', { userId: socket.userId!, online: true });
+        socket
+          .to(`conv:${conversationId}`)
+          .emit('presence:update', { userId: socket.userId!, online: true });
         ack?.(true);
       } catch {
         ack?.(false);
@@ -107,7 +111,9 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
 
     socket.on('conversation:leave', (conversationId: string) => {
       if (typeof conversationId === 'string') {
-        socket.to(`conv:${conversationId}`).emit('presence:update', { userId: socket.userId!, online: false });
+        socket
+          .to(`conv:${conversationId}`)
+          .emit('presence:update', { userId: socket.userId!, online: false });
         socket.leave(`conv:${conversationId}`);
       }
     });
@@ -195,9 +201,38 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
-        socket.to(`conv:${conversationId}`).emit('call:start', {
-          conversationId, mode, from: socket.userId, at: new Date().toISOString(),
+        const payload = {
+          conversationId,
+          mode,
+          from: socket.userId!,
+          at: new Date().toISOString(),
+        };
+        // Room relay (members currently viewing this chat get the in-chat ring).
+        socket.to(`conv:${conversationId}`).emit('call:start', payload);
+        // Ring EVERY member on all their devices: a member's socket only sits
+        // in the conv room while that chat is open, so conv-room-only delivery
+        // made calls unreachable unless the recipient already had the thread
+        // open. user:{id} rooms cover every logged-in socket of each member.
+        const members = await prisma.conversationMember.findMany({
+          where: { conversationId },
+          select: { userId: true },
         });
+        const caller = await prisma.user.findUnique({
+          where: { id: socket.userId! },
+          select: { fullName: true },
+        });
+        const ring = { ...payload, callerName: caller?.fullName ?? 'Someone' };
+        for (const m of members) {
+          if (m.userId === socket.userId) continue;
+          io.to(`user:${m.userId}`).emit('call:start', ring);
+          // Push catches users whose app is closed/backgrounded entirely.
+          void sendPush(m.userId, {
+            title: `Incoming ${mode} call from ${ring.callerName}`,
+            body: 'Tap to open Apex-Work and answer.',
+            url: `/messages/${conversationId}?call=${mode}`,
+            tag: `call-${conversationId}`,
+          }).catch(() => undefined);
+        }
       } catch {
         // silent — non-member; nothing to do
       }
@@ -207,47 +242,75 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
-        socket.to(`conv:${conversationId}`).emit('call:end', { conversationId, from: socket.userId });
-      } catch { /* non-member */ }
+        const payload = { conversationId, from: socket.userId };
+        socket.to(`conv:${conversationId}`).emit('call:end', payload);
+        // Dismiss ringing UIs on every device of every member.
+        const members = await prisma.conversationMember.findMany({
+          where: { conversationId },
+          select: { userId: true },
+        });
+        for (const m of members) {
+          if (m.userId === socket.userId) continue;
+          io.to(`user:${m.userId}`).emit('call:end', payload);
+        }
+      } catch {
+        /* non-member */
+      }
     });
 
     socket.on('call:join', async (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
-        socket.to(`conv:${conversationId}`).emit('call:join', { conversationId, from: socket.userId });
-      } catch { /* non-member */ }
+        socket
+          .to(`conv:${conversationId}`)
+          .emit('call:join', { conversationId, from: socket.userId });
+      } catch {
+        /* non-member */
+      }
     });
 
     socket.on('call:leave', async (conversationId: string) => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
-        socket.to(`conv:${conversationId}`).emit('call:leave', { conversationId, from: socket.userId });
-      } catch { /* non-member */ }
+        socket
+          .to(`conv:${conversationId}`)
+          .emit('call:leave', { conversationId, from: socket.userId });
+      } catch {
+        /* non-member */
+      }
     });
 
     // Forward SDP offers/answers + ICE candidates to a specific peer.
     // The payload can be a large SDP blob; Socket.io compresses it via
     // perMessageDeflate that we enabled last turn.
-    socket.on('call:signal', async (input: { conversationId: string; targetUserId: string; payload: unknown }) => {
-      if (!input || typeof input.conversationId !== 'string' || typeof input.targetUserId !== 'string') return;
-      if (input.targetUserId === socket.userId) return; // no self-relay
-      // Authorization: BOTH the caller and the target must belong to the
-      // conversation before any SDP/ICE payload is forwarded. Prevents an
-      // authenticated user from pushing call/signal data to arbitrary users
-      // or spoofing a target outside a conversation they share.
-      try {
-        await assertBothMembers(input.conversationId, socket.userId!, input.targetUserId);
-      } catch {
-        return; // silent — non-member or unknown target; nothing to forward
-      }
-      io.to(`user:${input.targetUserId}`).emit('call:signal', {
-        conversationId: input.conversationId,
-        from: socket.userId,
-        payload: input.payload,
-      });
-    });
+    socket.on(
+      'call:signal',
+      async (input: { conversationId: string; targetUserId: string; payload: unknown }) => {
+        if (
+          !input ||
+          typeof input.conversationId !== 'string' ||
+          typeof input.targetUserId !== 'string'
+        )
+          return;
+        if (input.targetUserId === socket.userId) return; // no self-relay
+        // Authorization: BOTH the caller and the target must belong to the
+        // conversation before any SDP/ICE payload is forwarded. Prevents an
+        // authenticated user from pushing call/signal data to arbitrary users
+        // or spoofing a target outside a conversation they share.
+        try {
+          await assertBothMembers(input.conversationId, socket.userId!, input.targetUserId);
+        } catch {
+          return; // silent — non-member or unknown target; nothing to forward
+        }
+        io.to(`user:${input.targetUserId}`).emit('call:signal', {
+          conversationId: input.conversationId,
+          from: socket.userId,
+          payload: input.payload,
+        });
+      },
+    );
 
     socket.on('disconnect', (reason) => {
       if (socket.userId) {

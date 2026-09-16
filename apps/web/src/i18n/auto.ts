@@ -260,6 +260,11 @@ export const AUTO_DICT: Record<string, string> = {
   'Dispute? A human reviews it': 'ቅሬታ? ሰው ራሱ ይመረምራል',
   'Silent client? Auto-release': 'የሞጠ ደንበኛ? በራስ-ሰር ይለቀቃል',
   'No subscription': 'ወርሃዊ ክፍያ የለም',
+  'No answer. The person you are calling may be offline — try chat or later.':
+    'ምላሽ የለም። የጠሯቸው ሰው ከመስመር ውጭ ሊሆኑ ይችላሉ — ወደ ውይይት ይስጡ ወይም በኋላ ይሞክሩ።',
+  'Camera unavailable — continuing with audio only. Video can be re-enabled once the camera is free.':
+    'ካሜራው አይሰራም — በድምጽ ብቻ መቀጠል እንችላለን።',
+  Answer: 'መልስ',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',

@@ -14,6 +14,9 @@ import { useConversations } from '@/hooks/use-chat';
 import { useI18n } from '@/i18n';
 import { PwaInstall } from '@/components/pwa-install';
 import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
+import { useIncomingCall } from '@/hooks/use-incoming-call';
+import { useAuthStore } from '@/stores/auth-store';
+import { Phone, PhoneOff } from 'lucide-react';
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
 const TABS: { id: MobileTab; labelKey: string; icon: typeof Home; href: string }[] = [
@@ -41,6 +44,10 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   const { data: conversations } = useConversations();
   const unreadChats = conversations?.items.reduce((total, item) => total + item.unread, 0) ?? 0;
 
+  // Global incoming-call ring — visible on every page while signed in.
+  const token = useAuthStore((st) => st.accessToken);
+  const { incoming: incomingCall, dismiss: dismissCall } = useIncomingCall(!!token);
+
   const currentTab: MobileTab | undefined =
     activeTab ??
     (pathname === '/'
@@ -63,6 +70,44 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
     <div className="flex min-h-dvh bg-background text-foreground">
       {/* Desktop: persistent left sidebar; Mobile: hidden (bottom nav instead). */}
       <DesktopSidebar />
+      {/* Global incoming-call ring */}
+      {incomingCall && (
+        <div className="fixed inset-x-0 top-0 z-[120] flex justify-center px-3 pt-3">
+          <div className="grad-hero w-full max-w-md rounded-2xl p-4 text-white shadow-2xl shadow-primary/40 ring-1 ring-white/20">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-extrabold">
+                  {incomingCall.mode === 'video' ? '📹' : '📞'} Incoming {incomingCall.mode} call
+                </div>
+                <div className="truncate text-xs text-white/80">
+                  {incomingCall.callerName ?? 'Someone'} — Apex-Work
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  dismissCall();
+                  router.push(`/messages/${incomingCall.conversationId}?call=${incomingCall.mode}`);
+                }}
+                className="grid h-11 w-11 place-items-center rounded-full bg-emerald-500 shadow-lg active:scale-90"
+                aria-label="Answer"
+              >
+                <Phone className="h-5 w-5" />
+              </button>
+              <button
+                onClick={dismissCall}
+                className="grid h-11 w-11 place-items-center rounded-full bg-red-600 shadow-lg active:scale-90"
+                aria-label="Decline"
+              >
+                <PhoneOff className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <motion.main
         key={pathname}
         initial={{ opacity: 0, y: 8 }}

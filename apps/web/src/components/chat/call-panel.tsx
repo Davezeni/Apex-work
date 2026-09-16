@@ -101,23 +101,58 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
 
   const localVideoOk = mode === 'video' && !cameraOff;
 
-  // ---- Media capture -----
+  // ---- Media capture (with audio-only fallback + retry) -----
+  const [captureAttempt, setCaptureAttempt] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    const stopCurrent = () => {
+      localRef.current?.srcObject && (localRef.current.srcObject = null);
+    };
     (async () => {
+      setError(null);
+      setPhase('starting');
       try {
         if (typeof window === 'undefined' || !window.isSecureContext) {
-          throw new Error('Secure connection required. Open Apex-Work using HTTPS.');
+          throw Object.assign(
+            new Error('Secure connection required. Open Apex-Work using HTTPS.'),
+            { name: 'SecurityError' },
+          );
         }
         if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error('This browser does not support camera or microphone access.');
+          throw Object.assign(
+            new Error('This browser does not support camera or microphone access.'),
+            { name: 'NotFoundError' },
+          );
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: mode === 'video',
-        });
+        stopCurrent();
+        let stream: MediaStream | null = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: mode === 'video',
+          });
+        } catch (err) {
+          const mediaError = err as { name?: string };
+          // Camera hardware busy/hung (NotReadable/Abort/NotFound): keep the
+          // call alive with audio only instead of failing outright.
+          if (mode === 'video' && !cancelled) {
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              setCameraOff(true);
+              toast.info(
+                dt(
+                  'Camera unavailable — continuing with audio only. Video can be re-enabled once the camera is free.',
+                ),
+              );
+            } catch {
+              throw err; // even the mic failed — surface the original error
+            }
+          } else {
+            throw err;
+          }
+        }
         if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
+          stream?.getTracks().forEach((t) => t.stop());
           return;
         }
         setLocalStream(stream);
@@ -130,12 +165,14 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
             'Permission denied. Tap the lock icon in the address bar, open Site settings, allow Camera and Microphone, then reopen the call.';
         } else if (mediaError.name === 'NotFoundError') {
           message =
-            mode === 'video'
+            mode === 'video' && !cameraOff
               ? 'No camera or microphone was found on this device.'
               : 'No microphone was found on this device.';
-        } else if (mediaError.name === 'NotReadableError') {
+        } else if (mediaError.name === 'NotReadableError' || mediaError.name === 'AbortError') {
+          // Chrome reports a busy/hung camera as NotReadableError ("Could not
+          // start video source") or AbortError ("Timeout starting video source").
           message =
-            'Your camera or microphone is being used by another app. Close it and try again.';
+            'Your camera did not start — it is most likely in use by another app (Zoom, Meet, Teams…) or stuck. Close other apps using the camera, then tap Retry.';
         }
         setError(message);
         setPhase('error');
@@ -144,7 +181,8 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, captureAttempt]);
 
   // ---- Attach local stream to <video> -----
   useEffect(() => {
@@ -154,6 +192,16 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
       void localRef.current.play().catch(() => undefined);
     }
   }, [localStream]);
+
+  // ---- No-answer timeout: 45s of connecting with zero peers → give up ----
+  useEffect(() => {
+    if (phase !== 'connecting') return;
+    const t = setTimeout(() => {
+      setPhase('error');
+      setError(dt('No answer. The person you are calling may be offline — try chat or later.'));
+    }, 45_000);
+    return () => clearTimeout(t);
+  }, [phase]);
 
   // ---- Socket + signaling -----
   const buildPeer = useCallback(
@@ -344,12 +392,20 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
                     {dt('Camera or microphone unavailable')}
                   </div>
                   <p className="mt-2 text-sm leading-relaxed text-white/75">{error}</p>
-                  <button
-                    onClick={onEnd}
-                    className="mt-5 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black active:scale-95"
-                  >
-                    Close call
-                  </button>
+                  <div className="mt-5 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setCaptureAttempt((n) => n + 1)}
+                      className="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-black active:scale-95"
+                    >
+                      Retry
+                    </button>
+                    <button
+                      onClick={onEnd}
+                      className="rounded-full bg-white/20 px-5 py-2.5 text-sm font-bold text-white backdrop-blur active:scale-95"
+                    >
+                      Close call
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>

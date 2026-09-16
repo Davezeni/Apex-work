@@ -10,7 +10,7 @@ import {
 } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowDown,
@@ -390,6 +390,16 @@ export default function ConversationPage() {
     );
   };
   const [callMode, setCallMode] = useState<null | 'audio' | 'video'>(null);
+  const searchParams = useSearchParams();
+  const autoCall = searchParams.get('call');
+  // Deep link from the global ring / push (?call=audio|video): open the call
+  // panel immediately, then strip the param so back navigation is clean.
+  useEffect(() => {
+    if ((autoCall === 'audio' || autoCall === 'video') && !callMode) {
+      setCallMode(autoCall);
+      router.replace(`/messages/${id}`);
+    }
+  }, [autoCall, callMode, id, router]);
   const [incoming, setIncoming] = useState<null | { from: string; mode: 'audio' | 'video' }>(null);
   // Clear any stale "incoming call" ring whenever a call session starts or
   // ends, so a ring can't linger on screen after we hang up (or while dialling).
