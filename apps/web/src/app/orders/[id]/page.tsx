@@ -251,6 +251,7 @@ export default function OrderDetailPage() {
             </>
           )}
         </div>
+        <OrderFlowStepper status={order.status} isSeller={isSeller} />
       </div>
 
       {/* Parties */}
@@ -632,6 +633,75 @@ function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
 }
 
 // Escrow / funds status timeline — reassures both parties where the money is.
+function OrderFlowStepper({ status, isSeller }: { status: string; isSeller: boolean }) {
+  const steps = [dt('Ordered'), dt('In progress'), dt('In review'), dt('Completed')];
+  const idx =
+    status === 'PENDING'
+      ? 0
+      : status === 'ACTIVE'
+        ? 1
+        : status === 'IN_REVIEW' || status === 'DELIVERED'
+          ? 2
+          : 3;
+  const hint =
+    status === 'PENDING'
+      ? isSeller
+        ? dt('Waiting for the client to pay — work has not started yet.')
+        : dt('Complete payment to start the order.')
+      : status === 'ACTIVE'
+        ? isSeller
+          ? dt('Do the work, then mark it delivered.')
+          : dt('Work is in progress. You can cancel or dispute while you wait.')
+        : status === 'IN_REVIEW' || status === 'DELIVERED'
+          ? isSeller
+            ? dt('Client is reviewing — funds auto-release 7 days after delivery.')
+            : dt(
+                'Accept & release, request a revision, or dispute. Funds auto-release after 7 days.',
+              )
+          : status === 'COMPLETED'
+            ? dt('Done — funds were released to the freelancer.')
+            : null;
+
+  if (status === 'CANCELLED' || status === 'DISPUTED') return null;
+
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <div className="flex items-center">
+        {steps.map((label, i) => (
+          <div key={label} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`grid h-5 w-5 place-items-center rounded-full text-[9px] font-black ${
+                  i < idx
+                    ? 'bg-emerald-500 text-white'
+                    : i === idx
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                {i < idx ? '✓' : i + 1}
+              </div>
+              <span
+                className={`text-center text-[9px] font-semibold leading-tight ${
+                  i <= idx ? 'text-foreground' : 'text-muted-foreground'
+                }`}
+              >
+                {label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className={`mx-1 mb-3.5 h-0.5 flex-1 rounded ${i < idx ? 'bg-emerald-500/60' : 'bg-muted'}`}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {hint && <p className="mt-2 text-center text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
 function EscrowTimeline({ status }: { status: string }) {
   // Stage order: money goes from client → held in escrow → released to seller.
   // Reject/Cancelled leaves it clear. DISPUTED = held pending admin ruling.

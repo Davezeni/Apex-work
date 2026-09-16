@@ -227,6 +227,17 @@ export const AUTO_DICT: Record<string, string> = {
   'SMS test failed': 'የኤስኤምኤስ ሙከራ አልተሳካም',
   'Test SMS accepted': 'የሙከራ ኤስኤምኤስ ተቀብለናል',
   'check the phone': 'ስልኩን ይመልከቱ',
+  Ordered: 'ትዕዛዝ ተሰጥቷል',
+  'Waiting for the client to pay — work has not started yet.': 'ደንበኛው ክፍያ እስኪያደርግ — ሥራው አልተጀመረም።',
+  'Complete payment to start the order.': 'ትዕዛዙን ለመጀመር ክፍያውን ይጠናቀቁ።',
+  'Do the work, then mark it delivered.': 'ሥራውን ያከናውኑ፣ ከዚያ እንደ ተደርሶ ይምልክቱ።',
+  'Work is in progress. You can cancel or dispute while you wait.':
+    'ሥራው በሂደት ላይ ነው። በሚጠብቁበት ወቅት ማቋረጥ ወይም ቅሬታ ማሳወቅ ይችላሉ።',
+  'Client is reviewing — funds auto-release 7 days after delivery.':
+    'ደንበኛው በግምገማ ላይ ነው — ገንዘብ ከመድረሱ 7 ቀናት በኋላ በራስ-ሰር ይለቀቃል።',
+  'Accept & release, request a revision, or dispute. Funds auto-release after 7 days.':
+    'ተቀበል እና ለቅቀው፣ ማሻሻያ ይጠይቁ ወይም ቅሬታ ይንገሩ። ገንዘብ ከ7 ቀናት በኋላ በራስ-ሰር ይለቀቃል።',
+  'Done — funds were released to the freelancer.': 'ተጠናቋል — ገንዘቡ ለነፃ ሰሪው ተለቋል።',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',

@@ -521,10 +521,15 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
 
   // 1. Remind clients between day 5 and day 7 (one reminder per order —
   //    check for absence of a 'ESCROW_REMINDED' transaction as a cheap marker).
+  //    Covers both legacy DELIVERED orders and the current IN_REVIEW state.
+  //    Orders WITH milestones are excluded — their escrow moves per-milestone
+  //    via autoReleaseMilestones (3d remind / 5d auto-approve), and an
+  //    order-level release here would bypass those approvals.
   const reminderCandidates = await prisma.order.findMany({
     where: {
-      status: 'DELIVERED',
+      status: { in: ['DELIVERED', 'IN_REVIEW'] },
       deliveredAt: { lte: new Date(now - 5 * day), gt: new Date(now - 7 * day) },
+      milestones: { none: {} },
     },
     select: { id: true, clientId: true, title: true },
   });
@@ -562,11 +567,19 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
     reminded++;
   }
 
-  // 2. Auto-release when past 7 days.
+  // 2. Auto-release when past 7 days. IN_REVIEW included: since the state
+  //    machine changed (MARK_DELIVERED → IN_REVIEW, accept → COMPLETED) no
+  //    order ever enters DELIVERED, so without this the 7-day release would
+  //    never fire and freelancers would wait forever on silent clients.
   const released = await prisma.order.findMany({
-    where: { status: 'DELIVERED', deliveredAt: { lte: new Date(now - 7 * day) } },
+    where: {
+      status: { in: ['DELIVERED', 'IN_REVIEW'] },
+      deliveredAt: { lte: new Date(now - 7 * day) },
+      milestones: { none: {} },
+    },
     select: {
       id: true,
+      status: true,
       clientId: true,
       sellerId: true,
       title: true,
@@ -585,7 +598,7 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         // matches exactly one row owns the payout; a concurrent one matches 0
         // rows and returns 'skipped', so funds move at most once.
         const claimed = await tx.order.updateMany({
-          where: { id: o.id, status: 'DELIVERED' },
+          where: { id: o.id, status: o.status },
           data: { status: 'COMPLETED', completedAt: new Date() },
         });
         if (claimed.count === 0) return 'skipped';
