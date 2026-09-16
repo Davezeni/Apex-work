@@ -87,14 +87,25 @@ class SmsEthiopiaProvider implements SmsProvider {
       };
 
       if (!res.ok || payload.sent !== true) {
+        // Their error bodies have no fixed schema (10006 = campaign sender not
+        // approved yet, 10007 = key bound to the free whitelist-only campaign).
+        // Pull the numeric code and any message-ish string straight from the
+        // raw body so the Render log always shows the gateway's own words.
+        const codeMatch = raw.match(/\b1000\d\b/);
+        const msgMatch = raw.match(
+          /"(?:description|message|msg|error|detail)"\s*:\s*"([^"]{3,300})"/,
+        );
+        const detail = msgMatch?.[1] ?? (codeMatch ? `sms_error_${codeMatch[0]}` : undefined);
         logger.error(
-          { status: res.status, to: msisdn, description: payload.description ?? payload.message },
+          {
+            status: res.status,
+            to: msisdn,
+            detail: detail ?? '(no message in body)',
+            body: raw.slice(0, 400),
+          },
           'SMSEthiopia send failed',
         );
-        return {
-          ok: false,
-          error: payload.description ?? payload.message ?? `send_failed_${res.status}`,
-        };
+        return { ok: false, error: detail ?? `send_failed_${res.status}` };
       }
 
       logger.info(
