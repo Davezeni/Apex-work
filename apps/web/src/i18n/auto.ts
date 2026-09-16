@@ -221,6 +221,12 @@ export const AUTO_DICT: Record<string, string> = {
   'Premium template': 'ፕሪሚየም ቴምፕሌት',
   'Unlock to see this template in full': 'ቴምፕሌቱን ሙሉ በሙሉ ለማየት ይክፈቱ',
   'Unlock to view': 'ለማየት ይክፈቱ',
+  'Free-campaign keys only deliver to numbers verified in the SMS dashboard':
+    'በነፃ ካምፔይን የተረጋገጡ ቁጥሮችን ብቻ ይላካሉ',
+  'Send test SMS to': 'የሙከራ ኤስኤምኤስ ላክ ወደ',
+  'SMS test failed': 'የኤስኤምኤስ ሙከራ አልተሳካም',
+  'Test SMS accepted': 'የሙከራ ኤስኤምኤስ ተቀብለናል',
+  'check the phone': 'ስልኩን ይመልከቱ',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',

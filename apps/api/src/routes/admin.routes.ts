@@ -290,6 +290,35 @@ router.post(
   }),
 );
 
+const smsTestSchema = z.object({
+  phone: z.string().min(9).max(20),
+});
+router.post(
+  '/sms/test',
+  requireCapability('artifacts:view'),
+  validate(smsTestSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as z.infer<typeof smsTestSchema>;
+    const { normalizeEthiopianMsisdn } = await import('../services/sms-msisdn.js');
+    const msisdn = normalizeEthiopianMsisdn(body.phone);
+    if (!msisdn)
+      throw new (await import('../lib/errors.js')).BadRequestError(
+        'Not a valid Ethiopian mobile number (use 09xx… or +2519…)',
+      );
+    const { sms } = await import('../services/sms.service.js');
+    // Diagnostic tool: report the provider's own verdict instead of throwing,
+    // so the admin UI can show the exact gateway error (10006/10007/…).
+    const result = await sms.send(
+      msisdn,
+      `Apex-Work test SMS at ${new Date().toISOString()}. If you see this, SMS delivery is wired correctly.`,
+    );
+    if (!result.ok) {
+      return success(res, { ok: false, provider: sms.name, error: result.error ?? 'unknown' });
+    }
+    return success(res, { ok: true, provider: sms.name, ref: result.providerRef ?? null });
+  }),
+);
+
 // ---------------- disputes ----------------
 import { resolveDisputeSchema } from '@apex-work/shared';
 import * as disputes from '../services/disputes.service.js';

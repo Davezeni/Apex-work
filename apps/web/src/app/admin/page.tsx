@@ -64,7 +64,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.101';
+export const ADMIN_UI_BUILD = '2026-09-09.102';
 
 type Tab =
   | 'summary'
@@ -1838,7 +1838,25 @@ function DiagnosticsTab() {
     onError: (e) => toast.error((e as Error).message ?? 'Failed'),
   });
 
+  const testSms = useMutation({
+    mutationFn: (phone: string) =>
+      apiFetch<{ ok: boolean; provider: string; error?: string; ref?: string | null }>(
+        '/admin/sms/test',
+        { method: 'POST', token, body: { phone } },
+      ),
+    onSuccess: (r) => {
+      if (r.ok) {
+        toast.success(`${dt('Test SMS accepted')} (${r.provider}) — ${dt('check the phone')}`);
+      } else {
+        toast.error(`${dt('SMS test failed')}: ${r.error ?? 'unknown'}`);
+      }
+      qc.invalidateQueries({ queryKey: ['admin', 'diagnostics'] });
+    },
+    onError: (e) => toast.error((e as Error).message ?? 'Failed'),
+  });
+
   const [emailTo, setEmailTo] = useState('');
+  const [smsTo, setSmsTo] = useState('');
 
   if (isLoading || !data)
     return <Loader2 className="mx-auto mt-8 h-5 w-5 animate-spin text-muted-foreground" />;
@@ -1883,6 +1901,37 @@ function DiagnosticsTab() {
           <p className="mt-1.5 text-[10px] text-muted-foreground">
             Uses Resend sandbox <code>onboarding@resend.dev</code> (unverified domains only send to
             the account owner&rsquo;s email).
+          </p>
+        </div>
+      )}
+
+      {(s.smsethiopia || s.afromessage) && (
+        <div className="rounded-2xl border border-border bg-card p-3">
+          <label className="text-xs font-semibold text-muted-foreground">
+            {dt('Send test SMS to')}
+          </label>
+          <div className="mt-1.5 flex gap-2">
+            <input
+              type="tel"
+              inputMode="tel"
+              value={smsTo}
+              onChange={(e) => setSmsTo(e.target.value)}
+              placeholder={dt('09xx xxx xxx')}
+              className="min-w-0 flex-1 rounded-full border border-input bg-background px-3 py-1.5 text-xs"
+            />
+            <Button
+              size="sm"
+              variant="brand"
+              onClick={() => testSms.mutate(smsTo.trim())}
+              disabled={testSms.isPending || !smsTo.trim()}
+            >
+              {testSms.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Send test'}
+            </Button>
+          </div>
+          <p className="mt-1.5 text-[10px] text-muted-foreground">
+            {dt(
+              'While on the free campaign, only numbers verified in the SMS dashboard receive messages.',
+            )}
           </p>
         </div>
       )}
