@@ -238,6 +238,7 @@ export const AUTO_DICT: Record<string, string> = {
   'Accept & release, request a revision, or dispute. Funds auto-release after 7 days.':
     'ተቀበል እና ለቅቀው፣ ማሻሻያ ይጠይቁ ወይም ቅሬታ ይንገሩ። ገንዘብ ከ7 ቀናት በኋላ በራስ-ሰር ይለቀቃል።',
   'Done — funds were released to the freelancer.': 'ተጠናቋል — ገንዘቡ ለነፃ ሰሪው ተለቋል።',
+  'in escrow (orders under review)': 'በጥቆ ውስጥ (በግምገማ ላይ ያሉ ትዕዛዞች)',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',

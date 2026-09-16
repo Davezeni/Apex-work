@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
+import { useWallet } from '@/hooks/use-wallet';
 import { formatEtb, cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,6 +37,7 @@ export default function ProfilePage() {
   const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
   const logout = useLogout();
   const savedGigs = useSavedGigs();
+  const wallet = useWallet();
   const { t } = useI18n();
 
   // Not signed in → show sign-in CTA
@@ -144,7 +146,14 @@ export default function ProfilePage() {
           className="grad-hero mx-5 mt-4 block rounded-2xl p-5 text-white shadow-xl shadow-primary/40 transition-transform active:scale-[0.98]"
         >
           <div className="text-xs opacity-90">{t('wallet.balance')}</div>
-          <div className="mt-1 text-3xl font-extrabold tracking-tight">{formatEtb(0)}</div>
+          <div className="mt-1 text-3xl font-extrabold tracking-tight">
+            {formatEtb(wallet.data?.balanceEtb ?? 0)}
+          </div>
+          {wallet.data?.pendingEtb ? (
+            <div className="mt-1 text-[11px] opacity-90">
+              +{formatEtb(wallet.data.pendingEtb)} {dt('in escrow (orders under review)')}
+            </div>
+          ) : null}
           <div className="mt-4 flex gap-2">
             <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
               💸 {t('wallet.withdraw')}
