@@ -147,11 +147,11 @@ export default function ProfilePage() {
         >
           <div className="text-xs opacity-90">{t('wallet.balance')}</div>
           <div className="mt-1 text-3xl font-extrabold tracking-tight">
-            {formatEtb(wallet.data?.balanceEtb ?? 0)}
+            {formatEtb(wallet.data?.wallet.balanceEtb ?? 0)}
           </div>
-          {wallet.data?.pendingEtb ? (
+          {wallet.data?.wallet.pendingEtb ? (
             <div className="mt-1 text-[11px] opacity-90">
-              +{formatEtb(wallet.data.pendingEtb)} {dt('in escrow (orders under review)')}
+              +{formatEtb(wallet.data.wallet.pendingEtb)} {dt('in escrow (orders under review)')}
             </div>
           ) : null}
           <div className="mt-4 flex gap-2">
