@@ -64,7 +64,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.99';
+export const ADMIN_UI_BUILD = '2026-09-09.100';
 
 type Tab =
   | 'summary'
@@ -1792,6 +1792,7 @@ interface Diagnostics {
     };
     cronToken: boolean;
     afromessage: boolean;
+    smsethiopia: boolean;
   };
   ts: string;
 }
@@ -1852,6 +1853,7 @@ function DiagnosticsTab() {
       />
       <StatusRow label={dt('Chapa payments')} ok={s.chapa} note="checkout + webhooks" />
       <StatusRow label={dt('AfroMessage SMS')} ok={s.afromessage} note="OTPs" />
+      <StatusRow label={dt('SMSethiopia SMS')} ok={s.smsethiopia} note="OTPs, any number" />
       <StatusRow label={dt('Groq LLM')} ok={s.groq} note="AI assistant, proposals, translation" />
       <StatusRow label={dt('Web Push (VAPID)')} ok={s.vapidPush} note="browser notifications" />
       <StatusRow label={dt('Resend email')} ok={s.resend} note={`from: ${s.email.from}`} />

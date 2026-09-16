@@ -13,11 +13,14 @@ const envSchema = z.object({
   // Render also sets this in render.yaml. The production default prevents
   // Chapa callbacks from falling back to localhost if a dashboard sync is
   // delayed or the variable was omitted.
-  API_URL: z.string().url().default(
-    process.env.NODE_ENV === 'production'
-      ? 'https://apex-work-api.onrender.com'
-      : 'http://localhost:4000',
-  ),
+  API_URL: z
+    .string()
+    .url()
+    .default(
+      process.env.NODE_ENV === 'production'
+        ? 'https://apex-work-api.onrender.com'
+        : 'http://localhost:4000',
+    ),
   WEB_URL: z.string().url().default('http://localhost:3000'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
@@ -35,13 +38,20 @@ const envSchema = z.object({
   AFROMESSAGE_SENDER: z.string().default('ApexWork'),
   AFROMESSAGE_IDENTIFIER_ID: z.string().optional(),
 
+  SMSETHIOPIA_API_KEY: z.string().optional(),
+  // 'auto' (default): SMSEthiopia when its key is set, else AfroMessage, else console.
+  SMS_PROVIDER: z.enum(['auto', 'smsethiopia', 'afromessage']).default('auto'),
+
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_PUBLIC_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
   CHAPA_ENCRYPTION_KEY: z.string().optional(),
   // Keep automated withdrawals off until Chapa Transfers is configured,
   // bank-code mapping is verified, and a small sandbox payout succeeds.
-  CHAPA_TRANSFERS_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  CHAPA_TRANSFERS_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((v) => v === 'true'),
 
   // OAuth providers. Redirect URLs are derived from API_URL so they remain
   // consistent between production and local development.

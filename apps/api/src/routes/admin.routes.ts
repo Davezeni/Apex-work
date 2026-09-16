@@ -235,6 +235,7 @@ router.get(
         turn: turnDebug(),
         cronToken: !!env.CRON_TOKEN,
         afromessage: !!env.AFROMESSAGE_API_KEY,
+        smsethiopia: !!env.SMSETHIOPIA_API_KEY,
         sentry: !!env.SENTRY_DSN,
       },
       ts: new Date().toISOString(),
