@@ -341,6 +341,7 @@ describe('checkout payment flow', () => {
 describe('escrow auto-release', () => {
   const deliverable = {
     id: 'order-rel',
+    status: 'DELIVERED' as const,
     clientId: 'client-1',
     sellerId: 'seller-1',
     title: 'Task',
@@ -370,6 +371,26 @@ describe('escrow auto-release', () => {
     expect(prismaMock.transaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ type: 'ORDER_PAYOUT', relatedId: 'order-rel' }),
+      }),
+    );
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rescues IN_REVIEW orders (no milestones) — CAS claims on the live status', async () => {
+    const inReview = { ...deliverable, id: 'order-stuck', status: 'IN_REVIEW' as const };
+    prismaMock.order.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([inReview]);
+    prismaMock.transaction.findFirst.mockResolvedValue(null);
+    prismaMock.order.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.wallet.upsert.mockResolvedValue({});
+    prismaMock.user.update.mockResolvedValue({});
+
+    const res = await autoReleaseEscrow();
+
+    expect(res.released).toBe(1);
+    expect(prismaMock.order.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'order-stuck', status: 'IN_REVIEW' },
+        data: expect.objectContaining({ status: 'COMPLETED' }),
       }),
     );
     expect(notifyMock).toHaveBeenCalledTimes(1);
