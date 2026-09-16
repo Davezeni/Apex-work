@@ -12,6 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
+  PhoneMissed,
   ArrowLeft,
   ArrowDown,
   Send,
@@ -274,6 +275,7 @@ export default function ConversationPage() {
       });
     },
     onPresence: (userId, online) => setPresence((prev) => ({ ...prev, [userId]: online })),
+    onCallEnd: () => setIncoming(null),
   });
   // Seed presence from the fetched conversation, then keep it live.
   useEffect(() => {
@@ -406,6 +408,13 @@ export default function ConversationPage() {
   useEffect(() => {
     if (callMode) setIncoming(null);
   }, [callMode]);
+
+  // Ring dies after 35s even if the caller vanished without a goodbye.
+  useEffect(() => {
+    if (!incoming) return;
+    const t = setTimeout(() => setIncoming(null), 35_000);
+    return () => clearTimeout(t);
+  }, [incoming]);
   const blockUser = useBlockUser();
   const toggleReaction = useToggleReaction(id);
   const { pending } = useOutboxSync(); // flush queued messages when we come back online
@@ -1073,30 +1082,43 @@ export default function ConversationPage() {
                   </span>
                 </div>
               )}
-              <MessageBubble
-                m={m}
-                isMine={m.senderId === me?.id}
-                isGroup={!!conv?.isGroup}
-                translation={translations[m.id]}
-                members={conv?.members ?? []}
-                showAvatar={i === 0 || messages[i - 1]?.senderId !== m.senderId}
-                groupStart={groupStart}
-                groupEnd={groupEnd}
-                onImageClick={setViewerUrl}
-                onReactOpen={() => setReactingId(m.id)}
-                reactingOpen={reactingId === m.id}
-                onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
-                onReactionTap={(emoji) =>
-                  toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })
-                }
-                onReactionInfo={(msg, emoji) => setReactionInfo({ messageId: msg.id, emoji })}
-                onReactClose={() => setReactingId(null)}
-                onOpenActions={() => setActionMsg(m)}
-                onReplyJump={jumpTo}
-                onReplyStart={setReplyTo}
-                onReadTap={(msg) => setReadReceiptId(msg.id)}
-                highlight={searchOpen ? searchQ : null}
-              />
+              {m.attachmentType === 'call_log' ? (
+                <div className="flex justify-center py-1">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm">
+                    {String(m.body ?? '').startsWith('Missed') ? (
+                      <PhoneMissed className="h-3.5 w-3.5 text-red-400" />
+                    ) : (
+                      <Phone className="h-3.5 w-3.5 text-emerald-500" />
+                    )}
+                    {m.body}
+                  </span>
+                </div>
+              ) : (
+                <MessageBubble
+                  m={m}
+                  isMine={m.senderId === me?.id}
+                  isGroup={!!conv?.isGroup}
+                  translation={translations[m.id]}
+                  members={conv?.members ?? []}
+                  showAvatar={i === 0 || messages[i - 1]?.senderId !== m.senderId}
+                  groupStart={groupStart}
+                  groupEnd={groupEnd}
+                  onImageClick={setViewerUrl}
+                  onReactOpen={() => setReactingId(m.id)}
+                  reactingOpen={reactingId === m.id}
+                  onReactPick={(emoji) => toggleReaction.mutate({ messageId: m.id, emoji })}
+                  onReactionTap={(emoji) =>
+                    toggleReaction.mutate({ messageId: m.id, emoji: emoji as ReactionEmoji })
+                  }
+                  onReactionInfo={(msg, emoji) => setReactionInfo({ messageId: msg.id, emoji })}
+                  onReactClose={() => setReactingId(null)}
+                  onOpenActions={() => setActionMsg(m)}
+                  onReplyJump={jumpTo}
+                  onReplyStart={setReplyTo}
+                  onReadTap={(msg) => setReadReceiptId(msg.id)}
+                  highlight={searchOpen ? searchQ : null}
+                />
+              )}
             </div>
           );
         })}

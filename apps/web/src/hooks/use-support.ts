@@ -6,14 +6,24 @@ import { useAuthStore } from '@/stores/auth-store';
 import type { CreateTicketInput, AddTicketMessageInput } from '@apex-work/shared';
 
 export interface SupportTicket {
-  id: string; subject: string; category: string;
+  id: string;
+  subject: string;
+  category: string;
   status: 'OPEN' | 'WAITING_USER' | 'WAITING_STAFF' | 'RESOLVED' | 'CLOSED';
-  createdAt: string; updatedAt: string;
+  createdAt: string;
+  updatedAt: string;
   csatRating?: number | null;
   csatComment?: string | null;
   csatScoredAt?: string | null;
   user?: { id: string; username: string; fullName: string; avatarUrl: string | null };
-  messages?: { id: string; ticketId: string; senderId: string; body: string; isStaff: boolean; createdAt: string }[];
+  messages?: {
+    id: string;
+    ticketId: string;
+    senderId: string;
+    body: string;
+    isStaff: boolean;
+    createdAt: string;
+  }[];
 }
 
 export function useMyTickets() {
@@ -31,7 +41,7 @@ export function useTicket(id: string | undefined) {
     queryKey: ['support', id],
     queryFn: () => apiFetch(`/support/${id}`, { token }),
     enabled: !!token && !!id,
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
   });
 }
 
@@ -60,7 +70,8 @@ export function useSetTicketStatus(id: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<unknown, Error, SupportTicket['status']>({
-    mutationFn: (status) => apiFetch(`/support/${id}/status`, { method: 'POST', token, body: { status } }),
+    mutationFn: (status) =>
+      apiFetch(`/support/${id}/status`, { method: 'POST', token, body: { status } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['support', id] }),
   });
 }

@@ -13,6 +13,10 @@ interface AuthedSocket extends Socket {
   userId?: string;
 }
 
+/** userId → conversationId of the call they most recently started/joined and
+ *  haven't left yet. Lets an abrupt disconnect end the call for everyone. */
+const activeCalls = new Map<string, string>();
+
 /**
  * Module-scoped Socket.io singleton. Chat routes reach for this via getIo()
  * to broadcast messages after a successful HTTP send. Kept simple: we don't
@@ -221,6 +225,7 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
           where: { id: socket.userId! },
           select: { fullName: true },
         });
+        activeCalls.set(socket.userId!, conversationId);
         const ring = { ...payload, callerName: caller?.fullName ?? 'Someone' };
         for (const m of members) {
           if (m.userId === socket.userId) continue;
@@ -243,6 +248,7 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       try {
         await assertMember(conversationId, socket.userId!);
         const payload = { conversationId, from: socket.userId };
+        if (activeCalls.get(socket.userId!) === conversationId) activeCalls.delete(socket.userId!);
         socket.to(`conv:${conversationId}`).emit('call:end', payload);
         // Dismiss ringing UIs on every device of every member.
         const members = await prisma.conversationMember.findMany({
@@ -262,6 +268,7 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
+        activeCalls.set(socket.userId!, conversationId);
         socket
           .to(`conv:${conversationId}`)
           .emit('call:join', { conversationId, from: socket.userId });
@@ -274,13 +281,60 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (typeof conversationId !== 'string') return;
       try {
         await assertMember(conversationId, socket.userId!);
-        socket
-          .to(`conv:${conversationId}`)
-          .emit('call:leave', { conversationId, from: socket.userId });
+        if (activeCalls.get(socket.userId!) === conversationId) activeCalls.delete(socket.userId!);
+        const payload = { conversationId, from: socket.userId };
+        socket.to(`conv:${conversationId}`).emit('call:leave', payload);
+        // Let ringing UIs on other devices dismiss too.
+        const members = await prisma.conversationMember.findMany({
+          where: { conversationId },
+          select: { userId: true },
+        });
+        for (const m of members) {
+          if (m.userId === socket.userId) continue;
+          io.to(`user:${m.userId}`).emit('call:leave', payload);
+        }
       } catch {
         /* non-member */
       }
     });
+
+    // Call log — the caller reports how the call went when their panel
+    // closes; we persist it as a chat message so the thread shows
+    // "Voice call · 2m 05s" / "Missed video call" like any messenger.
+    socket.on(
+      'call:log',
+      async (input: {
+        conversationId: string;
+        mode: 'audio' | 'video';
+        durationSec: number;
+        connected: boolean;
+      }) => {
+        if (!input || typeof input.conversationId !== 'string') return;
+        try {
+          await assertMember(input.conversationId, socket.userId!);
+          const dur = Math.max(0, Math.min(24 * 3600, Math.round(input.durationSec || 0)));
+          const label = `${Math.floor(dur / 60)}m ${String(dur % 60).padStart(2, '0')}s`;
+          const kind = input.mode === 'video' ? 'Video' : 'Voice';
+          const body = input.connected
+            ? `${kind} call · ${label}`
+            : `Missed ${kind.toLowerCase()} call`;
+          const msg = await prisma.message.create({
+            data: {
+              conversationId: input.conversationId,
+              senderId: socket.userId!,
+              body,
+              attachmentType: 'call_log',
+            },
+            include: {
+              sender: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+            },
+          });
+          io.to(`conv:${input.conversationId}`).emit('message:new', msg);
+        } catch {
+          // non-member or transient — never fail the call teardown over a log
+        }
+      },
+    );
 
     // Forward SDP offers/answers + ICE candidates to a specific peer.
     // The payload can be a large SDP blob; Socket.io compresses it via
@@ -316,6 +370,23 @@ export const initSocket = async (httpServer: HttpServer): Promise<Server> => {
       if (socket.userId) {
         markOffline(socket.userId);
         maybePersistLastSeen(socket.userId);
+        // Vanished mid-call (tab closed, network dropped)? End the call for
+        // everyone so peers never stay stuck on the call screen.
+        const liveConv = activeCalls.get(socket.userId);
+        if (liveConv) {
+          activeCalls.delete(socket.userId);
+          const payload = { conversationId: liveConv, from: socket.userId };
+          io.to(`conv:${liveConv}`).emit('call:end', payload);
+          void prisma.conversationMember
+            .findMany({ where: { conversationId: liveConv }, select: { userId: true } })
+            .then((members) => {
+              for (const m of members) {
+                if (m.userId === socket.userId) continue;
+                io.to(`user:${m.userId}`).emit('call:end', payload);
+              }
+            })
+            .catch(() => undefined);
+        }
       }
       logger.debug({ userId: socket.userId, reason }, 'Socket disconnected');
     });

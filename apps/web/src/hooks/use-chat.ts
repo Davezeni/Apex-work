@@ -106,8 +106,7 @@ export function useSendMessage(conversationId: string | undefined) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: string | SendMessagePayload) => {
-      const body: SendMessagePayload =
-        typeof payload === 'string' ? { body: payload } : payload;
+      const body: SendMessagePayload = typeof payload === 'string' ? { body: payload } : payload;
       const clientId = body.clientId ?? `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       try {
         return await apiFetch<ChatMessage>(`/conversations/${conversationId}/messages`, {
@@ -162,7 +161,16 @@ export function useSendMessage(conversationId: string | undefined) {
 export interface ConversationDetail extends ChatSummary {
   isSaved?: boolean;
   createdAt: string;
-  members: { userId: string; isAdmin: boolean; joinedAt: string; lastReadAt: string | null; online?: boolean | null; fullName: string; username: string; avatarUrl: string | null }[];
+  members: {
+    userId: string;
+    isAdmin: boolean;
+    joinedAt: string;
+    lastReadAt: string | null;
+    online?: boolean | null;
+    fullName: string;
+    username: string;
+    avatarUrl: string | null;
+  }[];
   me: { isMuted: boolean; isAdmin: boolean };
 }
 
@@ -203,7 +211,11 @@ export function useAddGroupMembers(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (memberIds: string[]) =>
-      apiFetch(`/conversations/${conversationId}/members`, { method: 'POST', body: { memberIds }, token }),
+      apiFetch(`/conversations/${conversationId}/members`, {
+        method: 'POST',
+        body: { memberIds },
+        token,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['conversation', conversationId] });
       qc.invalidateQueries({ queryKey: ['conversations'] });
@@ -216,7 +228,10 @@ export function useLeaveGroup() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { conversationId: string; userId: string }) =>
-      apiFetch(`/conversations/${vars.conversationId}/members/${vars.userId}`, { method: 'DELETE', token }),
+      apiFetch(`/conversations/${vars.conversationId}/members/${vars.userId}`, {
+        method: 'DELETE',
+        token,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['conversations'] });
     },
@@ -228,30 +243,35 @@ export function useToggleReactionMsg(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { messageId: string; emoji: string }) =>
-      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/reaction`, { method: 'POST', body: { emoji: vars.emoji }, token }),
+      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/reaction`, {
+        method: 'POST',
+        body: { emoji: vars.emoji },
+        token,
+      }),
     onSuccess: (_d, vars) => {
-      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
-        ['messages', conversationId],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            items: old.items.map((m) => {
-              if (m.id !== vars.messageId) return m;
-              const reactions = [...(m.reactions ?? [])];
-              const idx = reactions.findIndex((r) => r.emoji === vars.emoji);
-              if (idx >= 0) {
-                const mine = reactions[idx]!.mine;
-                reactions[idx] = { ...reactions[idx]!, mine: !mine, count: mine ? reactions[idx]!.count - 1 : reactions[idx]!.count + 1 };
-                if (reactions[idx]!.count <= 0) reactions.splice(idx, 1);
-              } else {
-                reactions.push({ emoji: vars.emoji, count: 1, mine: true });
-              }
-              return { ...m, reactions };
-            }),
-          };
-        },
-      );
+      qc.setQueryData<{ items: ChatMessage[] } | undefined>(['messages', conversationId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((m) => {
+            if (m.id !== vars.messageId) return m;
+            const reactions = [...(m.reactions ?? [])];
+            const idx = reactions.findIndex((r) => r.emoji === vars.emoji);
+            if (idx >= 0) {
+              const mine = reactions[idx]!.mine;
+              reactions[idx] = {
+                ...reactions[idx]!,
+                mine: !mine,
+                count: mine ? reactions[idx]!.count - 1 : reactions[idx]!.count + 1,
+              };
+              if (reactions[idx]!.count <= 0) reactions.splice(idx, 1);
+            } else {
+              reactions.push({ emoji: vars.emoji, count: 1, mine: true });
+            }
+            return { ...m, reactions };
+          }),
+        };
+      });
     },
   });
 }
@@ -261,7 +281,11 @@ export function useEditMessage(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (vars: { messageId: string; body: string }) =>
-      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}`, { method: 'PATCH', body: { body: vars.body }, token }),
+      apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}`, {
+        method: 'PATCH',
+        body: { body: vars.body },
+        token,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['messages', conversationId] }),
   });
 }
@@ -271,7 +295,10 @@ export function useDeleteMessage(conversationId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (messageId: string) =>
-      apiFetch(`/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE', token }),
+      apiFetch(`/conversations/${conversationId}/messages/${messageId}`, {
+        method: 'DELETE',
+        token,
+      }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['messages', conversationId] }),
   });
 }
@@ -304,7 +331,9 @@ export function useForwardMessage(conversationId: string) {
   return useMutation({
     mutationFn: (vars: { messageId: string; targetConversationId: string }) =>
       apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/forward`, {
-        method: 'POST', body: { targetConversationId: vars.targetConversationId }, token,
+        method: 'POST',
+        body: { targetConversationId: vars.targetConversationId },
+        token,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['conversations'] });
@@ -319,7 +348,9 @@ export function usePinMessage(conversationId: string) {
   return useMutation({
     mutationFn: (vars: { messageId: string; pinned: boolean }) =>
       apiFetch(`/conversations/${conversationId}/messages/${vars.messageId}/pin`, {
-        method: 'PATCH', body: { pinned: vars.pinned }, token,
+        method: 'PATCH',
+        body: { pinned: vars.pinned },
+        token,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['messages', conversationId] });
@@ -331,7 +362,10 @@ export function usePinMessage(conversationId: string) {
 export function useSearchMessages(conversationId: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   return useMutation<{ items: ChatMessage[] }, Error, string>({
-    mutationFn: (q: string) => apiFetch(`/conversations/${conversationId}/messages/search?q=${encodeURIComponent(q)}`, { token }),
+    mutationFn: (q: string) =>
+      apiFetch(`/conversations/${conversationId}/messages/search?q=${encodeURIComponent(q)}`, {
+        token,
+      }),
   });
 }
 
@@ -345,16 +379,28 @@ export function useLoadOlder(conversationId: string | undefined) {
   const [cursor, setCursor] = useState<string | null>(null);
 
   // Reset when conversation changes.
-  useEffect(() => { setOlder([]); setHasMore(false); setCursor(null); }, [conversationId]);
+  useEffect(() => {
+    setOlder([]);
+    setHasMore(false);
+    setCursor(null);
+  }, [conversationId]);
 
   const loadOlder = async () => {
     if (!token || !conversationId) return;
-    const current = qc.getQueryData<{ items: ChatMessage[]; nextCursor: string | null; hasMore: boolean }>(['messages', conversationId]);
+    const current = qc.getQueryData<{
+      items: ChatMessage[];
+      nextCursor: string | null;
+      hasMore: boolean;
+    }>(['messages', conversationId]);
     const c = cursor ?? current?.nextCursor ?? null;
     if (!c || loading) return;
     setLoading(true);
     try {
-      const res = await apiFetch<{ items: ChatMessage[]; nextCursor: string | null; hasMore: boolean }>(`/conversations/${conversationId}/messages?limit=40&cursor=${c}`, { token });
+      const res = await apiFetch<{
+        items: ChatMessage[];
+        nextCursor: string | null;
+        hasMore: boolean;
+      }>(`/conversations/${conversationId}/messages?limit=40&cursor=${c}`, { token });
       setOlder((prev) => [...res.items, ...prev]);
       setCursor(res.nextCursor);
       setHasMore(res.hasMore);
@@ -379,7 +425,8 @@ export function useJoinGroup() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<{ conversationId: string; title: string | null }, Error, string>({
-    mutationFn: (tokenStr: string) => apiFetch('/conversations/join', { method: 'POST', body: { token: tokenStr }, token }),
+    mutationFn: (tokenStr: string) =>
+      apiFetch('/conversations/join', { method: 'POST', body: { token: tokenStr }, token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
   });
 }
@@ -390,7 +437,9 @@ export function useSavedReplies() {
   const load = () => {
     try {
       setReplies(JSON.parse(localStorage.getItem('saved-replies') ?? '[]'));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
   useEffect(load, []);
   const addReply = (title: string, body: string) => {
@@ -442,6 +491,7 @@ export function useChatSocket(
   conversationId: string | undefined,
   handlers: {
     onIncomingCall?: (from: string, mode: 'audio' | 'video') => void;
+    onCallEnd?: (conversationId: string) => void;
     onTyping?: (status: 'start' | 'stop', userName: string) => void;
     onPresence?: (userId: string, online: boolean) => void;
   } = {},
@@ -456,14 +506,16 @@ export function useChatSocket(
   const socketRef = useRef<Socket | null>(null);
   const typingRef = useRef<{ [uid: string]: number }>({});
   const incomingCallRef = useRef(handlers.onIncomingCall);
+  const callEndRef = useRef(handlers.onCallEnd);
   const typingCbRef = useRef(handlers.onTyping);
   const presenceCbRef = useRef(handlers.onPresence);
 
   useEffect(() => {
     incomingCallRef.current = handlers.onIncomingCall;
+    callEndRef.current = handlers.onCallEnd;
     typingCbRef.current = handlers.onTyping;
     presenceCbRef.current = handlers.onPresence;
-  }, [handlers.onIncomingCall, handlers.onTyping, handlers.onPresence]);
+  }, [handlers.onIncomingCall, handlers.onCallEnd, handlers.onTyping, handlers.onPresence]);
 
   useEffect(() => {
     if (!token || !conversationId) return;
@@ -488,30 +540,32 @@ export function useChatSocket(
 
     socket.on('message:new', (msg: ChatMessage) => {
       if (msg.conversationId !== conversationId) return;
-      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
-        ['messages', conversationId],
-        (old) => {
-          if (!old) return { items: [msg], nextCursor: null, hasMore: false } as never;
-          if (old.items.some((m) => m.id === msg.id)) return old;
-          return { ...old, items: [...old.items, msg] } as never;
-        },
-      );
+      qc.setQueryData<{ items: ChatMessage[] } | undefined>(['messages', conversationId], (old) => {
+        if (!old) return { items: [msg], nextCursor: null, hasMore: false } as never;
+        if (old.items.some((m) => m.id === msg.id)) return old;
+        return { ...old, items: [...old.items, msg] } as never;
+      });
       qc.invalidateQueries({ queryKey: ['conversations'] });
     });
 
-    socket.on('call:start', (data: { conversationId: string; from: string; mode: 'audio' | 'video' }) => {
-      if (data.conversationId !== conversationId) return;
-      incomingCallRef.current?.(data.from, data.mode);
+    socket.on(
+      'call:start',
+      (data: { conversationId: string; from: string; mode: 'audio' | 'video' }) => {
+        if (data.conversationId !== conversationId) return;
+        incomingCallRef.current?.(data.from, data.mode);
+      },
+    );
+
+    // The caller hung up / never answered — clear any ringing UI immediately.
+    socket.on('call:end', (d: { conversationId: string }) => {
+      callEndRef.current?.(d.conversationId);
     });
 
     const patchMessage = (msg: ChatMessage) => {
-      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
-        ['messages', conversationId],
-        (old) => {
-          if (!old) return old;
-          return { ...old, items: old.items.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)) };
-        },
-      );
+      qc.setQueryData<{ items: ChatMessage[] } | undefined>(['messages', conversationId], (old) => {
+        if (!old) return old;
+        return { ...old, items: old.items.map((m) => (m.id === msg.id ? { ...m, ...msg } : m)) };
+      });
     };
 
     // Remote typing indicator (live). Server relays { conversationId, userId }.
@@ -525,31 +579,35 @@ export function useChatSocket(
     });
 
     // Live reaction chip update.
-    socket.on('message:reaction', (d: { conversationId: string; messageId: string; emoji: string; added: boolean }) => {
-      if (d.conversationId !== conversationId) return;
-      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
-        ['messages', conversationId],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            items: old.items.map((m) => {
-              if (m.id !== d.messageId) return m;
-              const reactions = [...(m.reactions ?? [])];
-              const idx = reactions.findIndex((r) => r.emoji === d.emoji);
-              if (d.added) {
-                if (idx >= 0) reactions[idx] = { ...reactions[idx]!, count: reactions[idx]!.count + 1 };
-                else reactions.push({ emoji: d.emoji, count: 1, mine: false });
-              } else if (idx >= 0) {
-                if (reactions[idx]!.count <= 1) reactions.splice(idx, 1);
-                else reactions[idx] = { ...reactions[idx]!, count: reactions[idx]!.count - 1 };
-              }
-              return { ...m, reactions };
-            }),
-          };
-        },
-      );
-    });
+    socket.on(
+      'message:reaction',
+      (d: { conversationId: string; messageId: string; emoji: string; added: boolean }) => {
+        if (d.conversationId !== conversationId) return;
+        qc.setQueryData<{ items: ChatMessage[] } | undefined>(
+          ['messages', conversationId],
+          (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              items: old.items.map((m) => {
+                if (m.id !== d.messageId) return m;
+                const reactions = [...(m.reactions ?? [])];
+                const idx = reactions.findIndex((r) => r.emoji === d.emoji);
+                if (d.added) {
+                  if (idx >= 0)
+                    reactions[idx] = { ...reactions[idx]!, count: reactions[idx]!.count + 1 };
+                  else reactions.push({ emoji: d.emoji, count: 1, mine: false });
+                } else if (idx >= 0) {
+                  if (reactions[idx]!.count <= 1) reactions.splice(idx, 1);
+                  else reactions[idx] = { ...reactions[idx]!, count: reactions[idx]!.count - 1 };
+                }
+                return { ...m, reactions };
+              }),
+            };
+          },
+        );
+      },
+    );
 
     // Live edit / delete.
     socket.on('message:edit', (d: { conversationId: string; message: ChatMessage }) => {
@@ -558,7 +616,12 @@ export function useChatSocket(
     });
     socket.on('message:delete', (d: { conversationId: string; message: ChatMessage }) => {
       if (d.conversationId !== conversationId) return;
-      patchMessage({ ...d.message, body: null, attachmentUrl: null, deletedAt: new Date().toISOString() });
+      patchMessage({
+        ...d.message,
+        body: null,
+        attachmentUrl: null,
+        deletedAt: new Date().toISOString(),
+      });
     });
 
     // Live presence: peer came online / offline.
@@ -569,13 +632,15 @@ export function useChatSocket(
     // Live pin/unpin.
     socket.on('message:pin', (d: { conversationId: string; message: ChatMessage }) => {
       if (d.conversationId !== conversationId) return;
-      qc.setQueryData<{ items: ChatMessage[] } | undefined>(
-        ['messages', conversationId],
-        (old) => {
-          if (!old) return old;
-          return { ...old, items: old.items.map((m) => (m.id === d.message.id ? { ...m, pinnedAt: d.message.pinnedAt } : m)) };
-        },
-      );
+      qc.setQueryData<{ items: ChatMessage[] } | undefined>(['messages', conversationId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items.map((m) =>
+            m.id === d.message.id ? { ...m, pinnedAt: d.message.pinnedAt } : m,
+          ),
+        };
+      });
     });
 
     // Presence heartbeat so peers see the online dot. Also auto-closes socket on 'close'.

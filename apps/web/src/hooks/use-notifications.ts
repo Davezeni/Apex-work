@@ -20,13 +20,7 @@ export const ICON_EMOJI: Record<string, string> = {
 };
 
 export type NotificationType =
-  | 'ORDER_UPDATE'
-  | 'NEW_MESSAGE'
-  | 'NEW_BID'
-  | 'PAYMENT'
-  | 'SYSTEM'
-  | 'REVIEW'
-  | 'REVIEW_REPLY';
+  'ORDER_UPDATE' | 'NEW_MESSAGE' | 'NEW_BID' | 'PAYMENT' | 'SYSTEM' | 'REVIEW' | 'REVIEW_REPLY';
 
 export interface AppNotification {
   id: string;
@@ -56,7 +50,7 @@ export function useUnreadCount() {
     queryFn: () => apiFetch('/notifications/unread-count', { token }),
     enabled: !!token,
     // Cheap poll every 30s as a fallback in case the socket connection drops.
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     staleTime: 5_000,
   });
 }
@@ -103,8 +97,7 @@ export function useNotificationSocket() {
       // Show an in-app toast unless we're already on the notifications page;
       // clicking it jumps to the notification. NEW_MESSAGE toasts are subtle.
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/notifications')) {
-        const title =
-          notif.type === 'NEW_MESSAGE' ? 'New message' : notif.title;
+        const title = notif.type === 'NEW_MESSAGE' ? 'New message' : notif.title;
         toast(title, {
           description: notif.body ?? undefined,
           icon: ICON_EMOJI[notif.type] ?? '🔔',
@@ -114,7 +107,8 @@ export function useNotificationSocket() {
               const p = notif.payload ?? {};
               if (typeof p.conversationId === 'string')
                 window.location.assign(`/messages/${p.conversationId}`);
-              else if (typeof p.orderId === 'string') window.location.assign(`/orders/${p.orderId}`);
+              else if (typeof p.orderId === 'string')
+                window.location.assign(`/orders/${p.orderId}`);
               else window.location.assign('/notifications');
             },
           },

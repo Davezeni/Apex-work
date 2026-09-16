@@ -84,6 +84,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
+  const connectedRef = useRef(false);
   const pcsRef = useRef<Record<string, RTCPeerConnection>>({});
   const localRef = useRef<HTMLVideoElement | null>(null);
   const iceRef = useRef<RTCIceServer[]>(DEFAULT_ICE_SERVERS);
@@ -234,7 +235,10 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') setPhase('live');
+        if (pc.connectionState === 'connected') {
+          connectedRef.current = true;
+          setPhase('live');
+        }
         if (pc.connectionState === 'failed') {
           toast.error(dt('Call peer disconnected'));
         }
@@ -264,6 +268,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
 
   useEffect(() => {
     if (!token || !localStream) return;
+    const startedAt = Date.now(); // lint-safe: captured inside the effect
     const sock = io(API_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -333,6 +338,14 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
     );
 
     return () => {
+      // Leave a call log in the thread: duration when someone connected,
+      // "Missed …" when nobody did.
+      sock.emit('call:log', {
+        conversationId,
+        mode,
+        durationSec: Math.round((Date.now() - startedAt) / 1000),
+        connected: connectedRef.current,
+      });
       sock.emit('call:leave', conversationId);
       sock.emit('call:end', conversationId);
       Object.values(pcsRef.current).forEach((pc) => pc.close());

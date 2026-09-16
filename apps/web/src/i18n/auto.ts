@@ -265,6 +265,16 @@ export const AUTO_DICT: Record<string, string> = {
   'Camera unavailable — continuing with audio only. Video can be re-enabled once the camera is free.':
     'ካሜራው አይሰራም — በድምጽ ብቻ መቀጠል እንችላለን።',
   Answer: 'መልስ',
+  'Your data, your rules': 'ዳታዎ የእርስዎ ነው',
+  'The simple rules that keep ApexWork fair for everyone.': 'ApexWorkን ለሁሉም ፍትሃዊ የሚያደርጉ ቀላል ህጎች።',
+  'The tiny files that keep you signed in — and nothing sneaky.':
+    'ወደ መለያዎ እንዲቀሩ የሚያግዙ ትንንሽ ፋይሎች ብቻ።',
+  'Quick answers to the questions we hear most.': 'ብዙ ከምንሰማቸው ጥያቄዎች ፈጣን መልሶች።',
+  'Real humans in Addis Ababa — reach out any time.': 'በአዲስ አበባ ያሉ እውነተኛ ሰዎች — በማንኛውም ጊዜ ያግኙን።',
+  'Talk to a real person.': 'ከእውነተኛ ሰው ጋር ይነገሩ።',
+  'Email, Telegram or a phone call — whichever is easiest for you.':
+    'ኢሜይል፣ ቴሌግራም ወይም ስልክ ጥሪ — ለእርስዎ የቀለለውን ይምረጡ።',
+  'Last updated by the ApexWork team': 'በApexWork ቡድን የታደሰ',
   Completed: 'ተጠናቋል',
   Confirm: 'አረጋግጥ',
   'Confirm password': 'የይለፍ ቃል አረጋግጥ',
