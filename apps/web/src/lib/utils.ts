@@ -12,7 +12,8 @@ const MEDIA_BASE = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
  */
 export function resolveMediaUrl(input?: string | null): string | undefined {
   if (!input) return undefined;
-  if (/^(https?:)?\/\//.test(input) || input.startsWith('data:') || input.startsWith('blob:')) return input;
+  if (/^(https?:)?\/\//.test(input) || input.startsWith('data:') || input.startsWith('blob:'))
+    return input;
   if (input.startsWith('/') && MEDIA_BASE) return `${MEDIA_BASE}${input}`;
   return input;
 }

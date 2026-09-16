@@ -81,8 +81,7 @@ export function useCloseJob() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<JobDetail>(`/jobs/${id}/close`, { method: 'POST', token }),
+    mutationFn: (id: string) => apiFetch<JobDetail>(`/jobs/${id}/close`, { method: 'POST', token }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['jobs'] });
       qc.invalidateQueries({ queryKey: ['job'] });

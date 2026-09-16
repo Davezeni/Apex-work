@@ -12,12 +12,27 @@ import { PinInput } from '@/components/auth/pin-input';
 import { useSetPin } from '@/hooks/use-security';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
+import { safeBack } from '@/lib/safe-back';
 
 const WEAK_PINS = new Set([
-  '000000', '111111', '222222', '333333', '444444', '555555',
-  '666666', '777777', '888888', '999999',
-  '123456', '654321', '012345', '098765',
-  '123123', '456456', '112233', '121212',
+  '000000',
+  '111111',
+  '222222',
+  '333333',
+  '444444',
+  '555555',
+  '666666',
+  '777777',
+  '888888',
+  '999999',
+  '123456',
+  '654321',
+  '012345',
+  '098765',
+  '123123',
+  '456456',
+  '112233',
+  '121212',
 ]);
 
 /**
@@ -93,7 +108,7 @@ function PinSetupInner() {
     <div className="mesh-bg flex min-h-dvh flex-col">
       <header className="safe-top flex items-center gap-3 p-5">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
           aria-label={t('common.back')}
         >

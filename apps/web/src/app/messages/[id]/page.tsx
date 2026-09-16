@@ -117,6 +117,7 @@ import { toast } from 'sonner';
 import { useI18n } from '@/i18n';
 import { REACTION_EMOJIS, type ReactionEmoji } from '@apex-work/shared';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { safeBack } from '@/lib/safe-back';
 function initialsOf(name: string): string {
   return (
     name
@@ -477,7 +478,7 @@ export default function ConversationPage() {
     if (!t) return;
     const dx = t.clientX - start.x;
     const dy = t.clientY - start.y;
-    if (start.x < 40 && dx > 70 && Math.abs(dy) < 60) router.back();
+    if (start.x < 40 && dx > 70 && Math.abs(dy) < 60) safeBack(router, '/messages');
     swipesRef.current = null;
   };
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -660,7 +661,7 @@ export default function ConversationPage() {
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)' }}
       >
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
           aria-label={dt('Back')}
         >

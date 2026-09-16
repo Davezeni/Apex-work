@@ -34,7 +34,11 @@ export function usePush() {
 
   const refresh = useCallback(async () => {
     if (typeof window === 'undefined') return;
-    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    if (
+      !('Notification' in window) ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
       setState('unsupported');
       return;
     }
@@ -48,10 +52,15 @@ export function usePush() {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const enable = useCallback(async (): Promise<boolean> => {
-    if (state === 'unsupported') { toast.error('Push not supported on this browser'); return false; }
+    if (state === 'unsupported') {
+      toast.error('Push not supported on this browser');
+      return false;
+    }
     setBusy(true);
     try {
       const perm = await Notification.requestPermission();
@@ -59,7 +68,10 @@ export function usePush() {
       if (perm !== 'granted') return false;
 
       // Fetch the VAPID public key. Public endpoint — no auth needed.
-      const { publicKey, configured } = await apiFetch<{ publicKey: string | null; configured: boolean }>('/push/vapid-key');
+      const { publicKey, configured } = await apiFetch<{
+        publicKey: string | null;
+        configured: boolean;
+      }>('/push/vapid-key');
       if (!publicKey || !configured) {
         toast.error('Push not configured on server yet');
         return false;
@@ -83,7 +95,11 @@ export function usePush() {
       await apiFetch('/push/subscribe', {
         method: 'POST',
         token,
-        body: { endpoint: json.endpoint, keys: json.keys, userAgent: navigator.userAgent.slice(0, 400) },
+        body: {
+          endpoint: json.endpoint,
+          keys: json.keys,
+          userAgent: navigator.userAgent.slice(0, 400),
+        },
       });
       setSubscribed(true);
       toast.success('Push notifications enabled 🔔');
@@ -103,7 +119,11 @@ export function usePush() {
       const reg = await navigator.serviceWorker.getRegistration();
       const sub = await reg?.pushManager.getSubscription();
       if (sub) {
-        await apiFetch('/push/unsubscribe', { method: 'POST', token, body: { endpoint: sub.endpoint } }).catch(() => undefined);
+        await apiFetch('/push/unsubscribe', {
+          method: 'POST',
+          token,
+          body: { endpoint: sub.endpoint },
+        }).catch(() => undefined);
         await sub.unsubscribe();
       }
       setSubscribed(false);

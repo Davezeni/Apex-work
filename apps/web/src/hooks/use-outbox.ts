@@ -34,10 +34,14 @@ export function useOutboxSync() {
 
       for (const item of items) {
         if (cancelled) return;
-        if (item.attempts >= 8) { await remove(item.clientId); continue; }
+        if (item.attempts >= 8) {
+          await remove(item.clientId);
+          continue;
+        }
         try {
           await apiFetch(`/conversations/${item.conversationId}/messages`, {
-            method: 'POST', token,
+            method: 'POST',
+            token,
             body: {
               body: item.body,
               attachmentUrl: item.attachmentUrl,

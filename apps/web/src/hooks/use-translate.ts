@@ -25,7 +25,9 @@ export function useTranslateGig(slug: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<GigTranslation & { source: 'ai' | 'fallback' }, Error, 'en' | 'am'>({
-    mutationFn: (targetLocale) => apiFetch(`/gigs/${slug}/translate`, { method: 'POST', token, body: { targetLocale } }),
-    onSuccess: (_r, locale) => qc.invalidateQueries({ queryKey: ['gig', slug, 'translation', locale] }),
+    mutationFn: (targetLocale) =>
+      apiFetch(`/gigs/${slug}/translate`, { method: 'POST', token, body: { targetLocale } }),
+    onSuccess: (_r, locale) =>
+      qc.invalidateQueries({ queryKey: ['gig', slug, 'translation', locale] }),
   });
 }

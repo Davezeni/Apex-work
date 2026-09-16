@@ -7,6 +7,7 @@ import { ArrowLeft, Moon, Sun, Monitor, Type, WifiOff } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 const SIZES = [
   { id: 'sm', label: 'Small', px: '14px' },
   { id: 'md', label: 'Default', px: '16px' },
@@ -45,7 +46,7 @@ export default function AppearancePage() {
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

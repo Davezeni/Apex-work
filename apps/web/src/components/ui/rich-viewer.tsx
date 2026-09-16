@@ -14,7 +14,13 @@ import { cn } from '@/lib/utils';
  * Legacy plain-text values (from before the editor swap) render fine too
  * because they don't contain any HTML tags to worry about.
  */
-export function RichViewer({ html, className }: { html: string | null | undefined; className?: string }) {
+export function RichViewer({
+  html,
+  className,
+}: {
+  html: string | null | undefined;
+  className?: string;
+}) {
   const clean = useMemo(() => sanitize(html ?? ''), [html]);
   if (!clean) return null;
   // If the string has NO HTML tags, render as pre-wrap text so line-breaks survive.
@@ -30,15 +36,17 @@ export function RichViewer({ html, className }: { html: string | null | undefine
 }
 
 function sanitize(html: string): string {
-  return html
-    // strip <script>…</script>
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    // strip <style>…</style>
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    // strip inline event handlers (onclick, onerror, …)
-    .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    // neutralize javascript: URIs
-    .replace(/javascript:/gi, '')
-    // neutralize data: URIs on href/src (but keep image data URIs? No — safer to strip)
-    .replace(/(href|src)\s*=\s*(["'])\s*data:/gi, '$1=$2about:blank" data-blocked="1');
+  return (
+    html
+      // strip <script>…</script>
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      // strip <style>…</style>
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      // strip inline event handlers (onclick, onerror, …)
+      .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      // neutralize javascript: URIs
+      .replace(/javascript:/gi, '')
+      // neutralize data: URIs on href/src (but keep image data URIs? No — safer to strip)
+      .replace(/(href|src)\s*=\s*(["'])\s*data:/gi, '$1=$2about:blank" data-blocked="1')
+  );
 }

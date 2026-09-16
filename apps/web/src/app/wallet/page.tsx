@@ -24,6 +24,7 @@ import {
 import { LazyWithdrawSheet as WithdrawSheet } from '@/components/lazy';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 
 type TxType = WalletData['transactions'][number]['type'];
 
@@ -65,7 +66,7 @@ export default function WalletPage() {
     <div className="min-h-dvh bg-background pb-16">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
@@ -125,9 +126,7 @@ export default function WalletPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="truncate text-sm font-semibold">
-                      {formatEtb(wd.amountEtb)}
-                    </div>
+                    <div className="truncate text-sm font-semibold">{formatEtb(wd.amountEtb)}</div>
                     <StatusPill status={wd.status} />
                   </div>
                   <div className="text-[11px] text-muted-foreground">

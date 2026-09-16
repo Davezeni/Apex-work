@@ -25,6 +25,7 @@ import { useSkills, useCreateSkill, type Skill } from '@/hooks/use-skills';
 import { cn, formatEtb } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
+import { safeBack } from '@/lib/safe-back';
 
 type Step = 'title' | 'bio' | 'location' | 'rate' | 'skills';
 const STEPS: Step[] = ['title', 'bio', 'location', 'rate', 'skills'];
@@ -83,7 +84,7 @@ export default function OnboardingPage() {
 
   const goBack = () => {
     if (stepIdx > 0) setStepIdx((i) => i - 1);
-    else router.back();
+    else safeBack(router, '/');
   };
 
   const submit = async () => {

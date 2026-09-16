@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useTicket, useReplyTicket, useSetTicketStatus, useSubmitCsat } from '@/hooks/use-support';
 import { cn, timeAgo } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function TicketPage() {
     <div className="flex h-dvh flex-col bg-background">
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -11,6 +11,7 @@ import { useMySkills, useAddSkill, useSetLevel, useRemoveSkill } from '@/hooks/u
 import { useSuggest } from '@/hooks/use-search';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 const LEVELS = [
   { n: 1, label: 'Beginner' },
   { n: 2, label: 'Practiced' },
@@ -59,7 +60,7 @@ export default function SkillsManagerPage() {
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

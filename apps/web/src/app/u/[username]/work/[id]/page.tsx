@@ -9,6 +9,7 @@ import { usePublicPortfolioItem } from '@/hooks/use-portfolio';
 import { useI18n } from '@/i18n';
 import { timeAgo } from '@/lib/utils';
 import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
+import { safeBack } from '@/lib/safe-back';
 export default function PortfolioItemPage() {
   const { username, id } = useParams<{ username: string; id: string }>();
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function PortfolioItemPage() {
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between p-3">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
         >

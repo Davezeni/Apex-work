@@ -90,9 +90,7 @@ export function OfferCard({ offerId, isMine }: Props) {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {t('offer.priceLabel')}
             </div>
-            <div className="text-base font-extrabold text-primary">
-              {formatEtb(offer.priceEtb)}
-            </div>
+            <div className="text-base font-extrabold text-primary">{formatEtb(offer.priceEtb)}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -162,11 +160,7 @@ function StatusBadge({ status }: { status: string }) {
         ? 'bg-red-500/30'
         : 'bg-muted-foreground/30';
   const icon =
-    status === 'ACCEPTED' ? (
-      <CheckCircle2 className="h-3 w-3" />
-    ) : (
-      <XCircle className="h-3 w-3" />
-    );
+    status === 'ACCEPTED' ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />;
   const label: Record<string, string> = {
     ACCEPTED: t('offer.accepted'),
     DECLINED: t('offer.declined'),

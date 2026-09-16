@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useMe } from '@/hooks/use-me';
 import { useBuyPro, useSubscription, useVerifyPro } from '@/hooks/use-subscription';
 import { formatEtb } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 export default function ProPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -66,7 +67,7 @@ export default function ProPage() {
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/90 px-3 py-3 backdrop-blur-xl">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -8,8 +8,14 @@ export interface GigAnalytics {
   gig: { id: string; title: string; slug: string };
   range: string;
   kpis: {
-    views: number; contacts: number; starts: number; orders: number; completed: number;
-    viewToContact: number; contactToOrder: number; completionRate: number;
+    views: number;
+    contacts: number;
+    starts: number;
+    orders: number;
+    completed: number;
+    viewToContact: number;
+    contactToOrder: number;
+    completionRate: number;
   };
   series: { day: string; views: number }[];
 }
@@ -25,8 +31,18 @@ export function useGigAnalytics(slug: string | undefined) {
 }
 
 /** Fire-and-forget event ping — never blocks the UI. */
-export async function recordGigEvent(slug: string, type: 'VIEW' | 'CONTACT' | 'ORDER_START', token?: string | null) {
+export async function recordGigEvent(
+  slug: string,
+  type: 'VIEW' | 'CONTACT' | 'ORDER_START',
+  token?: string | null,
+) {
   try {
-    await apiFetch(`/gigs/${slug}/event`, { method: 'POST', body: { type }, token: token ?? undefined });
-  } catch { /* ignore — analytics failures never disrupt UX */ }
+    await apiFetch(`/gigs/${slug}/event`, {
+      method: 'POST',
+      body: { type },
+      token: token ?? undefined,
+    });
+  } catch {
+    /* ignore — analytics failures never disrupt UX */
+  }
 }

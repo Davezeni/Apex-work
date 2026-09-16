@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { useMe } from '@/hooks/use-me';
+import { safeBack } from '@/lib/safe-back';
 type AdminTemplate = {
   id: string;
   name: string;
@@ -72,7 +73,7 @@ export default function AdminTemplatesPage() {
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -27,7 +27,8 @@ export function useAddMember(id: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<unknown, Error, string>({
-    mutationFn: (userId) => apiFetch(`/groups/${id}/members`, { method: 'POST', token, body: { userId } }),
+    mutationFn: (userId) =>
+      apiFetch(`/groups/${id}/members`, { method: 'POST', token, body: { userId } }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
   });
 }
@@ -36,7 +37,8 @@ export function useRemoveMember(id: string | undefined) {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<unknown, Error, string>({
-    mutationFn: (userId) => apiFetch(`/groups/${id}/members/${userId}`, { method: 'DELETE', token }),
+    mutationFn: (userId) =>
+      apiFetch(`/groups/${id}/members/${userId}`, { method: 'DELETE', token }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }),
   });
 }

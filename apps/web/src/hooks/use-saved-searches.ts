@@ -39,7 +39,8 @@ export function useUpdateSavedSearch() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<SavedSearch, Error, { id: string } & UpdateSavedSearchInput>({
-    mutationFn: ({ id, ...body }) => apiFetch(`/me/saved-searches/${id}`, { method: 'PATCH', token, body }),
+    mutationFn: ({ id, ...body }) =>
+      apiFetch(`/me/saved-searches/${id}`, { method: 'PATCH', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['saved-searches'] }),
   });
 }

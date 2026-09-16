@@ -13,6 +13,7 @@ import { useCreateJob } from '@/hooks/use-jobs';
 import { useI18n } from '@/i18n';
 import { CATEGORIES, MIN_GIG_PRICE_ETB } from '@apex-work/shared';
 import { cn } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 
 const STEPS = ['step1', 'step2', 'step3'] as const;
 type Step = (typeof STEPS)[number];
@@ -121,7 +122,7 @@ export default function NewJobPage() {
     <div className="min-h-dvh bg-background pb-32">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => (stepIdx > 0 ? setStep(STEPS[stepIdx - 1]!) : router.back())}
+          onClick={() => (stepIdx > 0 ? setStep(STEPS[stepIdx - 1]!) : safeBack(router, '/jobs'))}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

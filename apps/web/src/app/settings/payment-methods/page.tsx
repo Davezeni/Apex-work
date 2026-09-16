@@ -16,6 +16,7 @@ import { useI18n } from '@/i18n';
 import { PAYMENT_METHODS } from '@apex-work/shared';
 import { usePaymentConfig } from '@/hooks/use-payment';
 import { cn } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 /**
  * Chapa hosts the actual payment form, so Apex-Work must not collect or
  * persist wallet PINs, CVVs, or full account numbers in localStorage. This
@@ -30,7 +31,7 @@ export default function PaymentMethodsPage() {
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

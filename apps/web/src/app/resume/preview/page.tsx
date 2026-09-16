@@ -28,6 +28,7 @@ import {
   type ResumeFormatId,
   type ResumeTemplateId,
 } from '@apex-work/shared';
+import { safeBack } from '@/lib/safe-back';
 
 const FORMAT_IDS = new Set(RESUME_FORMATS.map((format) => format.id));
 const TEMPLATE_IDS = new Set(RESUME_TEMPLATES.map((template) => template.id));
@@ -111,7 +112,7 @@ export default function ResumePreviewPage() {
     <div className="min-h-dvh bg-muted/40 pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl print:hidden">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

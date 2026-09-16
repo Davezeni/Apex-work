@@ -39,6 +39,7 @@ import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { extensionOf, isImageType, isVideoType } from '@/lib/file-types';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { safeBack } from '@/lib/safe-back';
 function initialsOf(name: string): string {
   return (
     name
@@ -133,7 +134,7 @@ export default function PublicProfilePage() {
         <div className="absolute inset-0 bg-[radial-gradient(60%_70%_at_50%_0%,rgba(255,255,255,0.10),transparent_60%)] dark:bg-[radial-gradient(60%_70%_at_50%_0%,rgba(255,255,255,0.04),transparent_60%)]" />
         <div className="safe-top absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => safeBack(router)}
             aria-label={dt('Back')}
             className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
           >

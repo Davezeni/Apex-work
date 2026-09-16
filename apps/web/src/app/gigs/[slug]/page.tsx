@@ -39,6 +39,7 @@ import { useTrackRecentlyViewed } from '@/hooks/use-recently-viewed';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { safeBack } from '@/lib/safe-back';
 function initialsOf(name: string): string {
   return (
     name
@@ -352,7 +353,7 @@ export default function GigDetailPage() {
           {/* No cover image — compact sticky header, no gradient hero */}
           <header className="safe-top sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
             <button
-              onClick={() => router.back()}
+              onClick={() => safeBack(router)}
               aria-label={dt('Back')}
               className="grid h-9 w-9 place-items-center rounded-full text-foreground active:scale-90"
             >
@@ -751,7 +752,7 @@ function HeaderActions({
       )}
     >
       <button
-        onClick={() => router.back()}
+        onClick={() => safeBack(router)}
         aria-label={dt('Back')}
         className="grid h-10 w-10 place-items-center rounded-full bg-black/50 text-white backdrop-blur"
       >

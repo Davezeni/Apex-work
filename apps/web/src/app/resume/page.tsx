@@ -50,6 +50,7 @@ import { ResumeStudioSections } from '@/components/resume/studio-sections';
 import { ResumeVersionsPanel } from '@/components/resume/versions-panel';
 import { useI18n } from '@/i18n';
 import type { ResumeContent, ResumeTemplateId } from '@apex-work/shared';
+import { safeBack } from '@/lib/safe-back';
 /**
  * Resume/CV builder. Sections:
  *   - Basics (headline + summary + contact + socials)
@@ -313,7 +314,7 @@ export default function ResumeBuilderPage() {
     <div className="min-h-dvh bg-background pb-32">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -67,7 +67,7 @@ export function AttachButton({ onAttached, disabled, className }: Props) {
         disabled={disabled || upload.isPending}
         aria-label={t('chat.attach')}
         className={cn(
-          'grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-90 disabled:opacity-50 hover:bg-muted hover:text-foreground',
+          'grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform hover:bg-muted hover:text-foreground active:scale-90 disabled:opacity-50',
           className,
         )}
       >

@@ -21,6 +21,7 @@ import { useMe } from '@/hooks/use-me';
 import { useOrder, type OrderStatus } from '@/hooks/use-orders';
 import { useStartConversation } from '@/hooks/use-chat';
 import { cn, formatEtb } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 const statusLabels: Record<OrderStatus, string> = {
   PENDING: 'Awaiting payment',
   ACTIVE: 'In progress',
@@ -71,7 +72,7 @@ export default function ProjectWorkspacePage() {
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -26,8 +26,14 @@ export function useMessageDraft(conversationId: string | undefined) {
     if (!key || !conversationId) return;
     try {
       const local = localStorage.getItem(key);
-      if (local != null) { setText(local); lastSentRef.current = local; return; }
-    } catch { /* ignore */ }
+      if (local != null) {
+        setText(local);
+        lastSentRef.current = local;
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
     if (!token) return;
     // Never block UI — best-effort remote hydrate.
     apiFetch<{ body: string } | null>(`/me/drafts/${conversationId}`, { token })
@@ -35,7 +41,11 @@ export function useMessageDraft(conversationId: string | undefined) {
         if (d?.body) {
           setText(d.body);
           lastSentRef.current = d.body;
-          try { localStorage.setItem(key, d.body); } catch { /* ignore */ }
+          try {
+            localStorage.setItem(key, d.body);
+          } catch {
+            /* ignore */
+          }
         }
       })
       .catch(() => undefined);
@@ -44,25 +54,41 @@ export function useMessageDraft(conversationId: string | undefined) {
   // On every change: instant local write, debounced remote write.
   useEffect(() => {
     if (!key || !conversationId) return;
-    try { localStorage.setItem(key, text); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(key, text);
+    } catch {
+      /* ignore */
+    }
 
     if (timerRef.current) clearTimeout(timerRef.current);
     if (text === lastSentRef.current || !token) return;
     timerRef.current = setTimeout(() => {
       if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       apiFetch('/me/drafts', {
-        method: 'PUT', token,
+        method: 'PUT',
+        token,
         body: { conversationId, body: text },
-      }).then(() => { lastSentRef.current = text; }).catch(() => undefined);
+      })
+        .then(() => {
+          lastSentRef.current = text;
+        })
+        .catch(() => undefined);
     }, REMOTE_DEBOUNCE_MS);
 
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, [text, key, conversationId, token]);
 
   const clear = () => {
     setText('');
     lastSentRef.current = '';
-    if (key) try { localStorage.removeItem(key); } catch { /* ignore */ }
+    if (key)
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* ignore */
+      }
     if (conversationId && token) {
       apiFetch(`/me/drafts/${conversationId}`, { method: 'DELETE', token }).catch(() => undefined);
     }

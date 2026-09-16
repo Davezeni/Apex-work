@@ -34,6 +34,7 @@ import {
 import { useI18n } from '@/i18n';
 import { formatEtb } from '@/lib/utils';
 import type { ResumeTemplateId } from '@apex-work/shared';
+import { safeBack } from '@/lib/safe-back';
 export default function ResumeTemplatesPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -110,7 +111,7 @@ export default function ResumeTemplatesPage() {
       <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/90 px-3 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-5xl items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => safeBack(router)}
             aria-label={t('common.back')}
             className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
           >

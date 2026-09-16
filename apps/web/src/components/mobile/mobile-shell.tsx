@@ -108,11 +108,11 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
           </div>
         </div>
       )}
-      <motion.main
-        key={pathname}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      {/* No per-route remount / entrance animation: re-keying <main> on
+          pathname replays a 250ms animation and remounts heavy pages on every
+          navigation, which made taps feel swallowed ("need a second click")
+          and slowed transitions on mid/low-end phones. */}
+      <main
         className={cn(
           'safe-head-room min-h-dvh min-w-0 flex-1',
           showTabBar && 'safe-b-nav',
@@ -120,7 +120,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
         )}
       >
         {children}
-      </motion.main>
+      </main>
       <PwaInstall />
 
       {/* Desktop floating Create (+) — visible on md+ across the shell. On

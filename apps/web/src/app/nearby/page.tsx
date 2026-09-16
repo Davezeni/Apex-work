@@ -13,6 +13,7 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { formatEtb } from '@/lib/utils';
+import { safeBack } from '@/lib/safe-back';
 // Leaflet is browser-only; SSR it out.
 const NearbyMap = dynamic(() => import('@/components/nearby-map').then((m) => m.NearbyMap), {
   ssr: false,
@@ -67,7 +68,7 @@ export default function NearbyPage() {
         <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => router.back()}
+              onClick={() => safeBack(router)}
               aria-label={t('common.back')}
               className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
             >

@@ -6,14 +6,25 @@ import { useAuthStore } from '@/stores/auth-store';
 import type { OpenDisputeInput, ResolveDisputeInput } from '@apex-work/shared';
 
 export interface Dispute {
-  id: string; orderId: string; openedById: string; reason: string;
-  status: 'OPEN' | 'REVIEWING' | 'RESOLVED_CLIENT' | 'RESOLVED_SELLER' | 'RESOLVED_SPLIT' | 'WITHDRAWN';
-  clientPayoutEtb: number | null; sellerPayoutEtb: number | null;
+  id: string;
+  orderId: string;
+  openedById: string;
+  reason: string;
+  status:
+    'OPEN' | 'REVIEWING' | 'RESOLVED_CLIENT' | 'RESOLVED_SELLER' | 'RESOLVED_SPLIT' | 'WITHDRAWN';
+  clientPayoutEtb: number | null;
+  sellerPayoutEtb: number | null;
   adminNotes: string | null;
-  createdAt: string; resolvedAt: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
   order?: {
-    id: string; title: string; amountEtb: number; sellerNetEtb: number; platformFeeEtb: number;
-    clientId: string; sellerId: string;
+    id: string;
+    title: string;
+    amountEtb: number;
+    sellerNetEtb: number;
+    platformFeeEtb: number;
+    clientId: string;
+    sellerId: string;
     client: { username: string; fullName: string; avatarUrl: string | null };
     seller: { username: string; fullName: string; avatarUrl: string | null };
   };
@@ -55,7 +66,8 @@ export function useResolveDispute() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<Dispute, Error, { id: string } & ResolveDisputeInput>({
-    mutationFn: ({ id, ...body }) => apiFetch(`/admin/disputes/${id}/resolve`, { method: 'POST', token, body }),
+    mutationFn: ({ id, ...body }) =>
+      apiFetch(`/admin/disputes/${id}/resolve`, { method: 'POST', token, body }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'disputes'] }),
   });
 }

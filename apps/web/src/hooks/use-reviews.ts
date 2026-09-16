@@ -14,7 +14,13 @@ export interface Review {
   sellerReply: string | null;
   sellerRepliedAt: string | null;
   sellerReplyEditedAt: string | null;
-  author: { id: string; username: string; fullName: string; avatarUrl: string | null; isVerified?: boolean };
+  author: {
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+    isVerified?: boolean;
+  };
   order?: { id: string; title: string };
 }
 
@@ -40,8 +46,12 @@ export function useCreateReview() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: { orderId: string; rating: number; comment?: string; photoUrls?: string[] }) =>
-      apiFetch<Review>('/reviews', { method: 'POST', token, body: input }),
+    mutationFn: (input: {
+      orderId: string;
+      rating: number;
+      comment?: string;
+      photoUrls?: string[];
+    }) => apiFetch<Review>('/reviews', { method: 'POST', token, body: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reviews'] });
       qc.invalidateQueries({ queryKey: ['review', 'for-order'] });
@@ -57,10 +67,11 @@ export function useUpsertReviewReply() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: { reviewId: string; comment: string }) =>
-      apiFetch<{ id: string; sellerReply: string | null }>(
-        `/reviews/${input.reviewId}/reply`,
-        { method: 'PUT', token, body: { comment: input.comment } },
-      ),
+      apiFetch<{ id: string; sellerReply: string | null }>(`/reviews/${input.reviewId}/reply`, {
+        method: 'PUT',
+        token,
+        body: { comment: input.comment },
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reviews'] });
       qc.invalidateQueries({ queryKey: ['notifications'] });

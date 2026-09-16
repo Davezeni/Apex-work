@@ -25,6 +25,7 @@ import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
+import { safeBack } from '@/lib/safe-back';
 const VIEW_MODE_KEY = 'apex-gig-view';
 type ViewMode = 'list' | 'grid';
 
@@ -162,7 +163,7 @@ function BrowseInner() {
       <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl md:px-6 md:pt-6">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.back()}
+            onClick={() => safeBack(router)}
             aria-label={t('common.back')}
             className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card transition-colors hover:bg-muted md:hidden"
           >

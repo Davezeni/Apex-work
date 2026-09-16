@@ -27,6 +27,7 @@ import { VoiceSearch } from '@/components/chat/voice-search';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MobileShell } from '@/components/mobile/mobile-shell';
+import { safeBack } from '@/lib/safe-back';
 type Tab = 'all' | 'gigs' | 'jobs' | 'users';
 
 export default function SearchPage() {
@@ -75,7 +76,7 @@ export default function SearchPage() {
         <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.back()}
+              onClick={() => safeBack(router)}
               aria-label={t('common.back')}
               className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
             >

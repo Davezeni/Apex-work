@@ -54,6 +54,7 @@ import { canRole } from '@/components/admin/rbac';
 import { TrendChart, type SeriesPoint } from '@/components/admin/trend-chart';
 import { ExportButton } from '@/components/admin/export-button';
 import { CommandPalette, type PaletteAction } from '@/components/admin/command-palette';
+import { safeBack } from '@/lib/safe-back';
 
 /** Staff roles that may access the admin panel (mirrors @apex-work/shared). */
 const STAFF_ROLES = ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'];
@@ -64,7 +65,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.108';
+export const ADMIN_UI_BUILD = '2026-09-09.109';
 
 type Tab =
   | 'summary'
@@ -133,7 +134,12 @@ export default function AdminPage() {
   }
 
   return (
-    <AdminShell role={me.role} tab={tab} onChange={setTab} onBack={() => router.back()}>
+    <AdminShell
+      role={me.role}
+      tab={tab}
+      onChange={setTab}
+      onBack={() => safeBack(router, '/admin')}
+    >
       {tab === 'summary' && <SummaryTab />}
       {tab === 'moderation' && <ModerationTab />}
       {tab === 'media' && <MediaReviewTab />}

@@ -8,7 +8,8 @@ export function useBoostGig() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
   return useMutation<unknown, Error, { slug: string; days: number }>({
-    mutationFn: ({ slug, days }) => apiFetch(`/gigs/${slug}/boost`, { method: 'POST', token, body: { days } }),
+    mutationFn: ({ slug, days }) =>
+      apiFetch(`/gigs/${slug}/boost`, { method: 'POST', token, body: { days } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['gigs'] });
       qc.invalidateQueries({ queryKey: ['gig'] });

@@ -36,6 +36,7 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { timeAgo } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
+import { safeBack } from '@/lib/safe-back';
 export default function SecuritySettingsPage() {
   const router = useRouter();
   const { data: me, isLoading } = useMe();
@@ -63,7 +64,7 @@ export default function SecuritySettingsPage() {
     <div className="min-h-dvh bg-background pb-16">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

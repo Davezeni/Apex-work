@@ -36,7 +36,8 @@ export function useInboxTyping(): { typing: TypingMap } {
     socketRef.current = socket;
 
     const clear = (conversationId: string) => {
-      if (timers.current[conversationId]) window.clearTimeout(timers.current[conversationId] ?? undefined);
+      if (timers.current[conversationId])
+        window.clearTimeout(timers.current[conversationId] ?? undefined);
       timers.current[conversationId] = null;
       setTyping((prev) => {
         const { [conversationId]: _drop, ...rest } = prev;
@@ -44,12 +45,19 @@ export function useInboxTyping(): { typing: TypingMap } {
       });
     };
 
-    socket.on('typing:inbox', (d: { conversationId: string; userId: string; status: string; name?: string | null }) => {
-      if (d.status === 'stop') return clear(d.conversationId);
-      setTyping((prev) => ({ ...prev, [d.conversationId]: { userId: d.userId, name: d.name ?? null } }));
-      if (timers.current[d.conversationId]) window.clearTimeout(timers.current[d.conversationId] ?? undefined);
-      timers.current[d.conversationId] = window.setTimeout(() => clear(d.conversationId), 4000);
-    });
+    socket.on(
+      'typing:inbox',
+      (d: { conversationId: string; userId: string; status: string; name?: string | null }) => {
+        if (d.status === 'stop') return clear(d.conversationId);
+        setTyping((prev) => ({
+          ...prev,
+          [d.conversationId]: { userId: d.userId, name: d.name ?? null },
+        }));
+        if (timers.current[d.conversationId])
+          window.clearTimeout(timers.current[d.conversationId] ?? undefined);
+        timers.current[d.conversationId] = window.setTimeout(() => clear(d.conversationId), 4000);
+      },
+    );
 
     return () => {
       socket.disconnect();

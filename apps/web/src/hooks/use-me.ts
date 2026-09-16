@@ -46,7 +46,11 @@ export function useMe() {
     // /me carries role + verification flags + wallet-relevant state — we
     // need it fresh whenever a page mounts (e.g. after an admin promotes
     // the user). Override the app-wide `refetchOnMount: false` here.
-    staleTime: 30 * 1000,
+    // 5 min: `me` powers the shell, guard and most pages. Refetching it on
+    // every navigation added a round-trip to each page change; mutations that
+    // change the user still invalidate via ['me'].
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnMount: 'always',
     retry: (failureCount, error) => {
       if (error.status === 401) return false;

@@ -17,5 +17,7 @@ export function allCapabilitiesForRole(role: string): string[] {
 
 export function canRole(role: string, capability: string): boolean {
   if (role === 'ADMIN') return true;
-  return (ADMIN_CAPABILITIES as Record<string, readonly string[]>)[capability]?.includes(role) ?? false;
+  return (
+    (ADMIN_CAPABILITIES as Record<string, readonly string[]>)[capability]?.includes(role) ?? false
+  );
 }

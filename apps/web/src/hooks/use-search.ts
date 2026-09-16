@@ -5,18 +5,33 @@ import { apiFetch } from '@/lib/api';
 
 export interface SearchResults {
   gigs: {
-    id: string; slug: string; title: string; coverImageUrl: string | null;
-    startingPriceEtb: number; rating: number; ratingCount: number;
+    id: string;
+    slug: string;
+    title: string;
+    coverImageUrl: string | null;
+    startingPriceEtb: number;
+    rating: number;
+    ratingCount: number;
     owner: { username: string; fullName: string; avatarUrl: string | null };
   }[];
   jobs: {
-    id: string; title: string; budgetMinEtb: number | null; budgetMaxEtb: number | null;
-    isRemote: boolean; createdAt: string;
+    id: string;
+    title: string;
+    budgetMinEtb: number | null;
+    budgetMaxEtb: number | null;
+    isRemote: boolean;
+    createdAt: string;
     client: { username: string; fullName: string };
   }[];
   users: {
-    id: string; username: string; fullName: string; avatarUrl: string | null;
-    title: string | null; city: string | null; rating: number; ratingCount: number;
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+    title: string | null;
+    city: string | null;
+    rating: number;
+    ratingCount: number;
     isVerified?: boolean;
   }[];
 }
@@ -31,7 +46,11 @@ export function useGlobalSearch(q: string, limit = 8) {
   });
 }
 
-export interface Suggestion { text: string; type: 'gig' | 'job' | 'skill' | 'user'; ref?: string }
+export interface Suggestion {
+  text: string;
+  type: 'gig' | 'job' | 'skill' | 'user';
+  ref?: string;
+}
 
 export function useSuggest(q: string) {
   return useQuery<{ items: Suggestion[] }>({

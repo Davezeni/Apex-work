@@ -13,6 +13,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
+import { safeBack } from '@/lib/safe-back';
 type Step = 'phone' | 'otp';
 
 function safeNext(value: string | null): string {
@@ -106,7 +107,7 @@ export default function VerifyPhonePage() {
     <div className="mesh-bg flex min-h-dvh flex-col">
       <header className="safe-top flex items-center gap-3 p-5">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
         >

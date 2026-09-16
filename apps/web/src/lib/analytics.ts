@@ -28,7 +28,7 @@ function getPosthog(): typeof posthog | null {
     // call `.init()` on the empty namespace object (which crashed the app).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('posthog-js') as { default?: typeof posthog } & typeof posthog;
-    _posthog = (mod.default && typeof mod.default.init === 'function' ? mod.default : mod);
+    _posthog = mod.default && typeof mod.default.init === 'function' ? mod.default : mod;
   }
   return _posthog;
 }

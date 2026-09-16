@@ -25,7 +25,7 @@ const PAD = { top: 12, right: 8, bottom: 22, left: 34 };
 function maxOf(points: SeriesPoint[], useValue?: boolean): number {
   let m = 0;
   for (const p of points) {
-    const v = Number(useValue ? p.value ?? 0 : p.count);
+    const v = Number(useValue ? (p.value ?? 0) : p.count);
     if (v > m) m = v;
   }
   return m;
@@ -59,11 +59,13 @@ export function TrendChart({
   const points = series.map((p, i) => ({
     i,
     x: x(i),
-    y: y(Number(useValue ? p.value ?? 0 : p.count)),
+    y: y(Number(useValue ? (p.value ?? 0) : p.count)),
     p,
   }));
 
-  const line = points.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+  const line = points
+    .map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`)
+    .join(' ');
   const area = points.length
     ? `${line} L${points[points.length - 1]!.x.toFixed(1)},${PAD.top + innerH} L${points[0]!.x.toFixed(1)},${PAD.top + innerH} Z`
     : '';
@@ -74,14 +76,16 @@ export function TrendChart({
   });
 
   const labelEvery = Math.max(1, Math.ceil(n / 7));
-  const active = hover !== null ? points.find((pt) => pt.i === hover) ?? null : null;
+  const active = hover !== null ? (points.find((pt) => pt.i === hover) ?? null) : null;
 
   return (
     <div className="rounded-2xl border border-border bg-card p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: metric.color }} />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{metric.label}</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            {metric.label}
+          </span>
         </div>
         <div className="flex gap-1">
           {[7, 30, 90].map((d) => (
@@ -95,17 +99,46 @@ export function TrendChart({
           ))}
         </div>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${metric.label} trend chart`}>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        role="img"
+        aria-label={`${metric.label} trend chart`}
+      >
         {grid.map((g) => (
           <g key={g.gy}>
-            <line x1={PAD.left} x2={W - PAD.right} y1={g.gy} y2={g.gy} stroke="currentColor" className="text-border" strokeWidth={1} strokeDasharray="3 4" />
-            <text x={PAD.left - 6} y={g.gy + 3} textAnchor="end" fontSize={9} className="fill-muted-foreground">
+            <line
+              x1={PAD.left}
+              x2={W - PAD.right}
+              y1={g.gy}
+              y2={g.gy}
+              stroke="currentColor"
+              className="text-border"
+              strokeWidth={1}
+              strokeDasharray="3 4"
+            />
+            <text
+              x={PAD.left - 6}
+              y={g.gy + 3}
+              textAnchor="end"
+              fontSize={9}
+              className="fill-muted-foreground"
+            >
               {metric.format(g.val)}
             </text>
           </g>
         ))}
         {area && <path d={area} fill={metric.color} opacity={0.12} />}
-        {line && <path d={line} fill="none" stroke={metric.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />}
+        {line && (
+          <path
+            d={line}
+            fill="none"
+            stroke={metric.color}
+            strokeWidth={2}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+        )}
         {points.map((pt) => (
           <circle
             key={pt.i}
@@ -120,14 +153,29 @@ export function TrendChart({
         ))}
         {series.map((p, i) =>
           i % labelEvery === 0 ? (
-            <text key={p.day} x={x(i)} y={H - 6} textAnchor="middle" fontSize={9} className="fill-muted-foreground">
+            <text
+              key={p.day}
+              x={x(i)}
+              y={H - 6}
+              textAnchor="middle"
+              fontSize={9}
+              className="fill-muted-foreground"
+            >
               {p.day.slice(5)}
             </text>
           ) : null,
         )}
         {active && (
           <g>
-            <line x1={active.x} x2={active.x} y1={PAD.top} y2={PAD.top + innerH} stroke={metric.color} strokeWidth={1} strokeDasharray="2 2" />
+            <line
+              x1={active.x}
+              x2={active.x}
+              y1={PAD.top}
+              y2={PAD.top + innerH}
+              stroke={metric.color}
+              strokeWidth={1}
+              strokeDasharray="2 2"
+            />
             <g>
               <rect
                 x={Math.min(Math.max(active.x - 52, 2), W - 106)}
@@ -147,9 +195,15 @@ export function TrendChart({
                 fontWeight={700}
                 className="fill-foreground"
               >
-                {metric.format(Number(useValue ? active.p.value ?? 0 : active.p.count))}
+                {metric.format(Number(useValue ? (active.p.value ?? 0) : active.p.count))}
               </text>
-              <text x={Math.min(Math.max(active.x, 54), W - 54)} y={active.y - 3} textAnchor="middle" fontSize={8} className="fill-muted-foreground">
+              <text
+                x={Math.min(Math.max(active.x, 54), W - 54)}
+                y={active.y - 3}
+                textAnchor="middle"
+                fontSize={8}
+                className="fill-muted-foreground"
+              >
                 {active.p.day}
               </text>
             </g>

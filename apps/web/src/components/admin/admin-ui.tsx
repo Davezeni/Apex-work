@@ -6,7 +6,13 @@ import { cn } from '@/lib/utils';
 
 /** Small presentational helpers shared by every admin tab. */
 
-export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'ok' | 'warn' | 'bad' | 'info' }) {
+export function Badge({
+  children,
+  tone = 'neutral',
+}: {
+  children: ReactNode;
+  tone?: 'neutral' | 'ok' | 'warn' | 'bad' | 'info';
+}) {
   const tones: Record<string, string> = {
     neutral: 'bg-muted text-muted-foreground',
     ok: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
@@ -15,13 +21,26 @@ export function Badge({ children, tone = 'neutral' }: { children: ReactNode; ton
     info: 'bg-sky-500/15 text-sky-600 dark:text-sky-400',
   };
   return (
-    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide', tones[tone])}>
+    <span
+      className={cn(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide',
+        tones[tone],
+      )}
+    >
       {children}
     </span>
   );
 }
 
-export function SectionHead({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+export function SectionHead({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
       <div>
@@ -46,7 +65,15 @@ export function Empty({ message }: { message: string }) {
   return <div className="py-16 text-center text-sm text-muted-foreground">{message}</div>;
 }
 
-export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+export function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-bold text-muted-foreground">{label}</span>
@@ -68,7 +95,11 @@ export function TableShell({ children }: { children: ReactNode }) {
 }
 
 export function Th({ children }: { children: ReactNode }) {
-  return <th className="whitespace-nowrap border-b border-border px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{children}</th>;
+  return (
+    <th className="whitespace-nowrap border-b border-border px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </th>
+  );
 }
 
 export function Td({ children, className }: { children: ReactNode; className?: string }) {

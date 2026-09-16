@@ -15,14 +15,14 @@ const DB_NAME = 'apex-outbox-v1';
 const STORE = 'messages';
 
 export interface OutboxItem {
-  clientId: string;          // stable per attempt
+  clientId: string; // stable per attempt
   conversationId: string;
   body?: string;
   attachmentUrl?: string;
   attachmentType?: string;
   attachmentMeta?: Record<string, unknown>;
   replyToId?: string;
-  queuedAt: number;          // ms epoch
+  queuedAt: number; // ms epoch
   attempts: number;
 }
 
@@ -40,7 +40,10 @@ function open(): Promise<IDBDatabase> {
   });
 }
 
-async function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T> | void): Promise<T | void> {
+async function tx<T>(
+  mode: IDBTransactionMode,
+  fn: (store: IDBObjectStore) => IDBRequest<T> | void,
+): Promise<T | void> {
   if (typeof indexedDB === 'undefined') return;
   const db = await open();
   return new Promise((resolve, reject) => {
@@ -48,7 +51,10 @@ async function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => ID
     const store = t.objectStore(STORE);
     let result: T | undefined;
     const maybe = fn(store);
-    if (maybe) maybe.onsuccess = () => { result = maybe.result as T; };
+    if (maybe)
+      maybe.onsuccess = () => {
+        result = maybe.result as T;
+      };
     t.oncomplete = () => resolve(result as T);
     t.onerror = () => reject(t.error);
     t.onabort = () => reject(t.error);

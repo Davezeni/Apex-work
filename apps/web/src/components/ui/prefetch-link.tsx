@@ -42,7 +42,7 @@ export function PrefetchLink({
     if (prefetched.current || !intentPrefetch) return;
     prefetched.current = true;
     try {
-      const target = typeof href === 'string' ? href : href.pathname ?? '';
+      const target = typeof href === 'string' ? href : (href.pathname ?? '');
       if (target) router.prefetch(target);
     } catch {
       // Prefetch failures are always safe to ignore.

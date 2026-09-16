@@ -23,7 +23,9 @@ export function ReactionPicker({ open, onSelect, onClose }: Props) {
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('mousedown', onClick);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -46,7 +48,10 @@ export function ReactionPicker({ open, onSelect, onClose }: Props) {
           {REACTION_EMOJIS.map((e) => (
             <button
               key={e}
-              onClick={() => { onSelect(e); onClose(); }}
+              onClick={() => {
+                onSelect(e);
+                onClose();
+              }}
               className="grid h-8 w-8 place-items-center rounded-full text-lg transition-transform hover:scale-125 active:scale-110"
               aria-label={`React with ${e}`}
             >

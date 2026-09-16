@@ -187,7 +187,7 @@ export default function OrderDetailPage() {
       {/* Header */}
       <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >
@@ -554,6 +554,7 @@ function OrderActions({
 // -----------------------------------------------------------------------------
 import { AlertTriangle, Loader2 as SpinnerIcon } from 'lucide-react';
 import { useOpenDispute } from '@/hooks/use-disputes';
+import { safeBack } from '@/lib/safe-back';
 function DisputeBox({ orderId, status }: { orderId: string; status: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');

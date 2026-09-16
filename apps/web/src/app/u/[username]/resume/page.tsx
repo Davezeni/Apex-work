@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { usePublicResume } from '@/hooks/use-resume';
 import { usePublicUser } from '@/hooks/use-public-user';
+import { safeBack } from '@/lib/safe-back';
 export default function PublicResumePage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
@@ -76,7 +77,7 @@ export default function PublicResumePage() {
     <div className="min-h-dvh bg-muted/30 pb-12">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl print:hidden">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={dt('Back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

@@ -23,6 +23,7 @@ import { useCreateGig } from '@/hooks/use-gig-mutations';
 import { CATEGORIES, MIN_GIG_PRICE_ETB, MAX_GIG_PRICE_ETB } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useI18n } from '@/i18n';
+import { safeBack } from '@/lib/safe-back';
 
 type Step = 'title' | 'category' | 'description' | 'pricing';
 const STEPS: Step[] = ['title', 'category', 'description', 'pricing'];
@@ -108,7 +109,7 @@ export default function PostGigPage() {
 
   const goBack = () => {
     if (stepIdx > 0) setStepIdx((i) => i - 1);
-    else router.back();
+    else safeBack(router, '/gigs');
   };
 
   const submit = async () => {
@@ -138,8 +139,7 @@ export default function PostGigPage() {
 
   const addPackage = () => {
     if (packages.length >= 3) return;
-    const nextTier: Tier =
-      packages.length === 1 ? 'STANDARD' : 'PREMIUM';
+    const nextTier: Tier = packages.length === 1 ? 'STANDARD' : 'PREMIUM';
     const lastPrice = packages[packages.length - 1]?.priceEtb ?? 1000;
     setPackages([
       ...packages,

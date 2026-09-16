@@ -4,8 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 
 export interface SimilarGig {
-  id: string; slug: string; title: string; coverImageUrl: string | null;
-  startingPriceEtb: number; rating: number; ratingCount: number;
+  id: string;
+  slug: string;
+  title: string;
+  coverImageUrl: string | null;
+  startingPriceEtb: number;
+  rating: number;
+  ratingCount: number;
   owner: { username: string; fullName: string; avatarUrl: string | null };
 }
 

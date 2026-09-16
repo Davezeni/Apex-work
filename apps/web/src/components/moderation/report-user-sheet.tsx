@@ -27,7 +27,12 @@ export function ReportUserSheet({ open, onOpenChange, targetType, targetId }: Pr
 
   const submit = async () => {
     try {
-      await create.mutateAsync({ targetType, targetId, reason, details: details.trim() || undefined });
+      await create.mutateAsync({
+        targetType,
+        targetId,
+        reason,
+        details: details.trim() || undefined,
+      });
       toast.success(t('report.sent'));
       onOpenChange(false);
       setDetails('');
@@ -98,11 +103,7 @@ export function ReportUserSheet({ open, onOpenChange, targetType, targetId }: Pr
           onClick={submit}
           disabled={create.isPending}
         >
-          {create.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            t('report.submit')
-          )}
+          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : t('report.submit')}
         </Button>
       </div>
     </Sheet>

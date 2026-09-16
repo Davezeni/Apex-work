@@ -23,6 +23,7 @@ import { formatEtb, formatCompact } from '@/lib/utils';
 import { useProfileAnalytics } from '@/hooks/use-profile-analytics';
 import { useAuthStore } from '@/stores/auth-store';
 import { downloadViaAuth } from '@/lib/api';
+import { safeBack } from '@/lib/safe-back';
 /**
  * Freelancer analytics dashboard — profile views, response rate, earnings
  * trend, order pipeline. Numbers come from denormalized aggregates on the
@@ -69,7 +70,7 @@ export default function StatsPage() {
     <div className="min-h-dvh bg-background pb-24">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
-          onClick={() => router.back()}
+          onClick={() => safeBack(router)}
           aria-label={t('common.back')}
           className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
         >

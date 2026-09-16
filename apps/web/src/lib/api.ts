@@ -48,15 +48,23 @@ async function refreshAccessToken(): Promise<string | null> {
         body: JSON.stringify({ refreshToken }),
         credentials: 'include',
       });
-      const json = (await res.json()) as ApiSuccess<{ accessToken: string; refreshToken: string; expiresIn: number }> | ApiFailure;
-      const data = (json as { data?: { accessToken: string; refreshToken: string; expiresIn: number } } | undefined)?.data;
+      const json = (await res.json()) as
+        ApiSuccess<{ accessToken: string; refreshToken: string; expiresIn: number }> | ApiFailure;
+      const data = (
+        json as
+          { data?: { accessToken: string; refreshToken: string; expiresIn: number } } | undefined
+      )?.data;
       if (!res.ok || !data?.accessToken) {
         useAuthStore.getState().clear();
         return null;
       }
       useAuthStore
         .getState()
-        .setSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, expiresIn: data.expiresIn });
+        .setSession({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          expiresIn: data.expiresIn,
+        });
       return data.accessToken;
     } catch {
       return null;
@@ -79,7 +87,8 @@ async function refreshAccessToken(): Promise<string | null> {
 export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { body, token, headers, ...rest } = opts;
   // Prefer an explicit token, otherwise the freshest one in the store.
-  let activeToken = token ?? (await import('@/stores/auth-store')).useAuthStore.getState().accessToken;
+  let activeToken =
+    token ?? (await import('@/stores/auth-store')).useAuthStore.getState().accessToken;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const res = await fetch(`${API_URL}/v1${path}`, {
@@ -130,7 +139,11 @@ export async function apiFetch<T>(path: string, opts: RequestOptions = {}): Prom
  * with Content-Disposition) and trigger a browser download. Throws ApiError on
  * a non-2xx response.
  */
-export async function downloadViaAuth(path: string, token: string | null | undefined, filename?: string): Promise<void> {
+export async function downloadViaAuth(
+  path: string,
+  token: string | null | undefined,
+  filename?: string,
+): Promise<void> {
   const res = await fetch(`${API_URL}/v1${path}`, {
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     credentials: 'include',
