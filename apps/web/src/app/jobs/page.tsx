@@ -24,7 +24,7 @@ export default function JobsPage() {
 
   return (
     <MobileShell>
-      <div className="min-h-dvh bg-background pb-24">
+      <div className="mx-auto min-h-dvh w-full max-w-5xl bg-background pb-24">
         <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-xl">
           <div className="flex items-center justify-between">
             <div>
@@ -50,7 +50,7 @@ export default function JobsPage() {
             />
           </div>
 
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible">
             <CategoryChip
               label={dt('All')}
               icon="✨"
@@ -89,7 +89,7 @@ export default function JobsPage() {
           </div>
         )}
 
-        <div className="mx-3 mt-3 space-y-2">
+        <div className="mx-3 mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((job) => (
             <JobCard key={job.id} job={job} isMe={me?.id === job.client.id} />
           ))}

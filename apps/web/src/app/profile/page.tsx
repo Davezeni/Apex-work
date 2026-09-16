@@ -80,195 +80,197 @@ export default function ProfilePage() {
 
   return (
     <MobileShell activeTab="profile">
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
-        <div className="relative">
-          <div className="mx-auto h-20 w-20">
-            <UserAvatar
-              name={me.fullName}
-              avatarUrl={me.avatarUrl}
-              id={me.id}
-              verified={me.isVerified}
-              className="h-20 w-20 rounded-full text-3xl font-bold ring-4 ring-background"
-            />
-          </div>
-          <h2 className="mt-3 flex items-center justify-center gap-1.5 text-xl font-extrabold">
-            {me.fullName}
-            {me.isVerified && <CheckCircle2 className="h-4 w-4 text-cyan-400" />}
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {me.title ?? (me.role === 'FREELANCER' ? 'Freelancer' : 'Client')} · @{me.username}
-          </p>
-          {me.city && <p className="text-[11px] text-muted-foreground">📍 {me.city}</p>}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="mx-5 grid grid-cols-3 rounded-2xl border border-border bg-card p-4">
-        <Stat n={me.rating > 0 ? me.rating.toFixed(1) : '—'} l="Rating" />
-        <Stat n={String(me.completedOrders)} l="Orders" borderLeft />
-        <Stat n={me.isVerified ? '✓' : '—'} l="Verified" borderLeft />
-      </div>
-
-      {/* Actions */}
-      <div className="mx-5 mt-4 flex gap-2">
-        <Button asChild variant="brand" className="flex-1">
-          <Link href="/settings/profile">{dt('Edit profile')}</Link>
-        </Button>
-        <Button asChild variant="secondary" className="flex-1">
-          <Link href={`/u/${me.username}`}>{dt('Share')}</Link>
-        </Button>
-      </div>
-
-      {!me.isPhoneVerified && (
-        <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
-          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-500" />
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold">{dt('Verify your phone')}</div>
-            <p className="text-[11px] text-muted-foreground">
-              Required before messaging, ordering, posting, or withdrawing.
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Hero */}
+        <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
+          <div className="relative">
+            <div className="mx-auto h-20 w-20">
+              <UserAvatar
+                name={me.fullName}
+                avatarUrl={me.avatarUrl}
+                id={me.id}
+                verified={me.isVerified}
+                className="h-20 w-20 rounded-full text-3xl font-bold ring-4 ring-background"
+              />
+            </div>
+            <h2 className="mt-3 flex items-center justify-center gap-1.5 text-xl font-extrabold">
+              {me.fullName}
+              {me.isVerified && <CheckCircle2 className="h-4 w-4 text-cyan-400" />}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {me.title ?? (me.role === 'FREELANCER' ? 'Freelancer' : 'Client')} · @{me.username}
             </p>
+            {me.city && <p className="text-[11px] text-muted-foreground">📍 {me.city}</p>}
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/settings/phone?next=/profile">{dt('Verify')}</Link>
+        </div>
+
+        {/* Stats */}
+        <div className="mx-5 grid grid-cols-3 rounded-2xl border border-border bg-card p-4">
+          <Stat n={me.rating > 0 ? me.rating.toFixed(1) : '—'} l="Rating" />
+          <Stat n={String(me.completedOrders)} l="Orders" borderLeft />
+          <Stat n={me.isVerified ? '✓' : '—'} l="Verified" borderLeft />
+        </div>
+
+        {/* Actions */}
+        <div className="mx-5 mt-4 flex gap-2">
+          <Button asChild variant="brand" className="flex-1">
+            <Link href="/settings/profile">{dt('Edit profile')}</Link>
+          </Button>
+          <Button asChild variant="secondary" className="flex-1">
+            <Link href={`/u/${me.username}`}>{dt('Share')}</Link>
           </Button>
         </div>
-      )}
 
-      {/* Saved gigs — visible on the profile so saved services are not hidden in a menu. */}
-      <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
-
-      {/* Wallet — only for freelancers */}
-      {me.role === 'FREELANCER' && (
-        <Link
-          href="/wallet"
-          className="grad-hero mx-5 mt-4 block rounded-2xl p-5 text-white shadow-xl shadow-primary/40 transition-transform active:scale-[0.98]"
-        >
-          <div className="text-xs opacity-90">{t('wallet.balance')}</div>
-          <div className="mt-1 text-3xl font-extrabold tracking-tight">
-            {formatEtb(wallet.data?.wallet.balanceEtb ?? 0)}
+        {!me.isPhoneVerified && (
+          <div className="mx-5 mt-4 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3">
+            <ShieldCheck className="h-5 w-5 shrink-0 text-amber-500" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold">{dt('Verify your phone')}</div>
+              <p className="text-[11px] text-muted-foreground">
+                Required before messaging, ordering, posting, or withdrawing.
+              </p>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings/phone?next=/profile">{dt('Verify')}</Link>
+            </Button>
           </div>
-          {wallet.data?.wallet.pendingEtb ? (
-            <div className="mt-1 text-[11px] opacity-90">
-              +{formatEtb(wallet.data.wallet.pendingEtb)} {dt('in escrow (orders under review)')}
-            </div>
-          ) : null}
-          <div className="mt-4 flex gap-2">
-            <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
-              💸 {t('wallet.withdraw')}
-            </div>
-            <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
-              📊 {t('wallet.history')}
-            </div>
-          </div>
-        </Link>
-      )}
+        )}
 
-      {/* Language switcher */}
-      <div className="mt-6 flex items-center justify-between px-5">
-        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-          {t('language.label')}
-        </div>
-        <LanguageSwitcher />
-      </div>
+        {/* Saved gigs — visible on the profile so saved services are not hidden in a menu. */}
+        <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
 
-      {/* Menu */}
-      <div className="mt-4 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-        {t('profile.account')}
-      </div>
-      <div className="px-3 pb-8">
-        <MenuItem
-          icon={<Package className="h-4 w-4" />}
-          title={dt('Orders')}
-          subtitle={dt('Your purchases and sales')}
-          href="/orders"
-        />
-        <MenuItem
-          icon={<Bell className="h-4 w-4" />}
-          title={dt('Notifications')}
-          subtitle={dt('Alerts & activity')}
-          href="/notifications"
-        />
+        {/* Wallet — only for freelancers */}
         {me.role === 'FREELANCER' && (
-          <>
-            <MenuItem
-              icon={<BarChart3 className="h-4 w-4" />}
-              title={dt('Statistics')}
-              subtitle={dt('Views, earnings, response rate')}
-              href="/stats"
-            />
-            <MenuItem
-              icon={<Trophy className="h-4 w-4" />}
-              title={dt('Achievements')}
-              subtitle={dt('Badges & milestones')}
-              href="/achievements"
-            />
-            <MenuItem
-              icon={<FileText className="h-4 w-4" />}
-              title={dt('Resume / CV')}
-              subtitle={dt('Build your professional CV')}
-              href="/resume"
-            />
-          </>
+          <Link
+            href="/wallet"
+            className="grad-hero mx-5 mt-4 block rounded-2xl p-5 text-white shadow-xl shadow-primary/40 transition-transform active:scale-[0.98]"
+          >
+            <div className="text-xs opacity-90">{t('wallet.balance')}</div>
+            <div className="mt-1 text-3xl font-extrabold tracking-tight">
+              {formatEtb(wallet.data?.wallet.balanceEtb ?? 0)}
+            </div>
+            {wallet.data?.wallet.pendingEtb ? (
+              <div className="mt-1 text-[11px] opacity-90">
+                +{formatEtb(wallet.data.wallet.pendingEtb)} {dt('in escrow (orders under review)')}
+              </div>
+            ) : null}
+            <div className="mt-4 flex gap-2">
+              <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
+                💸 {t('wallet.withdraw')}
+              </div>
+              <div className="flex-1 rounded-xl bg-white/20 py-2.5 text-center text-xs font-bold backdrop-blur">
+                📊 {t('wallet.history')}
+              </div>
+            </div>
+          </Link>
         )}
-        <MenuItem
-          icon={<Users className="h-4 w-4" />}
-          title={dt('Teams & agencies')}
-          subtitle={dt('Collaborate on larger projects')}
-          href="/teams"
-        />
-        <MenuItem
-          icon={<Gift className="h-4 w-4" />}
-          title={dt('Refer friends')}
-          subtitle={dt('Earn 100 ETB per invite')}
-          href="/referrals"
-        />
-        <MenuItem
-          icon={<Bookmark className="h-4 w-4" />}
-          title={dt('Saved gigs')}
-          subtitle={dt('Keep services you want to hire later')}
-          href="/saved"
-        />
-        <MenuItem
-          icon={<MapPin className="h-4 w-4" />}
-          title={dt('Nearby freelancers')}
-          subtitle={dt('Discover local talent on a map')}
-          href="/nearby"
-        />
-        <MenuItem
-          icon={<LifeBuoy className="h-4 w-4" />}
-          title={dt('Support tickets')}
-          subtitle={dt('Get help beyond the AI bot')}
-          href="/support"
-        />
-        <MenuItem
-          icon={<Settings className="h-4 w-4" />}
-          title={t('profile.settings')}
-          subtitle={t('language.label')}
-          href="/settings"
-        />
-        {me.role === 'ADMIN' && (
+
+        {/* Language switcher */}
+        <div className="mt-6 flex items-center justify-between px-5">
+          <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {t('language.label')}
+          </div>
+          <LanguageSwitcher />
+        </div>
+
+        {/* Menu */}
+        <div className="mt-4 px-5 pb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {t('profile.account')}
+        </div>
+        <div className="grid gap-1.5 px-3 pb-8 sm:grid-cols-2 sm:gap-2">
           <MenuItem
-            icon={<ShieldCheck className="h-4 w-4" />}
-            title={dt('Admin panel')}
-            subtitle={dt('Reports, withdrawals, users')}
-            href="/admin"
+            icon={<Package className="h-4 w-4" />}
+            title={dt('Orders')}
+            subtitle={dt('Your purchases and sales')}
+            href="/orders"
           />
-        )}
-        <MenuItem
-          icon={
-            logout.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <LogOut className="h-4 w-4" />
-            )
-          }
-          title={logout.isPending ? t('common.signingOut') : t('common.signOut')}
-          onClick={() => !logout.isPending && logout.mutate(false)}
-          destructive
-          disabled={logout.isPending}
-        />
+          <MenuItem
+            icon={<Bell className="h-4 w-4" />}
+            title={dt('Notifications')}
+            subtitle={dt('Alerts & activity')}
+            href="/notifications"
+          />
+          {me.role === 'FREELANCER' && (
+            <>
+              <MenuItem
+                icon={<BarChart3 className="h-4 w-4" />}
+                title={dt('Statistics')}
+                subtitle={dt('Views, earnings, response rate')}
+                href="/stats"
+              />
+              <MenuItem
+                icon={<Trophy className="h-4 w-4" />}
+                title={dt('Achievements')}
+                subtitle={dt('Badges & milestones')}
+                href="/achievements"
+              />
+              <MenuItem
+                icon={<FileText className="h-4 w-4" />}
+                title={dt('Resume / CV')}
+                subtitle={dt('Build your professional CV')}
+                href="/resume"
+              />
+            </>
+          )}
+          <MenuItem
+            icon={<Users className="h-4 w-4" />}
+            title={dt('Teams & agencies')}
+            subtitle={dt('Collaborate on larger projects')}
+            href="/teams"
+          />
+          <MenuItem
+            icon={<Gift className="h-4 w-4" />}
+            title={dt('Refer friends')}
+            subtitle={dt('Earn 100 ETB per invite')}
+            href="/referrals"
+          />
+          <MenuItem
+            icon={<Bookmark className="h-4 w-4" />}
+            title={dt('Saved gigs')}
+            subtitle={dt('Keep services you want to hire later')}
+            href="/saved"
+          />
+          <MenuItem
+            icon={<MapPin className="h-4 w-4" />}
+            title={dt('Nearby freelancers')}
+            subtitle={dt('Discover local talent on a map')}
+            href="/nearby"
+          />
+          <MenuItem
+            icon={<LifeBuoy className="h-4 w-4" />}
+            title={dt('Support tickets')}
+            subtitle={dt('Get help beyond the AI bot')}
+            href="/support"
+          />
+          <MenuItem
+            icon={<Settings className="h-4 w-4" />}
+            title={t('profile.settings')}
+            subtitle={t('language.label')}
+            href="/settings"
+          />
+          {me.role === 'ADMIN' && (
+            <MenuItem
+              icon={<ShieldCheck className="h-4 w-4" />}
+              title={dt('Admin panel')}
+              subtitle={dt('Reports, withdrawals, users')}
+              href="/admin"
+            />
+          )}
+          <MenuItem
+            icon={
+              logout.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4" />
+              )
+            }
+            title={logout.isPending ? t('common.signingOut') : t('common.signOut')}
+            onClick={() => !logout.isPending && logout.mutate(false)}
+            destructive
+            disabled={logout.isPending}
+          />
+        </div>
       </div>
     </MobileShell>
   );
@@ -390,7 +392,7 @@ function MenuItem({
   const inner = (
     <>
       <div
-        className={`grid h-10 w-10 place-items-center rounded-xl bg-card ${
+        className={`grid h-10 w-10 place-items-center rounded-xl bg-primary/10 ${
           destructive ? 'text-destructive' : 'text-primary'
         }`}
       >
@@ -406,7 +408,7 @@ function MenuItem({
     </>
   );
   const cls =
-    'flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors active:bg-card disabled:opacity-60';
+    'flex h-full w-full items-center gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-left transition-all hover:border-primary/40 disabled:opacity-60';
   if (href) {
     return (
       <Link href={href} className={cls}>
