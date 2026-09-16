@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
+import { useQueryClient } from '@tanstack/react-query';
 import { useMe } from '@/hooks/use-me';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
@@ -54,6 +55,7 @@ export default function OrderDetailPage() {
   const { data: me } = useMe();
   const { data: order, isLoading, error, refetch } = useOrder(id);
   const action = useOrderAction(id);
+  const qc = useQueryClient();
   const verify = useVerifyPayment();
   const startConv = useStartConversation();
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -160,6 +162,10 @@ export default function OrderDetailPage() {
     } catch (err) {
       const e = err as { message?: string };
       toast.error(e.message ?? 'Action failed');
+      // The failure may mean another tap/tab/device already moved the order —
+      // re-sync so the correct action buttons render.
+      void qc.invalidateQueries({ queryKey: ['order', id] });
+      void qc.invalidateQueries({ queryKey: ['orders'] });
     }
   };
 

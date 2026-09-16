@@ -290,6 +290,9 @@ export async function acceptDelivery(orderId: string, clientId: string) {
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== clientId) throw new ForbiddenError();
+  // Double-tap / stale-tab guard: state machine's raw message would confuse users.
+  if (order.status === 'COMPLETED')
+    throw new ConflictError('Delivery was already accepted — the funds have been released.');
   const next = transitionGuard(order.status, 'ACCEPT_DELIVERY', order.id);
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -354,6 +357,12 @@ export async function markDelivered(
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.sellerId !== sellerId) throw new ForbiddenError();
+  // Double-tap / second-device guard: the first tap already flipped the order
+  // to IN_REVIEW. Say that in plain words instead of a state-machine error.
+  if (order.status === 'IN_REVIEW')
+    throw new ConflictError(
+      'Already delivered — waiting for the client to accept or request a revision.',
+    );
   const next = transitionGuard(order.status, 'MARK_DELIVERED', order.id);
 
   const updated = await prisma.order.update({
@@ -384,6 +393,8 @@ export async function requestRevision(orderId: string, clientId: string, notes: 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new NotFoundError('Order');
   if (order.clientId !== clientId) throw new ForbiddenError();
+  if (order.status === 'ACTIVE')
+    throw new ConflictError('A revision was already requested — the freelancer is working on it.');
   const next = transitionGuard(order.status, 'REQUEST_REVISION', order.id);
   const updated = await prisma.order.update({
     where: { id: order.id },
