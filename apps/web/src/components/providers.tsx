@@ -3,7 +3,8 @@
 import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { I18nProvider } from '@/i18n';
 import { useNotificationSocket } from '@/hooks/use-notifications';
 import { ServiceWorkerRegister } from './sw-register';
@@ -58,6 +59,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <ConsentBanner />
           <NetworkStatusBanner />
           <ScrollRestore />
+          <NavHistoryMarker />
           <GlobalCommandPalette />
           <AIAssistant />
         </I18nProvider>
@@ -69,5 +71,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
 /** Thin wrapper so the socket hook runs under the QueryClientProvider. */
 function RealtimeNotifications() {
   useNotificationSocket();
+  return null;
+}
+
+/** Marks the session as having REAL in-app navigation history so safeBack()
+    can trust router.back(). Deep links, shared links and PWA launches never
+    set the flag — those get a fallback push instead of a dead back(). */
+function NavHistoryMarker() {
+  const pathname = usePathname();
+  const first = useRef(true);
+  useEffect(() => {
+    // Skip the initial mount: landing on the first page is NOT history.
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    try {
+      window.sessionStorage.setItem('apex:inApp', '1');
+    } catch {
+      // private mode — safeBack will use fallbacks, which is fine
+    }
+  }, [pathname]);
   return null;
 }

@@ -2,13 +2,10 @@
 
 import { dt } from '@/i18n/auto';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { safeBack } from '@/lib/safe-back';
 import Image from 'next/image';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Button } from '@/components/ui/button';
 import {
-  ArrowLeft,
   CheckCircle2,
   Settings,
   LogOut,
@@ -38,7 +35,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useI18n } from '@/i18n';
 export default function ProfilePage() {
-  const router = useRouter();
   const { data: me, isLoading, isSignedIn, isAuthed } = useMe();
   const logout = useLogout();
   const savedGigs = useSavedGigs();
@@ -89,16 +85,6 @@ export default function ProfilePage() {
         {/* Hero */}
         <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
-          {/* Back (mirrors the theme pill on the right). */}
-          <div className="absolute left-3 top-3 z-10">
-            <button
-              onClick={() => safeBack(router)}
-              aria-label={t('common.back')}
-              className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background/70 shadow-sm backdrop-blur transition-transform active:scale-90"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-          </div>
           <div className="absolute right-3 top-3 z-10 rounded-full border border-border bg-background/70 shadow-sm backdrop-blur md:hidden">
             <ThemeToggle />
           </div>
