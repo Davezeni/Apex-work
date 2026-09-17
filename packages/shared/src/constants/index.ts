@@ -4,7 +4,7 @@
  */
 
 export const APP_NAME = 'Apex-Work' as const;
-export const APP_TAGLINE = "Ethiopia's most powerful freelance marketplace" as const;
+export const APP_TAGLINE = "Hire the top 3% of independent talent on Apex-Work." as const;
 
 /** Supported UI languages (BCP-47) */
 export const LOCALES = ['en', 'am', 'om', 'ti'] as const;

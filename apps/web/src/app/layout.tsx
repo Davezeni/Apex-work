@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   keywords: ['freelance Ethiopia', 'Telebirr', 'Amharic freelancers', 'Addis Ababa', 'remote work'],
   openGraph: {
     title: 'Apex-Work',
-    description: "Ethiopia's most powerful freelance marketplace",
+    description: "Hire the top 3% of independent talent on Apex-Work.",
     type: 'website',
     locale: 'en_ET',
     siteName: 'Apex-Work',
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Apex-Work',
-    description: "Ethiopia's most powerful freelance marketplace",
+    description: "Hire the top 3% of independent talent on Apex-Work.",
   },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
