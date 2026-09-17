@@ -23,6 +23,7 @@ import { useI18n } from '@/i18n';
 import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendations';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 import { toast } from 'sonner';
 import { NotificationsPanel } from '@/components/notifications-panel';
@@ -69,7 +70,10 @@ export function MobileHome() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5">
+          <div className="rounded-full border border-border bg-card shadow-sm">
+            <ThemeToggle />
+          </div>
           <NotificationsPanel />
           <Link href="/profile" className="grid h-10 w-10 place-items-center">
             {me ? (
@@ -239,6 +243,24 @@ function RecommendedJobCard({ job }: { job: RecommendedJob }) {
       <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
         {job.description}
       </p>
+      {/* Client identity on the job card */}
+      <div className="mt-2 flex items-center gap-1.5">
+        <div className="grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded-full bg-muted text-[8px] font-bold text-muted-foreground">
+          {job.client?.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={job.client.avatarUrl}
+              alt={job.client.fullName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            (job.client?.fullName ?? '?').slice(0, 1).toUpperCase()
+          )}
+        </div>
+        <span className="truncate text-[10px] text-muted-foreground">
+          {job.client?.fullName ?? 'Client'}
+        </span>
+      </div>
       <div className="mt-3 flex items-center justify-between gap-2 text-[10px]">
         <span className="font-semibold">
           {job.budgetMinEtb || job.budgetMaxEtb
@@ -446,6 +468,31 @@ function HomeSaveButton({
 function CardBody({ g, noTopPadding = false }: { g: GigListItem; noTopPadding?: boolean }) {
   return (
     <div className={cn('px-4 pb-4', noTopPadding ? 'pt-0' : 'pt-3')}>
+      {/* Owner identity — the freelancer behind the gig, on every card. */}
+      <div className="mb-2 flex items-center gap-2">
+        <div
+          className={cn(
+            'grid h-6 w-6 shrink-0 place-items-center overflow-hidden rounded-full text-[9px] font-bold text-white',
+            gradientFor(g.owner.id),
+          )}
+        >
+          {g.owner.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={g.owner.avatarUrl}
+              alt={g.owner.fullName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initialsOf(g.owner.fullName)
+          )}
+        </div>
+        <span className="truncate text-[11px] font-semibold">{g.owner.fullName}</span>
+        {g.owner.isVerified && (
+          <CheckCircle2 className="h-3 w-3 shrink-0 fill-cyan-400 text-white" />
+        )}
+        <span className="truncate text-[10px] text-muted-foreground">@{g.owner.username}</span>
+      </div>
       <div className="line-clamp-2 text-sm font-semibold leading-snug">{g.title}</div>
       <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground">
         {g.ratingCount > 0 ? (

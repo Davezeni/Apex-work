@@ -113,13 +113,24 @@ export function DesktopSidebar() {
       >
         <Icon className="h-5 w-5 shrink-0" strokeWidth={active ? 2.5 : 2} />
         {!collapsed && <span className="flex-1 truncate">{it.label}</span>}
-        {!collapsed && it.badge && it.badge > 0 && (
-          <span className="grid min-w-[20px] place-items-center rounded-full bg-destructive px-1.5 py-0.5 text-[10px] font-bold text-white">
+        {/* Always show counters (0 = muted chip) so it's obvious the inbox is empty. */}
+        {!collapsed && it.badge != null && (
+          <span
+            className={cn(
+              'grid min-w-[20px] place-items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+              it.badge > 0 ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground',
+            )}
+          >
             {it.badge > 99 ? '99+' : it.badge}
           </span>
         )}
-        {collapsed && it.badge && it.badge > 0 && (
-          <span className="absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-destructive px-1 text-[9px] font-bold text-white">
+        {collapsed && it.badge != null && (
+          <span
+            className={cn(
+              'absolute right-1.5 top-1.5 grid h-4 min-w-[16px] place-items-center rounded-full px-1 text-[9px] font-bold',
+              it.badge > 0 ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground',
+            )}
+          >
             {it.badge > 99 ? '99+' : it.badge}
           </span>
         )}
