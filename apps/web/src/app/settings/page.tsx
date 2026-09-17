@@ -36,7 +36,7 @@ export default function SettingsPage() {
   const logout = useLogout();
 
   return (
-    <div className="min-h-dvh bg-background pb-24">
+    <div className="min-h-dvh bg-background pb-24 md:mx-auto md:max-w-3xl">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           onClick={() => safeBack(router)}
@@ -178,7 +178,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
         {title}
       </h2>
-      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card md:grid md:grid-cols-2 md:gap-px md:divide-y-0 md:bg-border md:[&>*:last-child:nth-child(odd)]:col-span-2">
         {children}
       </div>
     </div>
@@ -199,7 +199,7 @@ function Row({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 px-4 py-3.5 text-sm font-semibold transition-colors active:bg-muted"
+      className="flex items-center gap-3 bg-card px-4 py-3.5 text-sm font-semibold transition-colors active:bg-muted"
     >
       <span className={destructive ? 'text-red-500' : 'text-muted-foreground'}>{icon}</span>
       <span className={destructive ? 'text-red-500' : ''}>{title}</span>
