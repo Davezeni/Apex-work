@@ -30,8 +30,8 @@ import { useI18n } from '@/i18n';
 import { dt } from '@/i18n/auto';
 import { safeBack } from '@/lib/safe-back';
 
-type Step = 'title' | 'category' | 'description' | 'photos' | 'pricing' | 'review';
-const STEPS: Step[] = ['title', 'category', 'description', 'photos', 'pricing', 'review'];
+type Step = 'overview' | 'setup' | 'review';
+const STEPS: Step[] = ['overview', 'setup', 'review'];
 
 type Tier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 interface PackageDraft {
@@ -94,10 +94,11 @@ export default function PostGigPage() {
   // accidentally satisfy the min-length check.
   const descPlainLen = description.replace(/<[^>]+>/g, '').trim().length;
   const canGoNext =
-    (step === 'title' && title.trim().length >= 15) ||
-    (step === 'category' && !!categoryId) ||
-    (step === 'description' && descPlainLen >= 50) ||
-    (step === 'pricing' &&
+    (step === 'overview' &&
+      title.trim().length >= 15 &&
+      !!categoryId &&
+      descPlainLen >= 50) ||
+    (step === 'setup' &&
       packages.length >= 1 &&
       packages.every(
         (p) =>
@@ -107,12 +108,11 @@ export default function PostGigPage() {
           p.priceEtb <= MAX_GIG_PRICE_ETB &&
           p.deliveryDays >= 1 &&
           p.deliveryDays <= 90,
-      ));
-
-  const canAdvance = canGoNext || step === 'photos' || step === 'review';
+      )) ||
+    step === 'review';
 
   const goNext = () => {
-    if (!canAdvance) return;
+    if (!canGoNext) return;
     if (stepIdx < STEPS.length - 1) setStepIdx((i) => i + 1);
     else void submit();
   };
@@ -230,13 +230,14 @@ export default function PostGigPage() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
             transition={{ duration: 0.25 }}
-            className="flex-1"
           >
-            {step === 'title' && (
+            {step === 'overview' && (
               <>
                 <StepIcon icon={<Sparkles className="h-6 w-6" />} />
-                <h1 className="text-3xl font-extrabold tracking-tight">{t('postGig.step1')}</h1>
-                <p className="mt-2 text-sm text-muted-foreground">{t('postGig.step1Blurb')}</p>
+                <h1 className="text-3xl font-extrabold tracking-tight">{dt('Gig overview')}</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {dt('A clear title, the right category and a solid description get you found.')}
+                </p>
                 <textarea
                   autoFocus
                   value={title}
@@ -252,11 +253,8 @@ export default function PostGigPage() {
               </>
             )}
 
-            {step === 'category' && (
+            {step === 'overview' && (
               <>
-                <StepIcon icon={<Layers className="h-6 w-6" />} />
-                <h1 className="text-3xl font-extrabold tracking-tight">{t('postGig.step2')}</h1>
-                <p className="mt-2 text-sm text-muted-foreground">{t('postGig.step2Blurb')}</p>
 
                 <div className="mt-6 grid grid-cols-2 gap-2">
                   {CATEGORIES.map((c) => (
@@ -300,11 +298,8 @@ export default function PostGigPage() {
               </>
             )}
 
-            {step === 'description' && (
+            {step === 'overview' && (
               <>
-                <StepIcon icon={<FileText className="h-6 w-6" />} />
-                <h1 className="text-3xl font-extrabold tracking-tight">{t('postGig.step3')}</h1>
-                <p className="mt-2 text-sm text-muted-foreground">{t('postGig.step3Blurb')}</p>
                 <RichEditor
                   value={description}
                   onChange={setDescription}
@@ -316,10 +311,10 @@ export default function PostGigPage() {
               </>
             )}
 
-            {step === 'photos' && (
+            {step === 'setup' && (
               <>
                 <StepIcon icon={<ImagePlus className="h-6 w-6" />} />
-                <h1 className="text-3xl font-extrabold tracking-tight">{dt('Add photos')}</h1>
+                <h1 className="text-3xl font-extrabold tracking-tight">{dt('Photos & pricing')}</h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {dt(
                     'Gigs with a cover photo get up to 3× more orders. You can also skip this step.',
@@ -426,11 +421,8 @@ export default function PostGigPage() {
               </>
             )}
 
-            {step === 'pricing' && (
+            {step === 'setup' && (
               <>
-                <StepIcon icon={<Wallet className="h-6 w-6" />} />
-                <h1 className="text-3xl font-extrabold tracking-tight">{t('postGig.step4')}</h1>
-                <p className="mt-2 text-sm text-muted-foreground">{t('postGig.step4Blurb')}</p>
 
                 <div className="mt-6 space-y-4">
                   {packages.map((p, i) => (
@@ -552,7 +544,7 @@ export default function PostGigPage() {
           size="lg"
           className="mt-6 w-full"
           onClick={goNext}
-          disabled={!canAdvance || create.isPending}
+          disabled={!canGoNext || create.isPending}
         >
           {create.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -566,6 +558,13 @@ export default function PostGigPage() {
             </>
           )}
         </Button>
+        {!canGoNext && step === 'setup' && (
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            {dt(
+              'Each package needs a name (3+ characters), a description (10+ characters), a price of 100–500,000 ETB and delivery of 1–90 days.',
+            )}
+          </p>
+        )}
       </main>
     </div>
   );

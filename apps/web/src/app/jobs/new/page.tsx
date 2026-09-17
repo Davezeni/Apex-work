@@ -16,7 +16,7 @@ import { CATEGORIES, MIN_GIG_PRICE_ETB } from '@apex-work/shared';
 import { cn } from '@/lib/utils';
 import { safeBack } from '@/lib/safe-back';
 
-const STEPS = ['step1', 'step2', 'step3'] as const;
+const STEPS = ['details', 'extras'] as const;
 type Step = (typeof STEPS)[number];
 
 export default function NewJobPage() {
@@ -26,7 +26,7 @@ export default function NewJobPage() {
   const create = useCreateJob();
   const searchParams = useSearchParams();
 
-  const [step, setStep] = useState<Step>('step1');
+  const [step, setStep] = useState<Step>('details');
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState<string>('development');
   const [description, setDescription] = useState('');
@@ -73,9 +73,8 @@ export default function NewJobPage() {
 
   const descPlainLen = description.replace(/<[^>]+>/g, '').trim().length;
   const canNext =
-    (step === 'step1' && title.trim().length >= 10 && !!categoryId) ||
-    (step === 'step2' && descPlainLen >= 30) ||
-    step === 'step3';
+    (step === 'details' && title.trim().length >= 10 && !!categoryId && descPlainLen >= 30) ||
+    step === 'extras';
 
   const submit = async () => {
     const min = budgetMin.trim() ? Number(budgetMin) : undefined;
@@ -148,7 +147,7 @@ export default function NewJobPage() {
       <main className="mx-auto w-full max-w-md px-5 pt-6 md:w-[calc(100%-4rem)] md:max-w-2xl md:rounded-3xl md:border md:border-border md:bg-card md:p-8 md:shadow-sm">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold tracking-tight">{t(`jobs.${step}`)}</h1>
-          {step === 'step1' && (
+          {step === 'details' && (
             <Link
               href="/ai/brief"
               className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-bold text-primary active:scale-95"
@@ -158,7 +157,7 @@ export default function NewJobPage() {
           )}
         </div>
 
-        {step === 'step1' && (
+        {step === 'details' && (
           <div className="mt-6 space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -202,7 +201,7 @@ export default function NewJobPage() {
           </div>
         )}
 
-        {step === 'step2' && (
+        {step === 'details' && (
           <div className="mt-6">
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t('jobs.description')}
@@ -217,7 +216,7 @@ export default function NewJobPage() {
           </div>
         )}
 
-        {step === 'step3' && (
+        {step === 'extras' && (
           <div className="mt-6 space-y-4">
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -366,22 +365,45 @@ export default function NewJobPage() {
             </div>
           </div>
         )}
+        {/* Desktop: actions sit in flow under the form — the bottom-pinned
+            bar is mobile-only (thumb reach); on desktop it wasted space and
+            buried the primary action. */}
+        <div className="mt-6 hidden md:flex">
+          <Button
+            variant="brand"
+            size="lg"
+            className="w-full md:w-auto md:min-w-44"
+            disabled={!canNext || create.isPending}
+            onClick={() => {
+              if (step === 'extras') void submit();
+              else setStep('extras');
+            }}
+          >
+            {create.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : step === 'extras' ? (
+              t('jobs.publish')
+            ) : (
+              t('common.next')
+            )}
+          </Button>
+        </div>
       </main>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">
+      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl md:hidden">
         <Button
           variant="brand"
           size="lg"
           className="w-full"
           disabled={!canNext || create.isPending}
           onClick={() => {
-            if (step === 'step3') void submit();
+            if (step === 'extras') void submit();
             else setStep(STEPS[stepIdx + 1]!);
           }}
         >
           {create.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : step === 'step3' ? (
+          ) : step === 'extras' ? (
             t('jobs.publish')
           ) : (
             t('common.next')
