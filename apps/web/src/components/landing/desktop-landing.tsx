@@ -13,8 +13,8 @@ import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 const DEFAULT_HOME: HomeConfig = {
   heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
-  heroTitle: "Ethiopia's most powerful",
-  heroTitleAccent: 'freelance marketplace.',
+  heroTitle: 'Hire the top 3% of',
+  heroTitleAccent: 'independent talent on Apex-Work.',
   heroSubtitle:
     'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
   heroCtaPrimary: 'Find talent',
