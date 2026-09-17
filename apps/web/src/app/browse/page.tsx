@@ -20,6 +20,8 @@ import {
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
+import { JobsBoard } from '@/app/jobs/page';
+import { useMe } from '@/hooks/use-me';
 import { apiFetch } from '@/lib/api';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
@@ -40,6 +42,10 @@ export default function BrowsePage() {
 }
 
 function BrowseInner() {
+  const { data: me } = useMe();
+  const isFreelancer = me?.role === 'FREELANCER';
+  // Jobs first for freelancers (they hunt work); gigs first for clients.
+  const [tab, setTab] = useState<'jobs' | 'gigs'>(isFreelancer ? 'jobs' : 'gigs');
   const params = useSearchParams();
   const router = useRouter();
   const { t } = useI18n();
@@ -177,7 +183,7 @@ function BrowseInner() {
           </div>
           <button
             onClick={() => setQuery('')}
-            className="hidden text-xs font-semibold text-primary transition-colors hover:text-primary/80 md:block"
+            className="hidden text-xs font-semibold text-primary transition-colors hover:text-primary/80 md:mr-14 md:block"
           >
             {t('browse.clear')}
           </button>
@@ -207,148 +213,180 @@ function BrowseInner() {
         </div>
       </header>
 
-      {/* Category filter — animated chips */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4 md:px-6">
-        <FilterChip
-          label={t('browse.allCategories')}
-          active={!category}
-          onClick={() => setCategoryUrl(null)}
-        />
-        {CATEGORIES.map((c) => (
-          <FilterChip
-            key={c.id}
-            label={`${c.icon} ${c.label}`}
-            active={category === c.id}
-            onClick={() => setCategoryUrl(c.id)}
-          />
-        ))}
-      </div>
-
-      {/* Device-local recently viewed gigs — shown only when browsing unfiltered */}
-      {!category && !query && <RecentlyViewedRow dense />}
-
-      {/* Sort + view toggle */}
-      <div className="flex items-center justify-between gap-2 px-5 pb-3">
-        <span className="text-xs text-muted-foreground">
-          {isLoading ? '…' : t('browse.resultsCount', { count: sorted.length })}
-        </span>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none"
-            >
-              <option value="recent">{t('browse.recent')}</option>
-              <option value="rating">{t('browse.rating')}</option>
-              <option value="price_asc">{t('browse.priceLow')}</option>
-              <option value="price_desc">{t('browse.priceHigh')}</option>
-            </select>
-          </label>
-          <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
-            <button
-              onClick={() => setViewMode('list')}
-              aria-label={dt('List view')}
-              className={cn(
-                'grid h-7 w-7 place-items-center rounded-full transition-colors',
-                view === 'list'
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <LayoutList className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              aria-label={dt('Grid view')}
-              className={cn(
-                'grid h-7 w-7 place-items-center rounded-full transition-colors',
-                view === 'grid'
-                  ? 'bg-primary/15 text-primary'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isLoading && (
-        <div
+      {/* Jobs | Services segmented control — primary surface depends on role */}
+      <div className="mx-4 mt-3 grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm md:mx-6">
+        <button
+          onClick={() => setTab('jobs')}
           className={cn(
-            'mx-auto grid max-w-7xl gap-4 px-4 pb-8 transition-all',
-            view === 'grid'
-              ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
-              : 'grid-cols-1',
+            'rounded-xl py-2.5 text-sm font-extrabold transition-colors',
+            tab === 'jobs'
+              ? 'grad-hero text-white shadow'
+              : 'text-muted-foreground hover:text-foreground',
           )}
-          aria-hidden="true"
         >
-          {Array.from({ length: view === 'grid' ? 8 : 4 }).map((_, i) => (
-            <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
-              <Skeleton
-                className={cn('w-full', view === 'grid' ? 'aspect-[4/3]' : 'aspect-[5/2]')}
+          💼 {dt('Jobs')}
+        </button>
+        <button
+          onClick={() => setTab('gigs')}
+          className={cn(
+            'rounded-xl py-2.5 text-sm font-extrabold transition-colors',
+            tab === 'gigs'
+              ? 'grad-hero text-white shadow'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          🛍️ {dt('Services')}
+        </button>
+      </div>
+
+      {tab === 'jobs' && <JobsBoard />}
+
+      {tab === 'gigs' && (
+        <>
+          {/* Category filter — animated chips */}
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4 md:px-6">
+            <FilterChip
+              label={t('browse.allCategories')}
+              active={!category}
+              onClick={() => setCategoryUrl(null)}
+            />
+            {CATEGORIES.map((c) => (
+              <FilterChip
+                key={c.id}
+                label={`${c.icon} ${c.label}`}
+                active={category === c.id}
+                onClick={() => setCategoryUrl(c.id)}
               />
-              <div className="space-y-2 p-3">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-                <Skeleton className="h-3 w-2/5" />
+            ))}
+          </div>
+
+          {/* Device-local recently viewed gigs — shown only when browsing unfiltered */}
+          {!category && !query && <RecentlyViewedRow dense />}
+
+          {/* Sort + view toggle */}
+          <div className="flex items-center justify-between gap-2 px-5 pb-3">
+            <span className="text-xs text-muted-foreground">
+              {isLoading ? '…' : t('browse.resultsCount', { count: sorted.length })}
+            </span>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none"
+                >
+                  <option value="recent">{t('browse.recent')}</option>
+                  <option value="rating">{t('browse.rating')}</option>
+                  <option value="price_asc">{t('browse.priceLow')}</option>
+                  <option value="price_desc">{t('browse.priceHigh')}</option>
+                </select>
+              </label>
+              <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
+                <button
+                  onClick={() => setViewMode('list')}
+                  aria-label={dt('List view')}
+                  className={cn(
+                    'grid h-7 w-7 place-items-center rounded-full transition-colors',
+                    view === 'list'
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  aria-label={dt('Grid view')}
+                  className={cn(
+                    'grid h-7 w-7 place-items-center rounded-full transition-colors',
+                    view === 'grid'
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
 
-      {!isLoading && sorted.length === 0 && (
-        <div className="mx-5 mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
-          <div className="text-3xl">🌱</div>
-          <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
-        </div>
-      )}
+          {isLoading && (
+            <div
+              className={cn(
+                'mx-auto grid max-w-7xl gap-4 px-4 pb-8 transition-all',
+                view === 'grid'
+                  ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
+                  : 'grid-cols-1',
+              )}
+              aria-hidden="true"
+            >
+              {Array.from({ length: view === 'grid' ? 8 : 4 }).map((_, i) => (
+                <div key={i} className="overflow-hidden rounded-2xl border border-border bg-card">
+                  <Skeleton
+                    className={cn('w-full', view === 'grid' ? 'aspect-[4/3]' : 'aspect-[5/2]')}
+                  />
+                  <div className="space-y-2 p-3">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                    <Skeleton className="h-3 w-2/5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-      <div
-        className={cn(
-          'px-4 pb-8 transition-all',
-          view === 'grid'
-            ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
-            : 'mx-auto flex max-w-7xl flex-col gap-3',
-        )}
-      >
-        {sorted.map((g, i) => (
-          <motion.div
-            key={g.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: Math.min(i * 0.03, 0.35),
-              type: 'spring',
-              stiffness: 320,
-              damping: 28,
-            }}
-          >
-            {view === 'grid' ? <GridCard key={g.id} g={g} /> : <BrowseCard g={g} />}
-          </motion.div>
-        ))}
-      </div>
+          {!isLoading && sorted.length === 0 && (
+            <div className="mx-5 mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
+              <div className="text-3xl">🌱</div>
+              <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
+            </div>
+          )}
 
-      {!isLoading && sorted.length > 0 && hasMore && (
-        <div ref={sentinelRef} className="flex justify-center px-4 pb-10">
-          <button
-            onClick={() => void loadMore()}
-            disabled={loadingMore}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-muted-foreground active:scale-95 disabled:opacity-50"
-          >
-            {loadingMore ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-              </>
-            ) : (
-              'Load more'
+          <div
+            className={cn(
+              'px-4 pb-8 transition-all',
+              view === 'grid'
+                ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
+                : 'mx-auto flex max-w-7xl flex-col gap-3',
             )}
-          </button>
-        </div>
+          >
+            {sorted.map((g, i) => (
+              <motion.div
+                key={g.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  delay: Math.min(i * 0.03, 0.35),
+                  type: 'spring',
+                  stiffness: 320,
+                  damping: 28,
+                }}
+              >
+                {view === 'grid' ? <GridCard key={g.id} g={g} /> : <BrowseCard g={g} />}
+              </motion.div>
+            ))}
+          </div>
+
+          {!isLoading && sorted.length > 0 && hasMore && (
+            <div ref={sentinelRef} className="flex justify-center px-4 pb-10">
+              <button
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold text-muted-foreground active:scale-95 disabled:opacity-50"
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                  </>
+                ) : (
+                  'Load more'
+                )}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </MobileShell>
   );

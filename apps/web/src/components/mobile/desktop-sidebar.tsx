@@ -25,8 +25,8 @@ import { Drawer } from 'vaul';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useConversations } from '@/hooks/use-chat';
-import { useUnreadCount } from '@/hooks/use-notifications';
 import { useMe } from '@/hooks/use-me';
+import { useUnreadCount } from '@/hooks/use-notifications';
 import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { NotificationsPanel } from '@/components/notifications-panel';
@@ -80,7 +80,11 @@ export function DesktopSidebar() {
     { label: t('nav.browse'), icon: Compass, href: '/browse' },
     { label: t('nav.search'), icon: Search, href: '/search' },
     { label: t('nav.chat'), icon: MessageCircle, href: '/messages', badge: unreadChats },
-    { label: t('nav.jobs'), icon: Briefcase, href: '/jobs' },
+    // Freelancers meet jobs inside Browse (it opens on the Jobs tab) — a
+    // separate Jobs entry duplicated the surface for them.
+    ...(me?.role === 'FREELANCER'
+      ? []
+      : [{ label: t('nav.jobs'), icon: Briefcase, href: '/jobs' }]),
     { label: t('nav.saved'), icon: Bookmark, href: '/saved' },
     { label: t('nav.notifications'), icon: Bell, href: '/notifications', badge: unreadNotifs },
     { label: t('nav.wallet'), icon: Wallet, href: '/wallet' },
@@ -154,13 +158,31 @@ export function DesktopSidebar() {
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="sticky top-0 hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-border bg-card/60 backdrop-blur-xl md:flex"
     >
-      {/* Logo / brand */}
-      <div className="flex items-center gap-2.5 px-4 py-5">
-        <Link href="/" className="flex shrink-0 items-center gap-2.5">
-          <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
-            A
-          </div>
-          {!collapsed && (
+      {/* Logo / brand. Collapsed: the expand button gets its own full-size
+          row under the logo — squeezing it into the 76px row made it nearly
+          impossible to find/tap. */}
+      {collapsed ? (
+        <div className="flex flex-col items-center gap-2 px-3 py-4">
+          <Link href="/" className="flex shrink-0">
+            <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
+              A
+            </div>
+          </Link>
+          <button
+            onClick={toggleCollapse}
+            aria-label="Expand sidebar"
+            title="Expand"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-90"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2.5 px-4 py-5">
+          <Link href="/" className="flex shrink-0 items-center gap-2.5">
+            <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
+              A
+            </div>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -168,20 +190,20 @@ export function DesktopSidebar() {
             >
               Apex-Work
             </motion.span>
-          )}
-        </Link>
-        <div className="ml-auto flex items-center gap-0.5">
-          <ThemeToggle />
-          <button
-            onClick={toggleCollapse}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={collapsed ? 'Expand' : 'Collapse'}
-            className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </button>
+          </Link>
+          <div className="ml-auto flex items-center gap-0.5">
+            <ThemeToggle />
+            <button
+              onClick={toggleCollapse}
+              aria-label="Collapse sidebar"
+              title="Collapse"
+              className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Command launcher (⌘K / Ctrl+K) — a quick way to jump anywhere. */}
       {!collapsed && (

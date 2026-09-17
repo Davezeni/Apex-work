@@ -12,7 +12,7 @@ import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { CATEGORIES } from '@apex-work/shared';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-export default function JobsPage() {
+export function JobsBoard() {
   const router = useRouter();
   const { t } = useI18n();
   const { data: me } = useMe();
@@ -23,7 +23,7 @@ export default function JobsPage() {
   const items: JobSummary[] = data?.items ?? [];
 
   return (
-    <MobileShell>
+    <>
       <div className="mx-auto min-h-dvh w-full max-w-5xl bg-background pb-24">
         <header className="safe-top sticky top-0 z-10 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-xl">
           <div className="flex items-center justify-between">
@@ -34,7 +34,7 @@ export default function JobsPage() {
             <button
               onClick={() => router.push('/jobs/new')}
               aria-label={t('jobs.postJob')}
-              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90"
+              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90 md:mr-14"
             >
               <Plus className="h-5 w-5" />
             </button>
@@ -95,6 +95,14 @@ export default function JobsPage() {
           ))}
         </div>
       </div>
+    </>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <MobileShell>
+      <JobsBoard />
     </MobileShell>
   );
 }

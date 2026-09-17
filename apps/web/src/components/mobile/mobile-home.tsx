@@ -23,7 +23,6 @@ import { useI18n } from '@/i18n';
 import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
 import { useAuthStore } from '@/stores/auth-store';
 import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendations';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 import { toast } from 'sonner';
 import { NotificationsPanel } from '@/components/notifications-panel';
@@ -70,10 +69,7 @@ export function MobileHome() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="rounded-full border border-border bg-card shadow-sm">
-            <ThemeToggle />
-          </div>
+        <div className="flex items-center gap-1.5 md:mr-14">
           <NotificationsPanel />
           <Link href="/profile" className="grid h-10 w-10 place-items-center">
             {me ? (

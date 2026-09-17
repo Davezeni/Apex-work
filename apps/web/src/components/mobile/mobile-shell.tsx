@@ -15,6 +15,7 @@ import { useI18n } from '@/i18n';
 import { PwaInstall } from '@/components/pwa-install';
 import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
 import { useIncomingCall } from '@/hooks/use-incoming-call';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuthStore } from '@/stores/auth-store';
 import { Phone, PhoneOff } from 'lucide-react';
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
@@ -123,18 +124,11 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
       </main>
       <PwaInstall />
 
-      {/* Desktop floating Create (+) — visible on md+ across the shell. On
-          mobile the center FAB in the bottom tab bar is the add affordance. */}
-      <button
-        onClick={() => {
-          haptic();
-          setSheetOpen(true);
-        }}
-        aria-label={dt('Create')}
-        className="fixed bottom-6 right-5 z-40 hidden h-14 w-14 grid-cols-1 place-items-center rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40 ring-1 ring-primary/30 transition-transform hover:scale-105 hover:brightness-110 active:scale-95 md:grid"
-      >
-        <Plus className="h-6 w-6" strokeWidth={2.5} />
-      </button>
+      {/* Desktop theme toggle — fixed top-right corner (the old floating +
+          here was removed: the sidebar Create is the single add affordance). */}
+      <div className="fixed right-4 top-4 z-[60] hidden rounded-full border border-border bg-background/80 shadow-md backdrop-blur md:block">
+        <ThemeToggle />
+      </div>
 
       {showTabBar && (
         <nav className="safe-bottom mobile-bottom-nav fixed inset-x-0 bottom-0 z-40 md:hidden">
