@@ -170,82 +170,58 @@ function BrowseInner() {
 
   return (
     <MobileShell activeTab="search">
-      <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl md:px-6 md:pt-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => safeBack(router)}
-            aria-label={t('common.back')}
-            className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card transition-colors hover:bg-muted md:hidden"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-extrabold tracking-tight md:text-2xl md:font-black">
-              {activeCat ? `${activeCat.icon} ${activeCat.label}` : t('browse.title')}
-            </h1>
-            <p className="hidden text-sm text-muted-foreground md:block">{t('browse.subtitle')}</p>
+      {tab !== 'jobs' && (
+        <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl md:px-6 md:pt-6">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => safeBack(router)}
+              aria-label={t('common.back')}
+              className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card transition-colors hover:bg-muted md:hidden"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-extrabold tracking-tight md:text-2xl md:font-black">
+                {activeCat ? `${activeCat.icon} ${activeCat.label}` : t('browse.title')}
+              </h1>
+              <p className="hidden text-sm text-muted-foreground md:block">
+                {t('browse.subtitle')}
+              </p>
+            </div>
+            <button
+              onClick={() => setQuery('')}
+              className="hidden text-xs font-semibold text-primary transition-colors hover:text-primary/80 md:mr-14 md:block"
+            >
+              {t('browse.clear')}
+            </button>
           </div>
-          <button
-            onClick={() => setQuery('')}
-            className="hidden text-xs font-semibold text-primary transition-colors hover:text-primary/80 md:mr-14 md:block"
-          >
-            {t('browse.clear')}
-          </button>
-        </div>
 
-        {/* Desktop search input with focus glow */}
-        <div className="mt-4 hidden md:block">
-          <div className="flex h-12 max-w-xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
-            <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
-            <input
-              id="browse-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('browse.searchPlaceholder')}
-              className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                aria-label={t('browse.clear')}
-                className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-xs text-muted-foreground transition-colors hover:bg-muted/80"
-              >
-                ×
-              </button>
-            )}
+          {/* Desktop search input with focus glow */}
+          <div className="mt-4 hidden md:block">
+            <div className="flex h-12 max-w-xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
+              <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+              <input
+                id="browse-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('browse.searchPlaceholder')}
+                className="h-full w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  aria-label={t('browse.clear')}
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-xs text-muted-foreground transition-colors hover:bg-muted/80"
+                >
+                  ×
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      {/* Jobs | Gigs segmented control — primary surface depends on role */}
-      <div className="mx-4 mt-3 grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm md:mx-6">
-        <button
-          onClick={() => setTab('jobs')}
-          className={cn(
-            'rounded-xl py-2.5 text-sm font-extrabold transition-colors',
-            tab === 'jobs'
-              ? 'grad-hero text-white shadow'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          💼 {dt('Jobs')}
-        </button>
-        <button
-          onClick={() => setTab('gigs')}
-          className={cn(
-            'rounded-xl py-2.5 text-sm font-extrabold transition-colors',
-            tab === 'gigs'
-              ? 'grad-hero text-white shadow'
-              : 'text-muted-foreground hover:text-foreground',
-          )}
-        >
-          🛍️ {dt('Gigs')}
-        </button>
-      </div>
-
-      {tab === 'jobs' && <JobsBoard />}
-
-      {tab === 'gigs' && (
+      {tab !== 'jobs' && (
         <>
           {/* Category filter — animated chips */}
           <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4 md:px-6">

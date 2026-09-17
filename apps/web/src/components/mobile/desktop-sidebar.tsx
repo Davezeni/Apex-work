@@ -88,23 +88,18 @@ export function DesktopSidebar() {
 
   const isFreelancer = me?.role === 'FREELANCER';
   const main: NavItem[] = [
-    {
-      label: t('nav.browse'),
-      icon: Compass,
-      href: isFreelancer ? '/browse?tab=jobs' : '/browse',
-    },
-    // Freelancers meet jobs inside Browse (it opens on Jobs); their gigs
-    // surface gets the same one-tap standalone entry, labeled "Gigs".
+    // Freelancers: ONE marketplace entry — "Gigs". Clients: Browse + Jobs.
+    // (Role items wait for `me` to load so they never flash the wrong way.)
     ...(isFreelancer
       ? [{ label: dt('Gigs'), icon: ShoppingBag, href: '/browse?tab=gigs' } as NavItem]
-      : []),
+      : me
+        ? [
+            { label: t('nav.browse'), icon: Compass, href: '/browse' },
+            { label: t('nav.jobs'), icon: Briefcase, href: '/jobs' },
+          ]
+        : []),
     { label: t('nav.search'), icon: Search, href: '/search' },
     { label: t('nav.chat'), icon: MessageCircle, href: '/messages', badge: unreadChats },
-    // Freelancers meet jobs inside Browse (it opens on the Jobs tab) — a
-    // separate Jobs entry duplicated the surface for them.
-    ...(me?.role === 'FREELANCER'
-      ? []
-      : [{ label: t('nav.jobs'), icon: Briefcase, href: '/jobs' }]),
     { label: t('nav.saved'), icon: Bookmark, href: '/saved' },
     { label: t('nav.notifications'), icon: Bell, href: '/notifications', badge: unreadNotifs },
     { label: t('nav.wallet'), icon: Wallet, href: '/wallet' },
