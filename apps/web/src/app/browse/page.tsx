@@ -217,7 +217,7 @@ function BrowseInner() {
         </div>
       </header>
 
-      {/* Jobs | Services segmented control — primary surface depends on role */}
+      {/* Jobs | Gigs segmented control — primary surface depends on role */}
       <div className="mx-4 mt-3 grid grid-cols-2 gap-1 rounded-2xl border border-border bg-card p-1 shadow-sm md:mx-6">
         <button
           onClick={() => setTab('jobs')}
@@ -239,7 +239,7 @@ function BrowseInner() {
               : 'text-muted-foreground hover:text-foreground',
           )}
         >
-          🛍️ {dt('Services')}
+          🛍️ {dt('Gigs')}
         </button>
       </div>
 

@@ -93,10 +93,10 @@ export function DesktopSidebar() {
       icon: Compass,
       href: isFreelancer ? '/browse?tab=jobs' : '/browse',
     },
-    // Freelancers meet jobs inside Browse (it opens on Jobs); give their
-    // Services (gigs) surface the same one-tap home the way clients get Jobs.
+    // Freelancers meet jobs inside Browse (it opens on Jobs); their gigs
+    // surface gets the same one-tap standalone entry, labeled "Gigs".
     ...(isFreelancer
-      ? [{ label: dt('Services'), icon: ShoppingBag, href: '/browse?tab=gigs' } as NavItem]
+      ? [{ label: dt('Gigs'), icon: ShoppingBag, href: '/browse?tab=gigs' } as NavItem]
       : []),
     { label: t('nav.search'), icon: Search, href: '/search' },
     { label: t('nav.chat'), icon: MessageCircle, href: '/messages', badge: unreadChats },
