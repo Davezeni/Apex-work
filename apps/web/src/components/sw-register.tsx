@@ -19,8 +19,15 @@ export function ServiceWorkerRegister() {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/', updateViaCache: 'none' })
         .then((reg) => {
-          // Poll for updates every hour so long-lived tabs get new versions.
-          setInterval(() => reg.update().catch(() => undefined), 60 * 60 * 1000);
+          // Check for updates every 15 minutes AND whenever the user returns
+          // to the tab — a deploy should reach an open app within minutes,
+          // not up to an hour later.
+          setInterval(() => reg.update().catch(() => undefined), 15 * 60 * 1000);
+          const onVisible = () => {
+            if (document.visibilityState === 'visible') reg.update().catch(() => undefined);
+          };
+          document.addEventListener('visibilitychange', onVisible);
+          window.addEventListener('focus', onVisible);
 
           // If a new SW takes over, tell it to skip waiting so the next
           // navigation gets the fresh assets.

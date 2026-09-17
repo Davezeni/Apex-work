@@ -34,7 +34,7 @@ export function JobsBoard() {
             <button
               onClick={() => router.push('/jobs/new')}
               aria-label={t('jobs.postJob')}
-              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90 md:mr-14"
+              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90 md:hidden"
             >
               <Plus className="h-5 w-5" />
             </button>

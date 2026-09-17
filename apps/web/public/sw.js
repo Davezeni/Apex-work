@@ -16,7 +16,7 @@
  * scope over the entire site — required by the browser SW spec.
  */
 
-const VERSION = 'v9';
+const VERSION = 'v10';
 const SHELL_CACHE = `apex-shell-${VERSION}`;
 const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
 const IMAGE_CACHE = `apex-img-${VERSION}`;
