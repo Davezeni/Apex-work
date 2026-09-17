@@ -26,6 +26,7 @@ import { useRecommendations, type RecommendedJob } from '@/hooks/use-recommendat
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 import { toast } from 'sonner';
 import { NotificationsPanel } from '@/components/notifications-panel';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
 import { gradientFor } from '@/components/ui/avatar-gradient';
@@ -71,6 +72,10 @@ export function MobileHome() {
         </div>
         <div className="flex items-center gap-1.5 md:mr-14">
           <NotificationsPanel />
+          {/* Mobile theme toggle — desktop gets the single shell-level one. */}
+          <div className="md:hidden">
+            <ThemeToggle />
+          </div>
           <Link href="/profile" className="grid h-10 w-10 place-items-center">
             {me ? (
               <UserAvatar
