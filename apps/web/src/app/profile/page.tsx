@@ -28,6 +28,7 @@ import {
 import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
 import { useWallet } from '@/hooks/use-wallet';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { formatEtb, cn } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -84,6 +85,9 @@ export default function ProfilePage() {
         {/* Hero */}
         <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
+          <div className="absolute right-3 top-3 z-10 rounded-full border border-border bg-background/70 shadow-sm backdrop-blur">
+            <ThemeToggle />
+          </div>
           <div className="relative">
             <div className="mx-auto h-20 w-20">
               <UserAvatar
