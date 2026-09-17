@@ -109,7 +109,7 @@ export default function PostGigPage() {
 
   const goBack = () => {
     if (stepIdx > 0) setStepIdx((i) => i - 1);
-    else safeBack(router, '/gigs');
+    else safeBack(router, '/browse');
   };
 
   const submit = async () => {
@@ -173,7 +173,7 @@ export default function PostGigPage() {
 
   return (
     <div className="mesh-bg flex min-h-dvh flex-col">
-      <header className="safe-top flex items-center gap-3 p-5">
+      <header className="safe-top mx-auto flex w-full max-w-md items-center gap-3 p-5 md:max-w-2xl">
         <button
           onClick={goBack}
           className="grid h-10 w-10 place-items-center rounded-full border border-border bg-card"
@@ -197,7 +197,7 @@ export default function PostGigPage() {
         </span>
       </header>
 
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-10 md:mb-10 md:w-[calc(100%-4rem)] md:max-w-2xl md:rounded-3xl md:border md:border-border md:bg-card md:p-8 md:shadow-sm">
         <AnimatePresence mode="wait">
           <motion.div
             key={step}

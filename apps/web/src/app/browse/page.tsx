@@ -44,9 +44,13 @@ export default function BrowsePage() {
 function BrowseInner() {
   const { data: me } = useMe();
   const isFreelancer = me?.role === 'FREELANCER';
-  // Jobs first for freelancers (they hunt work); gigs first for clients.
-  const [tab, setTab] = useState<'jobs' | 'gigs'>(isFreelancer ? 'jobs' : 'gigs');
   const params = useSearchParams();
+  // Jobs first for freelancers (they hunt work); gigs first for clients.
+  // ?tab=jobs|gigs (sidebar links, deep links) overrides the role default.
+  const tabFromUrl = params.get('tab');
+  const [tab, setTab] = useState<'jobs' | 'gigs'>(
+    tabFromUrl === 'jobs' || tabFromUrl === 'gigs' ? tabFromUrl : isFreelancer ? 'jobs' : 'gigs',
+  );
   const router = useRouter();
   const { t } = useI18n();
   const categoryFromUrl = params.get('category');

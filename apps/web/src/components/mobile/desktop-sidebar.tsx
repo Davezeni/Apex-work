@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Home,
@@ -16,14 +15,15 @@ import {
   Wallet,
   Settings,
   LogOut,
-  PanelLeftClose,
-  PanelLeft,
+  ChevronLeft,
   ChevronRight,
+  ShoppingBag,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Drawer } from 'vaul';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { dt } from '@/i18n/auto';
 import { useConversations } from '@/hooks/use-chat';
 import { useMe } from '@/hooks/use-me';
 import { useUnreadCount } from '@/hooks/use-notifications';
@@ -74,10 +74,30 @@ export function DesktopSidebar() {
     });
   };
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    const [base, query] = href.split('?');
+    if (!base || !pathname.startsWith(base)) return false;
+    // Links that target a specific tab only light up for that tab.
+    if (query) {
+      if (typeof window === 'undefined') return false;
+      return window.location.search.includes(query);
+    }
+    return true;
+  };
 
+  const isFreelancer = me?.role === 'FREELANCER';
   const main: NavItem[] = [
-    { label: t('nav.browse'), icon: Compass, href: '/browse' },
+    {
+      label: t('nav.browse'),
+      icon: Compass,
+      href: isFreelancer ? '/browse?tab=jobs' : '/browse',
+    },
+    // Freelancers meet jobs inside Browse (it opens on Jobs); give their
+    // Services (gigs) surface the same one-tap home the way clients get Jobs.
+    ...(isFreelancer
+      ? [{ label: dt('Services'), icon: ShoppingBag, href: '/browse?tab=gigs' } as NavItem]
+      : []),
     { label: t('nav.search'), icon: Search, href: '/search' },
     { label: t('nav.chat'), icon: MessageCircle, href: '/messages', badge: unreadChats },
     // Freelancers meet jobs inside Browse (it opens on the Jobs tab) — a
@@ -174,7 +194,7 @@ export function DesktopSidebar() {
             title="Expand"
             className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-90"
           >
-            <PanelLeft className="h-5 w-5" />
+            <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       ) : (
@@ -192,14 +212,13 @@ export function DesktopSidebar() {
             </motion.span>
           </Link>
           <div className="ml-auto flex items-center gap-0.5">
-            <ThemeToggle />
             <button
               onClick={toggleCollapse}
               aria-label="Collapse sidebar"
               title="Collapse"
               className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
-              <PanelLeftClose className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
           </div>
         </div>

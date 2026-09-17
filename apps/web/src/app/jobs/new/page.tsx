@@ -119,8 +119,8 @@ export default function NewJobPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background pb-32">
-      <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+    <div className="min-h-dvh bg-background pb-32 md:pb-16">
+      <header className="safe-top sticky top-0 z-10 mx-auto flex w-full max-w-md items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl md:max-w-2xl md:rounded-b-3xl md:border md:border-t-0">
         <button
           onClick={() => (stepIdx > 0 ? setStep(STEPS[stepIdx - 1]!) : safeBack(router, '/jobs'))}
           aria-label={t('common.back')}
@@ -144,7 +144,7 @@ export default function NewJobPage() {
         </span>
       </header>
 
-      <main className="mx-auto w-full max-w-md px-5 pt-6">
+      <main className="mx-auto w-full max-w-md px-5 pt-6 md:w-[calc(100%-4rem)] md:max-w-2xl md:rounded-3xl md:border md:border-border md:bg-card md:p-8 md:shadow-sm">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-extrabold tracking-tight">{t(`jobs.${step}`)}</h1>
           {step === 'step1' && (
