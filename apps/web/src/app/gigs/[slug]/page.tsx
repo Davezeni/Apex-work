@@ -272,6 +272,8 @@ export default function GigDetailPage() {
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-cover"
             />
+            {/* scrim: separates the photo from the floating card below */}
+            <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/40 to-transparent" />
             <HeaderActions
               router={router}
               onTop
@@ -281,7 +283,7 @@ export default function GigDetailPage() {
               onShare={shareGig}
             />
           </div>
-          <div className="mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-lg">
+          <div className="relative z-10 mx-4 -mt-8 rounded-2xl border border-border bg-card p-5 shadow-xl shadow-black/5">
             <div className="flex items-start gap-3">
               <Link
                 href={`/u/${gig.owner.username}`}

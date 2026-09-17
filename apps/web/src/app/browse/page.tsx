@@ -441,7 +441,7 @@ function BrowseCard({ g }: { g: GigListItem }) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary">
+          <div className="line-clamp-2 text-sm font-bold leading-snug group-hover:text-primary">
             {g.title}
           </div>
           <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -468,7 +468,7 @@ function BrowseCard({ g }: { g: GigListItem }) {
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
             {t('gig.from')}{' '}
-            <span className="text-sm font-extrabold text-foreground">
+            <span className="text-sm font-extrabold tabular-nums text-primary">
               {formatEtb(g.startingPriceEtb)}
             </span>
           </div>
@@ -480,71 +480,106 @@ function BrowseCard({ g }: { g: GigListItem }) {
 
 function GridCard({ g }: { g: GigListItem }) {
   const { t } = useI18n();
+  const catIcon = CATEGORIES.find((c) => c.id === g.categoryId)?.icon ?? '✨';
   return (
     <motion.div
-      whileHover={{ y: -6, scale: 1.015 }}
-      transition={{ type: 'spring', stiffness: 360, damping: 22 }}
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 360, damping: 24 }}
+      className="h-full"
     >
       <Link
         href={`/gigs/${g.slug}`}
-        className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/40 hover:shadow-xl hover:shadow-primary/15 active:scale-[.99]"
+        className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border transition-all duration-300 hover:shadow-xl hover:shadow-primary/15 hover:ring-primary/40 active:scale-[.99]"
       >
-        {/* Cover */}
+        {/* Cover — real photo, or a rich category gradient fallback */}
         <div
           className={cn(
-            'relative h-28 w-full overflow-hidden bg-gradient-to-br',
+            'relative aspect-[16/10] w-full shrink-0 overflow-hidden',
             gradientFor(g.id),
           )}
         >
-          {/* subtle cover shimmer on hover */}
-          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-          {g.coverImageUrl && (
+          {g.coverImageUrl ? (
             <Image
               src={g.coverImageUrl}
               alt={g.title}
               fill
               unoptimized
               sizes="300px"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />
+          ) : (
+            <>
+              <div className="absolute -right-6 -top-10 h-32 w-32 rounded-full border-[10px] border-white/10" />
+              <div className="absolute -bottom-12 -left-8 h-36 w-36 rounded-full border-[14px] border-white/10" />
+              <span className="absolute inset-0 grid place-items-center text-5xl drop-shadow-sm transition-transform duration-500 group-hover:scale-110">
+                {catIcon}
+              </span>
+            </>
           )}
+          {/* subtle cover shimmer on hover */}
+          <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           {g.isFeatured && (
-            <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-white shadow">
-              {t('gig.featured')}
+            <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-amber-400/95 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 shadow-sm">
+              ⚡ {t('gig.featured')}
             </span>
           )}
         </div>
-        <div className="flex flex-1 flex-col gap-1.5 p-3">
-          <div className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-tight group-hover:text-primary">
+
+        <div className="flex flex-1 flex-col p-3.5">
+          <div className="line-clamp-2 min-h-[2.6rem] text-[13px] font-bold leading-[1.3] tracking-[-0.01em]">
             {g.title}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            {g.ratingCount > 0 && (
-              <span className="flex items-center gap-0.5">
+          <div className="mb-3 mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            {g.ratingCount > 0 ? (
+              <span className="inline-flex items-center gap-1">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                {g.rating.toFixed(1)}
+                <span className="font-semibold text-foreground">{g.rating.toFixed(1)}</span>
+                <span>({g.ratingCount})</span>
               </span>
+            ) : (
+              <span className="font-medium">{dt('New')}</span>
             )}
             {g.owner.city && (
               <>
-                {g.ratingCount > 0 && <span>·</span>}
-                <span className="flex items-center gap-0.5">
-                  <MapPin className="h-3 w-3" />
+                <span aria-hidden>·</span>
+                <span className="inline-flex min-w-0 items-center gap-0.5">
+                  <MapPin className="h-3 w-3 shrink-0" />
                   <span className="truncate">{g.owner.city}</span>
                 </span>
               </>
             )}
           </div>
-          <div className="mt-auto flex items-center justify-between pt-1">
-            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-              <span className="font-semibold text-foreground">
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/70 pt-2.5">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  'grid h-5 w-5 shrink-0 place-items-center overflow-hidden rounded-full text-[9px] font-bold text-white',
+                  gradientFor(g.owner.id),
+                )}
+              >
+                {g.owner.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={g.owner.avatarUrl}
+                    alt={g.owner.fullName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (g.owner.fullName[0] ?? '?').toUpperCase()
+                )}
+              </span>
+              <span className="truncate text-[11px] font-semibold">
                 {g.owner.fullName.split(' ')[0]}
               </span>
-              {g.owner.isVerified && <CheckCircle2 className="h-3 w-3 fill-cyan-400 text-white" />}
+              {g.owner.isVerified && (
+                <CheckCircle2 className="h-3 w-3 shrink-0 fill-cyan-400 text-white" />
+              )}
             </div>
-            <div className="text-right">
-              <div className="text-[9px] text-muted-foreground">{t('gig.from')}</div>
-              <div className="text-sm font-extrabold text-primary">
+            <div className="shrink-0 text-right leading-none">
+              <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                {t('gig.from')}
+              </div>
+              <div className="mt-1 text-[13px] font-extrabold tabular-nums text-primary">
                 {formatEtb(g.startingPriceEtb)}
               </div>
             </div>
