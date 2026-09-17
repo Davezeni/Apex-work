@@ -26,6 +26,7 @@ import { useMe } from '@/hooks/use-me';
 import { apiFetch } from '@/lib/api';
 import { useI18n } from '@/i18n';
 import { gradientFor } from '@/components/ui/avatar-gradient';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RecentlyViewedRow } from '@/components/home/recently-viewed';
 import { safeBack } from '@/lib/safe-back';
@@ -201,6 +202,10 @@ function BrowseInner() {
             >
               {t('browse.clear')}
             </button>
+            {/* Mobile theme toggle — desktop gets the shell-level one (top-right). */}
+            <div className="shrink-0 md:hidden">
+              <ThemeToggle />
+            </div>
           </div>
 
           {/* Desktop search input with focus glow */}

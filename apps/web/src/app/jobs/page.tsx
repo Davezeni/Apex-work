@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Briefcase, Loader2, Plus, Search, MapPin } from 'lucide-react';
 import { useJobs, type JobSummary } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
@@ -31,13 +32,19 @@ export function JobsBoard() {
               <h1 className="text-xl font-extrabold tracking-tight">{t('jobs.title')}</h1>
               <p className="text-[11px] text-muted-foreground">{t('jobs.subtitle')}</p>
             </div>
-            <button
-              onClick={() => router.push('/jobs/new')}
-              aria-label={t('jobs.postJob')}
-              className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90 md:hidden"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Mobile theme toggle — desktop gets the shell-level one. */}
+              <div className="md:hidden">
+                <ThemeToggle />
+              </div>
+              <button
+                onClick={() => router.push('/jobs/new')}
+                aria-label={t('jobs.postJob')}
+                className="grad-hero grid h-10 w-10 place-items-center rounded-full text-white shadow-md shadow-primary/40 active:scale-90 md:hidden"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <div className="relative mt-3">

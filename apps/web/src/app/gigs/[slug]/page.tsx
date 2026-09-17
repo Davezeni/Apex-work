@@ -262,7 +262,7 @@ export default function GigDetailPage() {
       */}
       {gig.coverImageUrl ? (
         <>
-          <div className={cn('relative h-56 bg-gradient-to-br sm:h-72', gradientFor(gig.id))}>
+          <div className={cn('relative h-80 bg-gradient-to-br sm:h-[26rem]', gradientFor(gig.id))}>
             <Image
               src={gig.coverImageUrl}
               alt={gig.title}
