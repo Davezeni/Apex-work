@@ -4,12 +4,7 @@
  */
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import {
-  BadRequestError,
-  ConflictError,
-  ForbiddenError,
-  NotFoundError,
-} from '../lib/errors.js';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
 import { ChapaService, chapa } from './chapa.service.js';
 import { env } from '../config/env.js';
@@ -17,16 +12,19 @@ import { getCategoryFeePercent } from './categories.service.js';
 
 // ---------------- Jobs ----------------
 
-export async function createJob(clientId: string, input: {
-  title: string;
-  categoryId: string;
-  description: string;
-  requiredSkills: string[];
-  budgetMinEtb?: number;
-  budgetMaxEtb?: number;
-  isRemote?: boolean;
-  attachments?: { url: string; name: string; contentType: string; sizeBytes: number }[];
-}) {
+export async function createJob(
+  clientId: string,
+  input: {
+    title: string;
+    categoryId: string;
+    description: string;
+    requiredSkills: string[];
+    budgetMinEtb?: number;
+    budgetMaxEtb?: number;
+    isRemote?: boolean;
+    attachments?: { url: string; name: string; contentType: string; sizeBytes: number }[];
+  },
+) {
   const client = await prisma.user.findUnique({
     where: { id: clientId },
     select: { id: true, role: true, phone: true, isPhoneVerified: true },
@@ -84,6 +82,12 @@ export async function listJobs(opts: {
     include: {
       client: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       _count: { select: { bids: true } },
+      attachments: {
+        where: { contentType: { startsWith: 'image/' } },
+        take: 1,
+        orderBy: { createdAt: 'asc' },
+        select: { url: true, contentType: true },
+      },
     },
   });
   const hasMore = items.length > opts.limit;
@@ -261,7 +265,13 @@ export async function acceptBid(bidId: string, clientId: string) {
     // providerRef so a retried accept can never duplicate it (recoverable).
     await tx.payment.upsert({
       where: { providerRef: `apex-${o.id}` },
-      create: { orderId: o.id, amountEtb: bid.priceEtb, provider: 'chapa', providerRef: `apex-${o.id}`, status: 'PENDING' },
+      create: {
+        orderId: o.id,
+        amountEtb: bid.priceEtb,
+        provider: 'chapa',
+        providerRef: `apex-${o.id}`,
+        status: 'PENDING',
+      },
       update: {},
     });
     return o;
@@ -301,21 +311,25 @@ export async function acceptBid(bidId: string, clientId: string) {
     // Payment initialization failed — the provisional order (and its payment
     // record, which cascades) is removed AND the job is restored to open so the
     // client isn't left with a permanently closed job that has no payable order.
-    await prisma.$transaction(async (tx) => {
-      await tx.order.delete({ where: { id: order.id } });
-      await tx.job.update({
-        where: { id: bid.jobId },
-        data: { isOpen: true, closedAt: null },
+    await prisma
+      .$transaction(async (tx) => {
+        await tx.order.delete({ where: { id: order.id } });
+        await tx.job.update({
+          where: { id: bid.jobId },
+          data: { isOpen: true, closedAt: null },
+        });
+      })
+      .catch(() => {
+        // Belt-and-suspenders: if the transaction fails, at least remove the order
+        // and restore the job individually so the job is never permanently closed.
+        void prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
+        void prisma.job
+          .update({
+            where: { id: bid.jobId },
+            data: { isOpen: true, closedAt: null },
+          })
+          .catch(() => undefined);
       });
-    }).catch(() => {
-      // Belt-and-suspenders: if the transaction fails, at least remove the order
-      // and restore the job individually so the job is never permanently closed.
-      void prisma.order.delete({ where: { id: order.id } }).catch(() => undefined);
-      void prisma.job.update({
-        where: { id: bid.jobId },
-        data: { isOpen: true, closedAt: null },
-      }).catch(() => undefined);
-    });
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
   return { order, checkoutUrl: init.checkoutUrl, devSkipped: false };

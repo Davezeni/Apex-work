@@ -18,11 +18,13 @@ export interface JobSummary {
   closedAt: string | null;
   client: { id: string; username: string; fullName: string; avatarUrl: string | null };
   _count: { bids: number };
+  attachments?: { url: string; contentType: string }[];
 }
 
 export interface JobDetail extends JobSummary {
   description: string;
   bidCount: number;
+  attachments: { url: string; name: string; sizeBytes: number; contentType: string }[];
   bids: {
     id: string;
     message: string;

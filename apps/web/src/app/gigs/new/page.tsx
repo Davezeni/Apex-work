@@ -15,18 +15,23 @@ import {
   Check,
   Plus,
   X,
+  ImagePlus,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
 import { useCreateGig } from '@/hooks/use-gig-mutations';
 import { CATEGORIES, MIN_GIG_PRICE_ETB, MAX_GIG_PRICE_ETB } from '@apex-work/shared';
+import Image from 'next/image';
 import { cn, formatEtb } from '@/lib/utils';
+import { useUpload } from '@/hooks/use-upload';
 import { useI18n } from '@/i18n';
+import { dt } from '@/i18n/auto';
 import { safeBack } from '@/lib/safe-back';
 
-type Step = 'title' | 'category' | 'description' | 'pricing';
-const STEPS: Step[] = ['title', 'category', 'description', 'pricing'];
+type Step = 'title' | 'category' | 'description' | 'photos' | 'pricing' | 'review';
+const STEPS: Step[] = ['title', 'category', 'description', 'photos', 'pricing', 'review'];
 
 type Tier = 'BASIC' | 'STANDARD' | 'PREMIUM';
 interface PackageDraft {
@@ -54,6 +59,9 @@ export default function PostGigPage() {
   const [tagsInput, setTagsInput] = useState('');
   const [description, setDescription] = useState('');
   const [packages, setPackages] = useState<PackageDraft[]>(DEFAULT_PACKAGES);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
+  const upload = useUpload();
 
   useEffect(() => {
     if (isLoading) return;
@@ -101,8 +109,10 @@ export default function PostGigPage() {
           p.deliveryDays <= 90,
       ));
 
+  const canAdvance = canGoNext || step === 'photos' || step === 'review';
+
   const goNext = () => {
-    if (!canGoNext) return;
+    if (!canAdvance) return;
     if (stepIdx < STEPS.length - 1) setStepIdx((i) => i + 1);
     else void submit();
   };
@@ -127,7 +137,8 @@ export default function PostGigPage() {
           deliveryDays: p.deliveryDays,
           revisions: p.revisions,
         })),
-        galleryUrls: [],
+        coverImageUrl: coverUrl || undefined,
+        galleryUrls: gallery,
       });
       toast.success(t('postGig.success'));
       router.push(`/gigs/${created.slug}`);
@@ -162,6 +173,20 @@ export default function PostGigPage() {
   const updatePackage = (idx: number, patch: Partial<PackageDraft>) => {
     setPackages(packages.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
   };
+
+  const uploadImage = async (file: File, done: (url: string) => void) => {
+    if (file.size > 10 * 1024 * 1024) return toast.error(dt('Max 10 MB per image'));
+    if (!file.type.startsWith('image/')) return toast.error(dt('Images only (JPG, PNG, WebP)'));
+    try {
+      const res = await upload.mutateAsync({ file, bucket: 'portfolio' });
+      done(res.publicUrl);
+    } catch (err) {
+      toast.error((err as Error).message || dt('Upload failed — check your connection'));
+    }
+  };
+
+  const minPrice = Math.min(...packages.map((p) => p.priceEtb));
+  const activeCat = CATEGORIES.find((c) => c.id === categoryId);
 
   if (isLoading || !me) {
     return (
@@ -291,6 +316,116 @@ export default function PostGigPage() {
               </>
             )}
 
+            {step === 'photos' && (
+              <>
+                <StepIcon icon={<ImagePlus className="h-6 w-6" />} />
+                <h1 className="text-3xl font-extrabold tracking-tight">{dt('Add photos')}</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {dt(
+                    'Gigs with a cover photo get up to 3× more orders. You can also skip this step.',
+                  )}
+                </p>
+
+                <div className="mt-6">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {dt('Cover photo')}
+                  </label>
+                  {coverUrl ? (
+                    <div className="relative overflow-hidden rounded-2xl border border-border">
+                      <Image
+                        src={coverUrl}
+                        alt={dt('Cover preview')}
+                        width={800}
+                        height={450}
+                        unoptimized
+                        className="aspect-video w-full object-cover"
+                      />
+                      <button
+                        onClick={() => setCoverUrl(null)}
+                        aria-label={t('common.delete')}
+                        className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white backdrop-blur"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-card py-10 text-center transition-colors hover:border-primary/50 hover:bg-primary/5">
+                      {upload.isPending ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      ) : (
+                        <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      <span className="text-sm font-semibold">
+                        {upload.isPending ? dt('Uploading…') : dt('Tap to choose a cover image')}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {dt('JPG or PNG, up to 10 MB')}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (f) void uploadImage(f, setCoverUrl);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <div className="mt-5">
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {dt('Gallery (optional)')}
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {gallery.map((url) => (
+                      <div
+                        key={url}
+                        className="relative aspect-square overflow-hidden rounded-xl border border-border"
+                      >
+                        <Image
+                          src={url}
+                          alt={dt('Gallery image')}
+                          fill
+                          unoptimized
+                          sizes="150px"
+                          className="object-cover"
+                        />
+                        <button
+                          onClick={() => setGallery(gallery.filter((u) => u !== url))}
+                          aria-label={t('common.delete')}
+                          className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {gallery.length < 4 && (
+                      <label className="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-border bg-card transition-colors hover:border-primary/50">
+                        {upload.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            if (f) void uploadImage(f, (u) => setGallery((g2) => [...g2, u]));
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             {step === 'pricing' && (
               <>
                 <StepIcon icon={<Wallet className="h-6 w-6" />} />
@@ -320,6 +455,95 @@ export default function PostGigPage() {
                 )}
               </>
             )}
+            {step === 'review' && (
+              <>
+                <StepIcon icon={<Eye className="h-6 w-6" />} />
+                <h1 className="text-3xl font-extrabold tracking-tight">{dt('Review & publish')}</h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {dt('This is exactly how buyers will see your gig in the feed.')}
+                </p>
+
+                <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                  <div className="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-primary/25 via-fuchsia-500/15 to-cyan-400/20">
+                    {coverUrl ? (
+                      <Image
+                        src={coverUrl}
+                        alt={dt('Cover preview')}
+                        fill
+                        unoptimized
+                        sizes="600px"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-4xl">
+                        {activeCat?.icon ?? '✨'}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <div className="line-clamp-2 text-sm font-semibold leading-tight">
+                      {title.trim()}
+                    </div>
+                    {tags.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-2 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <div className="grad-hero grid h-5 w-5 place-items-center rounded-full text-[9px] font-bold text-white">
+                          {(me.fullName[0] ?? '?').toUpperCase()}
+                        </div>
+                        <span className="font-semibold text-foreground">
+                          {me.fullName.split(' ')[0]}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] text-muted-foreground">{t('gig.from')}</div>
+                        <div className="text-sm font-extrabold text-primary">
+                          {formatEtb(minPrice)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-border bg-card p-3">
+                  {packages.map((p) => (
+                    <div
+                      key={p.tier}
+                      className="flex items-center justify-between border-b border-border py-1.5 text-xs last:border-0"
+                    >
+                      <span className="font-semibold">
+                        {p.tier === 'BASIC'
+                          ? dt('Basic')
+                          : p.tier === 'STANDARD'
+                            ? dt('Standard')
+                            : dt('Premium')}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {p.deliveryDays}
+                        {dt('d')} · {formatEtb(p.priceEtb)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {dt(
+                    'Tip: gigs with complete packages and a clear description rank higher in search.',
+                  )}
+                </div>
+              </>
+            )}
           </motion.div>
         </AnimatePresence>
 
@@ -328,7 +552,7 @@ export default function PostGigPage() {
           size="lg"
           className="mt-6 w-full"
           onClick={goNext}
-          disabled={!canGoNext || create.isPending}
+          disabled={!canAdvance || create.isPending}
         >
           {create.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />

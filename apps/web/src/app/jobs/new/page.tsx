@@ -4,8 +4,9 @@ import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, X, Plus, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, X, Plus, Sparkles, ImagePlus, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
@@ -296,7 +297,73 @@ export default function NewJobPage() {
               {t('jobs.remote')}
             </label>
 
+            <div className="flex items-start gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs text-muted-foreground">
+              <ImagePlus className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              {dt('Add photos of what you need — jobs with photos get up to 3× more bids.')}
+            </div>
+
             <JobAttachmentsField items={attachments} onChange={setAttachments} />
+
+            <div className="rounded-2xl border border-border bg-muted/30 p-3">
+              <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Eye className="h-3.5 w-3.5" /> {dt('Live preview — how freelancers see your job')}
+              </div>
+              {(() => {
+                const cover = attachments.find((a) => a.contentType.startsWith('image/'))?.url;
+                const budget =
+                  budgetMin && budgetMax
+                    ? `${budgetMin}–${budgetMax} ETB`
+                    : budgetMin
+                      ? `≥ ${budgetMin} ETB`
+                      : budgetMax
+                        ? `≤ ${budgetMax} ETB`
+                        : dt('Budget open');
+                return (
+                  <div className="overflow-hidden rounded-xl border border-border bg-card">
+                    {cover && (
+                      <div className="relative h-32 w-full bg-muted">
+                        <Image
+                          src={cover}
+                          alt={title || dt('Job image')}
+                          fill
+                          unoptimized
+                          sizes="400px"
+                          className="object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <div className="line-clamp-2 text-sm font-extrabold leading-snug">
+                        {title.trim() || dt('Your job title')}
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 font-bold text-primary">
+                          {budget}
+                        </span>
+                        {isRemote && (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                            {t('jobs.remote')}
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">· {dt('0 bids')}</span>
+                      </div>
+                      {skills.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {skills.slice(0, 6).map((sk) => (
+                            <span
+                              key={sk}
+                              className="rounded-full border border-border px-2 py-0.5 text-[10px]"
+                            >
+                              {sk}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
       </main>

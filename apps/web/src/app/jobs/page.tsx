@@ -147,12 +147,25 @@ function JobCard({ job, isMe }: { job: JobSummary; isMe: boolean }) {
         : job.budgetMaxEtb != null
           ? `≤ ${formatEtb(job.budgetMaxEtb)}`
           : t('jobs.budgetOpen');
+  const cover = job.attachments?.find((a) => a.contentType.startsWith('image/'))?.url;
 
   return (
     <Link
       href={`/jobs/${job.id}`}
       className="block rounded-2xl border border-border bg-card p-4 transition-colors active:bg-muted"
     >
+      {cover && (
+        <div className="relative mb-3 h-36 w-full overflow-hidden rounded-xl bg-muted">
+          <Image
+            src={cover}
+            alt={job.title}
+            fill
+            unoptimized
+            sizes="400px"
+            className="object-cover"
+          />
+        </div>
+      )}
       <div className="flex items-start gap-3">
         {job.client.avatarUrl ? (
           <Image

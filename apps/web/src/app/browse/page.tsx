@@ -20,6 +20,7 @@ import {
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
+import Image from 'next/image';
 import { JobsBoard } from '@/app/jobs/page';
 import { useMe } from '@/hooks/use-me';
 import { apiFetch } from '@/lib/api';
@@ -424,10 +425,21 @@ function BrowseCard({ g }: { g: GigListItem }) {
       >
         <div
           className={cn(
-            'h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-[1.04]',
+            'relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br transition-transform duration-300 group-hover:scale-[1.04]',
             gradientFor(g.id),
           )}
-        />
+        >
+          {g.coverImageUrl && (
+            <Image
+              src={g.coverImageUrl}
+              alt={g.title}
+              fill
+              unoptimized
+              sizes="80px"
+              className="object-cover"
+            />
+          )}
+        </div>
         <div className="min-w-0 flex-1">
           <div className="line-clamp-2 text-sm font-semibold leading-tight group-hover:text-primary">
             {g.title}
@@ -486,6 +498,16 @@ function GridCard({ g }: { g: GigListItem }) {
         >
           {/* subtle cover shimmer on hover */}
           <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+          {g.coverImageUrl && (
+            <Image
+              src={g.coverImageUrl}
+              alt={g.title}
+              fill
+              unoptimized
+              sizes="300px"
+              className="object-cover"
+            />
+          )}
           {g.isFeatured && (
             <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold text-white shadow">
               {t('gig.featured')}
