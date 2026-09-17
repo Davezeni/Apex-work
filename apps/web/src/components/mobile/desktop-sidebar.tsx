@@ -88,10 +88,14 @@ export function DesktopSidebar() {
 
   const isFreelancer = me?.role === 'FREELANCER';
   const main: NavItem[] = [
-    // Freelancers: ONE marketplace entry — "Gigs". Clients: Browse + Jobs.
+    // Freelancers: Browse (= posted jobs; /browse is role-pure → jobs) + Gigs.
+    // Clients: Browse (gigs) + Jobs.
     // (Role items wait for `me` to load so they never flash the wrong way.)
     ...(isFreelancer
-      ? [{ label: dt('Gigs'), icon: ShoppingBag, href: '/browse?tab=gigs' } as NavItem]
+      ? [
+          { label: t('nav.browse'), icon: Compass, href: '/browse' },
+          { label: dt('Gigs'), icon: ShoppingBag, href: '/browse?tab=gigs' },
+        ]
       : me
         ? [
             { label: t('nav.browse'), icon: Compass, href: '/browse' },
