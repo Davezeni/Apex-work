@@ -42,15 +42,21 @@ export default function BrowsePage() {
 }
 
 function BrowseInner() {
-  const { data: me } = useMe();
+  const { data: me, isError, fetchStatus } = useMe();
   const isFreelancer = me?.role === 'FREELANCER';
   const params = useSearchParams();
   // Jobs first for freelancers (they hunt work); gigs first for clients.
   // ?tab=jobs|gigs (sidebar links, deep links) overrides the role default.
   const tabFromUrl = params.get('tab');
-  const [tab, setTab] = useState<'jobs' | 'gigs'>(
-    tabFromUrl === 'jobs' || tabFromUrl === 'gigs' ? tabFromUrl : isFreelancer ? 'jobs' : 'gigs',
-  );
+  // Derived, NOT frozen in useState: the role is usually still loading at
+  // mount, so a frozen default stranded freelancers on the gigs view. This
+  // re-derives the moment `me` arrives; explicit ?tab= still wins (deep links).
+  const tab: 'jobs' | 'gigs' =
+    tabFromUrl === 'jobs' || tabFromUrl === 'gigs' ? tabFromUrl : isFreelancer ? 'jobs' : 'gigs';
+  // Until the role is known (and no explicit ?tab=), show a quiet spinner
+  // instead of guessing gigs — no wrong-role flash. Idle query = no session,
+  // stop waiting and fall back to the client default.
+  const waitingForRole = !tabFromUrl && !me && !isError && fetchStatus !== 'idle';
   const router = useRouter();
   const { t } = useI18n();
   const categoryFromUrl = params.get('category');
@@ -170,7 +176,7 @@ function BrowseInner() {
 
   return (
     <MobileShell activeTab="search">
-      {tab !== 'jobs' && (
+      {!waitingForRole && tab !== 'jobs' && (
         <header className="safe-top sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-4 backdrop-blur-xl md:px-6 md:pt-6">
           <div className="flex items-center gap-3">
             <button
@@ -221,7 +227,16 @@ function BrowseInner() {
         </header>
       )}
 
-      {tab !== 'jobs' && (
+      {waitingForRole && (
+        <div className="grid place-items-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {/* Freelancers land here: the posted-jobs board (what they came for). */}
+      {!waitingForRole && tab === 'jobs' && <JobsBoard />}
+
+      {!waitingForRole && tab !== 'jobs' && (
         <>
           {/* Category filter — animated chips */}
           <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 py-4 md:px-6">
