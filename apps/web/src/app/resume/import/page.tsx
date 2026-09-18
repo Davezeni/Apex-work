@@ -19,6 +19,7 @@ import {
   UserCheck,
   X,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
@@ -29,6 +30,7 @@ import {
   useMyResume,
   useUpdateResume,
 } from '@/hooks/use-resume';
+import type { Resume } from '@/hooks/use-resume';
 import type { ResumeContent } from '@apex-work/shared';
 import { API_BASE } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
@@ -295,6 +297,7 @@ export default function ResumeImportPage() {
   const addEducation = useAddEducation();
   const addCertification = useAddCertification();
   const token = useAuthStore((s) => s.accessToken);
+  const queryClient = useQueryClient();
 
   const fileBusy = useRef(false);
   const [busy, setBusy] = useState<'file' | 'ocr' | 'ai' | null>(null);
@@ -303,6 +306,9 @@ export default function ResumeImportPage() {
   const [engine, setEngine] = useState<'ai' | 'basic' | null>(null);
   const [alsoProfile, setAlsoProfile] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; title: string; lines: string[] } | null>(
+    null,
+  );
 
   const ready = !!ex;
 
@@ -451,8 +457,14 @@ export default function ResumeImportPage() {
 
   // ---------------- import: everything goes to its correct place ----------------
   const importData = async () => {
-    if (!ex || !resume) return;
-    if (importing) return;
+    if (!ex || importing) return;
+    setResult(null);
+    if (!resume) {
+      const msg = dt('Your CV failed to load — refresh the page and try again');
+      setResult({ ok: false, title: msg, lines: [] });
+      toast.error(msg);
+      return;
+    }
     setImporting(true);
     try {
       // -- sanitizers: nothing invalid ever reaches the API (a single bad
@@ -485,6 +497,26 @@ export default function ResumeImportPage() {
         publications: [],
         references: [],
       };
+      const beforeExp = resume.experiences.length;
+      const beforeEdu = resume.education.length;
+      const beforeCert = resume.certifications.length;
+      // Duplicate guards: re-running an import must never create duplicates.
+      const expKeys = new Set(
+        resume.experiences.map(
+          (r) => `${r.company.toLowerCase()}|${r.role.toLowerCase()}|${r.startYear}`,
+        ),
+      );
+      const eduKeys = new Set(
+        resume.education.map(
+          (r) => `${r.school.toLowerCase()}|${r.degree?.toLowerCase() ?? ''}|${r.startYear}`,
+        ),
+      );
+      const certKeys = new Set(
+        resume.certifications.map(
+          (r) => `${r.name.toLowerCase()}|${r.issuer.toLowerCase()}|${r.issueYear}`,
+        ),
+      );
+
       const summaryFinal = (
         ex.interests.length > 0
           ? `${ex.summary}\n\nInterests: ${ex.interests.join(' · ')}`
@@ -505,11 +537,16 @@ export default function ResumeImportPage() {
           mergedSkills.push({ name: name.slice(0, 60), level: 3 });
         }
       }
+      const newSkillsCount = mergedSkills.length - rc.skills.length;
       const existingAch = new Set(rc.achievements.map((a) => a.toLowerCase()));
       const newAch = ex.achievements
         .split('\n')
         .map((line) => line.trim().slice(0, 240))
         .filter((line) => line.length >= 2 && !existingAch.has(line.toLowerCase()));
+      const newLanguagesCount = ex.languages.filter(
+        (l) =>
+          l.length >= 1 && !resume.languages.map((x) => x.toLowerCase()).includes(l.toLowerCase()),
+      ).length;
       const newProjects = ex.projects
         .filter((p) => p.title.trim().length >= 2)
         .map((p) => ({
@@ -538,8 +575,9 @@ export default function ResumeImportPage() {
       const emailOrKeep = (next: string, existing: string | null): string | undefined =>
         sanitizeEmail(next) ?? (existing && sanitizeEmail(existing) ? existing : undefined);
 
+      const finalHeadline = clamp(ex.headline, 120) || resume.headline;
       await update.mutateAsync({
-        headline: clamp(ex.headline, 120) || resume.headline,
+        headline: finalHeadline,
         summary: summaryFinal || resume.summary,
         phone: clamp(ex.phone, 40) || resume.phone,
         email: emailOrKeep(ex.email, resume.email),
@@ -557,6 +595,7 @@ export default function ResumeImportPage() {
       const yearMax = new Date().getFullYear() + 1;
       const validYear = (y: number | null): y is number => y !== null && y >= 1950 && y <= yearMax;
       let addedExp = 0;
+      let dupeExp = 0;
       let skipped = 0;
       for (let i = 0; i < ex.experiences.length; i += 1) {
         const e = ex.experiences[i];
@@ -566,6 +605,11 @@ export default function ResumeImportPage() {
         const startYear = Number(e.startYear.replace(/[^0-9]/g, ''));
         if (!company || !role || !validYear(startYear || null)) {
           skipped += 1;
+          continue;
+        }
+        const key = `${company.toLowerCase()}|${role.toLowerCase()}|${startYear}`;
+        if (expKeys.has(key)) {
+          dupeExp += 1;
           continue;
         }
         const startMonth = Math.min(12, Math.max(1, Number(e.startMonth) || 1));
@@ -593,6 +637,7 @@ export default function ResumeImportPage() {
             endMonth,
             description: e.description.trim().slice(0, 2000) || null,
           });
+          expKeys.add(key);
           addedExp += 1;
         } catch (err) {
           console.error('experience row failed', err);
@@ -602,6 +647,7 @@ export default function ResumeImportPage() {
 
       // 3) Education
       let addedEdu = 0;
+      let dupeEdu = 0;
       for (const d of ex.education) {
         const school = d.school.trim().slice(0, 120);
         if (!school) {
@@ -613,6 +659,11 @@ export default function ResumeImportPage() {
         const startYearRaw =
           Number(d.startYear.replace(/[^0-9]/g, '')) || endYear || new Date().getFullYear() - 4;
         const startYear = validYear(startYearRaw) ? startYearRaw : new Date().getFullYear() - 4;
+        const key = `${school.toLowerCase()}|${d.degree.trim().toLowerCase()}|${startYear}`;
+        if (eduKeys.has(key)) {
+          dupeEdu += 1;
+          continue;
+        }
         try {
           await addEducation.mutateAsync({
             school,
@@ -622,6 +673,7 @@ export default function ResumeImportPage() {
             endYear,
             description: d.description.trim().slice(0, 1000) || null,
           });
+          eduKeys.add(key);
           addedEdu += 1;
         } catch (err) {
           console.error('education row failed', err);
@@ -631,6 +683,7 @@ export default function ResumeImportPage() {
 
       // 4) Certifications
       let addedCert = 0;
+      let dupeCert = 0;
       for (const c of ex.certifications) {
         const name = c.name.trim().slice(0, 160);
         const issuer = c.issuer.trim().slice(0, 160);
@@ -639,8 +692,14 @@ export default function ResumeImportPage() {
           skipped += 1;
           continue;
         }
+        const key = `${name.toLowerCase()}|${issuer.toLowerCase()}|${issueYear}`;
+        if (certKeys.has(key)) {
+          dupeCert += 1;
+          continue;
+        }
         try {
           await addCertification.mutateAsync({ name, issuer, issueYear });
+          certKeys.add(key);
           addedCert += 1;
         } catch (err) {
           console.error('certification row failed', err);
@@ -664,18 +723,77 @@ export default function ResumeImportPage() {
         }
       }
 
-      toast.success(
-        `${dt('Imported into Resume Studio')} · ${addedExp} ${dt('experience')}, ${addedEdu} ${dt('education')}, ${addedCert} ${dt('certifications')}`,
-      );
-      if (skipped > 0) {
-        toast.info(
-          dt(`{count} entries skipped — check dates and required fields`, { count: skipped }),
+      // 6) VERIFY against the server: refetch the CV and confirm it all landed.
+      await queryClient.invalidateQueries({ queryKey: ['me', 'resume'] });
+      const fresh = queryClient.getQueryData<Resume>(['me', 'resume']);
+      const rowsOk =
+        !!fresh &&
+        fresh.experiences.length >= beforeExp + addedExp &&
+        fresh.education.length >= beforeEdu + addedEdu &&
+        fresh.certifications.length >= beforeCert + addedCert;
+      const coreOk = !finalHeadline || !!fresh?.headline || !ex.headline.trim();
+
+      const lines: string[] = [];
+      if (ex.headline.trim() || summaryFinal) lines.push(dt('Headline & summary'));
+      if (
+        ex.phone.trim() ||
+        ex.email.trim() ||
+        ex.city.trim() ||
+        ex.website.trim() ||
+        ex.linkedin.trim() ||
+        ex.github.trim()
+      )
+        lines.push(dt('Contact details'));
+      if (newSkillsCount > 0) lines.push(`${newSkillsCount} ${dt('skills')}`);
+      if (newLanguagesCount > 0) lines.push(`${newLanguagesCount} ${dt('languages')}`);
+      if (newAch.length > 0) lines.push(`${newAch.length} ${dt('achievements')}`);
+      if (newProjects.length > 0) lines.push(`${newProjects.length} ${dt('projects')}`);
+      if (addedExp > 0 || dupeExp > 0)
+        lines.push(
+          `${addedExp} ${dt('experience entries')}${dupeExp > 0 ? ` · ${dupeExp} ${dt('already on your CV')}` : ''}`,
         );
+      if (addedEdu > 0 || dupeEdu > 0)
+        lines.push(
+          `${addedEdu} ${dt('education entries')}${dupeEdu > 0 ? ` · ${dupeEdu} ${dt('already on your CV')}` : ''}`,
+        );
+      if (addedCert > 0 || dupeCert > 0)
+        lines.push(
+          `${addedCert} ${dt('certification entries')}${dupeCert > 0 ? ` · ${dupeCert} ${dt('already on your CV')}` : ''}`,
+        );
+      if (skipped > 0)
+        lines.push(
+          dt('{count} entries skipped — check dates and required fields').replace(
+            '{count}',
+            String(skipped),
+          ),
+        );
+
+      const ok = rowsOk && coreOk;
+      if (ok) {
+        toast.success(dt('Imported into Resume Studio'));
+      } else {
+        toast.error(dt('Saved, but the server check failed — refresh the page and review your CV'));
       }
-      router.push('/resume');
+      setResult({
+        ok,
+        title: ok
+          ? dt('Imported into your CV — verified on the server')
+          : dt('Saved, but the server check failed — refresh the page and review your CV'),
+        lines,
+      });
     } catch (error) {
       console.error('import failed', error);
-      toast.error(error instanceof Error ? error.message : 'Import failed');
+      const message = error instanceof Error ? error.message : 'Import failed';
+      setResult({
+        ok: false,
+        title: message,
+        lines: [
+          dt(
+            'Refresh the page and try again — anything already saved is skipped, so nothing duplicates.',
+          ),
+        ],
+      });
+      toast.error(message);
     } finally {
       setImporting(false);
     }
@@ -1276,6 +1394,40 @@ export default function ResumeImportPage() {
                   onChange={(e) => patch({ achievements: e.target.value })}
                 />
               </Section>
+            )}
+
+            {result && (
+              <div
+                className={`mt-4 rounded-2xl border p-4 ${
+                  result.ok
+                    ? 'border-emerald-500/40 bg-emerald-500/10'
+                    : 'border-destructive/40 bg-destructive/10'
+                }`}
+              >
+                <p
+                  className={`text-sm font-bold ${result.ok ? 'text-emerald-600' : 'text-destructive'}`}
+                >
+                  {result.ok ? '✓ ' : '⚠ '}
+                  {result.title}
+                </p>
+                {result.lines.length > 0 && (
+                  <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
+                    {result.lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+                {result.ok && (
+                  <Button
+                    type="button"
+                    variant="brand"
+                    className="mt-3"
+                    onClick={() => router.push('/resume')}
+                  >
+                    <FileText className="h-4 w-4" /> {dt('View my CV')}
+                  </Button>
+                )}
+              </div>
             )}
 
             {/* Import + profile mirror */}
