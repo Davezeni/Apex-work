@@ -16,6 +16,7 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { BadRequestError, NotFoundError } from '../lib/errors.js';
+import { logger } from '../config/logger.js';
 import { extractResumeData, isAiConfigured } from '../services/resumeExtractAi.service.js';
 import { extractResumeTextSchema } from '@apex-work/shared';
 import { prisma } from '../lib/prisma.js';
@@ -61,14 +62,19 @@ router.post(
     }
     const clean = text.slice(0, 60_000);
     let extracted: unknown = null;
+    let engine = 'basic';
+    let aiNote: string | null = isAiConfigured() ? null : 'AI_NOT_CONFIGURED';
     if (isAiConfigured()) {
       try {
         extracted = await extractResumeData(clean);
-      } catch {
-        extracted = null; // web falls back to heuristic parsing
+        engine = 'ai';
+        aiNote = null;
+      } catch (error) {
+        aiNote = `AI_ERROR: ${error instanceof Error ? error.message : 'unknown'}`;
+        logger.warn({ note: aiNote }, 'resume AI extraction failed — client falls back to heuristic');
       }
     }
-    return success(res, { text: clean, extracted });
+    return success(res, { text: clean, extracted, engine, aiNote });
   }),
 );
 
@@ -81,11 +87,13 @@ router.post(
   validate(extractResumeTextSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').ExtractResumeTextInput;
-    if (!isAiConfigured()) return success(res, { extracted: null });
+    if (!isAiConfigured()) return success(res, { extracted: null, engine: 'basic', aiNote: 'AI_NOT_CONFIGURED' });
     try {
-      return success(res, { extracted: await extractResumeData(body.text) });
-    } catch {
-      return success(res, { extracted: null });
+      return success(res, { extracted: await extractResumeData(body.text), engine: 'ai', aiNote: null });
+    } catch (error) {
+      const note = `AI_ERROR: ${error instanceof Error ? error.message : 'unknown'}`;
+      logger.warn({ note }, 'resume AI extraction failed — client falls back to heuristic');
+      return success(res, { extracted: null, engine: 'basic', aiNote: note });
     }
   }),
 );

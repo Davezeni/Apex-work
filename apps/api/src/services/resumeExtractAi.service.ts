@@ -91,30 +91,43 @@ STRICT RULES:
 7. certifications (with issuer + year) are NOT education entries. Degree programs (BSc, MSc, diploma) go in education.
 8. interests/hobbies: only if the CV lists them.
 9. languages = spoken/written languages (e.g. "Amharic", "English") — not programming languages.
-10. Clean formatting: no bullets/dashes at the start of strings, no ALL-CAPS shouting (title-case employers/roles).`;
+10. Clean formatting: no bullets/dashes at the start of strings, no ALL-CAPS shouting (title-case employers/roles).
+11. If the first line is "Name - Title(s)" or "Name | Title", SPLIT it: the person's name goes to name, the title part becomes headline.
+12. Undated "Role:" / "Tasks:" blocks describing a product or client engagement are PROJECTS (portfolio pieces): title = the product/project name, description = what was built + tasks. Only blocks with explicit date ranges are experience entries.
+13. For "Category: item, item, item" lines, extract the ITEMS after the colon (concrete skills), never the category label and never sentences.`;
 
 async function ask(messages: ChatMessage[]): Promise<string> {
   if (!env.GROQ_API_KEY) throw new Error('GROQ_NOT_CONFIGURED');
   const key = `ai:resume-extract:${createHash('sha1').update(JSON.stringify(messages)).digest('hex').slice(0, 24)}`;
   const cached = await redis.get(key).catch(() => null);
   if (cached) return cached;
-  const response = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      temperature: 0.1, // extraction = facts, not creativity
-      max_tokens: 4000,
-    }),
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (!response.ok) throw new Error(`GROQ_HTTP_${response.status}`);
-  const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
-  const text = body.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error('GROQ_EMPTY');
-  await redis.set(key, text, 'EX', 600).catch(() => undefined);
-  return text;
+  let lastError: unknown = new Error('GROQ_UNREACHABLE');
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch(GROQ_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` },
+        body: JSON.stringify({
+          model: MODEL,
+          messages,
+          temperature: 0.1, // extraction = facts, not creativity
+          max_tokens: 4000,
+          response_format: { type: 'json_object' }, // the model MUST answer with JSON
+        }),
+        signal: AbortSignal.timeout(45_000),
+      });
+      if (!response.ok) throw new Error(`GROQ_HTTP_${response.status}`);
+      const body = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+      const text = body.choices?.[0]?.message?.content?.trim();
+      if (!text) throw new Error('GROQ_EMPTY');
+      await redis.set(key, text, 'EX', 600).catch(() => undefined);
+      return text;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('GROQ_FAILED');
 }
 
 // ---------- defensive coercion (schema-exact clamps) ----------

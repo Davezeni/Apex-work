@@ -31,7 +31,7 @@ import {
   useUpdateResume,
 } from '@/hooks/use-resume';
 import type { Resume } from '@/hooks/use-resume';
-import type { ResumeContent } from '@apex-work/shared';
+import { parseResumeHeuristic, type ResumeContent } from '@apex-work/shared';
 import { API_BASE } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { safeBack } from '@/lib/safe-back';
@@ -81,73 +81,6 @@ interface Extracted {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** Heuristic fallback when the AI extractor is unavailable. */
-function parseResumeText(raw: string): Extracted {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const section = (names: string[]) => {
-    const index = lines.findIndex((line) => names.some((name) => line.toLowerCase() === name));
-    if (index < 0) return [];
-    const end = lines.findIndex(
-      (line, lineIndex) =>
-        lineIndex > index &&
-        /^(summary|profile|about|skills?|experience|employment|education|projects?|portfolio|certifications?|achievements?)$/i.test(
-          line,
-        ),
-    );
-    return lines.slice(index + 1, end < 0 ? lines.length : end);
-  };
-  const summaryLines = section(['summary', 'profile', 'about']);
-  const skillLines = section(['skills', 'technical skills', 'core skills']);
-  const projectLines = section(['projects', 'portfolio']);
-  const seen = new Set<string>();
-  const skills = skillLines
-    .join(',')
-    .split(/[,|•·]/)
-    .map((item) => item.trim().slice(0, 60))
-    .filter((item) => {
-      if (item.length < 2) return false;
-      const key = item.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, 40);
-  const projects = projectLines
-    .filter((line) => line.length >= 2)
-    .slice(0, 10)
-    .map((line) => ({
-      title: line.replace(/^[-•*]\s*/, '').slice(0, 120),
-      description: '',
-    }));
-  const emailMatch = raw.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
-  const phoneMatch =
-    raw.match(/(?:\+?251|0)[\s-]?9\d(?:[\s-]?\d{3})[\s-]?\d{3,4}/) ||
-    raw.match(/\+?\d[\d\s().-]{7,}\d/);
-  return {
-    name: null,
-    headline: lines[0]?.slice(0, 120) ?? '',
-    targetRole: '',
-    summary: summaryLines.join(' ').slice(0, 2000),
-    email: emailMatch ? emailMatch[0].slice(0, 200) : '',
-    phone: phoneMatch ? phoneMatch[0].slice(0, 40) : '',
-    city: '',
-    website: '',
-    linkedin: '',
-    github: '',
-    skills,
-    languages: [],
-    achievements: '',
-    interests: [],
-    experiences: [],
-    education: [],
-    certifications: [],
-    projects,
-  };
-}
 
 const MONTH_RE = /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
 function monthFrom(v: string): string {
@@ -304,6 +237,7 @@ export default function ResumeImportPage() {
   const [raw, setRaw] = useState('');
   const [ex, setEx] = useState<Extracted | null>(null);
   const [engine, setEngine] = useState<'ai' | 'basic' | null>(null);
+  const [aiNote, setAiNote] = useState<string | null>(null);
   const [alsoProfile, setAlsoProfile] = useState(true);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; title: string; lines: string[] } | null>(
@@ -330,7 +264,7 @@ export default function ResumeImportPage() {
     );
 
   // Ask the API's AI extractor to identify every field; fall back to the
-  // heuristic parser if the AI is unavailable.
+  // shared deterministic parser (and say WHY) if the AI is unavailable.
   const runExtraction = async (text: string) => {
     setBusy('ai');
     try {
@@ -339,21 +273,30 @@ export default function ResumeImportPage() {
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.slice(0, 20000) }),
       });
-      const json = (await res.json()) as { ok?: boolean; data?: { extracted?: unknown } };
+      const json = (await res.json()) as {
+        ok?: boolean;
+        data?: { extracted?: unknown; engine?: string; aiNote?: string | null };
+      };
       if (json.ok && json.data?.extracted) {
         setEx(fromApiExtraction(json.data.extracted));
         setEngine('ai');
+        setAiNote(null);
         toast.success(dt('Identified every section — review and import below'));
         return;
       }
-      throw new Error('no ai');
+      applyBasicExtraction(text, json.data?.aiNote ?? null);
     } catch {
-      setEx(parseResumeText(text));
-      setEngine('basic');
-      toast.success(dt('Basic extraction ready — review and import below'));
+      applyBasicExtraction(text, 'AI_ERROR: network');
     } finally {
       setBusy(null);
     }
+  };
+
+  const applyBasicExtraction = (text: string, note: string | null) => {
+    setEx(fromApiExtraction(parseResumeHeuristic(text)));
+    setEngine('basic');
+    setAiNote(note);
+    toast.success(dt('Smart text extraction ready — review and import below'));
   };
 
   const applyText = (text: string) => {
@@ -380,7 +323,7 @@ export default function ResumeImportPage() {
       );
       const json = (await res.json()) as {
         ok?: boolean;
-        data?: { text?: string; extracted?: unknown };
+        data?: { text?: string; extracted?: unknown; engine?: string; aiNote?: string | null };
         error?: { message?: string };
       };
       if (!res.ok || !json.ok || !json.data?.text) {
@@ -390,9 +333,31 @@ export default function ResumeImportPage() {
       if (json.data.extracted) {
         setEx(fromApiExtraction(json.data.extracted));
         setEngine('ai');
+        setAiNote(null);
         toast.success(dt('Identified every section — review and import below'));
       } else {
-        await runExtraction(json.data.text);
+        // second chance: the dedicated AI route (service retries internally)
+        try {
+          const retry = await fetch(`${API_BASE}/v1/me/resume/extract`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: json.data.text.slice(0, 20000) }),
+          });
+          const retryJson = (await retry.json()) as {
+            ok?: boolean;
+            data?: { extracted?: unknown; aiNote?: string | null };
+          };
+          if (retryJson.ok && retryJson.data?.extracted) {
+            setEx(fromApiExtraction(retryJson.data.extracted));
+            setEngine('ai');
+            setAiNote(null);
+            toast.success(dt('Identified every section — review and import below'));
+            return;
+          }
+          applyBasicExtraction(json.data.text, retryJson.data?.aiNote ?? json.data.aiNote ?? null);
+        } catch {
+          applyBasicExtraction(json.data.text, json.data.aiNote ?? null);
+        }
       }
     } catch (err) {
       toast.error((err as Error).message || dt('Could not read that file'));
@@ -948,6 +913,15 @@ export default function ResumeImportPage() {
                 >
                   {dt('Try AI')}
                 </button>
+              )}
+              {engine === 'basic' && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {aiNote === 'AI_NOT_CONFIGURED'
+                    ? dt('AI extraction is not enabled on the server yet (missing GROQ_API_KEY) — smart text parsing was used.')
+                    : aiNote
+                      ? dt(`AI was unavailable (${'{'}note{'}'}) — smart text parsing was used.`).replace('{note}', aiNote.slice(0, 60))
+                      : dt('Smart text parsing was used.')}
+                </p>
               )}
             </div>
 

@@ -4,3 +4,4 @@ export * from './constants/index.js';
 export * from './domain/orderState.js';
 export * from './domain/money.js';
 export * from './domain/badges.js';
+export * from './domain/resumeHeuristic.js';
