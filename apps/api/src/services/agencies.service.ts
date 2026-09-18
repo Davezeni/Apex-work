@@ -84,11 +84,14 @@ export async function invite(
   input: { username: string; role: 'MEMBER' | 'MANAGER' },
 ) {
   await canManage(userId, agencyId);
-  const target = await prisma.user.findUnique({
-    where: { username: input.username.trim() },
+  // Forgive the obvious: a leading @ (copied from the member list) and
+  // letter case — usernames are matched case-insensitively.
+  const handle = input.username.trim().replace(/^@+/, '');
+  const target = await prisma.user.findFirst({
+    where: { username: { equals: handle, mode: 'insensitive' } },
     select: { id: true, username: true, fullName: true },
   });
-  if (!target) throw new NotFoundError('User');
+  if (!target) throw new NotFoundError('No user with that username');
   try {
     return await prisma.agencyMember.create({
       data: { agencyId, userId: target.id, role: input.role },

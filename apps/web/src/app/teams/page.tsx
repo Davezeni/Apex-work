@@ -62,9 +62,11 @@ export default function TeamsPage() {
     );
   };
   const inviteMember = (agencyId: string) => {
-    if (username.trim().length < 2) return toast.error(dt('Enter a username'));
+    // Strip a leading @ (users copy it from the member list) before sending.
+    const handle = username.trim().replace(/^@+/, '');
+    if (handle.length < 2) return toast.error(dt('Enter a username'));
     invite.mutate(
-      { agencyId, username, role: 'MEMBER' },
+      { agencyId, username: handle, role: 'MEMBER' },
       {
         onSuccess: () => {
           setUsername('');
@@ -163,17 +165,18 @@ export default function TeamsPage() {
                   </Button>
                 </div>
                 {inviteFor === team.id && (
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <input
                       value={username}
                       onChange={(event) => setUsername(event.target.value)}
-                      placeholder={dt('Apex username')}
-                      className="h-10 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
+                      placeholder={dt('@username — e.g. dawittamiru')}
+                      className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-background px-3 text-sm outline-none focus:border-primary"
                     />
                     <Button
                       type="button"
                       size="sm"
                       variant="brand"
+                      className="shrink-0"
                       onClick={() => inviteMember(team.id)}
                       disabled={invite.isPending}
                     >
