@@ -146,6 +146,12 @@ export const certificationSchema = z.object({
 });
 export type CertificationInput = z.infer<typeof certificationSchema>;
 
+/** AI CV extraction — raw CV text (from paste or a parsed file) in, structured data out. */
+export const extractResumeTextSchema = z.object({
+  text: z.string().trim().min(20).max(20_000),
+});
+export type ExtractResumeTextInput = z.infer<typeof extractResumeTextSchema>;
+
 /** AI resume enhance — freelancer sends raw text; model returns polished bullets. */
 export const enhanceResumeSchema = z.object({
   section: z.enum(['summary', 'experience', 'education']),

@@ -16,6 +16,8 @@ import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import { BadRequestError, NotFoundError } from '../lib/errors.js';
+import { extractResumeData, isAiConfigured } from '../services/resumeExtractAi.service.js';
+import { extractResumeTextSchema } from '@apex-work/shared';
 import { prisma } from '../lib/prisma.js';
 import * as resume from '../services/resume.service.js';
 import * as resumeTemplates from '../services/resumeTemplates.service.js';
@@ -57,7 +59,34 @@ router.post(
     if (text.replace(/\s+/g, '').length < 40) {
       throw new BadRequestError('Could not find readable text — try a text-based PDF');
     }
-    return success(res, { text: text.slice(0, 60_000) });
+    const clean = text.slice(0, 60_000);
+    let extracted: unknown = null;
+    if (isAiConfigured()) {
+      try {
+        extracted = await extractResumeData(clean);
+      } catch {
+        extracted = null; // web falls back to heuristic parsing
+      }
+    }
+    return success(res, { text: clean, extracted });
+  }),
+);
+
+/**
+ * POST /me/resume/extract — AI-structured extraction from pasted CV text
+ * (same engine as parse-file, for the paste / LinkedIn-About path).
+ */
+router.post(
+  '/extract',
+  validate(extractResumeTextSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').ExtractResumeTextInput;
+    if (!isAiConfigured()) return success(res, { extracted: null });
+    try {
+      return success(res, { extracted: await extractResumeData(body.text) });
+    } catch {
+      return success(res, { extracted: null });
+    }
   }),
 );
 
