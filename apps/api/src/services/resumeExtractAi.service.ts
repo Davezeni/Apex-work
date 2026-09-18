@@ -130,16 +130,31 @@ function str(v: unknown, max: number): string | null {
   return s ? s.slice(0, max) : null;
 }
 function urlStr(v: unknown, max = 300): string | null {
-  const s = str(v, max);
+  let s = str(v, max + 40);
   if (!s) return null;
-  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+  // Model output is untrusted: strip whitespace/punctuation, prefix the scheme,
+  // then REQUIRE the result to actually parse as a URL — a poisoned value must
+  // become null (field omitted), never fail the whole save.
+  s = s.replace(/\s+/g, '').replace(/[.,;)\]]+$/, '');
+  if (!/^https?:\/\//i.test(s)) s = `https://${s}`;
+  if (!/^[\x21-\x7E]+$/.test(s)) return null;
+  try {
+    const u = new URL(s);
+    if ((u.protocol !== 'http:' && u.protocol !== 'https:') || !u.hostname.includes('.')) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+  return s.slice(0, max);
 }
 function emailStr(v: unknown): string | null {
   const s = str(v, 200);
   return s && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s : null;
 }
 function num(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v.replace(/[^0-9]/g, '')) : NaN;
+  const n =
+    typeof v === 'number' ? v : typeof v === 'string' ? Number(v.replace(/[^0-9]/g, '')) : NaN;
   return Number.isFinite(n) ? Math.round(n) : null;
 }
 function year(v: unknown): number | null {
@@ -183,12 +198,27 @@ function fixUrl(v: unknown): string | null {
 }
 
 function coerce(raw: unknown): ExtractedResume {
-  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+  const o =
+    raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const empty: ExtractedResume = {
-    name: null, headline: null, targetRole: null, summary: null, email: null, phone: null,
-    city: null, website: null, linkedin: null, github: null,
-    skills: [], languages: [], achievements: [], interests: [],
-    experiences: [], education: [], certifications: [], projects: [],
+    name: null,
+    headline: null,
+    targetRole: null,
+    summary: null,
+    email: null,
+    phone: null,
+    city: null,
+    website: null,
+    linkedin: null,
+    github: null,
+    skills: [],
+    languages: [],
+    achievements: [],
+    interests: [],
+    experiences: [],
+    education: [],
+    certifications: [],
+    projects: [],
   };
 
   const experiences: ExtractedExperience[] = [];
@@ -202,7 +232,11 @@ function coerce(raw: unknown): ExtractedResume {
     const startMonth = month(e.startMonth) ?? 1;
     if (endYear !== null && endMonth === null) endMonth = 12;
     // Schema invariant: end must not precede start — otherwise treat as current.
-    if (endYear !== null && endMonth !== null && endYear * 12 + endMonth < startYear * 12 + startMonth) {
+    if (
+      endYear !== null &&
+      endMonth !== null &&
+      endYear * 12 + endMonth < startYear * 12 + startMonth
+    ) {
       endYear = null;
       endMonth = null;
     }
@@ -271,6 +305,9 @@ function coerce(raw: unknown): ExtractedResume {
     projects,
   };
 }
+
+/** Exposed for regression tests: raw model JSON -> saveable extraction. */
+export const coerceExtraction = coerce;
 
 function jsonFromModel(raw: string): unknown {
   const clean = raw.replace(/^```(?:json)?\s*|\s*```$/g, '').trim();

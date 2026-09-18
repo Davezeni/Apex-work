@@ -455,6 +455,36 @@ export default function ResumeImportPage() {
     if (importing) return;
     setImporting(true);
     try {
+      // -- sanitizers: nothing invalid ever reaches the API (a single bad
+      //    email/URL would 400 the WHOLE update and import nothing) --
+      const clamp = (v: string, n: number) => v.trim().slice(0, n);
+      const sanitizeUrl = (v: string): string | null => {
+        let t = v.trim().replace(/\s+/g, '');
+        if (!t) return null;
+        t = t.replace(/[.,;)\]]+$/, '');
+        if (!/^https?:\/\//i.test(t)) t = `https://${t}`;
+        if (!/^[\x21-\x7E]+$/.test(t)) return null;
+        try {
+          const u = new URL(t);
+          if (!u.hostname.includes('.')) return null;
+          return t.slice(0, 300);
+        } catch {
+          return null;
+        }
+      };
+      const sanitizeEmail = (v: string): string | null => {
+        const t = v.trim().slice(0, 200);
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t) ? t : null;
+      };
+
+      const rc = resume.content ?? {
+        skills: [],
+        projects: [],
+        achievements: [],
+        volunteer: [],
+        publications: [],
+        references: [],
+      };
       const summaryFinal = (
         ex.interests.length > 0
           ? `${ex.summary}\n\nInterests: ${ex.interests.join(' · ')}`
@@ -463,9 +493,11 @@ export default function ResumeImportPage() {
         .trim()
         .slice(0, 2000);
 
-      // 1) Resume core + contact + skills/achievements/projects/languages
-      const existingSkills = new Set(resume.content.skills.map((sk) => sk.name.toLowerCase()));
-      const mergedSkills = [...resume.content.skills];
+      // 1) Resume core + contact + skills/achievements/projects/languages.
+      //    updateResume rewrites every field, so this is ONE merged body;
+      //    every value is sanitized (or falls back to the stored one).
+      const existingSkills = new Set(rc.skills.map((sk) => sk.name.toLowerCase()));
+      const mergedSkills = [...rc.skills];
       for (const name of ex.skills) {
         const key = name.toLowerCase();
         if (name.length >= 2 && !existingSkills.has(key)) {
@@ -473,84 +505,117 @@ export default function ResumeImportPage() {
           mergedSkills.push({ name: name.slice(0, 60), level: 3 });
         }
       }
-      const existingAch = new Set(resume.content.achievements.map((a) => a.toLowerCase()));
+      const existingAch = new Set(rc.achievements.map((a) => a.toLowerCase()));
       const newAch = ex.achievements
         .split('\n')
         .map((line) => line.trim().slice(0, 240))
         .filter((line) => line.length >= 2 && !existingAch.has(line.toLowerCase()));
+      const newProjects = ex.projects
+        .filter((p) => p.title.trim().length >= 2)
+        .map((p) => ({
+          title: p.title.trim().slice(0, 120),
+          description: p.description.trim().slice(0, 1600) || null,
+          role: null,
+          url: null,
+          technologies: [],
+          highlights: [],
+          startYear: null,
+          endYear: null,
+        }));
       const content: ResumeContent = {
-        ...resume.content,
         skills: mergedSkills.slice(0, 40),
-        achievements: [...resume.content.achievements, ...newAch].slice(0, 20),
-        projects: [
-          ...resume.content.projects,
-          ...ex.projects
-            .filter((p) => p.title.trim().length >= 2)
-            .map((p) => ({
-              title: p.title.trim().slice(0, 120),
-              description: p.description.trim().slice(0, 1600) || null,
-              role: null,
-              url: null,
-              technologies: [],
-              highlights: [],
-              startYear: null,
-              endYear: null,
-            })),
-        ].slice(0, 20),
+        projects: [...(rc.projects ?? []), ...newProjects].slice(0, 20),
+        achievements: [...(rc.achievements ?? []), ...newAch].slice(0, 20),
+        volunteer: rc.volunteer ?? [],
+        publications: rc.publications ?? [],
+        references: rc.references ?? [],
       };
       const languages = [
         ...new Set([...resume.languages, ...ex.languages.map((l) => l.slice(0, 60))]),
       ].slice(0, 15);
+      const urlOrKeep = (next: string, existing: string | null): string | undefined =>
+        sanitizeUrl(next) ?? (existing && sanitizeUrl(existing) ? existing : undefined);
+      const emailOrKeep = (next: string, existing: string | null): string | undefined =>
+        sanitizeEmail(next) ?? (existing && sanitizeEmail(existing) ? existing : undefined);
 
       await update.mutateAsync({
-        headline: ex.headline.trim() || resume.headline,
+        headline: clamp(ex.headline, 120) || resume.headline,
         summary: summaryFinal || resume.summary,
-        phone: ex.phone.trim() || resume.phone,
-        email: ex.email.trim() || resume.email,
-        city: ex.city.trim() || resume.city,
-        website: ex.website.trim() || resume.website,
-        linkedin: ex.linkedin.trim() || resume.linkedin,
-        github: ex.github.trim() || resume.github,
-        targetRole: ex.targetRole.trim() || resume.targetRole,
+        phone: clamp(ex.phone, 40) || resume.phone,
+        email: emailOrKeep(ex.email, resume.email),
+        city: clamp(ex.city, 80) || resume.city,
+        website: urlOrKeep(ex.website, resume.website),
+        linkedin: urlOrKeep(ex.linkedin, resume.linkedin),
+        github: urlOrKeep(ex.github, resume.github),
+        targetRole: clamp(ex.targetRole, 120) || resume.targetRole,
         languages,
         theme: resume.theme,
         content,
       });
 
       // 2) Work experience — one row per entry, in CV order
+      const yearMax = new Date().getFullYear() + 1;
+      const validYear = (y: number | null): y is number => y !== null && y >= 1950 && y <= yearMax;
       let addedExp = 0;
-      for (const e of ex.experiences) {
-        if (!e.company.trim() || !e.role.trim()) continue;
+      let skipped = 0;
+      for (let i = 0; i < ex.experiences.length; i += 1) {
+        const e = ex.experiences[i];
+        if (!e) continue;
+        const company = e.company.trim().slice(0, 120);
+        const role = e.role.trim().slice(0, 120);
         const startYear = Number(e.startYear.replace(/[^0-9]/g, ''));
-        if (!startYear || startYear < 1950) continue;
+        if (!company || !role || !validYear(startYear || null)) {
+          skipped += 1;
+          continue;
+        }
+        const startMonth = Math.min(12, Math.max(1, Number(e.startMonth) || 1));
+        let endYear = e.current || !e.endYear ? null : Number(e.endYear) || null;
+        let endMonth =
+          e.current || !e.endMonth ? null : Math.min(12, Math.max(1, Number(e.endMonth) || 1));
+        // Schema invariant: end >= start — otherwise treat the role as current.
+        if (
+          validYear(endYear) &&
+          endMonth !== null &&
+          endYear * 12 + endMonth < startYear * 12 + startMonth
+        ) {
+          endYear = null;
+          endMonth = null;
+          setExp(i, { current: true, endYear: '', endMonth: '' });
+        }
         try {
           await addExperience.mutateAsync({
-            company: e.company.trim().slice(0, 120),
-            role: e.role.trim().slice(0, 120),
+            company,
+            role,
             location: e.location.trim().slice(0, 120) || null,
             startYear,
-            startMonth: Math.min(12, Math.max(1, Number(e.startMonth) || 1)),
-            endYear: e.current || !e.endYear ? null : Number(e.endYear) || null,
-            endMonth:
-              e.current || !e.endMonth ? null : Math.min(12, Math.max(1, Number(e.endMonth) || 1)),
+            startMonth,
+            endYear: validYear(endYear) ? endYear : null,
+            endMonth,
             description: e.description.trim().slice(0, 2000) || null,
           });
           addedExp += 1;
-        } catch {
-          /* keep importing the rest */
+        } catch (err) {
+          console.error('experience row failed', err);
+          skipped += 1;
         }
       }
 
       // 3) Education
       let addedEdu = 0;
       for (const d of ex.education) {
-        if (!d.school.trim()) continue;
-        const endYear = Number(d.endYear.replace(/[^0-9]/g, '')) || null;
-        const startYear =
+        const school = d.school.trim().slice(0, 120);
+        if (!school) {
+          skipped += 1;
+          continue;
+        }
+        const endYearRaw = Number(d.endYear.replace(/[^0-9]/g, '')) || null;
+        const endYear = validYear(endYearRaw) ? endYearRaw : null;
+        const startYearRaw =
           Number(d.startYear.replace(/[^0-9]/g, '')) || endYear || new Date().getFullYear() - 4;
+        const startYear = validYear(startYearRaw) ? startYearRaw : new Date().getFullYear() - 4;
         try {
           await addEducation.mutateAsync({
-            school: d.school.trim().slice(0, 120),
+            school,
             degree: d.degree.trim().slice(0, 120) || null,
             fieldOfStudy: d.fieldOfStudy.trim().slice(0, 120) || null,
             startYear,
@@ -558,26 +623,28 @@ export default function ResumeImportPage() {
             description: d.description.trim().slice(0, 1000) || null,
           });
           addedEdu += 1;
-        } catch {
-          /* keep importing the rest */
+        } catch (err) {
+          console.error('education row failed', err);
+          skipped += 1;
         }
       }
 
       // 4) Certifications
       let addedCert = 0;
       for (const c of ex.certifications) {
-        if (!c.name.trim() || !c.issuer.trim()) continue;
+        const name = c.name.trim().slice(0, 160);
+        const issuer = c.issuer.trim().slice(0, 160);
         const issueYear = Number(c.issueYear.replace(/[^0-9]/g, ''));
-        if (!issueYear || issueYear < 1950) continue;
+        if (!name || !issuer || !validYear(issueYear || null)) {
+          skipped += 1;
+          continue;
+        }
         try {
-          await addCertification.mutateAsync({
-            name: c.name.trim().slice(0, 160),
-            issuer: c.issuer.trim().slice(0, 160),
-            issueYear,
-          });
+          await addCertification.mutateAsync({ name, issuer, issueYear });
           addedCert += 1;
-        } catch {
-          /* keep importing the rest */
+        } catch (err) {
+          console.error('certification row failed', err);
+          skipped += 1;
         }
       }
 
@@ -597,15 +664,22 @@ export default function ResumeImportPage() {
         }
       }
 
-      toast.success(dt('Imported into Resume Studio'));
+      toast.success(
+        `${dt('Imported into Resume Studio')} · ${addedExp} ${dt('experience')}, ${addedEdu} ${dt('education')}, ${addedCert} ${dt('certifications')}`,
+      );
+      if (skipped > 0) {
+        toast.info(
+          dt(`{count} entries skipped — check dates and required fields`, { count: skipped }),
+        );
+      }
       router.push('/resume');
     } catch (error) {
+      console.error('import failed', error);
       toast.error(error instanceof Error ? error.message : 'Import failed');
     } finally {
       setImporting(false);
     }
   };
-
   if (meLoading || resumeLoading || !me)
     return (
       <div className="grid min-h-dvh place-items-center">
