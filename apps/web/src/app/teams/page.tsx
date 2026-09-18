@@ -159,6 +159,7 @@ export default function TeamsPage() {
                     type="button"
                     size="sm"
                     variant="outline"
+                    className="shrink-0"
                     onClick={() => setInviteFor(inviteFor === team.id ? null : team.id)}
                   >
                     <UserPlus className="h-4 w-4" /> Invite
@@ -176,7 +177,7 @@ export default function TeamsPage() {
                       type="button"
                       size="sm"
                       variant="brand"
-                      className="shrink-0"
+                      className="w-full shrink-0 sm:w-auto"
                       onClick={() => inviteMember(team.id)}
                       disabled={invite.isPending}
                     >
