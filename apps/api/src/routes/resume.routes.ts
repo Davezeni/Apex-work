@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import mammoth from 'mammoth';
+import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import {
   resumeSchema,
   workExperienceSchema,
@@ -21,6 +23,43 @@ import * as resumeVersions from '../services/resumeVersions.service.js';
 
 const router: Router = Router();
 router.use(requireAuth);
+
+/**
+ * POST /me/resume/parse-file?filename=resume.pdf — extract plain text from an
+ * uploaded CV (PDF, DOCX, TXT/MD) so the web import page can prefill and let
+ * the user review before saving. Raw bytes in the body, like /uploads/proxy.
+ */
+router.post(
+  '/parse-file',
+  asyncHandler(async (req, res) => {
+    const filename = typeof req.query.filename === 'string' ? req.query.filename.trim() : '';
+    const ext = filename.toLowerCase().split('.').pop() ?? '';
+    if (!['pdf', 'docx', 'txt', 'md'].includes(ext)) {
+      throw new BadRequestError('Upload a PDF, DOCX or plain-text CV');
+    }
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const buf = Buffer.concat(chunks);
+    if (buf.length < 64) throw new BadRequestError('The file looks empty');
+    if (buf.length > 15 * 1024 * 1024) throw new BadRequestError('Max 15 MB per CV');
+
+    let text = '';
+    if (ext === 'pdf') {
+      const out = await pdfParse(buf);
+      text = out.text;
+    } else if (ext === 'docx') {
+      const out = await mammoth.extractRawText({ buffer: buf });
+      text = out.value;
+    } else {
+      text = buf.toString('utf8');
+    }
+    if (text.replace(/\s+/g, '').length < 40) {
+      throw new BadRequestError('Could not find readable text — try a text-based PDF');
+    }
+    return success(res, { text: text.slice(0, 60_000) });
+  }),
+);
 
 /** GET /me/resume */
 router.get(

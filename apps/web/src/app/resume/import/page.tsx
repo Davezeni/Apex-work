@@ -1,15 +1,26 @@
 'use client';
 
 import { dt } from '@/i18n/auto';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, FileInput, FileText, Loader2, Sparkles, Upload } from 'lucide-react';
+import {
+  ArrowLeft,
+  Camera,
+  FileInput,
+  FileText,
+  Loader2,
+  Sparkles,
+  Upload,
+  UserCheck,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useMyResume, useUpdateResume } from '@/hooks/use-resume';
 import type { ResumeContent } from '@apex-work/shared';
+import { API_BASE } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth-store';
 import { safeBack } from '@/lib/safe-back';
 type Parsed = {
   headline: string;
@@ -63,6 +74,86 @@ export default function ResumeImportPage() {
   const update = useUpdateResume();
   const [raw, setRaw] = useState('');
   const [parsed, setParsed] = useState<Parsed | null>(null);
+  const token = useAuthStore((s) => s.accessToken);
+  const fileBusy = useRef(false);
+  const [busy, setBusy] = useState<'file' | 'ocr' | null>(null);
+
+  const applyText = (text: string, source: string) => {
+    setRaw(text);
+    setParsed(parseResumeText(text));
+    toast.success(source);
+  };
+
+  // Upload a real CV (PDF / DOCX / TXT — a LinkedIn "Export as PDF" works too)
+  // and let the API extract the text.
+  const importFile = async (file: File) => {
+    if (fileBusy.current) return;
+    if (file.size > 15 * 1024 * 1024) return toast.error(dt('Max 15 MB per CV'));
+    fileBusy.current = true;
+    setBusy('file');
+    try {
+      const res = await fetch(
+        `${API_BASE}/v1/me/resume/parse-file?filename=${encodeURIComponent(file.name)}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': file.type || 'application/octet-stream',
+          },
+          body: file,
+        },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        data?: { text?: string };
+        error?: { message?: string };
+      };
+      if (!res.ok || !json.ok || !json.data?.text) {
+        throw new Error(json.error?.message || dt('Could not read that file'));
+      }
+      applyText(json.data.text, dt('CV text extracted — review it below'));
+    } catch (err) {
+      toast.error((err as Error).message || dt('Could not read that file'));
+    } finally {
+      fileBusy.current = false;
+      setBusy(null);
+    }
+  };
+
+  // Snap a paper CV and read it right in the browser (free OCR, no server).
+  const scanPhoto = async (file: File) => {
+    if (fileBusy.current) return;
+    fileBusy.current = true;
+    setBusy('ocr');
+    try {
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker('eng+amh');
+      const { data } = await worker.recognize(file);
+      await worker.terminate();
+      const text = (data?.text ?? '').replace(/[ \t]+/g, ' ').trim();
+      if (text.replace(/\s+/g, '').length < 40) {
+        throw new Error(dt('Could not read enough text — try a sharper, well-lit photo'));
+      }
+      applyText(text, dt('Photo scanned — review it below'));
+    } catch (err) {
+      toast.error((err as Error).message || dt('Could not read that photo'));
+    } finally {
+      fileBusy.current = false;
+      setBusy(null);
+    }
+  };
+
+  // Prefill from the Apex profile the user already filled in.
+  const fillFromProfile = () => {
+    const headline = me?.title ?? '';
+    const summary = me?.bio ?? '';
+    if (!headline && !summary) {
+      return toast.error(dt('Your profile has no title or bio yet — add them first'));
+    }
+    setRaw([headline, summary].filter(Boolean).join('\n\n'));
+    setParsed({ headline, summary, skills: [], projects: [] });
+    toast.success(dt('Prefilled from your profile — review it below'));
+  };
 
   const ready = useMemo(
     () =>
@@ -155,6 +246,62 @@ export default function ResumeImportPage() {
             <div>
               <h2 className="text-2xl font-black">{dt('Import, then polish.')}</h2>
               <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                {/* Fast paths: file, profile, photo. All feed the same review step. */}
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-dashed border-primary/40 bg-primary/5 px-3 py-4 text-center transition-colors hover:bg-primary/10">
+                    {busy === 'file' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <Upload className="h-5 w-5 text-primary" />
+                    )}
+                    <span className="text-xs font-bold">
+                      {busy === 'file' ? dt('Extracting…') : dt('Upload CV')}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">PDF · DOCX · TXT</span>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt,.md,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (f) void importFile(f);
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={fillFromProfile}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-3 py-4 text-center transition-colors hover:bg-muted"
+                  >
+                    <UserCheck className="h-5 w-5 text-primary" />
+                    <span className="text-xs font-bold">{dt('From my profile')}</span>
+                    <span className="text-[10px] text-muted-foreground">{dt('One tap')}</span>
+                  </button>
+                  <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border border-border bg-card px-3 py-4 text-center transition-colors hover:bg-muted">
+                    {busy === 'ocr' ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                    ) : (
+                      <Camera className="h-5 w-5 text-primary" />
+                    )}
+                    <span className="text-xs font-bold">
+                      {busy === 'ocr' ? dt('Scanning…') : dt('Scan a photo')}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">{dt('Paper CV')}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (f) void scanPhoto(f);
+                      }}
+                    />
+                  </label>
+                </div>
+                <div className="mt-3" />
                 Paste text exported from LinkedIn or an old CV. We only parse obvious headings and
                 skills locally in your browser; nothing is saved until you approve it.
               </p>

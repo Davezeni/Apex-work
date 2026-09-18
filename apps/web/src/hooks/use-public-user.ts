@@ -16,6 +16,7 @@ export interface PublicUser {
   hourlyRateEtb: number | null;
   languages: string[];
   isVerified: boolean;
+  agencyMembers?: { agency: { name: string; slug: string } }[];
   isPro?: boolean;
   rating: number;
   ratingCount: number;
