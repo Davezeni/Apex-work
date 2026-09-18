@@ -49,11 +49,20 @@ function parseResumeText(raw: string): Parsed {
   const summaryLines = section(['summary', 'profile', 'about']);
   const skillLines = section(['skills', 'technical skills', 'core skills']);
   const projectLines = section(['projects', 'portfolio']);
+  // Schema-safe from the source: names ≤60 chars, unique (case-insensitive),
+  // max 40 — mirrors resumeSchema so a save can never be rejected.
+  const seenSkills = new Set<string>();
   const skills = skillLines
     .join(',')
     .split(/[,|•·]/)
-    .map((item) => item.trim())
-    .filter((item) => item.length >= 2)
+    .map((item) => item.trim().slice(0, 60))
+    .filter((item) => {
+      if (item.length < 2) return false;
+      const key = item.toLowerCase();
+      if (seenSkills.has(key)) return false;
+      seenSkills.add(key);
+      return true;
+    })
     .slice(0, 40);
   const projects = projectLines
     .filter((line) => line.length >= 2)
@@ -150,8 +159,10 @@ export default function ResumeImportPage() {
     if (!headline && !summary) {
       return toast.error(dt('Your profile has no title or bio yet — add them first'));
     }
-    setRaw([headline, summary].filter(Boolean).join('\n\n'));
-    setParsed({ headline, summary, skills: [], projects: [] });
+    const clampedHeadline = headline.slice(0, 120);
+    const clampedSummary = summary.slice(0, 2000);
+    setRaw([clampedHeadline, clampedSummary].filter(Boolean).join('\n\n'));
+    setParsed({ headline: clampedHeadline, summary: clampedSummary, skills: [], projects: [] });
     toast.success(dt('Prefilled from your profile — review it below'));
   };
 
@@ -178,12 +189,20 @@ export default function ResumeImportPage() {
     if (!parsed || !resume) return;
     const current = resume.content;
     const existingSkills = new Set(current.skills.map((skill) => skill.name.toLowerCase()));
+    const mergeSeen = new Set<string>();
     const content: ResumeContent = {
       ...current,
       skills: [
         ...current.skills,
         ...parsed.skills
-          .filter((skill) => !existingSkills.has(skill.toLowerCase()))
+          .map((name) => name.trim().slice(0, 60))
+          .filter((name) => {
+            if (name.length < 2) return false;
+            const key = name.toLowerCase();
+            if (existingSkills.has(key) || mergeSeen.has(key)) return false;
+            mergeSeen.add(key);
+            return true;
+          })
           .map((name) => ({ name, level: 3 })),
       ].slice(0, 40),
       projects: [
