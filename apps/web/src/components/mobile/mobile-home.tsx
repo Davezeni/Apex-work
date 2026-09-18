@@ -489,6 +489,11 @@ function CardBody({ g, noTopPadding = false }: { g: GigListItem; noTopPadding?: 
           )}
         </div>
         <span className="truncate text-[11px] font-semibold">{g.owner.fullName}</span>
+        {g.owner.agencyMemberships?.[0]?.agency && (
+          <span className="truncate text-[10px] text-muted-foreground">
+            · 🏢 {g.owner.agencyMemberships[0].agency.name}
+          </span>
+        )}
         {g.owner.isVerified && (
           <CheckCircle2 className="h-3 w-3 shrink-0 fill-cyan-400 text-white" />
         )}

@@ -20,6 +20,7 @@ export interface GigListItem {
     avatarUrl: string | null;
     city: string | null;
     isVerified?: boolean;
+    agencyMemberships?: { agency: { name: string; slug: string } }[];
   };
 }
 

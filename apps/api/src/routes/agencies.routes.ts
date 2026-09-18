@@ -22,6 +22,14 @@ router.post(
   }),
 );
 router.post(
+  '/:id/chat',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    return success(res, await agencies.teamChat(req.user!.sub, id));
+  }),
+);
+
+router.post(
   '/:id/members',
   validate(inviteAgencyMemberSchema),
   asyncHandler(async (req, res) => {

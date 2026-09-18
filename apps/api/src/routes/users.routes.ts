@@ -37,7 +37,7 @@ router.get(
         country: true,
         hourlyRateEtb: true,
         languages: true,
-        agencyMembers: {
+        agencyMemberships: {
           take: 1,
           select: { agency: { select: { name: true, slug: true } } },
         },

@@ -237,10 +237,10 @@ export default function PublicProfilePage() {
             </h1>
             <p className="text-xs text-muted-foreground">@{user.username}</p>
             {user.title && <p className="mt-1 text-sm font-semibold">{user.title}</p>}
-            {user.agencyMembers?.[0]?.agency && (
+            {user.agencyMemberships?.[0]?.agency && (
               <div className="mt-1.5 flex items-center gap-1 text-xs font-semibold text-primary">
                 <Building2 className="h-3.5 w-3.5" />
-                Works at {user.agencyMembers[0].agency.name}
+                Works at {user.agencyMemberships[0].agency.name}
               </div>
             )}
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">

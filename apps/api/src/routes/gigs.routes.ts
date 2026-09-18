@@ -80,10 +80,7 @@ router.get(
           : q.sort === 'price_desc'
             ? { startingPriceEtb: 'desc' }
             : { createdAt: 'desc' };
-    const orderBy: Prisma.GigOrderByWithRelationInput[] = [
-      { isFeatured: 'desc' },
-      secondary,
-    ];
+    const orderBy: Prisma.GigOrderByWithRelationInput[] = [{ isFeatured: 'desc' }, secondary];
 
     const items = await prisma.gig.findMany({
       where,
@@ -100,14 +97,26 @@ router.get(
         ratingCount: true,
         startingPriceEtb: true,
         owner: {
-          select: { id: true, username: true, fullName: true, avatarUrl: true, city: true, isPhoneVerified: true, isIdVerified: true },
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            avatarUrl: true,
+            city: true,
+            isPhoneVerified: true,
+            isIdVerified: true,
+            agencyMemberships: {
+              take: 1,
+              select: { agency: { select: { name: true, slug: true } } },
+            },
+          },
         },
       },
     });
 
     const hasMore = items.length > q.limit;
     const trimmed = hasMore ? items.slice(0, q.limit) : items;
-    const nextCursor = hasMore ? trimmed[trimmed.length - 1]?.id ?? null : null;
+    const nextCursor = hasMore ? (trimmed[trimmed.length - 1]?.id ?? null) : null;
 
     return success(res, { items: trimmed, nextCursor, hasMore });
   }),
@@ -247,7 +256,9 @@ router.get(
 
 /** POST /gigs/:slug/event — record a gig event (VIEW/CONTACT/ORDER_START). */
 import { z as zed } from 'zod';
-const eventSchema = zed.object({ type: zed.enum(['VIEW', 'IMPRESSION', 'CONTACT', 'ORDER_START']) });
+const eventSchema = zed.object({
+  type: zed.enum(['VIEW', 'IMPRESSION', 'CONTACT', 'ORDER_START']),
+});
 router.post(
   '/:slug/event',
   optionalAuth,

@@ -619,6 +619,8 @@ model Conversation {
   avatarUrl   String?             // group avatar
   createdById String?             // set for groups; null for direct chats
   inviteToken String?             @unique // group join link token
+  agencyId    String?             // set when this group is a team's shared chat
+  agency      Agency?             @relation("AgencyConversation", fields: [agencyId], references: [id], onDelete: SetNull)
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   lastMessageAt DateTime?
@@ -1062,6 +1064,7 @@ model Agency {
 
   owner     User           @relation("AgencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members   AgencyMember[]
+  conversations Conversation[] @relation("AgencyConversation")
 
   @@index([ownerId])
 }

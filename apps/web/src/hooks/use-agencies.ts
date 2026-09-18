@@ -53,6 +53,13 @@ export function useInviteAgencyMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agencies'] }),
   });
 }
+/** Open (or create) the team's shared group chat; returns the conversation. */
+export function useTeamChat() {
+  const token = useAuthStore((state) => state.accessToken);
+  return useMutation<{ id: string }, Error, { agencyId: string }>({
+    mutationFn: ({ agencyId }) => apiFetch(`/me/teams/${agencyId}/chat`, { method: 'POST', token }),
+  });
+}
 export function useRemoveAgencyMember() {
   const token = useAuthStore((state) => state.accessToken);
   const qc = useQueryClient();

@@ -106,6 +106,12 @@ export async function invite(
   }
 }
 
+/** Open (or create) the team's shared group chat. */
+export async function teamChat(userId: string, agencyId: string) {
+  const { ensureTeamConversation } = await import('./chat.service.js');
+  return ensureTeamConversation({ userId, agencyId });
+}
+
 export async function removeMember(userId: string, agencyId: string, memberId: string) {
   await canManage(userId, agencyId);
   const member = await prisma.agencyMember.findUnique({

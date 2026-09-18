@@ -32,7 +32,7 @@ router.use(requireAuth);
 router.post(
   '/parse-file',
   asyncHandler(async (req, res) => {
-    const filename = typeof req.query.filename === 'string' ? req.query.filename.trim() : '';
+    const filename = ((req.query as { filename?: string }).filename ?? '').trim();
     const ext = filename.toLowerCase().split('.').pop() ?? '';
     if (!['pdf', 'docx', 'txt', 'md'].includes(ext)) {
       throw new BadRequestError('Upload a PDF, DOCX or plain-text CV');

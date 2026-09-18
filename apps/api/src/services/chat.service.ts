@@ -338,6 +338,68 @@ export async function sendMessage(input: {
   return message;
 }
 
+/** Ensure a team has exactly one shared group conversation and that its
+ *  membership mirrors the roster. Any team member can open it; leavers keep
+ *  their message history but new rosters always get added on open. */
+export async function ensureTeamConversation(input: { userId: string; agencyId: string }) {
+  const membership = await prisma.agencyMember.findUnique({
+    where: { agencyId_userId: { agencyId: input.agencyId, userId: input.userId } },
+    select: { role: true },
+  });
+  if (!membership) throw new ForbiddenError('You are not in this team');
+
+  const roster = await prisma.agencyMember.findMany({
+    where: { agencyId: input.agencyId },
+    select: { role: true, userId: true },
+  });
+
+  let conversation = await prisma.conversation.findFirst({
+    where: { agencyId: input.agencyId },
+  });
+
+  if (!conversation) {
+    const agency = await prisma.agency.findUniqueOrThrow({
+      where: { id: input.agencyId },
+      select: { name: true, ownerId: true },
+    });
+    conversation = await prisma.conversation.create({
+      data: {
+        isGroup: true,
+        title: `${agency.name} — team chat`,
+        createdById: agency.ownerId,
+        agencyId: input.agencyId,
+        members: {
+          createMany: {
+            data: roster.map((m) => ({
+              userId: m.userId,
+              isAdmin: m.role !== 'MEMBER',
+            })),
+          },
+        },
+      },
+    });
+    return { id: conversation.id };
+  }
+
+  // Membership sync: add anyone who joined since the last open.
+  const present = await prisma.conversationMember.findMany({
+    where: { conversationId: conversation.id },
+    select: { userId: true },
+  });
+  const have = new Set(present.map((p) => p.userId));
+  const missing = roster.filter((m) => !have.has(m.userId));
+  if (missing.length > 0) {
+    await prisma.conversationMember.createMany({
+      data: missing.map((m) => ({
+        conversationId: conversation!.id,
+        userId: m.userId,
+        isAdmin: m.role !== 'MEMBER',
+      })),
+    });
+  }
+  return { id: conversation.id };
+}
+
 export async function markAsRead(conversationId: string, userId: string) {
   await assertMember(conversationId, userId);
   return prisma.conversationMember.update({

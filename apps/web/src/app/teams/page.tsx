@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  MessageCircle,
+  ExternalLink,
   ArrowLeft,
   Building2,
   Loader2,
@@ -17,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
+import { useTeamChat } from '@/hooks/use-agencies';
 import {
   useAgencies,
   useCreateAgency,
@@ -36,6 +39,8 @@ export default function TeamsPage() {
   const [newBio, setNewBio] = useState('');
   const [inviteFor, setInviteFor] = useState<string | null>(null);
   const [username, setUsername] = useState('');
+  const chat = useTeamChat();
+  const [chatPendingFor, setChatPendingFor] = useState<string | null>(null);
 
   useEffect(() => {
     if (!meLoading && !isAuthed) router.replace('/login?next=/teams');
@@ -61,6 +66,23 @@ export default function TeamsPage() {
       },
     );
   };
+  const openChat = (agencyId: string) => {
+    setChatPendingFor(agencyId);
+    chat.mutate(
+      { agencyId },
+      {
+        onSuccess: (c) => {
+          setChatPendingFor(null);
+          router.push(`/messages/${c.id}`);
+        },
+        onError: (error) => {
+          setChatPendingFor(null);
+          toast.error(error.message);
+        },
+      },
+    );
+  };
+
   const inviteMember = (agencyId: string) => {
     // Strip a leading @ (users copy it from the member list) before sending.
     const handle = username.trim().replace(/^@+/, '');
@@ -155,15 +177,38 @@ export default function TeamsPage() {
                     </p>
                     {team.bio && <p className="mt-2 text-sm text-muted-foreground">{team.bio}</p>}
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0"
-                    onClick={() => setInviteFor(inviteFor === team.id ? null : team.id)}
-                  >
-                    <UserPlus className="h-4 w-4" /> Invite
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={dt('Team chat')}
+                      className="px-2.5"
+                      onClick={() => openChat(team.id)}
+                      disabled={chat.isPending}
+                    >
+                      {chat.isPending && chatPendingFor === team.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <MessageCircle className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Link
+                      href={`/agencies/${team.slug}`}
+                      aria-label={dt('Public page')}
+                      className="grid h-8 place-items-center rounded-lg border border-border px-2 text-muted-foreground transition-colors hover:bg-muted"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Link>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setInviteFor(inviteFor === team.id ? null : team.id)}
+                    >
+                      <UserPlus className="h-4 w-4" /> Invite
+                    </Button>
+                  </div>
                 </div>
                 {inviteFor === team.id && (
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
