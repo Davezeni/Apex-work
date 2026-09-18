@@ -26,7 +26,9 @@ describe('resume extraction coercion', () => {
         expect(parsed.success, `${field}=${String(out[field])}`).toBe(true);
       }
     }
-    expect(coerceExtraction({ website: junk[0] }).website).toBe('https://www.linkedin.com/in/johndoe'); // spaces stripped -> valid
+    expect(coerceExtraction({ website: junk[0] }).website).toBe(
+      'https://www.linkedin.com/in/johndoe',
+    ); // spaces stripped -> valid
     expect(coerceExtraction({ website: junk[2] }).website).toBeNull();
     expect(coerceExtraction({ website: junk[4] }).website).toBeNull();
     expect(coerceExtraction({ website: junk[6] }).website).toBe(
@@ -128,5 +130,128 @@ describe('resume extraction coercion', () => {
     expect(x.experiences).toEqual([]);
     expect(x.education).toEqual([]);
     expect(x.certifications).toEqual([]);
+  });
+});
+
+describe('sanitizeSemantics — mis-filed AI output', () => {
+  it('salvages contact info from wrong buckets and drops impossible entries', async () => {
+    const { sanitizeSemantics } = await import('./resumeExtractAi.service.js');
+    const x = sanitizeSemantics({
+      name: 'Kirubel Kibru',
+      headline: 'Senior Front End Developer / Business Analyst',
+      targetRole: null,
+      summary: null,
+      email: null,
+      phone: null,
+      city: null,
+      website: null,
+      linkedin: null,
+      github: null,
+      skills: [],
+      languages: [],
+      achievements: [],
+      interests: [],
+      experiences: [
+        {
+          company: 'k.kibru@gmail.com',
+          role: 'Dev',
+          location: null,
+          startYear: 2021,
+          startMonth: 1,
+          endYear: null,
+          endMonth: null,
+          description: null,
+        },
+        {
+          company: 'Acme',
+          role: 'January 2021 - Present',
+          location: null,
+          startYear: 2021,
+          startMonth: 1,
+          endYear: null,
+          endMonth: null,
+          description: null,
+        },
+        {
+          company: 'Yaltopia Tech',
+          role: 'Senior Front End Developer',
+          location: null,
+          startYear: 2021,
+          startMonth: 1,
+          endYear: null,
+          endMonth: null,
+          description: null,
+        },
+      ],
+      education: [
+        {
+          school: 'sara@qefo.com',
+          degree: null,
+          fieldOfStudy: null,
+          startYear: 2020,
+          endYear: null,
+          description: null,
+        },
+        {
+          school: '+251 911 234 567',
+          degree: null,
+          fieldOfStudy: null,
+          startYear: 2020,
+          endYear: null,
+          description: null,
+        },
+        {
+          school: 'Addis Ababa University',
+          degree: 'BSc',
+          fieldOfStudy: null,
+          startYear: 2015,
+          endYear: 2019,
+          description: null,
+        },
+      ],
+      certifications: [
+        { name: '2021', issuer: 'Yaltopia', issueYear: 2021, issueMonth: null },
+        { name: 'AWS Certified Developer', issuer: 'Amazon', issueYear: 2023, issueMonth: null },
+      ],
+      projects: [
+        { title: 'Kirubel Kibru', description: null },
+        { title: 'Senior Front End Developer / Business Analyst', description: null },
+        { title: 'YeneHealth', description: 'Telehealth platform' },
+      ],
+    });
+    // contact salvaged
+    expect(x.email).toBe('sara@qefo.com');
+    expect(x.phone).toBe('+251 911 234 567');
+    // only valid rows survive
+    expect(x.education.map((e) => e.school)).toEqual(['Addis Ababa University']);
+    expect(x.certifications.map((c) => c.name)).toEqual(['AWS Certified Developer']);
+    expect(x.projects.map((p) => p.title)).toEqual(['YeneHealth']);
+    expect(x.experiences.map((e) => e.company)).toEqual(['Yaltopia Tech']);
+  });
+
+  it('splits "Name - Title" into name + headline', async () => {
+    const { sanitizeSemantics } = await import('./resumeExtractAi.service.js');
+    const x = sanitizeSemantics({
+      name: 'Kirubel Kibru - Senior Front End Developer',
+      headline: null,
+      targetRole: null,
+      summary: null,
+      email: null,
+      phone: null,
+      city: null,
+      website: null,
+      linkedin: null,
+      github: null,
+      skills: [],
+      languages: [],
+      achievements: [],
+      interests: [],
+      experiences: [],
+      education: [],
+      certifications: [],
+      projects: [],
+    });
+    expect(x.name).toBe('Kirubel Kibru');
+    expect(x.headline).toBe('Senior Front End Developer');
   });
 });

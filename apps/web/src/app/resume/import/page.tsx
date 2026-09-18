@@ -239,6 +239,7 @@ export default function ResumeImportPage() {
   const [engine, setEngine] = useState<'ai' | 'basic' | null>(null);
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [alsoProfile, setAlsoProfile] = useState(true);
+  const [alsoName, setAlsoName] = useState(true);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; title: string; lines: string[] } | null>(
     null,
@@ -686,6 +687,21 @@ export default function ResumeImportPage() {
         } catch {
           /* profile sync is best-effort */
         }
+
+        // 5b) Override the account name with the name from the CV (explicit
+        // opt-in checkbox below; kills the "two different names" problem).
+        if (alsoName && ex.name && ex.name.trim().length >= 2) {
+          try {
+            await fetch(`${API_BASE}/v1/me`, {
+              method: 'PATCH',
+              headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fullName: ex.name.trim().slice(0, 80) }),
+            });
+            queryClient.invalidateQueries({ queryKey: ['me'] });
+          } catch {
+            /* name sync is best-effort */
+          }
+        }
       }
 
       // 6) VERIFY against the server: refetch the CV and confirm it all landed.
@@ -903,7 +919,7 @@ export default function ResumeImportPage() {
               <p className="text-xs font-semibold text-primary">
                 {engine === 'ai'
                   ? dt('✨ AI identified your CV — review each section, then import.')
-                  : dt('Basic extraction ready — check the sections, then import.')}
+                  : dt('Smart text extraction ready — check the sections, then import.')}
               </p>
               {engine === 'basic' && (
                 <button
@@ -917,9 +933,13 @@ export default function ResumeImportPage() {
               {engine === 'basic' && (
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {aiNote === 'AI_NOT_CONFIGURED'
-                    ? dt('AI extraction is not enabled on the server yet (missing GROQ_API_KEY) — smart text parsing was used.')
+                    ? dt(
+                        'AI extraction is not enabled on the server yet (missing GROQ_API_KEY) — smart text parsing was used.',
+                      )
                     : aiNote
-                      ? dt(`AI was unavailable (${'{'}note{'}'}) — smart text parsing was used.`).replace('{note}', aiNote.slice(0, 60))
+                      ? dt(
+                          `AI was unavailable (${'{'}note{'}'}) — smart text parsing was used.`,
+                        ).replace('{note}', aiNote.slice(0, 60))
                       : dt('Smart text parsing was used.')}
                 </p>
               )}
@@ -1406,6 +1426,18 @@ export default function ResumeImportPage() {
 
             {/* Import + profile mirror */}
             <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+              {ex.name && ex.name.trim().length >= 2 && (
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input
+                    type="checkbox"
+                    checked={alsoName}
+                    onChange={(e) => setAlsoName(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  {dt('Use the CV name everywhere — replace my account name')}
+                  <span className="font-normal text-muted-foreground">({ex.name})</span>
+                </label>
+              )}
               <label className="flex items-center gap-2 text-sm font-semibold">
                 <input
                   type="checkbox"

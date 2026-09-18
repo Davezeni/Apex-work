@@ -94,7 +94,8 @@ STRICT RULES:
 10. Clean formatting: no bullets/dashes at the start of strings, no ALL-CAPS shouting (title-case employers/roles).
 11. If the first line is "Name - Title(s)" or "Name | Title", SPLIT it: the person's name goes to name, the title part becomes headline.
 12. Undated "Role:" / "Tasks:" blocks describing a product or client engagement are PROJECTS (portfolio pieces): title = the product/project name, description = what was built + tasks. Only blocks with explicit date ranges are experience entries.
-13. For "Category: item, item, item" lines, extract the ITEMS after the colon (concrete skills), never the category label and never sentences.`;
+13. For "Category: item, item, item" lines, extract the ITEMS after the colon (concrete skills), never the category label and never sentences.
+14. FIELD DISCIPLINE: email/phone/address/ nationality / "personal information" NEVER go into education, certifications, projects or experience — only into their own fields. education.school = institution name ONLY. certification.name = the certificate title (never a bare year or number). project.title = the project/product name (never the person's name or job title). experience.company = employer name (never the candidate's name). A date range like "January 2021 - Present" is NEVER the role, certification name, or project title — it belongs in startYear/startMonth/endYear/endMonth.`;
 
 async function ask(messages: ChatMessage[]): Promise<string> {
   if (!env.GROQ_API_KEY) throw new Error('GROQ_NOT_CONFIGURED');
@@ -319,6 +320,128 @@ function coerce(raw: unknown): ExtractedResume {
   };
 }
 
+
+// ---------- semantic sanitation (cross-field mis-file defense) ----------
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^\+?[0-9][0-9\s()-]{6,}$/;
+const URLISH_RE = /^(https?:\/\/|www\.)[^\s]+$/i;
+const YEAR_ONLY_RE = /^(19|20)\d{2}$/;
+const DATE_RANGE_ONLY_RE = /^[A-Za-z]{3,9}\.?\s+\d{4}\s*(-|–|—|to|until)\s*(Present|Now|Current|[A-Za-z]{3,9}\.?\s*\d{4})$/i;
+const letters = (v: string): number => (v.match(/[A-Za-z]/g) ?? []).length;
+
+/**
+ * LLMs extract the right SHAPES but occasionally mis-FILE values (an email as
+ * a school, a year as a certificate name). Type coercion cannot catch that —
+ * this pass does: salvage contact-looking values out of wrong buckets, then
+ * drop entries that are still impossible. Field > entry > text.
+ */
+export function sanitizeSemantics(x: ExtractedResume): ExtractedResume {
+  const out: ExtractedResume = { ...x };
+
+  // A model sometimes returns "Name - Title" as the name; split it.
+  if (out.name) {
+    const split = out.name.match(/^(.{3,60}?)\s+[-\u2013\u2014|]\s+(.{2,})$/);
+    if (split && split[1] && split[1].trim().split(/\s+/).length <= 5) {
+      out.name = split[1].trim();
+      if (!out.headline) out.headline = (split[2] ?? '').trim().slice(0, 120) || null;
+    }
+  }
+  if (out.headline && (out.name ?? '') && out.headline.toLowerCase() === (out.name ?? '').toLowerCase()) {
+    out.headline = null;
+  }
+
+  const poisoned: string[] = [];
+  const inspect = (value: string | null): string | null => {
+    if (!value) return null;
+    if (EMAIL_RE.test(value)) {
+      if (!out.email) out.email = value.slice(0, 200);
+      return null; // poisoned -> caller drops/repairs
+    }
+    if (URLISH_RE.test(value)) {
+      const u = value;
+      if (!out.linkedin && /linkedin\./i.test(u)) out.linkedin = u.slice(0, 300);
+      else if (!out.github && /github\./i.test(u)) out.github = u.slice(0, 300);
+      else if (!out.website) out.website = u.slice(0, 300);
+      return null;
+    }
+    const digits = value.replace(/\D/g, '');
+    if (PHONE_RE.test(value) && digits.length >= 7 && digits.length <= 15) {
+      if (!out.phone) out.phone = value.slice(0, 40);
+      return null;
+    }
+    return value;
+  };
+
+  // education: school must be an institution
+  out.education = out.education.filter((entry) => {
+    const repaired = inspect(entry.school);
+    if (!repaired) {
+      poisoned.push('education.school');
+      return false;
+    }
+    if (!EMAIL_RE.test(entry.degree ?? '') && !URLISH_RE.test(entry.degree ?? '')) return true;
+    poisoned.push('education.degree');
+    return false;
+  });
+
+  // certifications: name must look like a title (letters, not a bare year)
+  out.certifications = out.certifications.filter((entry) => {
+    const repaired = inspect(entry.name);
+    if (!repaired) {
+      poisoned.push('certification.name');
+      return false;
+    }
+    if (YEAR_ONLY_RE.test(entry.name) || letters(entry.name) < 3) {
+      poisoned.push('certification.name=year');
+      return false;
+    }
+    return true;
+  });
+
+  // projects: title must be a project name
+  out.projects = out.projects.filter((entry) => {
+    const repaired = inspect(entry.title);
+    if (!repaired) {
+      poisoned.push('project.title');
+      return false;
+    }
+    const t = entry.title;
+    if (
+      YEAR_ONLY_RE.test(t) ||
+      DATE_RANGE_ONLY_RE.test(t) ||
+      (out.name && t.toLowerCase() === (out.name ?? '').toLowerCase()) ||
+      (out.headline && t.toLowerCase() === (out.headline ?? '').toLowerCase()) ||
+      letters(t) < 2
+    ) {
+      poisoned.push('project.title=heading');
+      return false;
+    }
+    return true;
+  });
+
+  // experience: company/role must not be the person or contact info
+  out.experiences = out.experiences.filter((entry) => {
+    const company = inspect(entry.company);
+    if (!company) {
+      poisoned.push('experience.company');
+      return false;
+    }
+    entry.company = company;
+    const role = inspect(entry.role);
+    if (!role || DATE_RANGE_ONLY_RE.test(role) || (out.name && role.toLowerCase() === (out.name ?? '').toLowerCase())) {
+      poisoned.push('experience.role');
+      return false;
+    }
+    entry.role = role;
+    return true;
+  });
+
+  if (poisoned.length > 0) {
+    logger.warn({ fixed: poisoned }, 'resume extraction: repaired mis-filed values');
+  }
+  return out;
+}
+
 /** Exposed for regression tests: raw model JSON -> saveable extraction. */
 export const coerceExtraction = coerce;
 
@@ -342,7 +465,7 @@ export async function extractResumeData(rawText: string): Promise<ExtractedResum
   ];
   try {
     const raw = await ask(messages);
-    return coerce(jsonFromModel(raw));
+    return sanitizeSemantics(coerce(jsonFromModel(raw)));
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'resume AI extraction failed');
     throw err;
