@@ -11,6 +11,7 @@
 import { prisma } from '../lib/prisma.js';
 import type { MilestoneInput } from '@apex-work/shared';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
+import { splitPayout } from './financialIdempotency.js';
 import { notify } from './notifications.service.js';
 import { sendPush } from './push.service.js';
 
@@ -129,6 +130,8 @@ export async function approve(milestoneId: string, userId: string) {
           sellerNetEtb: true,
           platformFeeEtb: true,
           title: true,
+          assignedToUserId: true,
+          assigneeSharePct: true,
         },
       },
     },
@@ -154,6 +157,8 @@ async function approveMilestoneCore(
       amountEtb: number;
       sellerNetEtb: number;
       platformFeeEtb: number;
+      assignedToUserId?: string | null;
+      assigneeSharePct?: number | null;
     };
     amountEtb: number;
     title: string;
@@ -163,6 +168,7 @@ async function approveMilestoneCore(
   const ratio = m.amountEtb / m.order.amountEtb;
   const payout = Math.round(m.order.sellerNetEtb * ratio);
   const fee = Math.round(m.order.platformFeeEtb * ratio);
+  const split = splitPayout(payout, m.order.assignedToUserId, m.order.assigneeSharePct);
 
   const result = await prisma.$transaction(async (tx) => {
     // Compare-and-set: only the DELIVERED → APPROVED transition may pay out.
@@ -178,21 +184,47 @@ async function approveMilestoneCore(
     const updated = await tx.milestone.findUniqueOrThrow({ where: { id: milestoneId } });
     await tx.wallet.upsert({
       where: { userId: m.order.sellerId },
-      create: { userId: m.order.sellerId, balanceEtb: payout, lifetimeEarnedEtb: payout },
+      create: { userId: m.order.sellerId, balanceEtb: split.sellerAmt, lifetimeEarnedEtb: split.sellerAmt },
       update: {
-        balanceEtb: { increment: payout },
-        lifetimeEarnedEtb: { increment: payout },
+        balanceEtb: { increment: split.sellerAmt },
+        lifetimeEarnedEtb: { increment: split.sellerAmt },
       },
     });
     await tx.transaction.create({
       data: {
         userId: m.order.sellerId,
         type: 'ORDER_PAYOUT',
-        amountEtb: payout,
-        description: `Milestone: ${m.title}`,
+        amountEtb: split.sellerAmt,
+        description:
+          split.assigneeAmt > 0
+            ? `Milestone: ${m.title} (team keeps ${100 - split.sharePct}%)`
+            : `Milestone: ${m.title}`,
         relatedId: m.order.id,
       },
     });
+    if (split.assigneeId && split.assigneeAmt > 0) {
+      await tx.wallet.upsert({
+        where: { userId: split.assigneeId },
+        create: {
+          userId: split.assigneeId,
+          balanceEtb: split.assigneeAmt,
+          lifetimeEarnedEtb: split.assigneeAmt,
+        },
+        update: {
+          balanceEtb: { increment: split.assigneeAmt },
+          lifetimeEarnedEtb: { increment: split.assigneeAmt },
+        },
+      });
+      await tx.transaction.create({
+        data: {
+          userId: split.assigneeId,
+          type: 'ORDER_PAYOUT',
+          amountEtb: split.assigneeAmt,
+          description: `Milestone: ${m.title} (${split.sharePct}% team share)`,
+          relatedId: m.order.id,
+        },
+      });
+    }
     if (fee > 0) {
       await tx.transaction.create({
         data: {
@@ -322,6 +354,8 @@ export async function autoReleaseMilestones(): Promise<{ released: number; remin
           sellerNetEtb: true,
           platformFeeEtb: true,
           title: true,
+          assignedToUserId: true,
+          assigneeSharePct: true,
         },
       },
     },

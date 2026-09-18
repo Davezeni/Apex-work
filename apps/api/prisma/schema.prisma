@@ -201,6 +201,8 @@ model User {
   @@index([role, isActive])
   @@index([createdAt])
   @@index([city])
+  ordersAssigned Order[]            @relation("OrderAssignee")
+  bidCrew        Bid[]              @relation("BidCrew")
 }
 
 model RefreshToken {
@@ -448,6 +450,11 @@ model Bid {
 
   job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
   freelancer    User     @relation(fields: [freelancerId], references: [id], onDelete: Cascade)
+  /// Set when a team manager/owner bids on behalf of their agency.
+  agencyId String?
+  agency   Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  /// Teammates pitching in on this joint bid (implicit m2m).
+  crew     User[]   @relation("BidCrew")
 
   @@unique([jobId, freelancerId])
   @@index([freelancerId])
@@ -478,8 +485,15 @@ model Order {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  assignedToUserId String?
+  assignedAt       DateTime?
+  /// Snapshot (0-100) of the assignee's share of sellerNetEtb at assignment
+  /// time. 0 = no assignment / legacy order → 100% to the seller as before.
+  assigneeSharePct Int           @default(0)
+
   client          User          @relation("OrderClient", fields: [clientId], references: [id])
   seller          User          @relation("OrderSeller", fields: [sellerId], references: [id])
+  assignedTo      User?         @relation("OrderAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
   gig             Gig?          @relation(fields: [gigId], references: [id])
   payments        Payment[]
   reviews         Review[]
@@ -491,6 +505,7 @@ model Order {
   @@index([clientId, status])
   @@index([sellerId, status])
   @@index([status])
+  @@index([assignedToUserId])
 }
 
 enum MilestoneStatus {
@@ -1065,6 +1080,10 @@ model Agency {
   owner     User           @relation("AgencyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members   AgencyMember[]
   conversations Conversation[] @relation("AgencyConversation")
+  /// Default share (0-100) of an order payout offered to an assigned member
+  /// when the owner assigns work. Snapshot onto the order at assignment time.
+  defaultAssigneeSharePct Int @default(100)
+  bids    Bid[]
 
   @@index([ownerId])
 }

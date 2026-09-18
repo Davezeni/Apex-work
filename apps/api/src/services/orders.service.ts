@@ -25,7 +25,7 @@ import { getCategoryFeePercent } from './categories.service.js';
 import { assertOrderTransition, type OrderAction, type OrderState } from '@apex-work/shared';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
-import { ledgerOnce } from './financialIdempotency.js';
+import { ledgerOnce, splitPayout } from './financialIdempotency.js';
 
 /**
  * Guard that an order may take `action` from `current.status`, translating the
@@ -309,13 +309,23 @@ export async function acceptDelivery(orderId: string, clientId: string) {
     }
     // DB-level idempotent payout: ledger row keyed uniquely on
     // (seller, ORDER_PAYOUT, order) + atomic wallet mutation.
+    // Team assignment: the assignee's share is credited to THEIR wallet while
+    // the seller's escrow hold (pendingEtb) always reconciles in full here.
+    const split = splitPayout(
+      order.sellerNetEtb,
+      order.assignedToUserId,
+      order.assigneeSharePct,
+    );
     const { applied } = await ledgerOnce(
       tx,
       {
         userId: order.sellerId,
         type: 'ORDER_PAYOUT',
-        amountEtb: order.sellerNetEtb,
-        description: `Released to balance: ${order.title}`,
+        amountEtb: split.sellerAmt,
+        description:
+          split.assigneeAmt > 0
+            ? `Released to balance: ${order.title} (team keeps ${100 - split.sharePct}%)`
+            : `Released to balance: ${order.title}`,
         relatedId: order.id,
       },
       async () => {
@@ -323,13 +333,39 @@ export async function acceptDelivery(orderId: string, clientId: string) {
           where: { userId: order.sellerId },
           data: {
             pendingEtb: { decrement: order.sellerNetEtb },
-            balanceEtb: { increment: order.sellerNetEtb },
-            lifetimeEarnedEtb: { increment: order.sellerNetEtb },
+            balanceEtb: { increment: split.sellerAmt },
+            lifetimeEarnedEtb: { increment: split.sellerAmt },
           },
         });
       },
     );
     if (!applied) throw new ConflictError('Order has already been paid out');
+    if (split.assigneeId && split.assigneeAmt > 0) {
+      await ledgerOnce(
+        tx,
+        {
+          userId: split.assigneeId,
+          type: 'ORDER_PAYOUT',
+          amountEtb: split.assigneeAmt,
+          description: `Team payout for ${order.title} (${split.sharePct}%)`,
+          relatedId: order.id,
+        },
+        async () => {
+          await tx.wallet.upsert({
+            where: { userId: split.assigneeId as string },
+            create: {
+              userId: split.assigneeId as string,
+              balanceEtb: split.assigneeAmt,
+              lifetimeEarnedEtb: split.assigneeAmt,
+            },
+            update: {
+              balanceEtb: { increment: split.assigneeAmt },
+              lifetimeEarnedEtb: { increment: split.assigneeAmt },
+            },
+          });
+        },
+      );
+    }
     await tx.user.update({
       where: { id: order.sellerId },
       data: { completedOrders: { increment: 1 } },
@@ -473,9 +509,110 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
   return updated;
 }
 
+const ASSIGNABLE_STATUSES: OrderStatus[] = ['PENDING', 'ACTIVE', 'IN_REVIEW'];
+
+/**
+ * Assign (or unassign) an order to a teammate. Only an OWNER/MANAGER of a
+ * team that contains the order's seller may assign, and the assignee must be
+ * a member of that same team. sharePct is snapshotted onto the order so
+ * later team-setting changes never retroactively alter in-flight payouts.
+ */
+export async function assignOrder(
+  orderId: string,
+  requesterId: string,
+  input: { userId: string | null; sharePct?: number },
+) {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      sellerId: true,
+      clientId: true,
+      title: true,
+      status: true,
+      assignedToUserId: true,
+    },
+  });
+  if (!order) throw new NotFoundError('Order');
+  if (order.clientId === requesterId) {
+    throw new ForbiddenError('Only the selling team can assign this order');
+  }
+  if (!ASSIGNABLE_STATUSES.includes(order.status)) {
+    throw new BadRequestError('This order can no longer be reassigned');
+  }
+
+  const managed = await prisma.agencyMember.findMany({
+    where: { userId: requesterId, role: { in: ['OWNER', 'MANAGER'] } },
+    select: { agencyId: true },
+  });
+  const managedIds = managed.map((m) => m.agencyId);
+  if (managedIds.length === 0) {
+    throw new ForbiddenError('Only a team owner or manager can assign orders');
+  }
+
+  if (input.userId === null) {
+    const updated = await prisma.order.update({
+      where: { id: orderId },
+      data: { assignedToUserId: null, assignedAt: null, assigneeSharePct: 0 },
+      include: { assignedTo: { select: { id: true, username: true, fullName: true } } },
+    });
+    return updated;
+  }
+
+  // The assignee must be a member of a team the requester manages; that same
+  // team must also contain the seller (the gig owner).
+  const membership = await prisma.agencyMember.findFirst({
+    where: {
+      userId: input.userId,
+      agencyId: { in: managedIds },
+    },
+    select: {
+      agencyId: true,
+      agency: {
+        select: { name: true, defaultAssigneeSharePct: true, members: { select: { userId: true } } },
+      },
+    },
+  });
+  if (!membership) {
+    throw new ForbiddenError('That member is not in a team you manage');
+  }
+  if (!membership.agency.members.some((m) => m.userId === order.sellerId)) {
+    throw new ForbiddenError('The gig owner must belong to the same team');
+  }
+
+  const sharePct =
+    input.sharePct === undefined
+      ? membership.agency.defaultAssigneeSharePct
+      : Math.min(100, Math.max(0, Math.round(input.sharePct)));
+
+  const updated = await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      assignedToUserId: input.userId,
+      assignedAt: new Date(),
+      assigneeSharePct: sharePct,
+    },
+    include: { assignedTo: { select: { id: true, username: true, fullName: true } } },
+  });
+
+  await notify({
+    userId: input.userId,
+    type: 'ORDER_UPDATE',
+    title: 'New order assigned to you 🎯',
+    body: `${order.title} — your share: ${sharePct}% of the payout.`,
+    payload: { orderId: order.id },
+  });
+
+  return updated;
+}
+
 export async function listMyOrders(userId: string, role: 'client' | 'seller') {
+  // Sellers also see orders assigned to them by their team (money still
+  // settles to the gig owner; the assignment is display + workspace access).
   const where: Prisma.OrderWhereInput =
-    role === 'client' ? { clientId: userId } : { sellerId: userId };
+    role === 'client'
+      ? { clientId: userId }
+      : { OR: [{ sellerId: userId }, { assignedToUserId: userId }] };
   return prisma.order.findMany({
     where,
     orderBy: { createdAt: 'desc' },
@@ -484,6 +621,7 @@ export async function listMyOrders(userId: string, role: 'client' | 'seller') {
       gig: { select: { slug: true, coverImageUrl: true } },
       client: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       seller: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      assignedTo: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
     },
   });
 }
@@ -495,6 +633,7 @@ export async function getOrder(orderId: string, userId: string) {
       gig: { select: { slug: true, title: true, coverImageUrl: true } },
       client: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       seller: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
+      assignedTo: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
       payments: true,
       milestones: {
         orderBy: { position: 'asc' },
@@ -503,10 +642,42 @@ export async function getOrder(orderId: string, userId: string) {
     },
   });
   if (!order) throw new NotFoundError('Order');
-  if (order.clientId !== userId && order.sellerId !== userId) {
+  if (
+    order.clientId !== userId &&
+    order.sellerId !== userId &&
+    order.assignedToUserId !== userId
+  ) {
     throw new ForbiddenError();
   }
-  return order;
+
+  // Seller-side assignment panel: the teams the seller belongs to where the
+  // VIEWER (== seller in that view) can manage members.
+  let manageableAgencies: unknown = null;
+  if (order.sellerId === userId) {
+    const rows = await prisma.agencyMember.findMany({
+      where: { userId: order.sellerId, role: { in: ['OWNER', 'MANAGER'] } },
+      select: {
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            defaultAssigneeSharePct: true,
+            members: {
+              select: {
+                role: true,
+                user: {
+                  select: { id: true, username: true, fullName: true, avatarUrl: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    manageableAgencies = rows.map((r) => r.agency);
+  }
+
+  return { ...order, manageableAgencies };
 }
 
 /**
@@ -587,6 +758,8 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
       sellerNetEtb: true,
       platformFeeEtb: true,
       deliveredAt: true,
+      assignedToUserId: true,
+      assigneeSharePct: true,
     },
   });
   let releasedCount = 0;
@@ -607,13 +780,21 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         // (seller, ORDER_PAYOUT, order) — a retried/concurrent release or a
         // manual accept that already paid this order matches 0 rows on the
         // ledger insert (or the CAS above), so it never double-pays.
+        const split = splitPayout(
+          o.sellerNetEtb,
+          o.assignedToUserId,
+          o.assigneeSharePct,
+        );
         const { applied } = await ledgerOnce(
           tx,
           {
             userId: o.sellerId,
             type: 'ORDER_PAYOUT',
-            amountEtb: o.sellerNetEtb,
-            description: `Auto-released: ${o.title}`,
+            amountEtb: split.sellerAmt,
+            description:
+              split.assigneeAmt > 0
+                ? `Auto-released: ${o.title} (team keeps ${100 - split.sharePct}%)`
+                : `Auto-released: ${o.title}`,
             relatedId: o.id,
           },
           async () => {
@@ -621,18 +802,44 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
               where: { userId: o.sellerId },
               create: {
                 userId: o.sellerId,
-                balanceEtb: o.sellerNetEtb,
-                lifetimeEarnedEtb: o.sellerNetEtb,
+                balanceEtb: split.sellerAmt,
+                lifetimeEarnedEtb: split.sellerAmt,
               },
               update: {
                 pendingEtb: { decrement: o.sellerNetEtb },
-                balanceEtb: { increment: o.sellerNetEtb },
-                lifetimeEarnedEtb: { increment: o.sellerNetEtb },
+                balanceEtb: { increment: split.sellerAmt },
+                lifetimeEarnedEtb: { increment: split.sellerAmt },
               },
             });
           },
         );
         if (!applied) return 'skipped';
+        if (split.assigneeId && split.assigneeAmt > 0) {
+          await ledgerOnce(
+            tx,
+            {
+              userId: split.assigneeId,
+              type: 'ORDER_PAYOUT',
+              amountEtb: split.assigneeAmt,
+              description: `Team payout for ${o.title} (${split.sharePct}%)`,
+              relatedId: o.id,
+            },
+            async () => {
+              await tx.wallet.upsert({
+                where: { userId: split.assigneeId as string },
+                create: {
+                  userId: split.assigneeId as string,
+                  balanceEtb: split.assigneeAmt,
+                  lifetimeEarnedEtb: split.assigneeAmt,
+                },
+                update: {
+                  balanceEtb: { increment: split.assigneeAmt },
+                  lifetimeEarnedEtb: { increment: split.assigneeAmt },
+                },
+              });
+            },
+          );
+        }
 
         await tx.user.update({
           where: { id: o.sellerId },

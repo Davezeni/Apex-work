@@ -50,6 +50,42 @@ export async function ledgerOnce(
   return { applied: true };
 }
 
+export interface PayoutSplit {
+  /** Credited to the order's seller (agency owner) — remainder of the net. */
+  sellerAmt: number;
+  /** Credited to the assigned team member (0 when unassigned). */
+  assigneeAmt: number;
+  assigneeId: string | null;
+  sharePct: number;
+}
+
+/**
+ * Pure math: divide a net payout between the seller and an assigned team
+ * member. Rounding remainder always stays with the seller, and the two
+ * amounts always sum to `net`. No assignment / 0% share → 100% seller,
+ * i.e. exactly the pre-agency behavior.
+ */
+export function splitPayout(
+  net: number,
+  assigneeId: string | null | undefined,
+  sharePct: number | null | undefined,
+): PayoutSplit {
+  const pct =
+    assigneeId && sharePct && sharePct > 0
+      ? Math.min(100, Math.max(0, Math.round(sharePct)))
+      : 0;
+  if (!assigneeId || pct === 0) {
+    return { sellerAmt: net, assigneeAmt: 0, assigneeId: null, sharePct: 0 };
+  }
+  const assigneeAmt = Math.round((net * pct) / 100);
+  return {
+    sellerAmt: net - assigneeAmt,
+    assigneeAmt,
+    assigneeId,
+    sharePct: pct,
+  };
+}
+
 /** True if `err` is a Prisma unique-constraint violation (P2002). */
 export function isUniqueViolation(err: unknown): boolean {
   return (err as { code?: string }).code === UNIQUE_VIOLATION;

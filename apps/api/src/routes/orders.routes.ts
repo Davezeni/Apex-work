@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createOrderSchema, orderActionSchema } from '@apex-work/shared';
+import { assignOrderSchema, createOrderSchema, orderActionSchema } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -113,6 +113,20 @@ router.post(
  * The return URL includes ?paid=1; the frontend calls this to force a
  * verification if the webhook hasn't landed yet.
  */
+/**
+ * POST /orders/:id/assign — team owner/manager assigns (or unassigns) the
+ * order to a member. sharePct snapshots onto the order at assignment time.
+ */
+router.post(
+  '/:id/assign',
+  validate(assignOrderSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').AssignOrderInput;
+    return success(res, await orders.assignOrder(id, req.user!.sub, body));
+  }),
+);
+
 router.post(
   '/:id/verify',
   asyncHandler(async (req, res) => {

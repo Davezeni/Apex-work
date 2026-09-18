@@ -121,6 +121,10 @@ export async function getJob(id: string, viewerId?: string) {
               ratingCount: true,
             },
           },
+          agency: { select: { name: true, slug: true } },
+          crew: {
+            select: { id: true, username: true, fullName: true, avatarUrl: true },
+          },
         },
       },
     },
@@ -152,7 +156,13 @@ export async function closeJob(jobId: string, userId: string) {
 export async function createBid(
   freelancerId: string,
   jobId: string,
-  input: { message: string; priceEtb: number; deliveryDays: number },
+  input: {
+    message: string;
+    priceEtb: number;
+    deliveryDays: number;
+    agencyId?: string;
+    crewIds?: string[];
+  },
 ) {
   const [freelancer, job] = await Promise.all([
     prisma.user.findUnique({
@@ -171,21 +181,59 @@ export async function createBid(
   if (!job.isOpen) throw new ConflictError('This job is closed');
   if (job.clientId === freelancerId) throw new BadRequestError('You cannot bid on your own job');
 
+  // Joint (team) bid: only the OWNER/MANAGER may bid on the team's behalf;
+  // crew must be members of the same agency (bidder excluded).
+  let agency: Prisma.BidUpdateInput['agency'];
+  let crew: Prisma.BidUpdateInput['crew'];
+  if (input.agencyId) {
+    const membership = await prisma.agencyMember.findFirst({
+      where: { agencyId: input.agencyId, userId: freelancerId, role: { in: ['OWNER', 'MANAGER'] } },
+      select: { agencyId: true },
+    });
+    if (!membership) {
+      throw new ForbiddenError('Only the team owner or a manager can bid as the team');
+    }
+    const crewIds = [...new Set(input.crewIds ?? [])].filter((id) => id !== freelancerId).slice(0, 8);
+    if (crewIds.length > 0) {
+      const members = await prisma.agencyMember.findMany({
+        where: { agencyId: input.agencyId, userId: { in: crewIds } },
+        select: { userId: true },
+      });
+      if (members.length !== crewIds.length) {
+        throw new NotFoundError('One or more crew members are not in this team');
+      }
+      crew = { connect: crewIds.map((id) => ({ id })) };
+    } else {
+      crew = { set: [] };
+    }
+    agency = { connect: { id: input.agencyId } };
+  } else {
+    // A plain re-bid clears any previous team attribution.
+    agency = { disconnect: true };
+    crew = { set: [] };
+  }
+
   const bid = await prisma.bid.upsert({
     where: { jobId_freelancerId: { jobId, freelancerId } },
+    // The nested team ops are valid for both create & update; Prisma's
+    // upsert input union is just too narrow for one shared shape.
     create: {
       jobId,
       freelancerId,
       message: input.message,
       priceEtb: input.priceEtb,
       deliveryDays: input.deliveryDays,
-    },
+      agency,
+      crew,
+    } as unknown as Prisma.BidCreateInput,
     update: {
       message: input.message,
       priceEtb: input.priceEtb,
       deliveryDays: input.deliveryDays,
       withdrawnAt: null,
-    },
+      agency,
+      crew,
+    } as Prisma.BidUpdateInput,
   });
 
   await notify({

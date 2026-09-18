@@ -41,6 +41,8 @@ export interface JobDetail extends JobSummary {
       rating: number;
       ratingCount: number;
     };
+    agency: { name: string; slug: string } | null;
+    crew: { id: string; username: string; fullName: string; avatarUrl: string | null }[];
   }[];
 }
 

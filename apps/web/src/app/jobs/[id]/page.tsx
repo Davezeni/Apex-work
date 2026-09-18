@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, MapPin, Send, CheckCircle2, Lock, Sparkles, Star } 
 import { Button } from '@/components/ui/button';
 import { useJob, useCreateBid, useAcceptBid, useCloseJob } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
+import { useAgencies, type Agency } from '@/hooks/use-agencies';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useI18n } from '@/i18n';
 import { formatEtb, timeAgo, cn } from '@/lib/utils';
@@ -31,6 +32,19 @@ export default function JobDetailPage() {
   const [msg, setMsg] = useState('');
   const [price, setPrice] = useState('');
   const [days, setDays] = useState('7');
+  const { data: myTeams } = useAgencies();
+  const teamItems: Agency[] = myTeams?.items ?? [];
+  const managedTeams = teamItems.filter(
+    (t) =>
+      t.ownerId === me?.id || t.members.some((m) => m.user.id === me?.id && m.role === 'MANAGER'),
+  );
+  const [asTeam, setAsTeam] = useState(false);
+  const [teamId, setTeamId] = useState('');
+  const [crewIds, setCrewIds] = useState<string[]>([]);
+  const bidTeam =
+    asTeam && managedTeams.length > 0
+      ? (managedTeams.find((t) => t.id === teamId) ?? managedTeams[0])
+      : null;
 
   if (isLoading || !job) {
     return (
@@ -59,6 +73,7 @@ export default function JobDetailPage() {
         message: msg.trim(),
         priceEtb: Math.floor(p),
         deliveryDays: Math.floor(d),
+        ...(bidTeam ? { agencyId: bidTeam.id, crewIds: crewIds.filter((c) => c !== me?.id) } : {}),
       });
       toast.success(t('jobs.bidSent'));
       setBidOpen(false);
@@ -247,6 +262,36 @@ export default function JobDetailPage() {
             <div className="mt-2 space-y-2">
               {job.bids.map((b) => (
                 <div key={b.id} className="rounded-2xl border border-border bg-card p-4">
+                  {b.agency && (
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                        🏢 {b.agency.name}
+                      </span>
+                      {b.crew.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {dt('Team of')} {b.crew.length + 1}
+                        </span>
+                      )}
+                      {b.crew.slice(0, 5).map((c) =>
+                        c.avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={c.id}
+                            src={c.avatarUrl}
+                            alt={c.fullName}
+                            className="h-5 w-5 rounded-full object-cover ring-2 ring-card"
+                          />
+                        ) : (
+                          <span
+                            key={c.id}
+                            className="grad-hero grid h-5 w-5 place-items-center rounded-full text-[8px] font-bold text-white ring-2 ring-card"
+                          >
+                            {(c.fullName[0] ?? '?').toUpperCase()}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-start gap-3">
                     {b.freelancer.avatarUrl ? (
                       <Image
@@ -411,6 +456,72 @@ export default function JobDetailPage() {
             />
             <p className="mt-1 text-right text-[11px] text-muted-foreground">{msg.length}/3000</p>
           </div>
+          {managedTeams.length > 0 && (
+            <div className="rounded-2xl border border-border bg-muted/30 p-3">
+              <label className="flex items-center gap-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={asTeam}
+                  onChange={(e) => setAsTeam(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                🏢 {dt('Bid as a team')}
+              </label>
+              {asTeam && (
+                <>
+                  {managedTeams.length > 1 && (
+                    <select
+                      value={bidTeam?.id ?? ''}
+                      onChange={(e) => {
+                        setTeamId(e.target.value);
+                        setCrewIds([]);
+                      }}
+                      className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-semibold outline-none focus:border-primary"
+                    >
+                      {managedTeams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {dt('Teammates on this pitch')}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {(bidTeam?.members ?? [])
+                      .filter((m) => m.user.id !== me?.id)
+                      .map((m) => {
+                        const on = crewIds.includes(m.user.id);
+                        return (
+                          <button
+                            key={m.user.id}
+                            type="button"
+                            onClick={() =>
+                              setCrewIds((c) =>
+                                on ? c.filter((x) => x !== m.user.id) : [...c, m.user.id],
+                              )
+                            }
+                            className={
+                              on
+                                ? 'rounded-full bg-primary px-3 py-1 text-xs font-bold text-white'
+                                : 'rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground'
+                            }
+                          >
+                            {m.user.fullName.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    {dt(
+                      'The client sees the whole team on your proposal. Money still settles to you — assign shares after hire.',
+                    )}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">

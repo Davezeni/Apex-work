@@ -106,6 +106,22 @@ export async function invite(
   }
 }
 
+/** Owner settings: default payout share offered to an assigned member. */
+export async function updateTeam(
+  userId: string,
+  agencyId: string,
+  input: { defaultAssigneeSharePct: number },
+) {
+  await canManage(userId, agencyId);
+  return prisma.agency.update({
+    where: { id: agencyId },
+    data: {
+      defaultAssigneeSharePct: Math.min(100, Math.max(0, Math.round(input.defaultAssigneeSharePct))),
+    },
+    select: { id: true, name: true, defaultAssigneeSharePct: true },
+  });
+}
+
 /** Open (or create) the team's shared group chat. */
 export async function teamChat(userId: string, agencyId: string) {
   const { ensureTeamConversation } = await import('./chat.service.js');

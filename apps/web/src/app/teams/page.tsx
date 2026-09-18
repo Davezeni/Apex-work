@@ -19,7 +19,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
-import { useTeamChat } from '@/hooks/use-agencies';
+import { useTeamChat, useUpdateTeam } from '@/hooks/use-agencies';
 import {
   useAgencies,
   useCreateAgency,
@@ -41,6 +41,8 @@ export default function TeamsPage() {
   const [username, setUsername] = useState('');
   const chat = useTeamChat();
   const [chatPendingFor, setChatPendingFor] = useState<string | null>(null);
+  const updateTeam = useUpdateTeam();
+  const [shareDraft, setShareDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!meLoading && !isAuthed) router.replace('/login?next=/teams');
@@ -232,6 +234,50 @@ export default function TeamsPage() {
                         'Add member'
                       )}
                     </Button>
+                  </div>
+                )}
+                {team.ownerId === me.id && (
+                  <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      {dt("Member's default payout share")}
+                    </label>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {dt(
+                        'When you assign an order to a member, this share of the payout goes to them. You can override it per order.',
+                      )}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        inputMode="numeric"
+                        value={shareDraft[team.id] ?? String(team.defaultAssigneeSharePct)}
+                        onChange={(e) =>
+                          setShareDraft((d) => ({
+                            ...d,
+                            [team.id]: e.target.value.replace(/[^0-9]/g, '').slice(0, 3),
+                          }))
+                        }
+                        className="h-9 w-20 rounded-lg border border-border bg-background px-2 text-center text-sm font-bold outline-none focus:border-primary"
+                      />
+                      <span className="text-sm font-bold">%</span>
+                      <button
+                        disabled={updateTeam.isPending}
+                        onClick={() => {
+                          const pct = Number(shareDraft[team.id] ?? team.defaultAssigneeSharePct);
+                          if (Number.isNaN(pct) || pct < 0 || pct > 100)
+                            return toast.error(dt('Share must be 0–100'));
+                          updateTeam.mutate(
+                            { agencyId: team.id, defaultAssigneeSharePct: pct },
+                            {
+                              onSuccess: () => toast.success(dt('Saved')),
+                              onError: (err) => toast.error(err.message),
+                            },
+                          );
+                        }}
+                        className="ml-auto rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white transition-transform active:scale-95 disabled:opacity-50"
+                      >
+                        {updateTeam.isPending ? dt('Saving…') : dt('Save')}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div className="mt-4 divide-y divide-border rounded-xl border border-border">

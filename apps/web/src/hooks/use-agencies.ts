@@ -16,6 +16,7 @@ export interface Agency {
   bio: string | null;
   website: string | null;
   ownerId: string;
+  defaultAssigneeSharePct: number;
   members: AgencyMember[];
 }
 
@@ -53,6 +54,25 @@ export function useInviteAgencyMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['agencies'] }),
   });
 }
+/** Owner settings: default payout share for assigned members. */
+export function useUpdateTeam() {
+  const token = useAuthStore((state) => state.accessToken);
+  const qc = useQueryClient();
+  return useMutation<
+    { id: string; name: string; defaultAssigneeSharePct: number },
+    Error,
+    { agencyId: string; defaultAssigneeSharePct: number }
+  >({
+    mutationFn: ({ agencyId, defaultAssigneeSharePct }) =>
+      apiFetch(`/me/teams/${agencyId}`, {
+        method: 'PATCH',
+        token,
+        body: { defaultAssigneeSharePct },
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['agencies'] }),
+  });
+}
+
 /** Open (or create) the team's shared group chat; returns the conversation. */
 export function useTeamChat() {
   const token = useAuthStore((state) => state.accessToken);

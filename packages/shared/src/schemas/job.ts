@@ -49,5 +49,8 @@ export const createBidSchema = z.object({
   message: z.string().trim().min(20, 'Explain your approach — at least 20 chars').max(3000),
   priceEtb: z.number().int().min(MIN_GIG_PRICE_ETB).max(MAX_GIG_PRICE_ETB),
   deliveryDays: z.number().int().min(1).max(90),
+  /** Team bid: agency id + teammates joining the pitch (max 8). */
+  agencyId: z.string().trim().min(10).max(64).optional(),
+  crewIds: z.array(z.string().trim().min(10).max(64)).max(8).optional(),
 });
 export type CreateBidInput = z.infer<typeof createBidSchema>;

@@ -17,6 +17,17 @@ export const createAgencySchema = z.object({
 });
 export type CreateAgencyInput = z.infer<typeof createAgencySchema>;
 
+export const agencyUpdateSchema = z.object({
+  defaultAssigneeSharePct: z.number().int().min(0).max(100),
+});
+export type AgencyUpdateInput = z.infer<typeof agencyUpdateSchema>;
+
+export const assignOrderSchema = z.object({
+  userId: z.string().trim().min(10).nullable(),
+  sharePct: z.number().int().min(0).max(100).optional(),
+});
+export type AssignOrderInput = z.infer<typeof assignOrderSchema>;
+
 export const inviteAgencyMemberSchema = z.object({
   username: z.string().trim().min(2).max(60),
   role: z.enum(['MEMBER', 'MANAGER']).default('MEMBER'),

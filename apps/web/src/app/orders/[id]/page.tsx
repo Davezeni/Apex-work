@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { useOrder, useOrderAction, useVerifyPayment, type OrderStatus } from '@/hooks/use-orders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe } from '@/hooks/use-me';
+import { useAssignOrder, type ManageableAgency } from '@/hooks/use-orders';
 import { useStartConversation } from '@/hooks/use-chat';
 import { useMyReviewForOrder } from '@/hooks/use-reviews';
 import { LazyRateReviewSheet as RateReviewSheet } from '@/components/lazy';
@@ -90,6 +91,12 @@ export default function OrderDetailPage() {
     };
   }, [order?.status, refetch]);
 
+  // Money/team state — must run before any early return (rules of hooks).
+  const assign = useAssignOrder(order?.id);
+  const [agencyId, setAgencyId] = useState<string>('');
+  const [memberId, setMemberId] = useState<string>('');
+  const [sharePct, setSharePct] = useState<string>('');
+
   if (isLoading || !order) {
     return (
       <div className="grid min-h-dvh place-items-center">
@@ -110,6 +117,10 @@ export default function OrderDetailPage() {
 
   const isSeller = me?.id === order.seller.id;
   const other = isSeller ? order.client : order.seller;
+  const isAssignee = me?.id === order.assignedToUserId;
+  const assignable = ['PENDING', 'ACTIVE', 'IN_REVIEW'].includes(order.status);
+  const managedAgencies: ManageableAgency[] = order.manageableAgencies ?? [];
+  const pickedAgency = managedAgencies.find((a) => a.id === agencyId) ?? managedAgencies[0] ?? null;
   const status = STATUS_STYLE[order.status];
   const StatusIcon = status.icon;
 
@@ -289,6 +300,136 @@ export default function OrderDetailPage() {
       <Section title={dt('Funds')}>
         <EscrowTimeline status={order.status} />
       </Section>
+
+      {/* Team assignment — seller's team can route the order to a member.
+          The member's share is snapshotted now; payouts follow it. */}
+      {order.assignedTo && (
+        <Section title={dt('Team assignment')}>
+          <div className="flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <div className="min-w-0 flex-1 text-sm">
+              <span className="font-bold">{dt('Assigned to')}</span>{' '}
+              <span className="font-semibold text-primary">{order.assignedTo.fullName}</span>
+              {isAssignee && (
+                <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">
+                  {dt('You')}
+                </span>
+              )}
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {dt('Their payout share')}:{' '}
+                <span className="font-bold text-foreground">{order.assigneeSharePct}%</span> ·{' '}
+                {dt('seller keeps')} {100 - order.assigneeSharePct}%
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
+      {isSeller && isAssignee && (
+        <div className="mx-4 mt-3 rounded-2xl border border-primary/30 bg-primary/5 p-3 text-xs font-semibold text-primary">
+          🎯 {dt('This order is assigned to you — deliver it as the working freelancer.')}
+        </div>
+      )}
+      {isSeller && managedAgencies.length > 0 && assignable && (
+        <Section title={dt('Assign to teammate')}>
+          <div className="space-y-3 rounded-2xl border border-border bg-card p-4 text-sm">
+            {managedAgencies.length > 1 && (
+              <select
+                value={pickedAgency?.id ?? ''}
+                onChange={(e) => {
+                  setAgencyId(e.target.value);
+                  setMemberId('');
+                  const a = managedAgencies.find((x) => x.id === e.target.value);
+                  setSharePct(String(a?.defaultAssigneeSharePct ?? 100));
+                }}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 font-semibold outline-none focus:border-primary"
+              >
+                {managedAgencies.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    🏢 {a.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <select
+              value={memberId}
+              onChange={(e) => {
+                setMemberId(e.target.value);
+                if (!sharePct) setSharePct(String(pickedAgency?.defaultAssigneeSharePct ?? 100));
+              }}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 font-semibold outline-none focus:border-primary"
+            >
+              <option value="">{dt('Choose a team member…')}</option>
+              {(pickedAgency?.members ?? [])
+                .filter((m) => m.user.id !== me?.id)
+                .map((m) => (
+                  <option key={m.user.id} value={m.user.id}>
+                    {m.user.fullName} (@{m.user.username})
+                    {m.role !== 'MEMBER' ? ` · ${m.role}` : ''}
+                  </option>
+                ))}
+            </select>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {dt("Member's payout share")} (%)
+              </label>
+              <input
+                inputMode="numeric"
+                value={sharePct}
+                onChange={(e) => setSharePct(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                placeholder={String(pickedAgency?.defaultAssigneeSharePct ?? 100)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 font-semibold outline-none focus:border-primary"
+              />
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                {dt(
+                  'Snapshot now: when the client approves (or escrow auto-releases), this exact share goes to the member and the rest to you.',
+                )}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={!memberId || assign.isPending}
+                onClick={() => {
+                  const pct =
+                    sharePct === ''
+                      ? (pickedAgency?.defaultAssigneeSharePct ?? 100)
+                      : Number(sharePct);
+                  if (Number.isNaN(pct) || pct < 0 || pct > 100)
+                    return toast.error(dt('Share must be 0–100'));
+                  assign.mutate(
+                    { userId: memberId, sharePct: pct },
+                    {
+                      onSuccess: () => {
+                        setMemberId('');
+                        toast.success(dt('Order assigned'));
+                      },
+                      onError: (err) => toast.error(err.message),
+                    },
+                  );
+                }}
+                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-50"
+              >
+                {assign.isPending ? dt('Saving…') : dt('Assign order')}
+              </button>
+              {order.assignedTo && (
+                <button
+                  disabled={assign.isPending}
+                  onClick={() =>
+                    assign.mutate(
+                      { userId: null },
+                      {
+                        onSuccess: () => toast.success(dt('Assignment removed')),
+                        onError: (err) => toast.error(err.message),
+                      },
+                    )
+                  }
+                  className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  {dt('Unassign')}
+                </button>
+              )}
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* Payment summary */}
       <Section title={dt('Payment')}>

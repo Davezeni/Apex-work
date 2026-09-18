@@ -28,6 +28,16 @@ export interface OrderSummary {
   gig: { slug: string; coverImageUrl: string | null } | null;
   client: OrderPartyMini;
   seller: OrderPartyMini;
+  assignedTo: OrderPartyMini | null;
+  assignedToUserId: string | null;
+  assigneeSharePct: number;
+}
+
+export interface ManageableAgency {
+  id: string;
+  name: string;
+  defaultAssigneeSharePct: number;
+  members: { role: string; user: OrderPartyMini }[];
 }
 
 export interface OrderDetail extends OrderSummary {
@@ -38,6 +48,7 @@ export interface OrderDetail extends OrderSummary {
   completedAt: string | null;
   cancelledAt: string | null;
   platformFeeEtb: number;
+  manageableAgencies: ManageableAgency[] | null;
   payments: {
     id: string;
     amountEtb: number;
@@ -122,6 +133,19 @@ export function useOrderAction(orderId: string | undefined) {
 }
 
 /** Force server-side verify after user returns from Chapa. */
+export function useAssignOrder(orderId: string | undefined) {
+  const token = useAuthStore((s) => s.accessToken);
+  const qc = useQueryClient();
+  return useMutation<OrderDetail, Error, { userId: string | null; sharePct?: number }>({
+    mutationFn: (input) =>
+      apiFetch(`/orders/${orderId}/assign`, { method: 'POST', token, body: input }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['order', orderId] });
+      void qc.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
 export function useVerifyPayment() {
   const token = useAuthStore((s) => s.accessToken);
   const qc = useQueryClient();
