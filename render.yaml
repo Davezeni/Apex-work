@@ -19,15 +19,17 @@ services:
       npm --workspace @apex-work/shared run build
       npm --workspace @apex-work/api run db:generate
       npm --workspace @apex-work/api run build
-
-    # Apply pending Prisma migrations against the live DB BEFORE the new code
-    # starts. Migrations use the direct (unpooled) connection when provided,
-    # falling back to the pooled DATABASE_URL. This closes the gap where builds
-    # shipped a new schema without the matching DB changes.
-    preDeployCommand: |
       DATABASE_URL="${DATABASE_URL_UNPOOLED:-$DATABASE_URL}" \
         npm --workspace @apex-work/api run db:migrate:deploy
 
+    # Apply pending Prisma migrations against the live DB as the LAST build
+    # step. (preDeployCommand is paid-plan-only — on free it silently never
+    # runs, which shipped code referencing columns the DB didn't have and
+    # broke payments with 'Database error'.) A failed migration fails the
+    # build, so a release can never go out ahead of its schema. Uses the
+    # direct (unpooled) connection when provided, else the pooled URL.
+    # Idempotent: 'migrate deploy' applies only pending migrations.
+    
     # Start: run the compiled server
     startCommand: node apps/api/dist/server.js
 
