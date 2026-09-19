@@ -32,6 +32,18 @@ jobs:
         # tree still catches any secret committed going forward.
         run: gitleaks detect --source . --config .gitleaks.toml --no-git --no-banner --verbose
 
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # Fails the build only for HIGH/CRITICAL advisories in production deps.
+      # Works straight off package-lock.json — no install needed.
+      - run: npm audit --omit=dev --audit-level=high
+
   lint-typecheck:
     name: Lint & Typecheck
     runs-on: ubuntu-latest

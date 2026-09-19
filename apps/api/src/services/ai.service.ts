@@ -13,6 +13,7 @@
  */
 import { env } from '../config/env.js';
 import { logger } from '../config/logger.js';
+import { assertPublicUrl } from '../lib/safeUrl.js';
 import { redis } from '../lib/redis.js';
 import { createHash } from 'node:crypto';
 import { parseRepliesAnswers, fallbackReplies } from './smart-replies.js';
@@ -424,6 +425,8 @@ export async function transcribeAudioUrl(
 ): Promise<{ text: string; source: 'ai' | 'fallback' }> {
   if (!isConfigured()) return { text: '', source: 'fallback' };
   try {
+    // SSRF guard: the URL must be a genuine public http(s) endpoint.
+    await assertPublicUrl(audioUrl);
     // Fetch the audio bytes from Supabase → forward to Groq's Whisper endpoint.
     const audioRes = await fetch(audioUrl, { signal: AbortSignal.timeout(15_000) });
     if (!audioRes.ok) throw new Error(`AUDIO_FETCH_${audioRes.status}`);

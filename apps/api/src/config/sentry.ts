@@ -8,10 +8,17 @@
  */
 import * as Sentry from '@sentry/node';
 import { env } from './env.js';
+import { logger } from './logger.js';
 
 export function initSentry(): void {
   const dsn = env.SENTRY_DSN;
-  if (!dsn) return; // no-op without a key
+  if (!dsn) {
+    // Make the gap visible instead of silently flying blind in production.
+    if (env.NODE_ENV === 'production') {
+      logger.warn('Sentry disabled: set SENTRY_DSN on Render to receive error alerts');
+    }
+    return; // no-op without a key
+  }
   Sentry.init({
     dsn,
     environment: env.NODE_ENV ?? 'development',

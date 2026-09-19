@@ -1,4 +1,5 @@
 import { BadRequestError } from '../lib/errors.js';
+import { assertResolvablePublicHost } from '../lib/safeUrl.js';
 
 export interface LinkPreviewResult {
   url: string;
@@ -135,6 +136,12 @@ export async function unfurl(rawUrl: string): Promise<LinkPreviewResult> {
     throw new BadRequestError('Only http(s) links are supported');
   }
   if (isBlockedHost(url.hostname)) throw new BadRequestError('Blocked host');
+  // DNS-level guard: reject names that RESOLVE into private space (nip.io & co).
+  try {
+    await assertResolvablePublicHost(url.hostname);
+  } catch {
+    throw new BadRequestError('Blocked host');
+  }
 
   const cached = UNFURL_CACHE.get(rawUrl);
   if (cached && Date.now() - cached.at < UNFURL_TTL) return cached.value;
@@ -168,8 +175,17 @@ export async function unfurl(rawUrl: string): Promise<LinkPreviewResult> {
           break;
         }
         if (next.protocol !== 'http:' && next.protocol !== 'https:') break;
-        // SSRF: reject a redirect that points at a private/internal host.
-        if (isBlockedHost(next.hostname)) {
+        // SSRF: reject a redirect that points at a private/internal host,
+        // including names that merely RESOLVE into private space.
+        let hopBlocked = isBlockedHost(next.hostname);
+        if (!hopBlocked) {
+          try {
+            await assertResolvablePublicHost(next.hostname);
+          } catch {
+            hopBlocked = true;
+          }
+        }
+        if (hopBlocked) {
           const bare: LinkPreviewResult = { url: current.href, domain: safeDomain(current.href) };
           UNFURL_CACHE.set(rawUrl, { at: Date.now(), value: bare });
           return bare;
