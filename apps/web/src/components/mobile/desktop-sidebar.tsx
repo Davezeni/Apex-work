@@ -87,7 +87,7 @@ export function DesktopSidebar() {
   };
 
   const isFreelancer = me?.role === 'FREELANCER';
-  const isClient = me?.role === 'CLIENT';
+  const isClient = me?.role !== 'FREELANCER';
   const main: NavItem[] = [
     // Freelancers: Browse (= posted jobs; /browse is role-pure → jobs) + Gigs.
     // Clients: Browse (gigs) + Jobs.

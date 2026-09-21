@@ -39,7 +39,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const { data: me } = useMe();
   const isFreelancer = me?.role === 'FREELANCER';
-  const isClient = me?.role === 'CLIENT';
+  const isClient = me?.role !== 'FREELANCER';
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
