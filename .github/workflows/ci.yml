@@ -102,7 +102,7 @@ jobs:
       CHAPA_SECRET_KEY: ${{ secrets.CHAPA_SECRET_KEY }}
       CHAPA_ENCRYPTION_KEY: ${{ secrets.CHAPA_ENCRYPTION_KEY }}
       CHAPA_WEBHOOK_SECRET: ${{ secrets.CHAPA_WEBHOOK_SECRET }}
-      CHAPA_TRANSFERS_ENABLED: "false"
+      CHAPA_TRANSFERS_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -127,6 +127,17 @@ jobs:
     # Runs against the live web + API on CI push. Optional — won't fail the
     # pipeline if the free Render dyno is cold-starting (it may take >60s).
     steps:
+      # The push that triggered CI also redeployed the API — wait for the
+      # restart window to close so readiness checks don't race the deploy.
+      - name: Wait for live API to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf --max-time 10 https://apex-work-api.onrender.com/v1/ready | grep -q '"ready":true'; then
+              echo "API ready after ${i}0s"; exit 0
+            fi
+            sleep 10
+          done
+          echo "API not ready after 600s"; exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:

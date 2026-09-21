@@ -29,8 +29,10 @@ test.describe('public API', () => {
     test.setTimeout(150_000);
     interface ReadyBody {
       ok?: boolean;
-      checks?: { db?: string; redis?: string };
+      // the API emits booleans; accept legacy string shapes too
+      checks?: { db?: boolean | string; redis?: boolean | string };
     }
+    const checkOk = (v: boolean | string | undefined): boolean => v === true || v === 'ok';
     let body: ReadyBody | null = null;
     for (let attempt = 0; attempt < 20; attempt += 1) {
       try {
@@ -41,12 +43,12 @@ test.describe('public API', () => {
       } catch {
         body = null; // cold start / restart window — keep polling
       }
-      if (body?.ok && body.checks?.db === 'ok' && body.checks?.redis === 'ok') return;
+      if (body?.ok && checkOk(body.checks?.db) && checkOk(body.checks?.redis)) return;
       await new Promise((resolve) => setTimeout(resolve, 5_000));
     }
     expect(body?.ok).toBe(true);
-    expect(body?.checks?.db).toBe('ok');
-    expect(body?.checks?.redis).toBe('ok');
+    expect(checkOk(body?.checks?.db)).toBe(true);
+    expect(checkOk(body?.checks?.redis)).toBe(true);
   });
 
   test('search endpoint is reachable (public)', async ({ request }) => {
