@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles, Chrome, Github } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Briefcase, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GithubIcon, GoogleIcon } from '@/components/ui/brand-icons';
 import { apiFetch, ApiError } from '@/lib/api';
 import { track } from '@/lib/analytics';
 import { OtpInput } from '@/components/auth/otp-input';
@@ -217,14 +218,14 @@ function SignupInner() {
                   onClick={() => startOAuth('google')}
                   className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:bg-muted"
                 >
-                  <Chrome className="h-4 w-4" /> Google
+                  <GoogleIcon className="h-4 w-4" /> Google
                 </button>
                 <button
                   type="button"
                   onClick={() => startOAuth('github')}
                   className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold hover:bg-muted"
                 >
-                  <Github className="h-4 w-4" /> GitHub
+                  <GithubIcon className="h-4 w-4" /> GitHub
                 </button>
               </div>
               <p className="mt-6 text-center text-sm text-muted-foreground">

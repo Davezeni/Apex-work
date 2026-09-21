@@ -12,9 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   CheckCircle2,
-  Chrome,
   ExternalLink,
-  Github,
   KeyRound,
   CreditCard,
   Loader2,
@@ -34,6 +32,7 @@ import {
 } from '@/hooks/use-oauth-accounts';
 import { useI18n } from '@/i18n';
 import { Button } from '@/components/ui/button';
+import { GithubIcon, GoogleIcon } from '@/components/ui/brand-icons';
 import { safeBack } from '@/lib/safe-back';
 interface Passkey {
   id: string;
@@ -233,7 +232,7 @@ function OAuthRow({
   onUnlink: () => void;
 }) {
   const isGoogle = provider === 'google';
-  const Icon = isGoogle ? Chrome : Github;
+  const Icon = isGoogle ? GoogleIcon : GithubIcon;
   const label = isGoogle ? 'Google' : 'GitHub';
   return (
     <div className="flex items-center gap-3 px-4 py-3.5">

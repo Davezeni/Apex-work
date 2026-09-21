@@ -14,10 +14,9 @@ import {
   LockKeyhole,
   Fingerprint,
   RefreshCw,
-  Chrome,
-  Github,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { GithubIcon, GoogleIcon } from '@/components/ui/brand-icons';
 import { OtpInput } from '@/components/auth/otp-input';
 import { PinInput } from '@/components/auth/pin-input';
 import { apiFetch, ApiError } from '@/lib/api';
@@ -347,14 +346,14 @@ function LoginInner() {
                   onClick={() => startOAuth('google')}
                   className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
                 >
-                  <Chrome className="h-4 w-4" /> Google
+                  <GoogleIcon className="h-4 w-4" /> Google
                 </button>
                 <button
                   type="button"
                   onClick={() => startOAuth('github')}
                   className="flex items-center justify-center gap-2 rounded-full border border-border bg-card py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
                 >
-                  <Github className="h-4 w-4" /> GitHub
+                  <GithubIcon className="h-4 w-4" /> GitHub
                 </button>
               </div>
 
