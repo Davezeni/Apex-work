@@ -138,3 +138,47 @@ export const aiResumeTailorSchema = z.object({
   }),
 });
 export type AIResumeTailorInput = z.infer<typeof aiResumeTailorSchema>;
+
+/** Shared resume-facts block used by cover letters (mirrors the tailor input). */
+const coverLetterResumeShape = {
+  headline: z.string().trim().max(120).optional(),
+  summary: z.string().trim().max(2000).optional(),
+  skills: z.array(z.string().trim().max(60)).max(40).default([]),
+  experience: z
+    .array(
+      z.object({
+        role: z.string().trim().max(120),
+        company: z.string().trim().max(120),
+        description: z.string().trim().max(2000).optional(),
+      }),
+    )
+    .max(20)
+    .default([]),
+  projects: z
+    .array(
+      z.object({
+        title: z.string().trim().max(120),
+        description: z.string().trim().max(1600).optional(),
+      }),
+    )
+    .max(20)
+    .default([]),
+};
+
+/** Generate an honest cover letter from the user's real resume facts. */
+export const aiCoverLetterSchema = z.object({
+  jobDescription: z.string().trim().min(30).max(6000),
+  targetRole: z.string().trim().max(120).optional(),
+  tone: z.enum(['professional', 'friendly', 'confident']).default('professional'),
+  length: z.enum(['short', 'standard']).default('standard'),
+  resume: z.object(coverLetterResumeShape),
+});
+export type AICoverLetterInput = z.infer<typeof aiCoverLetterSchema>;
+
+/** Line-level rewrite of one CV bullet / experience description. */
+export const aiBulletRewriteSchema = z.object({
+  text: z.string().trim().min(5).max(1500),
+  mode: z.enum(['stronger', 'metrics', 'shorter', 'english']).default('stronger'),
+  targetRole: z.string().trim().max(120).optional(),
+});
+export type AIBulletRewriteInput = z.infer<typeof aiBulletRewriteSchema>;

@@ -173,6 +173,8 @@ export function ResumeTemplate({
       return <TechGridTheme resume={resume} name={name} />;
     case 'academic':
       return <AcademicTheme resume={resume} name={name} />;
+    case 'compact':
+      return <CompactTheme resume={resume} name={name} />;
     default:
       return <ClassicTheme resume={resume} name={name} />;
   }
@@ -296,6 +298,105 @@ function AtsCleanTheme({ resume, name }: { resume: Resume; name: string }) {
           <p className="mt-1 text-sm">
             {resume.certifications.map((item) => `${item.name} — ${item.issuer}`).join(' · ')}
           </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function CompactTheme({ resume, name }: { resume: Resume; name: string }) {
+  const accent = resume.accentColor ?? '#0f766e';
+  const contact = [
+    resume.email,
+    resume.phone,
+    resume.city,
+    resume.website,
+    resume.linkedin,
+    resume.github,
+  ]
+    .filter(Boolean)
+    .map((item) => String(item).replace(/^https?:\/\//, ''));
+  return (
+    <div className="font-sans text-[12.5px] leading-snug">
+      <header className="border-b-2 pb-2" style={{ borderColor: accent }}>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <h1 className="text-2xl font-extrabold tracking-tight">{name}</h1>
+          {resume.headline && (
+            <p className="text-xs font-bold" style={{ color: accent }}>
+              {resume.headline}
+            </p>
+          )}
+        </div>
+        {resume.targetRole && (
+          <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
+            Target · {resume.targetRole}
+          </p>
+        )}
+        {contact.length > 0 && (
+          <p className="mt-1 text-[11px] text-neutral-600">{contact.join('  ·  ')}</p>
+        )}
+        {resume.content.skills.length > 0 && (
+          <p className="mt-1.5 text-[11.5px]">
+            <span className="font-bold uppercase tracking-wide" style={{ color: accent }}>
+              Skills:{' '}
+            </span>
+            {resume.content.skills.map((skill) => skill.name).join(' · ')}
+          </p>
+        )}
+      </header>
+      {resume.summary && (
+        <section className="mt-2.5">
+          <p className="whitespace-pre-wrap text-[12.5px]">{resume.summary}</p>
+        </section>
+      )}
+      {resume.experiences.length > 0 && (
+        <section className="mt-3">
+          <h2
+            className="border-b pb-0.5 text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: accent, borderColor: accent }}
+          >
+            Experience
+          </h2>
+          {resume.experiences.map((item) => (
+            <ExperienceItem key={item.id} item={item} compact />
+          ))}
+        </section>
+      )}
+      {resume.education.length > 0 && (
+        <section className="mt-3">
+          <h2
+            className="border-b pb-0.5 text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: accent, borderColor: accent }}
+          >
+            Education
+          </h2>
+          {resume.education.map((item) => (
+            <EducationItem key={item.id} item={item} />
+          ))}
+        </section>
+      )}
+      {resume.certifications.length > 0 && (
+        <section className="mt-3">
+          <h2
+            className="border-b pb-0.5 text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: accent, borderColor: accent }}
+          >
+            Certifications
+          </h2>
+          <p className="mt-1 text-[12px]">
+            {resume.certifications.map((item) => `${item.name} — ${item.issuer}`).join(' · ')}
+          </p>
+        </section>
+      )}
+      {resume.languages.length > 0 && (
+        <section className="mt-3">
+          <h2
+            className="border-b pb-0.5 text-[11px] font-bold uppercase tracking-widest"
+            style={{ color: accent, borderColor: accent }}
+          >
+            Languages
+          </h2>
+          <p className="mt-1 text-[12px]">{resume.languages.join(' · ')}</p>
         </section>
       )}
     </div>

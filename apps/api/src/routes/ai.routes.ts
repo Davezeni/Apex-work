@@ -10,6 +10,8 @@ import {
   aiResumeSkillsSchema,
   aiPortfolioCaseStudySchema,
   aiResumeTailorSchema,
+  aiCoverLetterSchema,
+  aiBulletRewriteSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -22,6 +24,7 @@ import { env, isProd } from '../config/env.js';
 import * as ai from '../services/ai.service.js';
 import * as studioAi from '../services/resumeStudioAi.service.js';
 import * as tailorAi from '../services/resumeTailorAi.service.js';
+import * as careerAi from '../services/careerAi.service.js';
 
 const router: Router = Router();
 
@@ -151,6 +154,24 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').AIResumeTailorInput;
     return success(res, await tailorAi.tailorResume(body));
+  }),
+);
+
+router.post(
+  '/cover-letter',
+  validate(aiCoverLetterSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AICoverLetterInput;
+    return success(res, await careerAi.generateCoverLetter(body));
+  }),
+);
+
+router.post(
+  '/resume/bullet',
+  validate(aiBulletRewriteSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').AIBulletRewriteInput;
+    return success(res, await careerAi.rewriteBullet(body));
   }),
 );
 

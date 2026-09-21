@@ -181,3 +181,37 @@ export function useAISuggestReplies() {
     retry: 1,
   });
 }
+
+export function useAICoverLetter() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { letter: string; words: number; source: 'ai' | 'fallback' },
+    Error,
+    {
+      jobDescription: string;
+      targetRole?: string;
+      tone: 'professional' | 'friendly' | 'confident';
+      length: 'short' | 'standard';
+      resume: {
+        headline?: string;
+        summary?: string;
+        skills: string[];
+        experience: { role: string; company: string; description?: string }[];
+        projects: { title: string; description?: string }[];
+      };
+    }
+  >({
+    mutationFn: (body) => apiFetch('/ai/cover-letter', { method: 'POST', token, body }),
+  });
+}
+
+export function useAIBulletRewrite() {
+  const token = useAuthStore((s) => s.accessToken);
+  return useMutation<
+    { text: string; source: 'ai' | 'fallback'; note?: string },
+    Error,
+    { text: string; mode: 'stronger' | 'metrics' | 'shorter' | 'english'; targetRole?: string }
+  >({
+    mutationFn: (body) => apiFetch('/ai/resume/bullet', { method: 'POST', token, body }),
+  });
+}

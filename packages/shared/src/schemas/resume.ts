@@ -64,6 +64,8 @@ export const resumeContentSchema = z.object({
   volunteer: z.array(resumeVolunteerSchema).max(10).default([]),
   publications: z.array(z.string().trim().min(2).max(300)).max(20).default([]),
   references: z.array(resumeReferenceSchema).max(5).default([]),
+  /// Latest AI-generated cover letter (optional; per-job letters live with the user).
+  coverLetter: z.string().max(8000).nullable().optional(),
 });
 export type ResumeContent = z.output<typeof resumeContentSchema>;
 

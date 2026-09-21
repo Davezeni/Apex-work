@@ -11,6 +11,7 @@ export const RESUME_TEMPLATE_IDS = [
   'creative',
   'tech-grid',
   'academic',
+  'compact',
 ] as const;
 
 export type ResumeTemplateId = (typeof RESUME_TEMPLATE_IDS)[number];
@@ -108,6 +109,16 @@ export const RESUME_TEMPLATES = [
     emoji: '🎓',
     bestFor: 'Researchers and academics',
     features: ['Long-form CV', 'Publications section', 'References section'],
+  },
+  {
+    id: 'compact',
+    name: 'Compact',
+    description: 'Space-saving single column that fits long careers on one page.',
+    tier: 'free',
+    priceEtb: 0,
+    emoji: '▤',
+    bestFor: 'Senior and multi-career talent',
+    features: ['Dense layout', 'One-page friendly', 'A4 export'],
   },
 ] as const satisfies readonly ResumeTemplateDefinition[];
 

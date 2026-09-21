@@ -27,6 +27,8 @@ import {
   WandSparkles,
   X,
   FileInput,
+  FileText,
+  Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -44,8 +46,15 @@ import {
   useDeleteCertification,
   type Resume,
 } from '@/hooks/use-resume';
-import { useAIResumeEnhance, useAIResumeReview, useAIResumeTailor } from '@/hooks/use-ai';
+import {
+  useAIResumeEnhance,
+  useAIResumeReview,
+  useAIResumeTailor,
+  useAICoverLetter,
+  useAIBulletRewrite,
+} from '@/hooks/use-ai';
 import { useResumeTemplates } from '@/hooks/use-resume-templates';
+import { useJob } from '@/hooks/use-jobs';
 import { ResumeStudioSections } from '@/components/resume/studio-sections';
 import { ResumeVersionsPanel } from '@/components/resume/versions-panel';
 import { useI18n } from '@/i18n';
@@ -105,6 +114,45 @@ export default function ResumeBuilderPage() {
   const [langInput, setLangInput] = useState('');
   const [tailorOpen, setTailorOpen] = useState(false);
   const [jobDescription, setJobDescription] = useState('');
+  const cover = useAICoverLetter();
+  const [coverOpen, setCoverOpen] = useState(false);
+  const [coverJd, setCoverJd] = useState('');
+  const [coverTone, setCoverTone] = useState<'professional' | 'friendly' | 'confident'>(
+    'professional',
+  );
+  const [coverLength, setCoverLength] = useState<'short' | 'standard'>('standard');
+  const [coverText, setCoverText] = useState('');
+  const [addedGaps, setAddedGaps] = useState<Set<string>>(new Set());
+  // Deep links from a job page: /resume?tailorJob=<id> | ?coverJob=<id>
+  // Read once on mount (window.location — no useSearchParams/Suspense needs).
+  const [deepJobId, setDeepJobId] = useState<null | { id: string; mode: 'tailor' | 'cover' }>(null);
+  const deepConsumedRef = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tailorJob = params.get('tailorJob');
+    const coverJob = params.get('coverJob');
+    if (tailorJob) setDeepJobId({ id: tailorJob, mode: 'tailor' });
+    else if (coverJob) setDeepJobId({ id: coverJob, mode: 'cover' });
+  }, []);
+  const deepJob = useJob(deepJobId?.id ?? undefined);
+  useEffect(() => {
+    if (!deepJobId || !deepJob.data || deepConsumedRef.current) return;
+    deepConsumedRef.current = true;
+    const jd = deepJob.data.description.slice(0, 6000);
+    if (deepJobId.mode === 'tailor') {
+      tailor.reset();
+      setJobDescription(jd);
+      if (!basics.targetRole) setBasics((cur) => ({ ...cur, targetRole: deepJob.data!.title }));
+      setTailorOpen(true);
+    } else {
+      setCoverJd(jd);
+      if (!basics.targetRole) setBasics((cur) => ({ ...cur, targetRole: deepJob.data!.title }));
+      setCoverOpen(true);
+    }
+    // Clean the URL so a refresh does not re-open the sheet.
+    window.history.replaceState({}, '', window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepJobId, deepJob.data]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   // Autosave: once the server copy has hydrated, any local edit is saved
   // automatically (debounced) so nothing is ever lost by navigating away.
@@ -285,6 +333,64 @@ export default function ResumeBuilderPage() {
     );
   };
 
+  const addSkillFromGap = (name: string) => {
+    if (content.skills.length >= 40) {
+      toast.error(dt('Skill limit reached (40)'));
+      return;
+    }
+    setAddedGaps((prev) => new Set(prev).add(name));
+    setContent((cur) => ({
+      ...cur,
+      skills: [...cur.skills, { name, level: 3, years: null }],
+    }));
+    toast.success(dt('Added to your skills — autosaving'));
+  };
+
+  const runCover = () => {
+    if (coverJd.trim().length < 30)
+      return toast.error(dt('Paste a job description of at least 30 characters'));
+    cover.mutate(
+      {
+        jobDescription: coverJd,
+        targetRole: basics.targetRole || undefined,
+        tone: coverTone,
+        length: coverLength,
+        resume: {
+          headline: basics.headline || undefined,
+          summary: basics.summary || undefined,
+          skills: content.skills.map((skill) => skill.name),
+          experience: resume.experiences.map((item) => ({
+            role: item.role,
+            company: item.company,
+            description: item.description ?? undefined,
+          })),
+          projects: content.projects.map((item) => ({
+            title: item.title,
+            description: item.description ?? undefined,
+          })),
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setCoverText(data.letter);
+          toast.success(
+            data.source === 'ai'
+              ? dt('Cover letter ready')
+              : dt('Offline draft built from your facts — edit freely'),
+          );
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  const saveCoverToCv = () => {
+    if (!coverText.trim()) return;
+    setContent((cur) => ({ ...cur, coverLetter: coverText.trim() }));
+    toast.success(dt('Cover letter saved to your CV'));
+    setCoverOpen(false);
+  };
+
   const applyTailoredSummary = () => {
     if (!tailor.data) return;
     setBasics((current) => ({
@@ -463,6 +569,18 @@ export default function ResumeBuilderPage() {
               >
                 <BarChart3 className="h-4 w-4 text-primary" />
                 {review.isPending ? 'Reviewing…' : 'Run AI Resume Coach'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto min-h-12 justify-start"
+                onClick={() => {
+                  cover.reset();
+                  setCoverText('');
+                  setCoverOpen(true);
+                }}
+              >
+                <FileText className="h-4 w-4 text-primary" /> Cover letter
               </Button>
               <Button
                 type="button"
@@ -781,6 +899,146 @@ export default function ResumeBuilderPage() {
         )}
 
         {/* Tailor this resume to one job without changing the saved CV until the user approves. */}
+        {coverOpen && (
+          <div
+            className="fixed inset-0 z-[100] grid place-items-end bg-black/60 backdrop-blur-sm sm:place-items-center"
+            onClick={() => setCoverOpen(false)}
+          >
+            <div
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
+              <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-extrabold">{dt('Cover letter')}</h2>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {dt(
+                      'Written from your real CV facts for this job. Edit it freely — nothing is invented.',
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCoverOpen(false)}
+                  aria-label={dt('Close')}
+                  className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <textarea
+                value={coverJd}
+                onChange={(event) => setCoverJd(event.target.value)}
+                rows={5}
+                maxLength={6000}
+                placeholder={dt('Paste the job description here…')}
+                className="input mt-4 min-h-[110px]"
+              />
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="text-xs font-semibold">
+                  {dt('Tone')}
+                  <select
+                    value={coverTone}
+                    onChange={(event) => setCoverTone(event.target.value as typeof coverTone)}
+                    className="input mt-1"
+                  >
+                    <option value="professional">{dt('Professional')}</option>
+                    <option value="friendly">{dt('Friendly')}</option>
+                    <option value="confident">{dt('Confident')}</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold">
+                  {dt('Length')}
+                  <select
+                    value={coverLength}
+                    onChange={(event) => setCoverLength(event.target.value as typeof coverLength)}
+                    className="input mt-1"
+                  >
+                    <option value="short">{dt('Short (~150 words)')}</option>
+                    <option value="standard">{dt('Standard (~200 words)')}</option>
+                  </select>
+                </label>
+              </div>
+              <Button
+                type="button"
+                variant="brand"
+                className="mt-3 w-full"
+                onClick={runCover}
+                disabled={cover.isPending}
+              >
+                {cover.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}{' '}
+                {cover.isPending ? dt('Writing…') : dt('Write with AI')}
+              </Button>
+              {coverText && (
+                <div className="mt-4 rounded-2xl border border-border bg-background p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {coverText.split(/\s+/).length} {dt('words')} ·{' '}
+                      {cover.data?.source === 'ai' ? dt('AI draft') : dt('Offline draft')}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={dt('Copy')}
+                      className="grid h-7 w-7 place-items-center rounded-full text-primary active:bg-primary/10"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(coverText);
+                          toast.success(dt('Copied'));
+                        } catch {
+                          toast.error(dt('Could not copy'));
+                        }
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <textarea
+                    value={coverText}
+                    onChange={(event) => setCoverText(event.target.value)}
+                    rows={10}
+                    maxLength={8000}
+                    className="mt-2 w-full resize-none rounded-xl border border-border bg-card p-3 text-sm leading-relaxed outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
+                  />
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        const blob = new Blob([coverText], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'cover-letter.txt';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                    >
+                      {dt('Download .txt')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="brand"
+                      className="flex-1"
+                      onClick={saveCoverToCv}
+                    >
+                      {dt('Save to CV')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {tailorOpen && (
           <div
             className="fixed inset-0 z-[100] grid place-items-end bg-black/60 backdrop-blur-sm sm:place-items-center"
@@ -880,14 +1138,33 @@ export default function ResumeBuilderPage() {
                     <div className="mt-3">
                       <div className="text-xs font-bold">{dt('Keyword gaps to review')}</div>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        {tailor.data.keywordGaps.map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full bg-background px-2 py-1 text-[10px] font-semibold"
-                          >
-                            {item}
-                          </span>
-                        ))}
+                        {tailor.data.keywordGaps.map((item) => {
+                          const added =
+                            addedGaps.has(item) ||
+                            content.skills.some(
+                              (skill) => skill.name.toLowerCase() === item.toLowerCase(),
+                            );
+                          return (
+                            <span
+                              key={item}
+                              className={
+                                added
+                                  ? 'inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 text-[10px] font-semibold text-primary'
+                                  : 'inline-flex items-center gap-1 rounded-full bg-background px-2 py-1 text-[10px] font-semibold'
+                              }
+                            >
+                              {item}
+                              <button
+                                type="button"
+                                disabled={added}
+                                onClick={() => addSkillFromGap(item)}
+                                className="font-bold text-primary disabled:opacity-60"
+                              >
+                                {added ? '✓' : '+ Add'}
+                              </button>
+                            </span>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1058,6 +1335,73 @@ function Field({
 // -----------------------------------------------------------------------------
 // EXPERIENCE
 // -----------------------------------------------------------------------------
+function RewriteRow({ text, onResult }: { text: string; onResult: (next: string) => void }) {
+  const rewrite = useAIBulletRewrite();
+  const [prev, setPrev] = useState<string | null>(null);
+
+  const run = (mode: 'stronger' | 'metrics' | 'shorter' | 'english') => {
+    if (text.trim().length < 5) {
+      toast.error(dt('Write something first — AI needs text to rewrite'));
+      return;
+    }
+    rewrite.mutate(
+      { text, mode },
+      {
+        onSuccess: (data) => {
+          if (data.source === 'fallback') {
+            toast.error(data.note ?? dt('AI is unavailable right now'));
+            return;
+          }
+          setPrev(text);
+          onResult(data.text);
+          toast.success(dt('Rewritten — Undo restores your text'));
+        },
+        onError: (error) => toast.error(error.message),
+      },
+    );
+  };
+
+  const modes: { id: 'stronger' | 'metrics' | 'shorter' | 'english'; label: string }[] = [
+    { id: 'stronger', label: dt('Stronger') },
+    { id: 'metrics', label: dt('Impact') },
+    { id: 'shorter', label: dt('Shorter') },
+    { id: 'english', label: dt('Plain English') },
+  ];
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <Sparkles className="mr-0.5 inline h-3 w-3 text-primary" />
+        {dt('AI rewrite')}:
+      </span>
+      {modes.map((mode) => (
+        <button
+          key={mode.id}
+          type="button"
+          disabled={rewrite.isPending}
+          onClick={() => run(mode.id)}
+          className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-bold text-primary active:scale-95 disabled:opacity-50"
+        >
+          {mode.label}
+        </button>
+      ))}
+      {rewrite.isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+      {prev !== null && (
+        <button
+          type="button"
+          onClick={() => {
+            onResult(prev);
+            setPrev(null);
+          }}
+          className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground active:scale-95"
+        >
+          {dt('Undo')}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ExperienceSection({ resume }: { resume: Resume | undefined }) {
   const add = useAddExperience();
   const upd = useUpdateExperience();
@@ -1243,6 +1587,10 @@ function ExperienceSection({ resume }: { resume: Resume | undefined }) {
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="input"
+          />
+          <RewriteRow
+            text={form.description}
+            onResult={(next) => setForm((f) => ({ ...f, description: next }))}
           />
           <div className="flex gap-2">
             <Button
