@@ -217,12 +217,14 @@ export default function ProfilePage() {
               />
             </>
           )}
-          <MenuItem
-            icon={<Users className="h-4 w-4" />}
-            title={dt('Teams & agencies')}
-            subtitle={dt('Collaborate on larger projects')}
-            href="/teams"
-          />
+          {me.role === 'FREELANCER' && (
+            <MenuItem
+              icon={<Users className="h-4 w-4" />}
+              title={dt('Teams & agencies')}
+              subtitle={dt('Collaborate on larger projects')}
+              href="/teams"
+            />
+          )}
           <MenuItem
             icon={<Gift className="h-4 w-4" />}
             title={dt('Refer friends')}
@@ -250,7 +252,7 @@ export default function ProfilePage() {
           <MenuItem
             icon={<Settings className="h-4 w-4" />}
             title={t('profile.settings')}
-            subtitle={t('language.label')}
+            subtitle={dt('Account, security & language')}
             href="/settings"
           />
           {me.role === 'ADMIN' && (

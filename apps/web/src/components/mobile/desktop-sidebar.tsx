@@ -87,6 +87,7 @@ export function DesktopSidebar() {
   };
 
   const isFreelancer = me?.role === 'FREELANCER';
+  const isClient = me?.role === 'CLIENT';
   const main: NavItem[] = [
     // Freelancers: Browse (= posted jobs; /browse is role-pure → jobs) + Gigs.
     // Clients: Browse (gigs) + Jobs.
@@ -357,38 +358,55 @@ export function DesktopSidebar() {
               <div className="p-6">
                 <Drawer.Title className="text-xl font-extrabold">{t('nav.create')}</Drawer.Title>
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                  <CreateAction
-                    icon="💼"
-                    title={t('nav.postGig')}
-                    onClick={() => {
-                      setSheetOpen(false);
-                      router.push('/gigs/new');
-                    }}
-                  />
-                  <CreateAction
-                    icon="📢"
-                    title={t('nav.postJob')}
-                    onClick={() => {
-                      setSheetOpen(false);
-                      router.push('/jobs/new');
-                    }}
-                  />
-                  <CreateAction
-                    icon="✨"
-                    title={t('nav.aiProposal')}
-                    onClick={() => {
-                      setSheetOpen(false);
-                      router.push('/ai/proposal');
-                    }}
-                  />
-                  <CreateAction
-                    icon="💬"
-                    title={t('nav.quickOffer')}
-                    onClick={() => {
-                      setSheetOpen(false);
-                      router.push('/messages');
-                    }}
-                  />
+                  {!isClient && (
+                    <CreateAction
+                      icon="💼"
+                      title={t('nav.postGig')}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        router.push('/gigs/new');
+                      }}
+                    />
+                  )}
+                  {isFreelancer ? (
+                    <CreateAction
+                      icon="📄"
+                      title={dt('Build CV / Resume')}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        router.push('/resume');
+                      }}
+                    />
+                  ) : (
+                    <CreateAction
+                      icon="📢"
+                      title={t('nav.postJob')}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        router.push('/jobs/new');
+                      }}
+                    />
+                  )}
+                  {!isClient && (
+                    <CreateAction
+                      icon="✨"
+                      title={t('nav.aiProposal')}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        router.push('/ai/proposal');
+                      }}
+                    />
+                  )}
+                  {!isClient && (
+                    <CreateAction
+                      icon="💬"
+                      title={t('nav.quickOffer')}
+                      onClick={() => {
+                        setSheetOpen(false);
+                        router.push('/messages');
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             </Drawer.Content>

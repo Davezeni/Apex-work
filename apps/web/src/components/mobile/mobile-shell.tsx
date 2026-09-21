@@ -17,6 +17,7 @@ import { DesktopSidebar } from '@/components/mobile/desktop-sidebar';
 import { useIncomingCall } from '@/hooks/use-incoming-call';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuthStore } from '@/stores/auth-store';
+import { useMe } from '@/hooks/use-me';
 import { Phone, PhoneOff } from 'lucide-react';
 export type MobileTab = 'home' | 'search' | 'chat' | 'profile';
 
@@ -36,6 +37,9 @@ interface Props {
 
 export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { data: me } = useMe();
+  const isFreelancer = me?.role === 'FREELANCER';
+  const isClient = me?.role === 'CLIENT';
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useI18n();
@@ -188,6 +192,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                 {t('chat.createToday')}
               </Drawer.Description>
               <div className="mt-5 flex flex-col gap-2">
+                {!isClient && (
                 <SheetAction
                   icon="💼"
                   title={t('create.postGig')}
@@ -198,6 +203,19 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   }}
                   color="violet"
                 />
+                )}
+                {isFreelancer ? (
+                <SheetAction
+                  icon="📄"
+                  title={dt('Build CV / Resume')}
+                  subtitle={dt('Create or import your CV')}
+                  onClick={() => {
+                    setSheetOpen(false);
+                    router.push('/resume');
+                  }}
+                  color="green"
+                />
+                ) : (
                 <SheetAction
                   icon="📢"
                   title={t('create.postJob')}
@@ -208,6 +226,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   }}
                   color="green"
                 />
+                )}
+                {!isClient && (
                 <SheetAction
                   icon="✨"
                   title={t('create.aiProposal')}
@@ -218,6 +238,8 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   }}
                   color="amber"
                 />
+                )}
+                {!isClient && (
                 <SheetAction
                   icon="💬"
                   title={t('create.quickOffer')}
@@ -228,6 +250,7 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
                   }}
                   color="cyan"
                 />
+                )}
               </div>
             </div>
           </Drawer.Content>
