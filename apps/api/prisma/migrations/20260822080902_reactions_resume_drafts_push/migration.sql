@@ -2,28 +2,28 @@
 DROP INDEX IF EXISTS "idx_gig_tags_gin";
 
 -- DropIndex
-DROP INDEX "idx_gig_title_trgm";
+DROP INDEX IF EXISTS "idx_gig_title_trgm";
 
 -- DropIndex
-DROP INDEX "idx_job_description_trgm";
+DROP INDEX IF EXISTS "idx_job_description_trgm";
 
 -- DropIndex
-DROP INDEX "idx_job_skills_gin";
+DROP INDEX IF EXISTS "idx_job_skills_gin";
 
 -- DropIndex
-DROP INDEX "idx_job_title_trgm";
+DROP INDEX IF EXISTS "idx_job_title_trgm";
 
 -- DropIndex
-DROP INDEX "idx_message_conv_created_covering";
+DROP INDEX IF EXISTS "idx_message_conv_created_covering";
 
 -- DropIndex
-DROP INDEX "idx_skill_name_trgm";
+DROP INDEX IF EXISTS "idx_skill_name_trgm";
 
 -- DropIndex
-DROP INDEX "idx_user_fullname_trgm";
+DROP INDEX IF EXISTS "idx_user_fullname_trgm";
 
 -- DropIndex
-DROP INDEX "idx_user_username_trgm";
+DROP INDEX IF EXISTS "idx_user_username_trgm";
 
 -- CreateTable
 CREATE TABLE "MessageReaction" (
