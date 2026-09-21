@@ -15,6 +15,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
 import { contentTypeForFile } from '@/lib/file-types';
 import { safeBack } from '@/lib/safe-back';
+import { PortfolioBody } from '@/components/settings/portfolio-body';
+import { SkillsBody } from '@/components/settings/skills-body';
+import { AvailabilityBody } from '@/components/settings/availability-body';
 export default function EditProfilePage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -237,6 +240,29 @@ export default function EditProfilePage() {
           />
         </Field>
       </div>
+
+      {me.role === 'FREELANCER' && (
+        <div className="mt-10 space-y-10">
+          <section>
+            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
+              {dt('Portfolio')}
+            </h2>
+            <PortfolioBody />
+          </section>
+          <section>
+            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
+              {dt('Skills')}
+            </h2>
+            <SkillsBody />
+          </section>
+          <section>
+            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
+              {dt('Availability')}
+            </h2>
+            <AvailabilityBody />
+          </section>
+        </div>
+      )}
 
       {/* Sticky save */}
       <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">

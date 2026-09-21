@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { Button } from '@/components/ui/button';
 import {
+  Share2,
   CheckCircle2,
   Settings,
   LogOut,
@@ -25,6 +26,7 @@ import {
   MapPin,
   LifeBuoy,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
 import { useWallet } from '@/hooks/use-wallet';
@@ -121,8 +123,22 @@ export default function ProfilePage() {
           <Button asChild variant="brand" className="flex-1">
             <Link href="/settings/profile">{dt('Edit profile')}</Link>
           </Button>
-          <Button asChild variant="secondary" className="flex-1">
-            <Link href={`/u/${me.username}`}>{dt('Share')}</Link>
+          <Button
+            variant="secondary"
+            className="flex-1"
+            onClick={() => {
+              const url = `${window.location.origin}/u/${me.username}`;
+              if (typeof navigator !== 'undefined' && navigator.share) {
+                navigator.share({ title: me.fullName || 'Apex-Work profile', url }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(url).then(
+                  () => toast.success(dt('Profile link copied')),
+                  () => toast.error(dt('Could not copy link')),
+                );
+              }
+            }}
+          >
+            <Share2 className="h-4 w-4" /> {dt('Share')}
           </Button>
         </div>
 

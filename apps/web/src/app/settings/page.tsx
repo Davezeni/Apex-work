@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,10 +18,8 @@ import {
   LogOut,
   KeyRound,
   ShieldOff,
-  ImageIcon,
   Fingerprint,
   CreditCard,
-  Calendar,
   Bookmark,
 } from 'lucide-react';
 import { useI18n } from '@/i18n';
@@ -29,6 +28,11 @@ import { safeBack } from '@/lib/safe-back';
 
 export default function SettingsPage() {
   const router = useRouter();
+  // Open at the top: mobile browsers restore the previous scroll
+  // position for this route, which landed users at the bottom.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   const { t } = useI18n();
   const { data: me } = useMe();
   const logout = useLogout();
@@ -57,25 +61,6 @@ export default function SettingsPage() {
           title={t('settings.paymentMethods')}
           href="/settings/payment-methods"
         />
-        {me?.role === 'FREELANCER' && (
-          <>
-            <Row
-              icon={<ImageIcon className="h-4 w-4" />}
-              title={t('portfolio.title')}
-              href="/settings/portfolio"
-            />
-            <Row
-              icon={<Calendar className="h-4 w-4" />}
-              title={t('settings.availability')}
-              href="/settings/availability"
-            />
-            <Row
-              icon={<FileText className="h-4 w-4" />}
-              title={t('settings.skills')}
-              href="/settings/skills"
-            />
-          </>
-        )}
       </Section>
 
       <Section title={t('settings.securityGroup')}>
