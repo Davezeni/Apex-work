@@ -11,7 +11,8 @@ import { CATEGORIES } from '@apex-work/shared';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { useMe } from '@/hooks/use-me';
 import { useSavedGigs, useUnsaveGig, type SavedGig } from '@/hooks/use-saved-gigs';
-import { cn, formatEtb } from '@/lib/utils';
+import { useSavedJobs, useUnsaveJob, type SavedJob } from '@/hooks/use-saved-jobs';
+import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { useI18n } from '@/i18n';
 import { safeBack } from '@/lib/safe-back';
 export default function SavedGigsPage() {
@@ -34,6 +35,9 @@ export default function SavedGigsPage() {
   }
 
   const items = saved.data?.items ?? [];
+
+  // Freelancers save JOBS (things to bid on), clients save GIGS (things to buy).
+  if (me.role === 'FREELANCER') return <SavedJobsView />;
 
   return (
     <MobileShell activeTab="search">
@@ -200,6 +204,175 @@ function SavedGigCard({
             <span className="text-[10px] text-muted-foreground">{dt('Starting at')}</span>
             <span className="text-sm font-extrabold text-primary">
               {formatEtb(gig.startingPriceEtb)}
+            </span>
+          </div>
+        </div>
+      </Link>
+      <div className="border-t border-border px-3 py-2">
+        <button
+          onClick={onRemove}
+          disabled={busy}
+          className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-destructive disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+          Remove from saved
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function SavedJobsView() {
+  const router = useRouter();
+  const { t } = useI18n();
+  const { data: me, isLoading: meLoading } = useMe();
+  const saved = useSavedJobs();
+  const remove = useUnsaveJob();
+
+  useEffect(() => {
+    if (!meLoading && !me) router.replace('/login?next=/saved');
+  }, [meLoading, me, router]);
+
+  const items = saved.data?.items ?? [];
+
+  return (
+    <MobileShell activeTab="search">
+      <div className="min-h-dvh bg-background pb-24">
+        <header className="safe-top sticky top-0 z-20 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
+          <button
+            onClick={() => safeBack(router)}
+            aria-label={t('common.back')}
+            className="grid h-9 w-9 place-items-center rounded-full active:scale-90"
+          >
+            <ChevronRight className="h-5 w-5 rotate-180" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg font-extrabold tracking-tight">{dt('Saved jobs')}</h1>
+            <p className="text-[11px] text-muted-foreground">
+              {saved.isLoading
+                ? 'Loading…'
+                : `${items.length} saved ${items.length === 1 ? 'job' : 'jobs'}`}
+            </p>
+          </div>
+          <Bookmark className="h-5 w-5 text-primary" fill="currentColor" />
+        </header>
+
+        {saved.isLoading && (
+          <div className="grid h-48 place-items-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!saved.isLoading && items.length === 0 && (
+          <div className="mx-4 mt-10 rounded-3xl border border-dashed border-border p-8 text-center">
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Bookmark className="h-8 w-8" />
+            </div>
+            <h2 className="mt-4 text-base font-extrabold">{dt('No saved jobs yet')}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Tap the bookmark on a job you like and it will stay here across your devices.
+            </p>
+            <Link
+              href="/jobs"
+              className="mt-5 inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2.5 text-xs font-bold text-white"
+            >
+              Browse jobs <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+
+        {items.length > 0 && (
+          <div className="mx-3 mt-4 grid gap-3 sm:grid-cols-2">
+            {items.map((item) => (
+              <SavedJobCard
+                key={item.id}
+                item={item}
+                busy={remove.isPending}
+                onRemove={() => {
+                  remove.mutate(item.job.id, {
+                    onSuccess: () => toast.success(dt('Job removed from saved')),
+                    onError: (error) => toast.error(error.message),
+                  });
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </MobileShell>
+  );
+}
+
+function SavedJobCard({
+  item,
+  busy,
+  onRemove,
+}: {
+  item: SavedJob;
+  busy: boolean;
+  onRemove: () => void;
+}) {
+  const { job } = item;
+  const cover = job.attachments.find((a) => a.contentType.startsWith('image/'))?.url;
+
+  return (
+    <article
+      className={cn(
+        'overflow-hidden rounded-2xl border border-border bg-card',
+        !job.isOpen && 'opacity-75',
+      )}
+    >
+      <Link href={`/jobs/${job.id}`} className="block active:bg-muted/40">
+        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-primary/30 via-primary/15 to-primary/10">
+          {cover ? (
+            <Image
+              src={cover}
+              alt={job.title}
+              fill
+              sizes="(max-width: 640px) 100vw, 50vw"
+              className="object-cover"
+              unoptimized
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-background/70 text-xl font-extrabold text-primary backdrop-blur">
+                {job.title.slice(0, 1).toUpperCase()}
+              </div>
+            </div>
+          )}
+          {!job.isOpen && (
+            <span className="absolute left-2 top-2 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold text-white">
+              Closed
+            </span>
+          )}
+          <span className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/55 text-white backdrop-blur">
+            <Bookmark className="h-4 w-4" fill="currentColor" />
+          </span>
+        </div>
+        <div className="p-3">
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+            <span>
+              {job.client.fullName} · {timeAgo(job.createdAt)}
+            </span>
+            {job.isRemote && (
+              <span className="inline-flex items-center gap-0.5">
+                <MapPin className="h-3 w-3" /> Remote
+              </span>
+            )}
+          </div>
+          <h2 className="mt-1 line-clamp-2 text-sm font-bold leading-snug">{job.title}</h2>
+          <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
+            <span className="text-[10px] text-muted-foreground">
+              {job._count.bids === 0 ? 'No bids yet' : `${job._count.bids} bids`}
+            </span>
+            <span className="text-sm font-extrabold text-primary">
+              {job.budgetMinEtb != null && job.budgetMaxEtb != null
+                ? `${formatEtb(job.budgetMinEtb)} – ${formatEtb(job.budgetMaxEtb)}`
+                : job.budgetMinEtb != null
+                  ? `≥ ${formatEtb(job.budgetMinEtb)}`
+                  : job.budgetMaxEtb != null
+                    ? `≤ ${formatEtb(job.budgetMaxEtb)}`
+                    : dt('Open budget')}
             </span>
           </div>
         </div>

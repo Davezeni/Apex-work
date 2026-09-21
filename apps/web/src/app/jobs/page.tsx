@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { Briefcase, Loader2, Plus, Search, MapPin } from 'lucide-react';
+import { Briefcase, Loader2, Plus, Search, MapPin, Bookmark } from 'lucide-react';
+import { useSavedJobIds, useSaveJob, useUnsaveJob } from '@/hooks/use-saved-jobs';
+import { useAuthStore } from '@/stores/auth-store';
 import { useJobs, type JobSummary } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
@@ -114,6 +116,44 @@ export default function JobsPage() {
   );
 }
 
+function SaveJobBookmark({ jobId, isMe }: { jobId: string; isMe: boolean }) {
+  const router = useRouter();
+  const token = useAuthStore((st) => st.accessToken);
+  const savedIds = useSavedJobIds();
+  const save = useSaveJob();
+  const unsave = useUnsaveJob();
+  const saved = savedIds.has(jobId);
+
+  if (isMe) return null;
+
+  return (
+    <button
+      aria-label={saved ? dt('Remove from saved') : dt('Save job')}
+      className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full border border-border bg-background/85 shadow-sm backdrop-blur transition-transform active:scale-90"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!token) {
+          router.push(`/login?next=/jobs`);
+          return;
+        }
+        if (save.isPending || unsave.isPending) return;
+        if (saved) unsave.mutate(jobId);
+        else save.mutate(jobId);
+      }}
+    >
+      {save.isPending || unsave.isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      ) : (
+        <Bookmark
+          className={cn('h-4 w-4', saved ? 'text-primary' : 'text-muted-foreground')}
+          fill={saved ? 'currentColor' : 'none'}
+        />
+      )}
+    </button>
+  );
+}
+
 function CategoryChip({
   label,
   icon,
@@ -159,8 +199,9 @@ function JobCard({ job, isMe }: { job: JobSummary; isMe: boolean }) {
   return (
     <Link
       href={`/jobs/${job.id}`}
-      className="block rounded-2xl border border-border bg-card p-4 transition-colors active:bg-muted"
+      className="relative block rounded-2xl border border-border bg-card p-4 transition-colors active:bg-muted"
     >
+      <SaveJobBookmark jobId={job.id} isMe={isMe} />
       {cover && (
         <div className="relative mb-3 h-36 w-full overflow-hidden rounded-xl bg-muted">
           <Image

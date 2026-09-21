@@ -155,6 +155,7 @@ model User {
   portfolio      PortfolioItem[]
   gigs           Gig[]                @relation("GigOwner")
   savedGigs      SavedGig[]
+  savedJobs      JobSave[]
   jobsPosted     Job[]                @relation("JobClient")
   bidsPlaced     Bid[]
   ordersAsClient Order[]              @relation("OrderClient")
@@ -416,6 +417,7 @@ model Job {
   client        User      @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
   bids          Bid[]
   attachments   JobAttachment[]
+  savedBy       JobSave[]
 
   @@index([clientId])
   @@index([isOpen, createdAt(sort: Desc)])
@@ -1243,6 +1245,20 @@ model SavedGig {
   @@unique([userId, gigId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([gigId])
+}
+
+model JobSave {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([jobId])
 }
 
 // ================= SAVED SEARCHES =================

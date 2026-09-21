@@ -29,9 +29,10 @@ import {
 import { toast } from 'sonner';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
+import { useSavedJobs, useUnsaveJob, type SavedJob } from '@/hooks/use-saved-jobs';
 import { useWallet } from '@/hooks/use-wallet';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { formatEtb, cn } from '@/lib/utils';
+import { formatEtb, cn, timeAgo } from '@/lib/utils';
 import { LanguageSwitcher } from '@/components/language-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
@@ -85,7 +86,7 @@ export default function ProfilePage() {
     <MobileShell activeTab="profile">
       <div className="mx-auto w-full max-w-2xl">
         {/* Hero */}
-        <div className="relative overflow-hidden border-b border-border pb-6 pt-6 text-center">
+        <div className="relative overflow-hidden pb-6 pt-6 text-center">
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />
           <div className="absolute right-3 top-3 z-10 rounded-full border border-border bg-background/70 shadow-sm backdrop-blur md:hidden">
             <ThemeToggle />
@@ -157,8 +158,13 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Saved gigs — visible on the profile so saved services are not hidden in a menu. */}
-        <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
+        {/* Saved — freelancers bookmark jobs to bid on later; clients save gigs.
+            Visible on the profile so saved items are not hidden in a menu. */}
+        {me.role === 'FREELANCER' ? (
+          <ProfileSavedJobs />
+        ) : (
+          <ProfileSavedGigs saved={savedGigs.data?.items ?? []} isLoading={savedGigs.isLoading} />
+        )}
 
         {/* Wallet — only for freelancers */}
         {me.role === 'FREELANCER' && (
@@ -289,6 +295,77 @@ export default function ProfilePage() {
         </div>
       </div>
     </MobileShell>
+  );
+}
+
+function ProfileSavedJobs() {
+  const { data, isLoading } = useSavedJobs();
+  const unsave = useUnsaveJob();
+  const items = data?.items ?? [];
+
+  return (
+    <section className="mx-5 mt-5">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bookmark className="h-4 w-4 text-primary" />
+          <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            {dt('Saved jobs')}
+          </h2>
+        </div>
+        <Link href="/saved" className="text-xs font-semibold text-primary">
+          {dt('View all')}
+        </Link>
+      </div>
+      {isLoading ? (
+        <div className="grid h-24 place-items-center rounded-2xl border border-border bg-card">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-card p-4 text-center">
+          <p className="text-xs font-semibold">{dt('You have not saved a job yet.')}</p>
+          <Link href="/jobs" className="mt-2 inline-block text-xs font-bold text-primary">
+            {dt('Browse jobs')}
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.slice(0, 3).map((item) => (
+            <div
+              key={item.id}
+              className={cn(
+                'flex items-center gap-3 rounded-2xl border border-border bg-card p-3',
+                !item.job.isOpen && 'opacity-70',
+              )}
+            >
+              <Link href={`/jobs/${item.job.id}`} className="min-w-0 flex-1">
+                <h3 className="line-clamp-1 text-sm font-bold">{item.job.title}</h3>
+                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                  {item.job.client.fullName} · {timeAgo(item.job.createdAt)}
+                  {item.job.isRemote ? ` · ${dt('Remote')}` : ''}
+                </p>
+                <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
+                  {item.job.budgetMinEtb != null && item.job.budgetMaxEtb != null
+                    ? `${formatEtb(item.job.budgetMinEtb)} – ${formatEtb(item.job.budgetMaxEtb)}`
+                    : item.job.budgetMinEtb != null
+                      ? `≥ ${formatEtb(item.job.budgetMinEtb)}`
+                      : item.job.budgetMaxEtb != null
+                        ? `≤ ${formatEtb(item.job.budgetMaxEtb)}`
+                        : dt('Open budget')}
+                </span>
+              </Link>
+              <button
+                aria-label={dt('Remove from saved')}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-primary active:scale-90"
+                onClick={() => unsave.mutate(item.job.id)}
+                disabled={unsave.isPending}
+              >
+                <Bookmark className="h-4 w-4" fill="currentColor" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

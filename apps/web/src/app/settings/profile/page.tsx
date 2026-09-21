@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useUpload } from '@/hooks/use-upload';
@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '@/i18n';
 import { contentTypeForFile } from '@/lib/file-types';
+import { cn } from '@/lib/utils';
 import { safeBack } from '@/lib/safe-back';
 import { PortfolioBody } from '@/components/settings/portfolio-body';
 import { SkillsBody } from '@/components/settings/skills-body';
@@ -242,25 +243,19 @@ export default function EditProfilePage() {
       </div>
 
       {me.role === 'FREELANCER' && (
-        <div className="mt-10 space-y-10">
-          <section>
-            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
-              {dt('Portfolio')}
-            </h2>
+        <div className="mt-10 space-y-3">
+          <CollapsibleSection title={dt('Portfolio')} subtitle={dt('Your work, curated')}>
             <PortfolioBody />
-          </section>
-          <section>
-            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
-              {dt('Skills')}
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection
+            title={dt('Skills')}
+            subtitle={dt('Rank yourself · Show clients what you do')}
+          >
             <SkillsBody />
-          </section>
-          <section>
-            <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
-              {dt('Availability')}
-            </h2>
+          </CollapsibleSection>
+          <CollapsibleSection title={dt('Availability')} subtitle={dt('Your weekly working hours')}>
             <AvailabilityBody />
-          </section>
+          </CollapsibleSection>
         </div>
       )}
 
@@ -277,6 +272,39 @@ export default function EditProfilePage() {
         </Button>
       </div>
     </div>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-card">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-muted/50"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-extrabold">{title}</div>
+          {subtitle && <div className="truncate text-[11px] text-muted-foreground">{subtitle}</div>}
+        </div>
+        <ChevronRight
+          className={cn(
+            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200',
+            open && 'rotate-90',
+          )}
+        />
+      </button>
+      {open && <div className="border-t border-border">{children}</div>}
+    </section>
   );
 }
 
