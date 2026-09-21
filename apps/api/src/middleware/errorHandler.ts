@@ -45,7 +45,12 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     (err as { type?: string })?.type === 'entity.too.large'
   ) {
     const tooLarge = (err as { type?: string })?.type === 'entity.too.large';
-    return failure(res, tooLarge ? 'PAYLOAD_TOO_LARGE' : 'BAD_JSON', tooLarge ? 'Request body too large' : 'Malformed JSON body', tooLarge ? 413 : 400);
+    return failure(
+      res,
+      tooLarge ? 'PAYLOAD_TOO_LARGE' : 'BAD_JSON',
+      tooLarge ? 'Request body too large' : 'Malformed JSON body',
+      tooLarge ? 413 : 400,
+    );
   }
 
   // Our typed errors

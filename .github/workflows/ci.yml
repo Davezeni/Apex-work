@@ -91,6 +91,8 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/apex
+      # schema.prisma directUrl — same value locally (no pooling in CI)
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/apex
       REDIS_URL: redis://localhost:6379
       NODE_ENV: test
       JWT_SECRET: ci-test-jwt-secret-that-is-long-enough-for-hmac

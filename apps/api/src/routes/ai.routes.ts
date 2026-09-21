@@ -1,6 +1,4 @@
-import { Router,
-  RequestHandler,
-} from 'express';
+import { Router, RequestHandler } from 'express';
 import {
   aiProposalSchema,
   aiBriefSchema,
@@ -46,7 +44,12 @@ const aiDailyQuota: RequestHandler = async (req, res, next) => {
     const used = await redis.incr(key);
     if (used === 1) await redis.expire(key, 60 * 60 * 48);
     if (used > AI_DAILY_LIMIT) {
-      return failure(res, 'AI_QUOTA', `Daily AI limit reached (${AI_DAILY_LIMIT}). Back tomorrow.`, 429);
+      return failure(
+        res,
+        'AI_QUOTA',
+        `Daily AI limit reached (${AI_DAILY_LIMIT}). Back tomorrow.`,
+        429,
+      );
     }
     return next();
   } catch {
