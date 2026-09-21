@@ -3,6 +3,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { success } from '../lib/response.js';
 import { NotFoundError } from '../lib/errors.js';
 import { prisma } from '../lib/prisma.js';
+import * as agencies from '../services/agencies.service.js';
 
 const router: Router = Router();
 
@@ -21,6 +22,7 @@ router.get(
         logoUrl: true,
         website: true,
         createdAt: true,
+        verifiedAt: true,
         members: {
           select: {
             role: true,
@@ -71,15 +73,29 @@ router.get(
       }),
     ]);
 
+    const [teamScore, portfolio, reviews] = await Promise.all([
+      agencies.agencyStats(agency.id),
+      prisma.agencyProject.findMany({
+        where: { agencyId: agency.id },
+        orderBy: { createdAt: 'desc' },
+        take: 12,
+        select: { id: true, title: true, description: true, url: true, imageUrl: true },
+      }),
+      agencies.agencyReviews(agency.id, 5),
+    ]);
+
     return success(res, {
       agency,
       gigs,
+      portfolio,
+      reviews,
       stats: {
         members: ids.length,
         gigs: gigCount,
         avgRating: agg._avg.rating ?? 0,
         completedOrders: agg._sum.completedOrders ?? 0,
       },
+      teamScore,
     });
   }),
 );

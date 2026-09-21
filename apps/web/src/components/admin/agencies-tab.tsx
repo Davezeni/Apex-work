@@ -14,6 +14,7 @@ interface Agency {
   slug: string;
   bio: string | null;
   website: string | null;
+  verifiedAt: string | null;
   createdAt: string;
   owner: { id: string; username: string; fullName: string };
   _count: { members: number };
@@ -69,6 +70,20 @@ function AgencyCard({ agency, token }: { agency: Agency; token: string | null })
     queryFn: () => apiFetch(`/admin/ops/agencies/${agency.id}`, { token }),
     enabled: open,
   });
+  const verify = useMutation({
+    mutationFn: (input: { verified: boolean }) =>
+      apiFetch(`/admin/ops/agencies/${agency.id}/verify`, {
+        method: 'PATCH',
+        token,
+        body: { verified: input.verified },
+      }),
+    onSuccess: (_d, input) => {
+      toast.success(input.verified ? dt('Team verified') : dt('Verification removed'));
+      qc.invalidateQueries({ queryKey: ['admin/agencies'] });
+      qc.invalidateQueries({ queryKey: ['admin/agencies', agency.id] });
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
   const setRole = useMutation({
     mutationFn: (input: { userId: string; role: string }) =>
       apiFetch(`/admin/ops/agencies/${agency.id}/members/${input.userId}`, {
@@ -92,7 +107,20 @@ function AgencyCard({ agency, token }: { agency: Agency; token: string | null })
             @{agency.slug} · {agency.owner.fullName} · {agency._count.members} member(s)
           </div>
         </div>
-        <Badge tone="info">{agency._count.members}</Badge>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {agency.verifiedAt ? <Badge tone="ok">✓</Badge> : <Badge tone="neutral">—</Badge>}
+          <Badge tone="info">{agency._count.members}</Badge>
+        </div>
+      </div>
+      <div className="mt-2">
+        <button
+          type="button"
+          onClick={() => verify.mutate({ verified: !agency.verifiedAt })}
+          disabled={verify.isPending}
+          className="rounded-full border border-border px-3 py-1 text-[10px] font-bold text-primary active:scale-95 disabled:opacity-50"
+        >
+          {agency.verifiedAt ? dt('Remove verification') : dt('Verify team')}
+        </button>
       </div>
       {agency.bio && (
         <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{agency.bio}</p>

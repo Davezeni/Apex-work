@@ -1,11 +1,17 @@
 import { Router } from 'express';
-import { createBidSchema, createJobSchema, jobListQuerySchema } from '@apex-work/shared';
+import {
+  createBidSchema,
+  createJobSchema,
+  jobAgencyInviteSchema,
+  jobListQuerySchema,
+} from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
 import { optionalAuth, requireAuth } from '../middleware/auth.js';
 import { success } from '../lib/response.js';
 import * as jobs from '../services/jobs.service.js';
 import { cache, bust } from '../middleware/cache.js';
+import { prisma } from '../lib/prisma.js';
 
 const router: Router = Router();
 
@@ -19,6 +25,24 @@ router.get(
     const q = req.query as unknown as import('@apex-work/shared').JobListQuery;
     const result = await jobs.listJobs({ ...q, onlyOpen: true });
     return success(res, result);
+  }),
+);
+
+/**
+ * GET /jobs/mine/open — the signed-in client's own open jobs (lightweight).
+ * Used by the "invite a team to bid" picker. Must be registered before /:id.
+ */
+router.get(
+  '/mine/open',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const items = await prisma.job.findMany({
+      where: { clientId: req.user!.sub, isOpen: true },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: { id: true, title: true, createdAt: true },
+    });
+    return success(res, { items });
   }),
 );
 
@@ -102,6 +126,21 @@ router.post(
     const { bidId } = req.params as { bidId: string };
     const result = await jobs.acceptBid(bidId, req.user!.sub);
     return success(res, result);
+  }),
+);
+
+/**
+ * POST /jobs/:id/agency-invites — the job's client invites a team to bid.
+ * Idempotent; notifies the team owner + managers.
+ */
+router.post(
+  '/:id/agency-invites',
+  requireAuth,
+  validate(jobAgencyInviteSchema),
+  asyncHandler(async (req, res) => {
+    const params = req.params as { id: string };
+    const body = req.body as import('@apex-work/shared').JobAgencyInviteInput;
+    return success(res, await jobs.inviteAgency(params.id, req.user!.sub, body), 201);
   }),
 );
 

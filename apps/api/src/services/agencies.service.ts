@@ -110,16 +110,138 @@ export async function invite(
 export async function updateTeam(
   userId: string,
   agencyId: string,
-  input: { defaultAssigneeSharePct: number },
+  input: {
+    defaultAssigneeSharePct?: number;
+    bio?: string | null;
+    website?: string | null;
+    logoUrl?: string | null;
+  },
 ) {
   await canManage(userId, agencyId);
   return prisma.agency.update({
     where: { id: agencyId },
     data: {
-      defaultAssigneeSharePct: Math.min(100, Math.max(0, Math.round(input.defaultAssigneeSharePct))),
+      ...(input.defaultAssigneeSharePct != null
+        ? {
+            defaultAssigneeSharePct: Math.min(
+              100,
+              Math.max(0, Math.round(input.defaultAssigneeSharePct)),
+            ),
+          }
+        : {}),
+      ...(input.bio !== undefined ? { bio: input.bio } : {}),
+      ...(input.website !== undefined ? { website: input.website } : {}),
+      ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
     },
-    select: { id: true, name: true, defaultAssigneeSharePct: true },
+    select: {
+      id: true,
+      name: true,
+      bio: true,
+      website: true,
+      logoUrl: true,
+      defaultAssigneeSharePct: true,
+    },
   });
+}
+
+/** Owner promotes/demotes between MEMBER and MANAGER. The OWNER role is fixed. */
+export async function setMemberRole(
+  userId: string,
+  agencyId: string,
+  memberUserId: string,
+  role: 'MEMBER' | 'MANAGER',
+) {
+  const agency = await prisma.agency.findUnique({
+    where: { id: agencyId },
+    select: { ownerId: true },
+  });
+  if (!agency) throw new NotFoundError('Agency');
+  if (agency.ownerId !== userId) throw new ForbiddenError('Only the owner can change roles');
+  if (memberUserId === agency.ownerId) throw new ConflictError('The owner role is fixed');
+  const member = await prisma.agencyMember.findUnique({
+    where: { agencyId_userId: { agencyId, userId: memberUserId } },
+    select: { userId: true },
+  });
+  if (!member) throw new NotFoundError('Member');
+  return prisma.agencyMember.update({
+    where: { agencyId_userId: { agencyId, userId: memberUserId } },
+    data: { role },
+    select: { userId: true, role: true },
+  });
+}
+
+const MAX_PROJECTS = 24;
+
+export async function addProject(
+  userId: string,
+  agencyId: string,
+  input: { title: string; description?: string; url?: string; imageUrl?: string },
+) {
+  await canManage(userId, agencyId);
+  const count = await prisma.agencyProject.count({ where: { agencyId } });
+  if (count >= MAX_PROJECTS) throw new ConflictError('Max 24 portfolio pieces');
+  return prisma.agencyProject.create({
+    data: {
+      agencyId,
+      title: input.title,
+      description: input.description ?? null,
+      url: input.url ?? null,
+      imageUrl: input.imageUrl ?? null,
+    },
+    select: { id: true, title: true },
+  });
+}
+
+export async function removeProject(userId: string, agencyId: string, projectId: string) {
+  await canManage(userId, agencyId);
+  const row = await prisma.agencyProject.findFirst({
+    where: { id: projectId, agencyId },
+    select: { id: true },
+  });
+  if (!row) throw new NotFoundError('Portfolio piece');
+  await prisma.agencyProject.delete({ where: { id: projectId } });
+  return { removed: true as const };
+}
+
+/** Pending job invites for a team (owner/manager view). */
+export async function listInvites(userId: string, agencyId: string) {
+  await canManage(userId, agencyId);
+  return prisma.jobAgencyInvite.findMany({
+    where: { agencyId },
+    orderBy: { createdAt: 'desc' },
+    take: 30,
+    select: {
+      id: true,
+      createdAt: true,
+      message: true,
+      job: {
+        select: {
+          id: true,
+          title: true,
+          isOpen: true,
+          budgetMinEtb: true,
+          budgetMaxEtb: true,
+        },
+      },
+      invitedBy: { select: { fullName: true } },
+    },
+  });
+}
+
+/**
+ * Owner dashboard per team: pipeline (open bids), active work, completed
+ * team orders, plus the same public Team Score inputs.
+ */
+export async function dashboard(userId: string, agencyId: string) {
+  await canManage(userId, agencyId);
+  const [openBids, activeOrders, stats] = await Promise.all([
+    prisma.bid.count({ where: { agencyId, withdrawnAt: null, job: { isOpen: true } } }),
+    prisma.order.count({
+      where: { agencyId, status: { in: ['ACTIVE', 'IN_REVIEW', 'DELIVERED'] } },
+    }),
+    agencyStats(agencyId),
+  ]);
+  return { openBids, activeOrders, ...stats };
 }
 
 /** Open (or create) the team's shared group chat. */
@@ -138,4 +260,87 @@ export async function removeMember(userId: string, agencyId: string, memberId: s
   if (member.role === 'OWNER') throw new ConflictError('The team owner cannot be removed');
   await prisma.agencyMember.delete({ where: { agencyId_userId: { agencyId, userId: memberId } } });
   return { ok: true };
+}
+
+// ================= TEAM SCORE (honest math, no invented data) =================
+
+export interface ScoreOrderRow {
+  status: string;
+  deadline: Date | null;
+  deliveredAt: Date | null;
+  clientId: string;
+}
+export interface ScoreReviewRow {
+  rating: number;
+  hiddenAt: Date | null;
+}
+
+export interface AgencyScore {
+  completedOrders: number;
+  avgRating: number;
+  onTimePct: number;
+  repeatClientPct: number;
+  badge: 'NONE' | 'RISING' | 'TOP';
+}
+
+/**
+ * Pure mapper so the numbers are unit-testable. Rules:
+ *  - completed = orders with status COMPLETED
+ *  - on-time   = of completed orders with a deadline+delivery, % delivered by the deadline
+ *  - rating    = average of visible client reviews on team orders
+ *  - repeat    = % of clients with more than one completed team order
+ *  - TOP badge needs >= 10 completed orders AND rating >= 4.6 AND onTimePct >= 80
+ *  - RISING badge for newer teams (1..9 completed) with rating >= 4.5
+ */
+export function computeAgencyScore(
+  orders: ScoreOrderRow[],
+  reviews: ScoreReviewRow[],
+): AgencyScore {
+  const completed = orders.filter((o) => o.status === 'COMPLETED');
+  const rated = completed.filter((o) => o.deadline && o.deliveredAt);
+  const onTime = rated.filter((o) => o.deliveredAt! <= o.deadline!).length;
+  const visible = reviews.filter((r) => !r.hiddenAt);
+  const avgRating =
+    visible.length > 0
+      ? Math.round((visible.reduce((sum, r) => sum + r.rating, 0) / visible.length) * 10) / 10
+      : 0;
+  const byClient = new Map<string, number>();
+  for (const o of completed) byClient.set(o.clientId, (byClient.get(o.clientId) ?? 0) + 1);
+  const repeat = [...byClient.values()].filter((n) => n > 1).length;
+  const repeatClientPct = byClient.size > 0 ? Math.round((repeat / byClient.size) * 100) : 0;
+  const onTimePct = rated.length > 0 ? Math.round((onTime / rated.length) * 100) : 0;
+  let badge: AgencyScore['badge'] = 'NONE';
+  if (completed.length >= 10 && avgRating >= 4.6 && onTimePct >= 80) badge = 'TOP';
+  else if (completed.length >= 1 && completed.length < 10 && avgRating >= 4.5) badge = 'RISING';
+  return { completedOrders: completed.length, avgRating, onTimePct, repeatClientPct, badge };
+}
+
+/** Live Team Score for an agency, from real orders + visible client reviews. */
+export async function agencyStats(agencyId: string): Promise<AgencyScore> {
+  const [orders, reviews] = await Promise.all([
+    prisma.order.findMany({
+      where: { agencyId, status: { in: ['COMPLETED', 'IN_REVIEW', 'DELIVERED'] } },
+      select: { status: true, deadline: true, deliveredAt: true, clientId: true },
+    }),
+    prisma.review.findMany({
+      where: { order: { agencyId }, hiddenAt: null },
+      select: { rating: true, hiddenAt: true },
+    }),
+  ]);
+  return computeAgencyScore(orders as ScoreOrderRow[], reviews as ScoreReviewRow[]);
+}
+
+/** Latest visible client reviews on this team's orders (public storefront). */
+export async function agencyReviews(agencyId: string, take = 5) {
+  return prisma.review.findMany({
+    where: { order: { agencyId }, hiddenAt: null },
+    orderBy: { createdAt: 'desc' },
+    take,
+    select: {
+      rating: true,
+      comment: true,
+      createdAt: true,
+      author: { select: { fullName: true } },
+    },
+  });
 }

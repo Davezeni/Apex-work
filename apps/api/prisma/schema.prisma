@@ -156,6 +156,7 @@ model User {
   gigs           Gig[]                @relation("GigOwner")
   savedGigs      SavedGig[]
   savedJobs      JobSave[]
+  jobAgencyInvitesSent JobAgencyInvite[] @relation("JobAgencyInviteAuthor")
   jobsPosted     Job[]                @relation("JobClient")
   bidsPlaced     Bid[]
   ordersAsClient Order[]              @relation("OrderClient")
@@ -417,6 +418,7 @@ model Job {
   client        User      @relation("JobClient", fields: [clientId], references: [id], onDelete: Cascade)
   bids          Bid[]
   attachments   JobAttachment[]
+  agencyInvites JobAgencyInvite[]
   savedBy       JobSave[]
 
   @@index([clientId])
@@ -487,12 +489,16 @@ model Order {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  /// Set when the accepted bid was made by a team — the link that powers
+  /// agency work history, ratings and on-time stats. Snapshot at accept time.
+  agencyId         String?
   assignedToUserId String?
   assignedAt       DateTime?
   /// Snapshot (0-100) of the assignee's share of sellerNetEtb at assignment
   /// time. 0 = no assignment / legacy order → 100% to the seller as before.
   assigneeSharePct Int           @default(0)
 
+  agency          Agency?       @relation(fields: [agencyId], references: [id], onDelete: SetNull)
   client          User          @relation("OrderClient", fields: [clientId], references: [id])
   seller          User          @relation("OrderSeller", fields: [sellerId], references: [id])
   assignedTo      User?         @relation("OrderAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
@@ -1086,8 +1092,49 @@ model Agency {
   /// when the owner assigns work. Snapshot onto the order at assignment time.
   defaultAssigneeSharePct Int @default(100)
   bids    Bid[]
+  orders  Order[]
+  projects AgencyProject[]
+  jobInvites JobAgencyInvite[]
+
+  /// Set only after an admin verifies the team (identity + track record).
+  verifiedAt   DateTime?
+  verifiedById String?
 
   @@index([ownerId])
+}
+
+/// Team portfolio entry — curated proof of past work shown on the public
+/// agency storefront. Owner/manager curated, max 24 per team.
+model AgencyProject {
+  id          String   @id @default(cuid())
+  agencyId    String
+  title       String
+  description String?  @db.Text
+  url         String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId, createdAt(sort: Desc)])
+}
+
+/// A client inviting a team to bid on their job. Unique per (job, agency);
+/// the notification drives the team to the job page.
+model JobAgencyInvite {
+  id          String   @id @default(cuid())
+  jobId       String
+  agencyId    String
+  invitedById String
+  message     String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  job        Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  agency     Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  invitedBy  User   @relation("JobAgencyInviteAuthor", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, agencyId])
+  @@index([agencyId, createdAt(sort: Desc)])
 }
 
 model AgencyMember {

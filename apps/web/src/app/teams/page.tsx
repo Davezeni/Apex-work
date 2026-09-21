@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
+  BadgeCheck,
   MessageCircle,
   ExternalLink,
   ArrowLeft,
@@ -20,6 +21,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useMe } from '@/hooks/use-me';
 import { useTeamChat, useUpdateTeam } from '@/hooks/use-agencies';
+import { AgencyConsole } from '@/components/teams/agency-console';
 import {
   useAgencies,
   useCreateAgency,
@@ -173,7 +175,12 @@ export default function TeamsPage() {
                     <Users className="h-5 w-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-base font-extrabold">{team.name}</h3>
+                    <h3 className="flex items-center gap-1 text-base font-extrabold">
+                      {team.name}
+                      {team.verifiedAt && (
+                        <BadgeCheck className="h-4 w-4 shrink-0 fill-cyan-500 text-white" />
+                      )}
+                    </h3>
                     <p className="text-[11px] text-muted-foreground">
                       /{team.slug} · {team.members.length} members
                     </p>
@@ -318,6 +325,30 @@ export default function TeamsPage() {
                     </div>
                   ))}
                 </div>
+                <AgencyConsole
+                  team={{
+                    id: team.id,
+                    name: team.name,
+                    slug: team.slug,
+                    bio: team.bio,
+                    website: team.website,
+                    logoUrl: team.logoUrl,
+                    verifiedAt: team.verifiedAt,
+                    ownerId: team.ownerId,
+                    members: team.members.map((m) => ({
+                      userId: m.user.id,
+                      role: m.role,
+                      user: { id: m.user.id, fullName: m.user.fullName, username: m.user.username },
+                    })),
+                  }}
+                  myRole={
+                    team.ownerId === me.id
+                      ? 'OWNER'
+                      : team.members.find((m) => m.user.id === me.id)?.role === 'MANAGER'
+                        ? 'MANAGER'
+                        : 'MEMBER'
+                  }
+                />
               </article>
             ))
           ) : (

@@ -757,6 +757,36 @@ router.get(
   }),
 );
 
+/** Verify / unverify a team after review. Audited. */
+router.patch(
+  '/agencies/:id/verify',
+  requireCapability('moderation:content'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params as { id: string };
+    const body = (req.body ?? {}) as { verified?: boolean };
+    const actor = await loadActor(req);
+    const data =
+      body.verified === false
+        ? { verifiedAt: null, verifiedById: null }
+        : { verifiedAt: new Date(), verifiedById: actor.adminId };
+    const agency = await prisma.agency.update({
+      where: { id },
+      data,
+      select: { id: true, name: true, verifiedAt: true },
+    });
+    await adminAudit({
+      adminId: actor.adminId,
+      adminName: actor.adminName,
+      adminRole: actor.adminRole,
+      action: body.verified === false ? 'AGENCY.UNVERIFY' : 'AGENCY.VERIFY',
+      resourceType: 'AGENCY',
+      resourceId: id,
+      meta: { name: agency.name },
+    });
+    return success(res, agency);
+  }),
+);
+
 router.post(
   '/agencies/:id/members/:userId',
   requireCapability('moderation:content'),

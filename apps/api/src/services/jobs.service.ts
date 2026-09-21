@@ -193,7 +193,9 @@ export async function createBid(
     if (!membership) {
       throw new ForbiddenError('Only the team owner or a manager can bid as the team');
     }
-    const crewIds = [...new Set(input.crewIds ?? [])].filter((id) => id !== freelancerId).slice(0, 8);
+    const crewIds = [...new Set(input.crewIds ?? [])]
+      .filter((id) => id !== freelancerId)
+      .slice(0, 8);
     if (crewIds.length > 0) {
       const members = await prisma.agencyMember.findMany({
         where: { agencyId: input.agencyId, userId: { in: crewIds } },
@@ -304,6 +306,7 @@ export async function acceptBid(bidId: string, clientId: string) {
         platformFeeEtb: platformFee,
         sellerNetEtb: sellerNet,
         deliveryDays: bid.deliveryDays,
+        agencyId: bid.agencyId, // team order → powers agency work history & Team Score
         requirements: bid.message,
         deadline: new Date(Date.now() + bid.deliveryDays * 24 * 60 * 60 * 1000),
         status: 'PENDING',
@@ -381,4 +384,53 @@ export async function acceptBid(bidId: string, clientId: string) {
     throw new BadRequestError(init.error ?? 'Payment initialization failed');
   }
   return { order, checkoutUrl: init.checkoutUrl, devSkipped: false };
+}
+
+// ================= CLIENT → TEAM INVITES =================
+
+/**
+ * A job's client invites a team to bid. Idempotent per (job, agency);
+ * notifies the agency owner + managers with a SYSTEM notification.
+ */
+export async function inviteAgency(
+  jobId: string,
+  clientId: string,
+  input: { agencyId: string; message?: string },
+) {
+  const job = await prisma.job.findUnique({
+    where: { id: jobId },
+    select: { id: true, isOpen: true, clientId: true, title: true },
+  });
+  if (!job) throw new NotFoundError('Job');
+  if (job.clientId !== clientId) throw new ForbiddenError();
+  if (!job.isOpen) throw new ConflictError('This job is closed');
+
+  const agency = await prisma.agency.findUnique({
+    where: { id: input.agencyId },
+    select: { id: true, name: true, members: { select: { userId: true, role: true } } },
+  });
+  if (!agency) throw new NotFoundError('Agency');
+
+  const invite = await prisma.jobAgencyInvite.upsert({
+    where: { jobId_agencyId: { jobId, agencyId: agency.id } },
+    create: { jobId, agencyId: agency.id, invitedById: clientId, message: input.message ?? null },
+    update: {},
+    select: { id: true, createdAt: true },
+  });
+
+  const recipients = agency.members
+    .filter((m) => m.role === 'OWNER' || m.role === 'MANAGER')
+    .map((m) => m.userId);
+  if (recipients.length > 0) {
+    await prisma.notification.createMany({
+      data: recipients.map((userId) => ({
+        userId,
+        type: 'SYSTEM',
+        title: `Invited to bid: ${job.title}`.slice(0, 120),
+        body: (input.message || 'A client would like your team to bid on their job.').slice(0, 300),
+        payload: { jobId, agencyId: agency.id, kind: 'agency_invite' },
+      })),
+    });
+  }
+  return { invited: true as const, id: invite.id, createdAt: invite.createdAt.toISOString() };
 }

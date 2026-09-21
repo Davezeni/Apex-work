@@ -283,9 +283,12 @@ export default function JobDetailPage() {
                 <div key={b.id} className="rounded-2xl border border-border bg-card p-4">
                   {b.agency && (
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
-                        🏢 {b.agency.name}
-                      </span>
+                      <Link
+                        href={`/agencies/${b.agency.slug}`}
+                        className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary active:scale-95"
+                      >
+                        🏢 {b.agency.name} · {dt('View team')}
+                      </Link>
                       {b.crew.length > 0 && (
                         <span className="text-[10px] text-muted-foreground">
                           {dt('Team of')} {b.crew.length + 1}
