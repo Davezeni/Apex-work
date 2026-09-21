@@ -238,12 +238,6 @@ export default function ProfilePage() {
             href="/saved"
           />
           <MenuItem
-            icon={<MapPin className="h-4 w-4" />}
-            title={dt('Nearby freelancers')}
-            subtitle={dt('Discover local talent on a map')}
-            href="/nearby"
-          />
-          <MenuItem
             icon={<LifeBuoy className="h-4 w-4" />}
             title={dt('Support tickets')}
             subtitle={dt('Get help beyond the AI bot')}

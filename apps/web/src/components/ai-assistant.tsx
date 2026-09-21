@@ -174,8 +174,8 @@ export function AIAssistant() {
         onClick={() => setOpen((v) => !v)}
         aria-label={dt('AI assistant')}
         className={cn(
-          'safe-bottom fixed bottom-24 right-4 z-40 flex h-14 items-center gap-2 rounded-full px-4 text-sm font-bold text-white shadow-xl shadow-emerald-500/40 ring-1 ring-emerald-300/50 transition-all hover:scale-105 hover:brightness-110 active:scale-95',
-          'bg-emerald-600',
+          'safe-bottom fixed bottom-24 right-4 z-40 flex h-14 items-center gap-2 rounded-full px-4 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/40 ring-1 ring-primary/30 transition-all hover:scale-105 hover:brightness-110 active:scale-95',
+          'bg-primary',
           open && 'rotate-45',
         )}
       >

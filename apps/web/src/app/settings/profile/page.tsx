@@ -33,7 +33,6 @@ export default function EditProfilePage() {
   const [saving, setSaving] = useState(false);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
-  const [locating, setLocating] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -55,31 +54,6 @@ export default function EditProfilePage() {
     setLatitude(anyMe.latitude ?? null);
     setLongitude(anyMe.longitude ?? null);
   }, [me]);
-
-  const captureLocation = () => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      toast.error(dt('Geolocation not available'));
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLatitude(Number(pos.coords.latitude.toFixed(6)));
-        setLongitude(Number(pos.coords.longitude.toFixed(6)));
-        setLocating(false);
-        toast.success(dt('Location captured — save to publish'));
-      },
-      (err) => {
-        setLocating(false);
-        toast.error(err.message || 'Could not get location');
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-  };
-  const clearLocation = () => {
-    setLatitude(null);
-    setLongitude(null);
-  };
 
   const onPickPhoto = () => fileRef.current?.click();
 
@@ -262,48 +236,6 @@ export default function EditProfilePage() {
             className="w-full rounded-xl border border-border bg-card px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/20"
           />
         </Field>
-
-        {me.role === 'FREELANCER' && (
-          <Field label={dt('Show me on the nearby map')}>
-            <div className="rounded-2xl border border-border bg-card p-3">
-              {latitude != null && longitude != null ? (
-                <div className="flex items-center gap-2">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/10 text-emerald-500">
-                    📍
-                  </div>
-                  <div className="flex-1 text-xs">
-                    <div className="font-bold">{dt('Location captured')}</div>
-                    <div className="text-muted-foreground">
-                      {latitude.toFixed(4)}, {longitude.toFixed(4)}
-                    </div>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={clearLocation}>
-                    {dt('Clear')}
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground">
-                    Opt in so clients looking for local talent can find you on the map.
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="brand"
-                    className="mt-2"
-                    onClick={captureLocation}
-                    disabled={locating}
-                  >
-                    {locating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      '📍 Use my current location'
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Field>
-        )}
       </div>
 
       {/* Sticky save */}

@@ -193,63 +193,63 @@ export function MobileShell({ children, activeTab, showTabBar = true }: Props) {
               </Drawer.Description>
               <div className="mt-5 flex flex-col gap-2">
                 {!isClient && (
-                <SheetAction
-                  icon="💼"
-                  title={t('create.postGig')}
-                  subtitle={t('create.postGigSub')}
-                  onClick={() => {
-                    setSheetOpen(false);
-                    router.push('/gigs/new');
-                  }}
-                  color="violet"
-                />
+                  <SheetAction
+                    icon="💼"
+                    title={t('create.postGig')}
+                    subtitle={t('create.postGigSub')}
+                    onClick={() => {
+                      setSheetOpen(false);
+                      router.push('/gigs/new');
+                    }}
+                    color="violet"
+                  />
                 )}
                 {isFreelancer ? (
-                <SheetAction
-                  icon="📄"
-                  title={dt('Build CV / Resume')}
-                  subtitle={dt('Create or import your CV')}
-                  onClick={() => {
-                    setSheetOpen(false);
-                    router.push('/resume');
-                  }}
-                  color="green"
-                />
+                  <SheetAction
+                    icon="📄"
+                    title={dt('Build CV / Resume')}
+                    subtitle={dt('Create or import your CV')}
+                    onClick={() => {
+                      setSheetOpen(false);
+                      router.push('/resume');
+                    }}
+                    color="green"
+                  />
                 ) : (
-                <SheetAction
-                  icon="📢"
-                  title={t('create.postJob')}
-                  subtitle={t('create.postJobSub')}
-                  onClick={() => {
-                    setSheetOpen(false);
-                    router.push('/jobs/new');
-                  }}
-                  color="green"
-                />
+                  <SheetAction
+                    icon="📢"
+                    title={t('create.postJob')}
+                    subtitle={t('create.postJobSub')}
+                    onClick={() => {
+                      setSheetOpen(false);
+                      router.push('/jobs/new');
+                    }}
+                    color="green"
+                  />
                 )}
                 {!isClient && (
-                <SheetAction
-                  icon="✨"
-                  title={t('create.aiProposal')}
-                  subtitle={t('create.aiProposalSub')}
-                  onClick={() => {
-                    setSheetOpen(false);
-                    router.push('/ai/proposal');
-                  }}
-                  color="amber"
-                />
+                  <SheetAction
+                    icon="✨"
+                    title={t('create.aiProposal')}
+                    subtitle={t('create.aiProposalSub')}
+                    onClick={() => {
+                      setSheetOpen(false);
+                      router.push('/ai/proposal');
+                    }}
+                    color="amber"
+                  />
                 )}
                 {!isClient && (
-                <SheetAction
-                  icon="💬"
-                  title={t('create.quickOffer')}
-                  subtitle={t('create.quickOfferSub')}
-                  onClick={() => {
-                    setSheetOpen(false);
-                    router.push('/messages');
-                  }}
-                  color="cyan"
-                />
+                  <SheetAction
+                    icon="💬"
+                    title={t('create.quickOffer')}
+                    subtitle={t('create.quickOfferSub')}
+                    onClick={() => {
+                      setSheetOpen(false);
+                      router.push('/messages');
+                    }}
+                    color="cyan"
+                  />
                 )}
               </div>
             </div>
@@ -319,7 +319,7 @@ function SheetAction({
   color: 'violet' | 'green' | 'amber' | 'cyan';
 }) {
   const bgs = {
-    violet: 'bg-violet-500/15 text-violet-400',
+    violet: 'bg-primary/15 text-primary',
     green: 'bg-emerald-500/15 text-emerald-400',
     amber: 'bg-amber-500/15 text-amber-400',
     cyan: 'bg-cyan-500/15 text-cyan-400',

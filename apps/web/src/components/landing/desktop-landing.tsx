@@ -46,7 +46,7 @@ const DEFAULT_HOME: HomeConfig = {
       reviews: 312,
       skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
       price: 2500,
-      gradient: 'from-violet-600 to-indigo-600',
+      gradient: 'from-primary to-primary/50',
     },
     {
       name: 'Dawit Tesfaye',
@@ -66,7 +66,7 @@ const DEFAULT_HOME: HomeConfig = {
       reviews: 421,
       skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
       price: 1200,
-      gradient: 'from-purple-600 to-violet-600',
+      gradient: 'from-primary/70 to-primary/40',
     },
   ],
   pricingClient: {

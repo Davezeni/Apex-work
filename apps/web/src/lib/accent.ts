@@ -22,17 +22,17 @@ export interface AccentPreset {
 
 /** Curated presets — first entry is the app default (violet). */
 export const ACCENT_PRESETS: AccentPreset[] = [
+  { name: 'Teal', hex: '#0d9488' },
   { name: 'Violet', hex: '#7c3aed' },
   { name: 'Blue', hex: '#2563eb' },
   { name: 'Emerald', hex: '#059669' },
-  { name: 'Teal', hex: '#0d9488' },
   { name: 'Amber', hex: '#d97706' },
   { name: 'Orange', hex: '#ea580c' },
   { name: 'Rose', hex: '#e11d48' },
   { name: 'Pink', hex: '#db2777' },
 ];
 
-export const DEFAULT_ACCENT = ACCENT_PRESETS[0]?.hex ?? '#7c3aed';
+export const DEFAULT_ACCENT = ACCENT_PRESETS[0]?.hex ?? '#0d9488';
 
 /** "#7c3aed" -> "262 83% 58%" (matches the globals.css triplet format). */
 export function hexToHslTriplet(hex: string): string | null {

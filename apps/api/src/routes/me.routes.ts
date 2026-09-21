@@ -16,7 +16,7 @@ import * as earnings from '../services/earnings.service.js';
 import * as authService from '../services/auth.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import * as profileAnalytics from '../services/profileAnalytics.service.js';
-import { dataExport } from '../services/data-export.service.js';
+import { buildExportWorkbook, dataExport } from '../services/data-export.service.js';
 import { referralDashboard } from '../services/referrals.service.js';
 
 const router: Router = Router();
@@ -85,9 +85,28 @@ router.get(
 router.get(
   '/data-export',
   asyncHandler(async (req, res) => {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="apex-work-data-export-${req.user!.sub.slice(0, 8)}.json"`);
-    res.send(JSON.stringify(await dataExport(req.user!.sub), null, 2));
+    const payload = await dataExport(req.user!.sub);
+    // Structured Excel workbook (one sheet per entity). ?format=json keeps the
+    // raw JSON bundle for programmatic use.
+    if (new URL(req.url, 'http://x').searchParams.get('format') === 'json') {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="apex-work-data-export-${req.user!.sub.slice(0, 8)}.json"`,
+      );
+      res.send(JSON.stringify(payload, null, 2));
+      return;
+    }
+    const buffer = await buildExportWorkbook(payload);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="apex-work-data-export-${req.user!.sub.slice(0, 8)}.xlsx"`,
+    );
+    res.send(buffer);
   }),
 );
 

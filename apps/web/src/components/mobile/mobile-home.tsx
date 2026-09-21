@@ -111,27 +111,15 @@ export function MobileHome() {
       {/* Device-local recently viewed gigs (gig browsers only) */}
       {me?.role !== 'FREELANCER' && <RecentlyViewedRow />}
 
-      {/* Jobs + Nearby shortcuts */}
-      <div className="mb-5 grid grid-cols-2 gap-2 px-5">
+      {/* Jobs shortcut */}
+      <div className="mb-5 px-5">
         <Link
           href="/jobs"
           className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-3 transition-transform active:scale-[0.98]"
         >
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-500/20 text-xl">
-            📢
-          </div>
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">📢</div>
           <div className="text-xs font-extrabold">{t('jobs.title')}</div>
           <div className="line-clamp-1 text-[10px] text-muted-foreground">{t('jobs.subtitle')}</div>
-        </Link>
-        <Link
-          href="/nearby"
-          className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-violet-500/10 p-3 transition-transform active:scale-[0.98]"
-        >
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">🗺</div>
-          <div className="text-xs font-extrabold">{t('home.nearby')}</div>
-          <div className="line-clamp-1 text-[10px] text-muted-foreground">
-            {t('home.nearbySub')}
-          </div>
         </Link>
       </div>
 

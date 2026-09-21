@@ -253,7 +253,6 @@ export const AUTO_DICT_OM: Record<string, string> = {
   'Device revoked': 'Meeshaan haqame',
   'Digital skills, all in one place': 'Dandeettii dijitaalaa, hunduu bakka tokkotti',
   Discard: 'Keessaa gatuu',
-  'Discover local talent on a map': 'Ogeessa naannoo kaartirra argadhu',
   Dismiss: 'Balleessuu',
   'Dispute opened — an admin will review within 48h':
     'Falmiin baname — admin tokko 48h keessatti ni ilaala',
@@ -533,7 +532,6 @@ export const AUTO_DICT_OM: Record<string, string> = {
   More: 'Caalaa',
   Name: 'Maqaa',
   'Name & issuer required': 'Maqaa & nama kenne barbaachisa',
-  'Nearby freelancers': 'Hojjetoota dhiyoo',
   'Need to hire instead?': 'Inumaayyuu qacaruu barbaachisa?',
   Net: 'Dimshaashaan',
   'Net value': 'Gatii qulqulluu',
@@ -816,7 +814,6 @@ export const AUTO_DICT_OM: Record<string, string> = {
   Show: 'Agarsiisuu',
   'Show API Key': 'Furtuu API agarsiisi',
   'Show hidden only': 'Dhokataa qofa agarsiisi',
-  'Show me on the nearby map': 'Kaartaa dhiyoo jiru irratti natti agarsiisi',
   'Show recruiters what you can actually deliver':
     'Waan qabatamaan geessuu akka dandeessu qacartootatti agarsiisi',
   'Sign in': 'Seeni',

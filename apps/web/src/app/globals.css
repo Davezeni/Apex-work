@@ -12,20 +12,20 @@
     --card: 0 0% 100%;
     --card-foreground: 258 24% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 258 24% 10%;
-    --primary: 262 83% 58%; /* violet */
+    --popover-foreground: 174 24% 10%;
+    --primary: 175 84% 32%; /* teal (#0D9488) — app default accent */
     --primary-foreground: 0 0% 100%;
-    --secondary: 258 60% 96%; /* violet-tinted surface */
-    --secondary-foreground: 262 62% 34%;
-    --muted: 256 50% 96%;
-    --muted-foreground: 258 12% 42%;
+    --secondary: 174 45% 95%; /* teal-tinted surface */
+    --secondary-foreground: 175 70% 26%;
+    --muted: 174 30% 95%;
+    --muted-foreground: 174 10% 40%;
     --accent: 142 66% 37%; /* hire green (#16A34A) */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 258 34% 90%;
-    --input: 258 34% 90%;
-    --ring: 262 83% 58%;
+    --border: 174 20% 88%;
+    --input: 174 20% 88%;
+    --ring: 175 84% 32%;
     --radius: 0.75rem;
   }
 
@@ -35,20 +35,20 @@
     --card: 256 30% 11%; /* cards lift off bg */
     --card-foreground: 258 30% 97%;
     --popover: 256 30% 10%;
-    --popover-foreground: 258 30% 97%;
-    --primary: 262 94% 76%; /* brighter violet for dark */
-    --primary-foreground: 256 60% 9%;
-    --secondary: 260 22% 17%;
-    --secondary-foreground: 258 30% 97%;
-    --muted: 258 18% 16%;
-    --muted-foreground: 258 12% 68%;
+    --popover-foreground: 174 30% 97%;
+    --primary: 173 80% 40%; /* brighter teal for dark */
+    --primary-foreground: 175 60% 9%;
+    --secondary: 174 20% 16%;
+    --secondary-foreground: 174 30% 96%;
+    --muted: 174 18% 15%;
+    --muted-foreground: 174 10% 66%;
     --accent: 142 70% 55%; /* brighter hire-green for dark */
-    --accent-foreground: 258 60% 9%;
+    --accent-foreground: 174 60% 9%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 258 22% 20%;
-    --input: 258 22% 20%;
-    --ring: 262 94% 76%;
+    --border: 174 16% 19%;
+    --input: 174 16% 19%;
+    --ring: 173 80% 40%;
     --radius: 0.75rem;
   }
 
@@ -160,7 +160,8 @@
      cycling). This is used for all primary Create/action chips. */
   .grad-hero {
     background:
-      linear-gradient(to bottom, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%), #7c3aed;
+      linear-gradient(to bottom, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0) 55%),
+      hsl(var(--primary));
   }
   .grad-text {
     background: var(--primary);

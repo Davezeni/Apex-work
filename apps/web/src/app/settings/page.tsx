@@ -4,10 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  User,
   Shield,
   ShieldCheck,
-  Bell,
   Globe,
   Palette,
   Database,
@@ -49,11 +47,6 @@ export default function SettingsPage() {
       </header>
 
       <Section title={t('settings.account')}>
-        <Row
-          icon={<User className="h-4 w-4" />}
-          title={t('editProfile.title')}
-          href="/settings/profile"
-        />
         <Row
           icon={<ShieldCheck className="h-4 w-4" />}
           title={t('settings.phone')}
@@ -104,11 +97,6 @@ export default function SettingsPage() {
           icon={<ShieldOff className="h-4 w-4" />}
           title={t('block.listTitle')}
           href="/settings/blocks"
-        />
-        <Row
-          icon={<Bell className="h-4 w-4" />}
-          title={t('settings.notifications')}
-          href="/settings/notifications"
         />
         <Row
           icon={<Bookmark className="h-4 w-4" />}
