@@ -1,5 +1,5 @@
 -- DropIndex
-DROP INDEX "idx_gig_tags_gin";
+DROP INDEX IF EXISTS "idx_gig_tags_gin";
 
 -- DropIndex
 DROP INDEX "idx_gig_title_trgm";
