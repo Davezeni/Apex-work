@@ -65,16 +65,6 @@ services:
         value: https://apex-work-api.onrender.com
       - key: WEB_URL
         value: https://apex-work-gold.vercel.app
-      - key: AFROMESSAGE_API_KEY
-        sync: false
-      - key: AFROMESSAGE_IDENTIFIER_ID
-        sync: false
-        # Beta accounts: leave unset. AfroMessage uses their default shortcode.
-        # Paid accounts: set to your assigned short-code (NOT the account UUID).
-      - key: AFROMESSAGE_SENDER
-        sync: false
-        # Beta accounts: leave unset. Paid accounts: set to your approved
-        # sender name (e.g. 'ApexWork'). Sender registration takes 1-2 days.
       - key: CHAPA_SECRET_KEY
         sync: false
       - key: CHAPA_PUBLIC_KEY

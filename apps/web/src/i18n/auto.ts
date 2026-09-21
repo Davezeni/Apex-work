@@ -63,7 +63,6 @@ export const AUTO_DICT: Record<string, string> = {
   'Admin team': 'የአስተዳዳሪ ቡድን',
   'Admins only': 'አስተዳዳሪዎች ብቻ',
   Advanced: 'ላቀ',
-  'AfroMessage SMS': 'AfroMessage SMS',
   Age: 'ዕድሜ',
   Agencies: 'ኤጀንሲዎች',
   AI: 'AI',

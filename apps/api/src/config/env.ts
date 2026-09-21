@@ -34,13 +34,9 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
 
-  AFROMESSAGE_API_KEY: z.string().optional(),
-  AFROMESSAGE_SENDER: z.string().default('ApexWork'),
-  AFROMESSAGE_IDENTIFIER_ID: z.string().optional(),
-
   SMSETHIOPIA_API_KEY: z.string().optional(),
-  // 'auto' (default): SMSEthiopia when its key is set, else AfroMessage, else console.
-  SMS_PROVIDER: z.enum(['auto', 'smsethiopia', 'afromessage']).default('auto'),
+  // 'auto' (default): SMSEthiopia when its key is set, else console (dev OTP logging).
+  SMS_PROVIDER: z.enum(['auto', 'smsethiopia']).default('auto'),
 
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_PUBLIC_KEY: z.string().optional(),

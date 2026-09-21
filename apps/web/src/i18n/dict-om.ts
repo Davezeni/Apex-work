@@ -54,7 +54,6 @@ export const AUTO_DICT_OM: Record<string, string> = {
   'Admin team': 'Garee Admin',
   'Admins only': 'Admin qofa',
   Advanced: "Hammayyaa'aa",
-  'AfroMessage SMS': 'Ergaa gabaabaa AfroMessage',
   Age: 'Umurii',
   Agencies: 'Ejensiiwwan',
   'AI assistant': 'Gargaaraa AI',

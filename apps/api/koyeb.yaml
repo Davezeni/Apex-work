@@ -42,4 +42,4 @@ env:
   - key: API_PORT
     value: "4000"
   # Set these as secrets in Koyeb dashboard:
-  # DATABASE_URL, JWT_SECRET, REDIS_URL, CHAPA_SECRET_KEY, AFROMESSAGE_API_KEY, etc.
+  # DATABASE_URL, JWT_SECRET, REDIS_URL, CHAPA_SECRET_KEY, SMSETHIOPIA_API_KEY, etc.

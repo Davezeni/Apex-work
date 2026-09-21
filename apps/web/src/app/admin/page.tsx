@@ -65,7 +65,7 @@ const isStaffRole = (role: string) => STAFF_ROLES.includes(role);
  * changes so you can confirm the deployed build matches what you expect —
  * handy when debugging a stale Vercel deployment.
  */
-export const ADMIN_UI_BUILD = '2026-09-09.137';
+export const ADMIN_UI_BUILD = '2026-09-09.138';
 
 type Tab =
   | 'summary'
@@ -1797,7 +1797,6 @@ interface Diagnostics {
       lastAttempts: { url: string; ok: boolean; message: string }[];
     };
     cronToken: boolean;
-    afromessage: boolean;
     smsethiopia: boolean;
   };
   ts: string;
@@ -1876,7 +1875,6 @@ function DiagnosticsTab() {
         note="uploads, avatars, chat attachments"
       />
       <StatusRow label={dt('Chapa payments')} ok={s.chapa} note="checkout + webhooks" />
-      <StatusRow label={dt('AfroMessage SMS')} ok={s.afromessage} note="OTPs" />
       <StatusRow label={dt('SMSethiopia SMS')} ok={s.smsethiopia} note="OTPs, any number" />
       <StatusRow label={dt('Groq LLM')} ok={s.groq} note="AI assistant, proposals, translation" />
       <StatusRow label={dt('Web Push (VAPID)')} ok={s.vapidPush} note="browser notifications" />
@@ -1911,7 +1909,7 @@ function DiagnosticsTab() {
         </div>
       )}
 
-      {(s.smsethiopia || s.afromessage) && (
+      {s.smsethiopia && (
         <div className="rounded-2xl border border-border bg-card p-3">
           <label className="text-xs font-semibold text-muted-foreground">
             {dt('Send test SMS to')}

@@ -72,7 +72,7 @@ apex-work/  (npm workspaces monorepo)
 - Cache: Upstash Redis (10K cmd/day free)
 - Storage: Supabase Storage (free)
 - Email: Resend (3K/mo free)
-- SMS: AfroMessage (pay-per-SMS)
+- SMS: SMSEthiopia (pay-per-SMS, ET OTP delivery)
 - Payments: Chapa (2.5% fee, no setup)
 - AI: Groq / Gemini free tiers
 - Monitoring: Sentry (5K events free)
@@ -210,7 +210,7 @@ Both services auto-deploy on push to `main`. See `docs/DEPLOY.md` for the full g
 **Backend (Render)** — `https://apex-work-api.onrender.com`
 - The tracked `render.yaml` blueprint drives provisioning + deploy.
 - Prisma migrations are applied automatically on every deploy via `preDeployCommand`.
-- Secrets (DB URL, Redis, JWT, Chapa, AfroMessage, OAuth, Supabase, Groq, VAPID, CRON_TOKEN, METERED) live in the Render dashboard, never in the repo.
+- Secrets (DB URL, Redis, JWT, Chapa, SMSEthiopia, OAuth, Supabase, Groq, VAPID, CRON_TOKEN, METERED) live in the Render dashboard, never in the repo.
 
 ---
 
