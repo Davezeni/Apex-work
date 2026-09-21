@@ -24,18 +24,25 @@ test.describe('public API', () => {
 
   test('readiness reports db and redis healthy', async ({ request }) => {
     // CI runs right after a push redeploys the API — during the restart
-    // window readiness legitimately reports not-ready. Poll up to ~90s
-    // before failing; assertions themselves are not weakened.
-    let body: { ok?: boolean; checks?: { db?: string; redis?: string } } | null = null;
-    for (let attempt = 0; attempt < 18; attempt += 1) {
-      const res = await request.get('https://apex-work-api.onrender.com/v1/ready');
+    // window the endpoint may error or hang. Poll up to ~2.5 min before
+    // failing; the final assertions are not weakened.
+    test.setTimeout(150_000);
+    interface ReadyBody {
+      ok?: boolean;
+      checks?: { db?: string; redis?: string };
+    }
+    let body: ReadyBody | null = null;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
       try {
-        body = (await res.json()) as typeof body;
+        const res = await request.get('https://apex-work-api.onrender.com/v1/ready', {
+          timeout: 8_000,
+        });
+        body = (await res.json()) as ReadyBody;
       } catch {
-        body = null;
+        body = null; // cold start / restart window — keep polling
       }
       if (body?.ok && body.checks?.db === 'ok' && body.checks?.redis === 'ok') return;
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
     }
     expect(body?.ok).toBe(true);
     expect(body?.checks?.db).toBe('ok');
