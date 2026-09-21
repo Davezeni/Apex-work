@@ -208,12 +208,8 @@ export function AIAssistant() {
                   <div className="text-sm font-extrabold">{dt('Apex Assistant')}</div>
                   <div className="text-[10px] opacity-80">
                     {aiStatus.data?.providerReachable === true
-                      ? 'AI online · Apex-Work help'
-                      : aiStatus.data?.providerReachable === false
-                        ? 'AI provider unavailable · fallback ready'
-                        : aiStatus.data?.configured
-                          ? 'AI key configured · fallback ready'
-                          : 'Apex-Work help · fallback ready'}
+                      ? dt('Your 24/7 career copilot — ask me anything')
+                      : dt('Smart help for hiring, gigs & money — always on')}
                   </div>
                 </div>
                 {msgs.length > 0 && (

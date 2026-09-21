@@ -253,12 +253,14 @@ export default function ProfilePage() {
             subtitle={dt('Earn 100 ETB per invite')}
             href="/referrals"
           />
-          <MenuItem
-            icon={<Bookmark className="h-4 w-4" />}
-            title={dt('Saved gigs')}
-            subtitle={dt('Keep services you want to hire later')}
-            href="/saved"
-          />
+          {me.role !== 'FREELANCER' && (
+            <MenuItem
+              icon={<Bookmark className="h-4 w-4" />}
+              title={dt('Saved gigs')}
+              subtitle={dt('Keep services you want to hire later')}
+              href="/saved"
+            />
+          )}
           <MenuItem
             icon={<LifeBuoy className="h-4 w-4" />}
             title={dt('Support tickets')}
