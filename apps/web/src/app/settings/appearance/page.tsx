@@ -3,7 +3,14 @@
 import { dt } from '@/i18n/auto';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Moon, Sun, Monitor, Type, WifiOff } from 'lucide-react';
+import { ArrowLeft, Check, Moon, Sun, Monitor, Type, WifiOff, RotateCcw } from 'lucide-react';
+import {
+  ACCENT_PRESETS,
+  DEFAULT_ACCENT,
+  applyAccent,
+  clearAccent,
+  getStoredAccent,
+} from '@/lib/accent';
 import { useTheme } from 'next-themes';
 import { useI18n } from '@/i18n';
 import { cn } from '@/lib/utils';
@@ -20,6 +27,7 @@ export default function AppearancePage() {
   const { theme, setTheme } = useTheme();
   const [textSize, setTextSize] = useState<'sm' | 'md' | 'lg'>('md');
   const [dataSaver, setDataSaver] = useState(false);
+  const [accent, setAccent] = useState<string>(DEFAULT_ACCENT);
 
   useEffect(() => {
     const s = (localStorage.getItem('apex-text-size') ?? 'md') as 'sm' | 'md' | 'lg';
@@ -28,12 +36,24 @@ export default function AppearancePage() {
     const savedDataSaver = localStorage.getItem('apex-data-saver') === '1';
     setDataSaver(savedDataSaver);
     document.documentElement.dataset.dataSaver = savedDataSaver ? 'true' : 'false';
+    const savedAccent = getStoredAccent();
+    if (savedAccent) setAccent(savedAccent);
   }, []);
 
   const chooseSize = (id: 'sm' | 'md' | 'lg') => {
     setTextSize(id);
     localStorage.setItem('apex-text-size', id);
     document.documentElement.style.fontSize = SIZES.find((x) => x.id === id)!.px;
+  };
+
+  const chooseAccent = (hex: string) => {
+    setAccent(hex);
+    applyAccent(hex);
+  };
+
+  const resetAccent = () => {
+    setAccent(DEFAULT_ACCENT);
+    clearAccent();
   };
 
   const chooseDataSaver = (enabled: boolean) => {
@@ -101,6 +121,67 @@ export default function AppearancePage() {
               <span className="text-[11px] text-muted-foreground">{s.px}</span>
             </button>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-3 mt-6">
+        <h2 className="mb-2 px-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {dt('Accent color')}
+        </h2>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="grid grid-cols-4 gap-3">
+            {ACCENT_PRESETS.map((preset) => (
+              <button
+                key={preset.hex}
+                type="button"
+                onClick={() => chooseAccent(preset.hex)}
+                className="flex flex-col items-center gap-1.5"
+                aria-label={preset.name}
+              >
+                <span
+                  className="grid h-11 w-11 place-items-center rounded-full border-2 transition-transform active:scale-90"
+                  style={{
+                    backgroundColor: preset.hex,
+                    borderColor:
+                      accent.toLowerCase() === preset.hex.toLowerCase()
+                        ? 'hsl(var(--foreground))'
+                        : 'transparent',
+                  }}
+                >
+                  {accent.toLowerCase() === preset.hex.toLowerCase() && (
+                    <Check className="h-5 w-5 text-white" />
+                  )}
+                </span>
+                <span className="text-[10px] font-semibold text-muted-foreground">
+                  {preset.name}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <label className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm">
+              <span className="font-semibold text-muted-foreground">{dt('Custom')}</span>
+              <input
+                type="color"
+                value={accent}
+                onChange={(e) => chooseAccent(e.target.value)}
+                className="h-8 w-14 cursor-pointer rounded-lg border border-border bg-transparent"
+              />
+              <span className="ml-auto font-mono text-xs text-muted-foreground">
+                {accent.toUpperCase()}
+              </span>
+            </label>
+            <button
+              type="button"
+              onClick={resetAccent}
+              className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2.5 text-xs font-bold text-muted-foreground active:scale-95"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> {dt('Reset')}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {dt('Your color applies instantly across the app — buttons, links, highlights.')}
+          </p>
         </div>
       </section>
 

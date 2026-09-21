@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@apex-work/shared';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
+import { JobsBoard } from '@/app/jobs/page';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { useSavedGigs, useSaveGig, useUnsaveGig } from '@/hooks/use-saved-gigs';
@@ -107,8 +108,8 @@ export function MobileHome() {
         </div>
       </div>
 
-      {/* Device-local recently viewed gigs (shown only when present) */}
-      <RecentlyViewedRow />
+      {/* Device-local recently viewed gigs (gig browsers only) */}
+      {me?.role !== 'FREELANCER' && <RecentlyViewedRow />}
 
       {/* Jobs + Nearby shortcuts */}
       <div className="mb-5 grid grid-cols-2 gap-2 px-5">
@@ -143,56 +144,67 @@ export function MobileHome() {
           />
         )}
 
-      {/* Category chips */}
-      <div className="mb-4 flex items-center justify-between px-5">
-        <h2 className="text-base font-bold tracking-tight">{t('home.explore')}</h2>
-        <Link href="/browse" className="text-xs font-semibold text-primary">
-          {t('home.seeAll')}
-        </Link>
-      </div>
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-6">
-        <CategoryChip
-          label={t('home.forYou')}
-          active={activeCategory === 'for-you'}
-          onClick={() => setActiveCategory('for-you')}
-        />
-        {CATEGORIES.map((c) => (
-          <CategoryChip
-            key={c.id}
-            label={`${c.icon} ${c.label}`}
-            active={activeCategory === c.id}
-            onClick={() => setActiveCategory(c.id)}
-          />
-        ))}
-      </div>
+      {/* Freelancers: the posted-jobs board (what they came for). Clients: gigs. */}
+      {me?.role === 'FREELANCER' && (
+        <div className="pb-4">
+          <JobsBoard />
+        </div>
+      )}
 
-      {/* Feed */}
-      <div className="mb-4 flex items-center justify-between px-5">
-        <h2 className="text-base font-bold tracking-tight">{t('home.topTalent')}</h2>
-        <Link href="/browse" className="text-xs font-semibold text-primary">
-          {t('home.viewAll')}
-        </Link>
-      </div>
-
-      <div className="flex flex-col gap-4 px-5 pb-8">
-        {isLoading && (
-          <>
-            <GigSkeleton />
-            <GigSkeleton />
-            <GigSkeleton />
-          </>
-        )}
-        {!isLoading && gigs.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-            <div className="text-2xl">🌱</div>
-            <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
+      {me?.role !== 'FREELANCER' && (
+        <>
+          {/* Category chips */}
+          <div className="mb-4 flex items-center justify-between px-5">
+            <h2 className="text-base font-bold tracking-tight">{t('home.explore')}</h2>
+            <Link href="/browse" className="text-xs font-semibold text-primary">
+              {t('home.seeAll')}
+            </Link>
           </div>
-        )}
-        {gigs.map((g) => (
-          <GigCard key={g.id} g={g} saved={savedSlugs.has(g.slug)} />
-        ))}
-      </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-6">
+            <CategoryChip
+              label={t('home.forYou')}
+              active={activeCategory === 'for-you'}
+              onClick={() => setActiveCategory('for-you')}
+            />
+            {CATEGORIES.map((c) => (
+              <CategoryChip
+                key={c.id}
+                label={`${c.icon} ${c.label}`}
+                active={activeCategory === c.id}
+                onClick={() => setActiveCategory(c.id)}
+              />
+            ))}
+          </div>
+
+          {/* Feed */}
+          <div className="mb-4 flex items-center justify-between px-5">
+            <h2 className="text-base font-bold tracking-tight">{t('home.topTalent')}</h2>
+            <Link href="/browse" className="text-xs font-semibold text-primary">
+              {t('home.viewAll')}
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-4 px-5 pb-8">
+            {isLoading && (
+              <>
+                <GigSkeleton />
+                <GigSkeleton />
+                <GigSkeleton />
+              </>
+            )}
+            {!isLoading && gigs.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+                <div className="text-2xl">🌱</div>
+                <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
+              </div>
+            )}
+            {gigs.map((g) => (
+              <GigCard key={g.id} g={g} saved={savedSlugs.has(g.slug)} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
