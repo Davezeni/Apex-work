@@ -10,7 +10,7 @@ import {
   ArrowLeft,
   Loader2,
   MapPin,
-  Send,
+  SendHorizontal,
   CheckCircle2,
   Lock,
   Sparkles,
@@ -138,7 +138,16 @@ export default function JobDetailPage() {
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <h1 className="truncate text-sm font-bold">{t('jobs.title')}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-sm font-bold">{t('jobs.title')}</h1>
+        {!isOwner && job.isOpen && isFreelancer && (
+          <Link
+            href={`/resume?tailorJob=${job.id}`}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary active:scale-95"
+          >
+            <Target className="h-3.5 w-3.5" />
+            Match CV
+          </Link>
+        )}
       </header>
 
       <div className="mx-4 mt-4">
@@ -368,7 +377,7 @@ export default function JobDetailPage() {
                           })
                         }
                       >
-                        <Send className="h-3 w-3" />
+                        <SendHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   )}
@@ -419,12 +428,6 @@ export default function JobDetailPage() {
         <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl">
           <div className="flex gap-2">
             <Button asChild variant="outline" size="lg" className="shrink-0">
-              <Link href={`/resume?tailorJob=${job.id}`}>
-                <Target className="h-4 w-4 text-primary" />
-                <span className="hidden sm:inline">Match CV</span>
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="shrink-0">
               <Link href={`/ai/proposal?job=${job.id}`}>
                 <Sparkles className="h-4 w-4 text-primary" />
                 <span className="hidden sm:inline">{dt('AI Proposal')}</span>
@@ -439,7 +442,7 @@ export default function JobDetailPage() {
                 setBidOpen(true);
               }}
             >
-              <Send className="h-4 w-4" /> {myBid ? t('jobs.yourBid') : t('jobs.sendBid')}
+              <SendHorizontal className="h-4 w-4" /> {myBid ? t('jobs.yourBid') : t('jobs.sendBid')}
             </Button>
           </div>
         </div>

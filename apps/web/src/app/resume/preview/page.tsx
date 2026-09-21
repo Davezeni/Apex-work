@@ -110,7 +110,7 @@ export default function ResumePreviewPage() {
 
   return (
     <div className="min-h-dvh bg-muted/40 pb-24">
-      <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl print:hidden">
+      <header className="safe-top sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl sm:gap-3 print:hidden">
         <button
           onClick={() => safeBack(router)}
           aria-label={t('common.back')}
@@ -119,15 +119,16 @@ export default function ResumePreviewPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold tracking-tight">{dt('Resume preview')}</h1>
+          <h1 className="truncate text-lg font-extrabold tracking-tight">{dt('Resume preview')}</h1>
           <p className="truncate text-[10px] text-muted-foreground">
             {template?.name ?? 'Apex template'} · {formatName(format)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/resume/templates">
-              <Palette className="h-4 w-4" /> Templates
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link href="/resume/templates" aria-label={dt('Templates')}>
+              <Palette className="h-4 w-4" />
+              <span className="hidden sm:inline">{dt('Templates')}</span>
             </Link>
           </Button>
           <select
@@ -145,6 +146,7 @@ export default function ResumePreviewPage() {
           <Button
             size="sm"
             variant="outline"
+            className="shrink-0"
             onClick={() => window.print()}
             title={dt('Print or save as PDF')}
           >
@@ -167,16 +169,18 @@ export default function ResumePreviewPage() {
           <Button
             size="sm"
             variant="brand"
+            className="shrink-0"
             onClick={handlePdfDownload}
             disabled={!!exporting}
             title={dt('Download a PDF file')}
+            aria-label={dt('Download a PDF file')}
           >
             {exporting === 'pdf' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Download className="h-4 w-4" />
-            )}{' '}
-            PDF
+            )}
+            <span className="hidden sm:inline">PDF</span>
           </Button>
         </div>
       </header>

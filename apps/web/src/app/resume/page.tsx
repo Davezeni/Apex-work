@@ -452,18 +452,21 @@ export default function ResumeBuilderPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/resume/import">
-              <FileInput className="h-4 w-4" /> Import
+            <Link href="/resume/import" aria-label={dt('Import')}>
+              <FileInput className="h-4 w-4" />
+              <span className="hidden sm:inline">{dt('Import')}</span>
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href={`/u/${me.username}/resume`}>
-              <Share2 className="h-4 w-4" /> Share
+            <Link href={`/u/${me.username}/resume`} aria-label={dt('Share')}>
+              <Share2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{dt('Share')}</span>
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href="/resume/preview">
-              <Eye className="h-4 w-4" /> Preview
+            <Link href="/resume/preview" aria-label={dt('Preview')}>
+              <Eye className="h-4 w-4" />
+              <span className="hidden sm:inline">{dt('Preview')}</span>
             </Link>
           </Button>
         </div>
@@ -905,7 +908,7 @@ export default function ResumeBuilderPage() {
             onClick={() => setCoverOpen(false)}
           >
             <div
-              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
@@ -1045,7 +1048,7 @@ export default function ResumeBuilderPage() {
             onClick={() => setTailorOpen(false)}
           >
             <div
-              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
+              className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto overflow-x-hidden rounded-t-3xl border border-b-0 border-border bg-card p-5 sm:rounded-3xl sm:border-b sm:p-6"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted sm:hidden" />
@@ -1117,19 +1120,19 @@ export default function ResumeBuilderPage() {
                     </div>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl bg-background p-3">
+                    <div className="min-w-0 rounded-xl bg-background p-3">
                       <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         Suggested headline
                       </div>
-                      <p className="mt-1 text-sm font-semibold">
+                      <p className="mt-1 break-words text-sm font-semibold">
                         {tailor.data.tailoredHeadline || 'Keep your current headline'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-background p-3">
+                    <div className="min-w-0 rounded-xl bg-background p-3">
                       <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         Suggested summary
                       </div>
-                      <p className="mt-1 line-clamp-5 whitespace-pre-wrap text-xs">
+                      <p className="mt-1 line-clamp-5 whitespace-pre-wrap break-words text-xs">
                         {tailor.data.tailoredSummary || 'Add a summary before tailoring.'}
                       </p>
                     </div>
@@ -1191,11 +1194,11 @@ export default function ResumeBuilderPage() {
                       </div>
                     </div>
                   )}
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                     <Button
                       type="button"
                       variant="outline"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={() => setTailorOpen(false)}
                     >
                       Keep reviewing
@@ -1203,7 +1206,7 @@ export default function ResumeBuilderPage() {
                     <Button
                       type="button"
                       variant="brand"
-                      className="flex-1"
+                      className="w-full sm:flex-1"
                       onClick={applyTailoredSummary}
                     >
                       <Save className="h-4 w-4" /> Apply headline & summary
