@@ -59,21 +59,21 @@ So this is a **code-review-driven assessment + external posture check**, not a f
 
 ## 4. Findings
 
-### 🟠 H-1 — No database backups / disaster recovery (operational risk)
+### 🟠 H-1 — Mitigation BUILT (2026-09-21), needs 2 repo secrets: No database backups / disaster recovery (operational risk)
 - **Detail:** free Render Postgres expires periodically and has no automated backup. Escrow balances, ledgers and user data live there. This is the single highest-impact risk to the business regardless of any code vulnerability.
 - **Likelihood/Impact:** medium / severe (irreversible data loss).
 - **Recommendation:** scheduled `pg_dump` GitHub Action (encrypted artifact or private storage) **now**; paid managed Postgres with PITR when revenue starts. I can build the dump automation on request.
+- **UPDATE:** `.github/workflows/backup.yml` is now in place — weekly encrypted (AES-256, PBKDF2 200k) full dumps stored as 90-day-retention GitHub artifacts, plus manual run button. **To activate, add 2 repo secrets** (Settings → Secrets and variables → Actions): `DATABASE_URL_BACKUP` = the UNPOOLED Postgres URL from Render, `BACKUP_PASSPHRASE` = a strong passphrase (store it somewhere safe — the dump is useless without it). Without the secrets the workflow skips gracefully.
 
-### 🟡 M-1 — Production error monitoring is disabled
-- **Detail:** Sentry is fully wired (`initSentry`, `captureException`) but `SENTRY_DSN` is empty on Render → production errors surface only via logs nobody tails. You are blind to 5xx storms, failed webhooks, and abuse patterns.
-- **Recommendation:** paste a free Sentry DSN into Render env (10 minutes, already supported). A startup warning now logs when it's missing.
+### ✅ M-1 — RESOLVED (2026-09-21): Production error monitoring is LIVE
+- **Detail:** owner set `SENTRY_DSN` on Render; the service redeployed (health uptime reset) and Sentry initializes at boot. End-to-end verified: a controlled harmless fault (malformed-JSON probe) produced a captured event in the Sentry project.
+- **Follow-through:** the probe also revealed malformed client JSON was surfacing as 500s (would have polluted Sentry) — now correctly mapped to **400 BAD_JSON** / **413 PAYLOAD_TOO_LARGE** in the error handler, so Sentry only sees real faults. Web-side Sentry (server+edge+client instrumentation) exists in code: add `SENTRY_DSN` + `NEXT_PUBLIC_SENTRY_DSN` on **Vercel** to light it up.
 
-### 🟡 M-2 — Session/cookie flags unverified (needs an authenticated check)
-- **Detail:** refresh-token handling uses bearer + rotation; cookie `Secure`/`HttpOnly`/`SameSite` flags could not be observed without a logged-in session. CORS is pinned to the two known origins (`CORS_ORIGINS`), which limits exposure, but this must be confirmed, not assumed.
-- **Recommendation:** one authenticated `curl -D -` on login/refresh to verify flags. 15 minutes with a test account.
+### ✅ M-2 — RESOLVED (2026-09-21): Session transport is bearer-only (no cookies)
+- **Detail:** codebase-wide grep confirms the API never sets a cookie (`res.cookie` count = 0); tokens travel as Authorization headers with rotation + device revocation. The cookie-flag concern is therefore N/A — there are no session cookies to flag. CORS is pinned to the two known origins. Residual XSS exposure is covered by React escaping, strict zod input validation, and short access-token expiry.
 
-### ⚪ L-1 — AI endpoint cost/abuse surface
-- AI routes are auth'd + separately rate-limited + cached, but a determined user can still burn Groq quota within limits. Consider per-user daily AI quotas (cheap Redis counters) before scaling marketing.
+### ✅ L-1 — RESOLVED (2026-09-21): Per-user daily AI quota implemented
+- **Detail:** every AI route now enforces a per-user daily quota (default 150/day, tunable via `AI_DAILY_LIMIT` env) via Redis INCR counters (48h expiry). Production-only enforcement; fail-open on Redis errors so the feature never breaks. Combined with the existing route limiter + Groq caching, the budget-abuse surface is closed.
 
 ### ⚪ L-2 — Prompt injection via CV text
 - CV content is untrusted input to the LLM. Mitigations already in place: extraction-only prompt (no tools, no instructions-following surface), output must pass strict zod coercion + semantic sanitizer, results stored as inert data. Residual risk: low. Do **not** add tool-use/agent features to this path without re-review.

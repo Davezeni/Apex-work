@@ -1,4 +1,6 @@
-import { Router } from 'express';
+import { Router,
+  RequestHandler,
+} from 'express';
 import {
   aiProposalSchema,
   aiBriefSchema,
@@ -13,10 +15,12 @@ import {
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
+import { redis } from '../lib/redis.js';
+import { failure } from '../lib/response.js';
 import { requireAuth } from '../middleware/auth.js';
 import { aiLimiter } from '../middleware/rateLimit.js';
 import { success } from '../lib/response.js';
-import { env } from '../config/env.js';
+import { env, isProd } from '../config/env.js';
 import * as ai from '../services/ai.service.js';
 import * as studioAi from '../services/resumeStudioAi.service.js';
 import * as tailorAi from '../services/resumeTailorAi.service.js';
@@ -25,6 +29,31 @@ const router: Router = Router();
 
 // Every AI call hits an LLM provider, so cap the whole /ai namespace (incl.
 // the public /status probe) tighter than the general API limiter.
+/**
+ * Per-user daily AI quota (production only): protects the Groq budget from
+ * runaway or scripted abuse while staying invisible to normal users.
+ * Counters are Redis INCR keys that expire at the end of the next day.
+ */
+const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT ?? 150);
+
+const aiDailyQuota: RequestHandler = async (req, res, next) => {
+  if (!isProd) return next();
+  const userId = (req as unknown as { user?: { id?: string } }).user?.id;
+  if (!userId) return next(); // auth middleware runs first; safe no-op otherwise
+  const day = new Date().toISOString().slice(0, 10);
+  const key = `ai:quota:${userId}:${day}`;
+  try {
+    const used = await redis.incr(key);
+    if (used === 1) await redis.expire(key, 60 * 60 * 48);
+    if (used > AI_DAILY_LIMIT) {
+      return failure(res, 'AI_QUOTA', `Daily AI limit reached (${AI_DAILY_LIMIT}). Back tomorrow.`, 429);
+    }
+    return next();
+  } catch {
+    return next(); // quota must never break the feature if Redis hiccups
+  }
+};
+
 router.use(aiLimiter);
 
 /** Public, non-secret diagnostic so the UI can explain whether live AI is available. */
@@ -40,6 +69,7 @@ router.get('/status', (_req, res) => {
 });
 
 router.use(requireAuth);
+router.use(aiDailyQuota);
 
 router.post(
   '/replies',

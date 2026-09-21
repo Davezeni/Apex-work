@@ -1,0 +1,64 @@
+name: Database backup
+
+# H-1 mitigation from SECURITY_AUDIT.md: free-tier Render Postgres has no
+# automatic backups. This dumps the full database weekly, encrypts it with a
+# passphrase (AES-256), and stores it as a GitHub artifact (90-day retention,
+# rolling). Restore: download artifact -> openssl enc -d -> psql < dump.sql
+
+on:
+  schedule:
+    - cron: '0 3 * * 0' # Sundays 03:00 UTC = 06:00 EAT
+  workflow_dispatch: {} # manual run button
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets are configured
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DATABASE_URL_BACKUP" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::warning::Set DATABASE_URL_BACKUP (unpooled Postgres URL) and BACKUP_PASSPHRASE repo secrets to enable backups. Skipping."
+            exit 0
+          fi
+
+      - name: Install postgres client
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt noble-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+          sudo apt-get update -qq && sudo apt-get install -qq -y postgresql-client-16
+
+      - name: Dump database
+        env:
+          DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
+        run: |
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          pg_dump "$DATABASE_URL_BACKUP" --no-owner --no-privileges --format=custom -f "apexwork-$TS.dump"
+          echo "BACKUP_FILE=apexwork-$TS.dump" >> "$GITHUB_ENV"
+          ls -lh "apexwork-$TS.dump"
+
+      - name: Encrypt backup (AES-256)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in "$BACKUP_FILE" -out "$BACKUP_FILE.enc" -pass env:BACKUP_PASSPHRASE
+          rm -f "$BACKUP_FILE"
+          sha256sum "$BACKUP_FILE.enc" > "$BACKUP_FILE.enc.sha256"
+          ls -lh "$BACKUP_FILE.enc"
+
+      - name: Store artifact (90-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}.enc
+          path: |
+            ${{ env.BACKUP_FILE }}.enc
+            ${{ env.BACKUP_FILE }}.enc.sha256
+          retention-days: 90
+          if-no-files-found: error

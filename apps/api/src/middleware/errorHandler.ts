@@ -37,6 +37,17 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return failure(res, 'VALIDATION_ERROR', 'Invalid database query', 400);
   }
 
+  // Malformed request bodies (express.json SyntaxError etc.) — client error,
+  // NOT a server fault: must not 500 or pollute Sentry.
+  if (
+    (err as Error)?.name === 'SyntaxError' ||
+    (err as { type?: string })?.type === 'entity.parse.failed' ||
+    (err as { type?: string })?.type === 'entity.too.large'
+  ) {
+    const tooLarge = (err as { type?: string })?.type === 'entity.too.large';
+    return failure(res, tooLarge ? 'PAYLOAD_TOO_LARGE' : 'BAD_JSON', tooLarge ? 'Request body too large' : 'Malformed JSON body', tooLarge ? 413 : 400);
+  }
+
   // Our typed errors
   if (err instanceof AppError) {
     if (err instanceof ValidationError) {
