@@ -268,7 +268,6 @@ export default function GigDetailPage() {
               alt={gig.title}
               fill
               priority
-              unoptimized
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-cover"
             />
@@ -482,7 +481,6 @@ export default function GigDetailPage() {
                   src={url}
                   alt={`${gig.title} photo ${i + 1}`}
                   fill
-                  unoptimized
                   sizes="(max-width: 640px) 33vw, 160px"
                   className="object-cover"
                 />
@@ -700,7 +698,6 @@ function SimilarGigsSection({ slug }: { slug: string }) {
                   src={g.coverImageUrl}
                   alt={g.title}
                   fill
-                  unoptimized
                   sizes="200px"
                   className="object-cover"
                 />

@@ -204,14 +204,7 @@ function JobCard({ job, isMe }: { job: JobSummary; isMe: boolean }) {
       <SaveJobBookmark jobId={job.id} isMe={isMe} />
       {cover && (
         <div className="relative mb-3 h-36 w-full overflow-hidden rounded-xl bg-muted">
-          <Image
-            src={cover}
-            alt={job.title}
-            fill
-            unoptimized
-            sizes="400px"
-            className="object-cover"
-          />
+          <Image src={cover} alt={job.title} fill sizes="400px" className="object-cover" />
         </div>
       )}
       <div className="flex items-start gap-3">

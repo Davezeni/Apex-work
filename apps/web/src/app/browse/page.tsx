@@ -246,9 +246,7 @@ function BrowseInner() {
           <div
             className={cn(
               'py-4',
-              category
-                ? 'no-scrollbar overflow-x-auto px-4 md:px-6'
-                : 'overflow-hidden',
+              category ? 'no-scrollbar overflow-x-auto px-4 md:px-6' : 'overflow-hidden',
             )}
           >
             <div className={cn('flex w-max', !category && 'chip-marquee')}>
@@ -460,14 +458,7 @@ function BrowseCard({ g }: { g: GigListItem }) {
           )}
         >
           {g.coverImageUrl && (
-            <Image
-              src={g.coverImageUrl}
-              alt={g.title}
-              fill
-              unoptimized
-              sizes="80px"
-              className="object-cover"
-            />
+            <Image src={g.coverImageUrl} alt={g.title} fill sizes="80px" className="object-cover" />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -533,7 +524,6 @@ function GridCard({ g }: { g: GigListItem }) {
               src={g.coverImageUrl}
               alt={g.title}
               fill
-              unoptimized
               sizes="300px"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />

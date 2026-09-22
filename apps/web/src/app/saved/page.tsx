@@ -149,7 +149,6 @@ function SavedGigCard({
               fill
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center">
@@ -331,7 +330,6 @@ function SavedJobCard({
               fill
               sizes="(max-width: 640px) 100vw, 50vw"
               className="object-cover"
-              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center">

@@ -355,7 +355,6 @@ function ProfileSavedJobs() {
                       src={cover}
                       alt={item.job.title}
                       fill
-                      unoptimized
                       sizes="120px"
                       className="object-cover"
                     />
@@ -424,7 +423,6 @@ function ProfileSavedGigs({ saved, isLoading }: { saved: SavedGig[]; isLoading: 
                     src={item.gig.coverImageUrl}
                     alt={item.gig.title}
                     fill
-                    unoptimized
                     sizes="120px"
                     className="object-cover"
                   />

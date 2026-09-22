@@ -327,14 +327,7 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
       className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
       <div className="relative aspect-[16/9] w-full bg-muted">
-        <Image
-          src={g.coverImageUrl!}
-          alt={g.title}
-          fill
-          unoptimized
-          sizes="400px"
-          className="object-cover"
-        />
+        <Image src={g.coverImageUrl!} alt={g.title} fill sizes="400px" className="object-cover" />
         {g.isFeatured ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
             ⚡ Featured

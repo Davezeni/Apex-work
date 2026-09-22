@@ -25,8 +25,7 @@ import { apiFetch } from '@/lib/api';
 import { useMe } from '@/hooks/use-me';
 import { useAuthStore } from '@/stores/auth-store';
 import { useInviteAgencyToJob } from '@/hooks/use-agencies';
-import { CATEGORIES } from '@apex-work/shared';
-import { cn, formatEtb } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { safeBack } from '@/lib/safe-back';
 
@@ -175,7 +174,7 @@ export default function AgencyStorefrontPage() {
       </div>
     );
 
-  const { agency, gigs, stats } = data;
+  const { agency, stats } = data;
   const score = data.teamScore;
   const stat = (value: string, label: string) => (
     <div className="rounded-2xl border border-border bg-card px-3 py-2.5 text-center">
@@ -210,7 +209,6 @@ export default function AgencyStorefrontPage() {
                 alt={agency.name}
                 width={80}
                 height={80}
-                unoptimized
                 className="h-20 w-20 rounded-3xl object-cover ring-4 ring-background"
               />
             ) : (
@@ -392,7 +390,6 @@ export default function AgencyStorefrontPage() {
                         src={project.imageUrl}
                         alt={project.title}
                         fill
-                        unoptimized
                         sizes="250px"
                         className="object-cover"
                       />
@@ -520,66 +517,6 @@ export default function AgencyStorefrontPage() {
               </Link>
             ))}
           </div>
-        </section>
-
-        {/* Gigs */}
-        <section className="pt-7">
-          <h2 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-            <Briefcase className="h-3.5 w-3.5" /> {dt('Gigs from this team')}
-          </h2>
-          {gigs.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              {dt('No active gigs yet')}
-            </p>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {gigs.map((g) => {
-                const catIcon = CATEGORIES.find((c) => c.id === g.categoryId)?.icon ?? '✨';
-                return (
-                  <Link
-                    key={g.id}
-                    href={`/gigs/${g.slug}`}
-                    className="group overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border transition-all hover:shadow-lg hover:ring-primary/40"
-                  >
-                    <div
-                      className={cn(
-                        'relative aspect-[16/10] w-full overflow-hidden',
-                        gradientFor(g.id),
-                      )}
-                    >
-                      {g.coverImageUrl ? (
-                        <Image
-                          src={g.coverImageUrl}
-                          alt={g.title}
-                          fill
-                          unoptimized
-                          sizes="250px"
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <span className="absolute inset-0 grid place-items-center text-4xl">
-                          {catIcon}
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-2.5">
-                      <div className="line-clamp-2 min-h-[2.3rem] text-xs font-bold leading-snug">
-                        {g.title}
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-between">
-                        <span className="truncate text-[10px] text-muted-foreground">
-                          {g.owner.fullName.split(' ')[0]}
-                        </span>
-                        <span className="text-xs font-extrabold tabular-nums text-primary">
-                          {formatEtb(g.startingPriceEtb)}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
         </section>
       </main>
     </div>
