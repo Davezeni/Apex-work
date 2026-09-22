@@ -29,7 +29,7 @@ import {
 import { toast } from 'sonner';
 import { useMe, useLogout } from '@/hooks/use-me';
 import { useSavedGigs, type SavedGig } from '@/hooks/use-saved-gigs';
-import { useSavedJobs, useUnsaveJob, type SavedJob } from '@/hooks/use-saved-jobs';
+import { useSavedJobs, type SavedJob } from '@/hooks/use-saved-jobs';
 import { useWallet } from '@/hooks/use-wallet';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { formatEtb, cn, timeAgo } from '@/lib/utils';
@@ -302,7 +302,6 @@ export default function ProfilePage() {
 
 function ProfileSavedJobs() {
   const { data, isLoading } = useSavedJobs();
-  const unsave = useUnsaveJob();
   const items = data?.items ?? [];
 
   return (
@@ -330,41 +329,53 @@ function ProfileSavedJobs() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-2">
-          {items.slice(0, 3).map((item) => (
-            <div
-              key={item.id}
-              className={cn(
-                'flex items-center gap-3 rounded-2xl border border-border bg-card p-3',
-                !item.job.isOpen && 'opacity-70',
-              )}
-            >
-              <Link href={`/jobs/${item.job.id}`} className="min-w-0 flex-1">
-                <h3 className="line-clamp-1 text-sm font-bold">{item.job.title}</h3>
-                <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                  {item.job.client.fullName} · {timeAgo(item.job.createdAt)}
-                  {item.job.isRemote ? ` · ${dt('Remote')}` : ''}
-                </p>
-                <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">
-                  {item.job.budgetMinEtb != null && item.job.budgetMaxEtb != null
-                    ? `${formatEtb(item.job.budgetMinEtb)} – ${formatEtb(item.job.budgetMaxEtb)}`
-                    : item.job.budgetMinEtb != null
-                      ? `≥ ${formatEtb(item.job.budgetMinEtb)}`
-                      : item.job.budgetMaxEtb != null
-                        ? `≤ ${formatEtb(item.job.budgetMaxEtb)}`
-                        : dt('Open budget')}
-                </span>
-              </Link>
-              <button
-                aria-label={dt('Remove from saved')}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-primary active:scale-90"
-                onClick={() => unsave.mutate(item.job.id)}
-                disabled={unsave.isPending}
+        <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+          {items.slice(0, 8).map((item) => {
+            const cover = item.job.attachments.find((a) => a.contentType.startsWith('image/'))?.url;
+            const budget =
+              item.job.budgetMinEtb != null && item.job.budgetMaxEtb != null
+                ? `${formatEtb(item.job.budgetMinEtb)} – ${formatEtb(item.job.budgetMaxEtb)}`
+                : item.job.budgetMinEtb != null
+                  ? `≥ ${formatEtb(item.job.budgetMinEtb)}`
+                  : item.job.budgetMaxEtb != null
+                    ? `≤ ${formatEtb(item.job.budgetMaxEtb)}`
+                    : dt('Open budget');
+            return (
+              <Link
+                key={item.id}
+                href={`/jobs/${item.job.id}`}
+                className={cn(
+                  'w-[112px] shrink-0 overflow-hidden rounded-xl border border-border bg-card',
+                  !item.job.isOpen && 'opacity-70',
+                )}
               >
-                <Bookmark className="h-4 w-4" fill="currentColor" />
-              </button>
-            </div>
-          ))}
+                <div className="relative aspect-square w-full bg-gradient-to-br from-primary/25 to-primary/10">
+                  {cover ? (
+                    <Image
+                      src={cover}
+                      alt={item.job.title}
+                      fill
+                      unoptimized
+                      sizes="120px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-full place-items-center text-lg font-extrabold text-primary">
+                      {item.job.title.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="p-1.5">
+                  <div className="line-clamp-2 min-h-[2rem] text-[11px] font-bold leading-snug">
+                    {item.job.title}
+                  </div>
+                  <div className="mt-1 truncate text-[10px] font-extrabold text-primary">
+                    {budget}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>
