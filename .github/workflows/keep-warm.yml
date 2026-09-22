@@ -6,7 +6,7 @@ name: Keep warm
 # The endpoint is the public readiness probe; it touches no user data.
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '4,14,24,34,44,54 * * * *'
   workflow_dispatch:
 
 jobs:

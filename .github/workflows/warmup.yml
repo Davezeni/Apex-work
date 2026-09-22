@@ -7,7 +7,7 @@ name: Warmup
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # every 5 minutes
+    - cron: '9,19,29,39,49,59 * * * *' # every 5 min, offset from keep-warm (top-of-hour crons get dropped most)
   workflow_dispatch: {}
 
 concurrency:
@@ -27,7 +27,7 @@ jobs:
             if [ "$code" = "200" ]; then exit 0; fi
             sleep 5
           done
-          echo "API cold-start took too long — will retry next cycle"
+          echo "::warning::API ping failed 3x — instance likely cold/asleep; retrying next cycle"
       - name: Ping Web
         if: always()
         run: |
