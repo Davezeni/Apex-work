@@ -1,0 +1,30 @@
+name: Keep warm
+
+# Pings the Render API every 10 minutes so the free instance never sleeps
+# (Render free tier idles after 15 min of inactivity). 744 always-on hours
+# < 750 free hours/month, so this fits the free allowance for ONE instance.
+# The endpoint is the public readiness probe; it touches no user data.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /v1/ready
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 \
+              https://apex-work-api.onrender.com/v1/ready || true)
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 15
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::warning::API /v1/ready did not return 200 after 3 attempts"
+          else
+            echo "API is warm"
+          fi

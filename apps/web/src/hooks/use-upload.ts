@@ -166,13 +166,13 @@ export function useUpload() {
       // goes to Supabase, so smaller bytes = faster loads everywhere.
       file = await downscaleForBucket(file, bucket);
       const contentType = contentTypeForFile(file);
-      // Avatars must be readable by any bare <img> tag everywhere (chat header,
-      // gig cards, profile, reviews). The API's self-hosted file gateway serves
-      // them publicly at an absolute URL with immutable cache headers, so we use
-      // it directly — it can't fail with a non-public Supabase bucket ACL.
-      if (bucket === 'avatars') {
-        return await uploadThroughApi(file, bucket, token, contentType, onProgress);
-      }
+      // Avatars now go through the SAME signed Supabase path as everything else:
+      // Supabase's CDN serves them, so profile pictures never wake or load
+      // through the free-tier API. Safety net below: if the avatars bucket is
+      // not public in Supabase yet (dashboard toggle), the public URL fails the
+      // HEAD check and we transparently fall back to the Postgres-backed
+      // gateway (uploadThroughApi). Old gateway URLs keep working forever.
+      const avatarsViaSupabase = bucket === 'avatars';
       let signed: SignResponse | null = null;
       let firstError: Error | null = null;
 
@@ -194,6 +194,15 @@ export function useUpload() {
       if (signed) {
         try {
           await uploadDirect(signed, file, onProgress);
+          // Avatars: only trust the Supabase public URL if it is actually
+          // publicly readable (bucket must be toggled public in the Supabase
+          // dashboard). A private bucket returns 400 on object/public/.
+          if (avatarsViaSupabase) {
+            const head = await fetch(signed.publicUrl, { method: 'HEAD' }).catch(() => null);
+            if (!head || !head.ok) {
+              return await uploadThroughApi(file, bucket, token, contentType, onProgress);
+            }
+          }
           return {
             publicUrl: signed.publicUrl,
             path: signed.path,
