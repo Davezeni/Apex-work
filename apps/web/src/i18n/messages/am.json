@@ -737,10 +737,39 @@
     "availability": "መገኘት",
     "paymentMethods": "የክፍያ ዘዴዎች",
     "savedSearches": "የተቀመጡ ፍለጋዎች",
-    "skills": "ክህሎቶች"
+    "skills": "ክህሎቶች",
+    "activity": "የቅርብ እንቅስቃሴ"
   },
   "gigs": {
     "saved": "ሥራ ተቀምጧል",
     "removedSaved": "ሥራ ከተቀመጡት ተወግዷል"
+  },
+  "activity": {
+    "subtitle": "በመለያዎ ላይ የተደረጉ የደህንነትና የገንዘብ ክንውኖች — ከአዲሱ ጀምሮ።",
+    "empty": "እስካሁን ምንም የለም",
+    "emptyBody": "አቅርቦቶችዎ፣ ጸድቆችዎ፣ ክፍያዎችዎና ግቢዎች እዚህ ይታያሉ።",
+    "system": "ራስ-ሰር",
+    "orderFunded": "ኤስክሮ ተሞልቷል",
+    "orderApproved": "ትዕዛዝ ጸድቋል — ገንዘብ ተለቋል",
+    "orderDelivered": "ሥራ አቅርቧል",
+    "orderRevision": "ማሻሻያ ተጠይቋል",
+    "orderCancelled": "ትዕዛዝ ተሰርዟል",
+    "orderAutoReleased": "ኤስክሮ በራስ-ሰር ተለቋል",
+    "milestoneDelivered": "የሥራ ደረጃ አቅርቧል",
+    "milestoneApproved": "የሥራ ደረጃ ጸድቋል — ገንዘብ ተለቋል",
+    "milestoneDisputed": "የሥራ ደረጃ ተከስሷል",
+    "milestoneAutoReleased": "የሥራ ደረጃ በራስ-ሰር ተለቋል",
+    "disputeOpened": "ክርክር ተከፈተ",
+    "disputeResolved": "ክርክር ተፈትቷል",
+    "payoutRequested": "የክፍያ ጥያቄ ቀርቧል",
+    "payoutSent": "ክፍያ ወደ አቅራቢ ተልኳል",
+    "payoutSucceeded": "ክፍያ ተጠናቋል",
+    "payoutFailed": "ክፍያ አልተሳካም",
+    "payoutCancelled": "ክፍያ ተሰርዟል",
+    "pinSet": "የመግቢያ ፒን ተዋቅሷል",
+    "pinRemoved": "የመግቢያ ፒን ተወግዷል",
+    "phoneBound": "ስልክ ቁጥር ተገናኝቷል",
+    "deviceAdded": "አዲስ መሣሪያ ገብቷል",
+    "updated": "መለያ ተዘምኗል"
   }
 }

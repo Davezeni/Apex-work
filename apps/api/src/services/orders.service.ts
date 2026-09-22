@@ -26,6 +26,7 @@ import { assertOrderTransition, type OrderAction, type OrderState } from '@apex-
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
 import { ledgerOnce, splitPayout } from './financialIdempotency.js';
+import { writeUserAudit } from '../lib/audit.js';
 
 /**
  * Guard that an order may take `action` from `current.status`, translating the
@@ -280,6 +281,14 @@ export async function confirmPaymentByTxRef(txRef: string) {
       body: `Your payment for ${order.title} was successful.`,
       payload: { orderId: order.id },
     });
+    void writeUserAudit({
+      actorType: 'SYSTEM',
+      systemName: 'Payments',
+      action: 'ORDER.FUNDED',
+      resourceType: 'ORDER',
+      resourceId: order.id,
+      meta: { title: order.title, amountEtb: order.amountEtb },
+    });
   }
 
   return { order, updated: updated.activated };
@@ -311,11 +320,7 @@ export async function acceptDelivery(orderId: string, clientId: string) {
     // (seller, ORDER_PAYOUT, order) + atomic wallet mutation.
     // Team assignment: the assignee's share is credited to THEIR wallet while
     // the seller's escrow hold (pendingEtb) always reconciles in full here.
-    const split = splitPayout(
-      order.sellerNetEtb,
-      order.assignedToUserId,
-      order.assigneeSharePct,
-    );
+    const split = splitPayout(order.sellerNetEtb, order.assignedToUserId, order.assigneeSharePct);
     const { applied } = await ledgerOnce(
       tx,
       {
@@ -380,6 +385,13 @@ export async function acceptDelivery(orderId: string, clientId: string) {
     body: `${order.title} was accepted. Your balance has been updated.`,
     payload: { orderId: order.id },
   });
+  void writeUserAudit({
+    userId: clientId,
+    action: 'ORDER.APPROVED',
+    resourceType: 'ORDER',
+    resourceId: order.id,
+    meta: { title: order.title, releasedEtb: order.sellerNetEtb },
+  });
 
   return updated;
 }
@@ -420,6 +432,13 @@ export async function markDelivered(
     body: `${order.title} — please review and accept.`,
     payload: { orderId: order.id },
   });
+  void writeUserAudit({
+    userId: sellerId,
+    action: 'ORDER.DELIVERED',
+    resourceType: 'ORDER',
+    resourceId: order.id,
+    meta: { title: order.title },
+  });
 
   return updated;
 }
@@ -442,6 +461,13 @@ export async function requestRevision(orderId: string, clientId: string, notes: 
     title: 'Revision requested',
     body: notes.slice(0, 160),
     payload: { orderId: order.id },
+  });
+  void writeUserAudit({
+    userId: clientId,
+    action: 'ORDER.REVISION_REQUESTED',
+    resourceType: 'ORDER',
+    resourceId: order.id,
+    meta: { title: order.title },
   });
   return updated;
 }
@@ -504,6 +530,17 @@ export async function cancelOrder(orderId: string, userId: string, reason?: stri
     title: 'Order cancelled',
     body: reason?.slice(0, 160) ?? `${order.title} was cancelled.`,
     payload: { orderId: order.id },
+  });
+  void writeUserAudit({
+    userId,
+    action: 'ORDER.CANCELLED',
+    resourceType: 'ORDER',
+    resourceId: order.id,
+    meta: {
+      title: order.title,
+      refundedFromEscrow: order.status === 'ACTIVE',
+      reason: reason ?? null,
+    },
   });
 
   return updated;
@@ -569,7 +606,11 @@ export async function assignOrder(
     select: {
       agencyId: true,
       agency: {
-        select: { name: true, defaultAssigneeSharePct: true, members: { select: { userId: true } } },
+        select: {
+          name: true,
+          defaultAssigneeSharePct: true,
+          members: { select: { userId: true } },
+        },
       },
     },
   });
@@ -642,11 +683,7 @@ export async function getOrder(orderId: string, userId: string) {
     },
   });
   if (!order) throw new NotFoundError('Order');
-  if (
-    order.clientId !== userId &&
-    order.sellerId !== userId &&
-    order.assignedToUserId !== userId
-  ) {
+  if (order.clientId !== userId && order.sellerId !== userId && order.assignedToUserId !== userId) {
     throw new ForbiddenError();
   }
 
@@ -780,11 +817,7 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         // (seller, ORDER_PAYOUT, order) — a retried/concurrent release or a
         // manual accept that already paid this order matches 0 rows on the
         // ledger insert (or the CAS above), so it never double-pays.
-        const split = splitPayout(
-          o.sellerNetEtb,
-          o.assignedToUserId,
-          o.assigneeSharePct,
-        );
+        const split = splitPayout(o.sellerNetEtb, o.assignedToUserId, o.assigneeSharePct);
         const { applied } = await ledgerOnce(
           tx,
           {
@@ -858,6 +891,14 @@ export async function autoReleaseEscrow(): Promise<{ released: number; reminded:
         title: 'Auto-released 💰',
         body: `${o.title} — funds moved to your balance`,
         payload: { orderId: o.id, autoRelease: true },
+      });
+      void writeUserAudit({
+        actorType: 'SYSTEM',
+        systemName: 'Escrow auto-release',
+        action: 'ORDER.AUTO_RELEASED',
+        resourceType: 'ORDER',
+        resourceId: o.id,
+        meta: { title: o.title, releasedEtb: o.sellerNetEtb },
       });
       releasedCount++;
     }

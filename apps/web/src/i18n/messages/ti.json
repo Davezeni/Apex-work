@@ -737,10 +737,39 @@
     "availability": "ኣብ ዝኾነ እዋን",
     "paymentMethods": "መገዲ ክፍሊት",
     "savedSearches": "ዝተዐቀባ ድለይታት",
-    "skills": "ብቕዓታት"
+    "skills": "ብቕዓታት",
+    "activity": "ቅሪተ ንጥፈት"
   },
   "gigs": {
     "saved": "ጊግ ተዐቂቡ",
     "removedSaved": "ጊግ ካብ መዝገብ ተወዲኡ"
+  },
+  "activity": {
+    "subtitle": "ናይ ደህንነትን ቅድሚትን ኣጸዓት ትሕዝቶ — ሓድሽ ቀዳም።",
+    "empty": "ንቕሓት የለን",
+    "emptyBody": "ኣቅርብታትካ፣ እቕባለታትካ፣ ክፍሊታትካን ኣተዋትካን ኣብዚ ይርከቡ።",
+    "system": "ብኣውቶማቲክ",
+    "orderFunded": "ኤስክሮ ተመሊኡ",
+    "orderApproved": "ትእዛዝ ተእቓበ — ፈላጥ ተለቀየ",
+    "orderDelivered": "ስራሕ ተሃቢ",
+    "orderRevision": "ምሕደራ ተሓቲኡ",
+    "orderCancelled": "ትእዛዝ ተሰዒሩ",
+    "orderAutoReleased": "ኤስክሮ ብኣውቶማቲክ ተለቀየ",
+    "milestoneDelivered": "ክፋል ስራሕ ተሃቢ",
+    "milestoneApproved": "ክፋል ስራሕ ተእቓበ — ፈላጥ ተለቀየ",
+    "milestoneDisputed": "ክፋል ስራሕ ተኸስረ",
+    "milestoneAutoReleased": "ክፋል ስራሕ ብኣውቶማቲክ ተለቀየ",
+    "disputeOpened": "ክርክር ተከፊቱ",
+    "disputeResolved": "ክርክር ተፈቲኑ",
+    "payoutRequested": "ክፍሊት ተሓቲኡ",
+    "payoutSent": "ክፍሊት ተለኪዋ",
+    "payoutSucceeded": "ክፍሊት ተዛዚማ",
+    "payoutFailed": "ክፍሊት ኣይተሳኣነትን",
+    "payoutCancelled": "ክፍሊት ተሰዒራ",
+    "pinSet": "ፒን ተቐሚጡ",
+    "pinRemoved": "ፒን ተወጊዱ",
+    "phoneBound": "ቁጽሪ ተሌፎን ተኣሳሲፉ",
+    "deviceAdded": "ሓድሽ መሳልሕቲ ኣተወ",
+    "updated": "ኣካውንት ተሰሚሙ"
   }
 }

@@ -14,6 +14,7 @@ import { prisma } from '../lib/prisma.js';
 import { NotFoundError } from '../lib/errors.js';
 import * as earnings from '../services/earnings.service.js';
 import * as authService from '../services/auth.service.js';
+import * as activity from '../services/activity.service.js';
 import * as oauthAccounts from '../services/oauthAccounts.service.js';
 import * as profileAnalytics from '../services/profileAnalytics.service.js';
 import { buildExportWorkbook, dataExport } from '../services/data-export.service.js';
@@ -242,6 +243,16 @@ router.get(
     const month = ((req.query as { month?: string }).month ?? '').trim();
     const { summary } = await earnings.monthlyStatement(req.user!.sub, month);
     return success(res, summary);
+  }),
+);
+
+/** GET /me/activity — the signed-in user's own audit trail (recent activity). */
+router.get(
+  '/activity',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const items = await activity.listMyActivity(req.user!.sub);
+    return success(res, { items });
   }),
 );
 

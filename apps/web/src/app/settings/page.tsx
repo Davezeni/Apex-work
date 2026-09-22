@@ -17,6 +17,7 @@ import {
   ChevronRight,
   LogOut,
   KeyRound,
+  Activity,
   ShieldOff,
   Fingerprint,
   CreditCard,
@@ -74,6 +75,11 @@ export default function SettingsPage() {
           icon={<Fingerprint className="h-4 w-4" />}
           title={t('settings.devices')}
           href="/settings/devices"
+        />
+        <Row
+          icon={<Activity className="h-4 w-4" />}
+          title={t('settings.activity')}
+          href="/settings/activity"
         />
       </Section>
 

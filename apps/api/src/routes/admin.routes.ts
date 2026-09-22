@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../lib/asyncHandler.js';
+import { adminAudit, loadActor } from '../lib/audit.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireAdmin, requireCapability } from '../middleware/adminOnly.js';
@@ -347,6 +348,14 @@ router.post(
   asyncHandler(async (req, res) => {
     const { id } = req.params as { id: string };
     const body = req.body as import('@apex-work/shared').ResolveDisputeInput;
+    const actor = await loadActor(req);
+    void adminAudit({
+      ...actor,
+      action: 'DISPUTE.RESOLVED',
+      resourceType: 'DISPUTE',
+      resourceId: id,
+      after: body,
+    });
     return success(res, await disputes.adminResolve(id, body));
   }),
 );

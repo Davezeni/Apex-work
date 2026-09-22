@@ -2,28 +2,15 @@ import { OTP_LENGTH, OTP_TTL_SECONDS, type UserRole } from '@apex-work/shared';
 import type { OAuthProfile } from './oauth.service.js';
 import type { OtpPurpose, User } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import {
-  generateOtp,
-  hashPassword,
-  randomToken,
-  sha256,
-  verifyPassword,
-} from '../lib/hash.js';
+import { writeUserAudit } from '../lib/audit.js';
+import { generateOtp, hashPassword, randomToken, sha256, verifyPassword } from '../lib/hash.js';
 import { signAccessToken, signRefreshToken } from '../lib/jwt.js';
 import { env } from '../config/env.js';
-import {
-  BadRequestError,
-  ConflictError,
-  NotFoundError,
-  UnauthorizedError,
-} from '../lib/errors.js';
+import { BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '../lib/errors.js';
 import { redis } from '../lib/redis.js';
 import { sms } from './sms.service.js';
 import { logger } from '../config/logger.js';
-import {
-  findUserByTrustedDevice,
-  issueTrustedDevice,
-} from './trustedDevice.service.js';
+import { findUserByTrustedDevice, issueTrustedDevice } from './trustedDevice.service.js';
 
 const OTP_TOKEN_PREFIX = 'otp-verified:'; // Redis key prefix
 const OTP_TOKEN_TTL_SEC = 15 * 60; // token to complete signup after OTP
@@ -38,12 +25,18 @@ const parseDurationSec = (input: string): number => {
   const [, n, unit] = m;
   const value = Number(n);
   switch (unit) {
-    case 's': return value;
-    case 'm': return value * 60;
-    case 'h': return value * 3600;
-    case 'd': return value * 86400;
-    case 'w': return value * 604800;
-    default: return 900;
+    case 's':
+      return value;
+    case 'm':
+      return value * 60;
+    case 'h':
+      return value * 3600;
+    case 'd':
+      return value * 86400;
+    case 'w':
+      return value * 604800;
+    default:
+      return 900;
   }
 };
 
@@ -195,7 +188,9 @@ export const verifyOtp = async (
   return { verifiedToken, userId: existing?.id ?? null };
 };
 
-const consumeVerifiedToken = async (token: string): Promise<{ phone: string; purpose: OtpPurpose; userId: string | null }> => {
+const consumeVerifiedToken = async (
+  token: string,
+): Promise<{ phone: string; purpose: OtpPurpose; userId: string | null }> => {
   const raw = await redis.get(`${OTP_TOKEN_PREFIX}${token}`);
   if (!raw) throw new UnauthorizedError('Verification token expired. Restart the flow.');
   await redis.del(`${OTP_TOKEN_PREFIX}${token}`);
@@ -248,14 +243,18 @@ export interface SignupData {
 }
 
 const generateUniqueUsername = async (base: string): Promise<string> => {
-  const clean = base
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '')
-    .slice(0, 20) || 'user';
+  const clean =
+    base
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .slice(0, 20) || 'user';
   // Try N times with a numeric suffix
   for (let i = 0; i < 10; i++) {
     const candidate = i === 0 ? clean : `${clean}${Math.floor(1000 + Math.random() * 9000)}`;
-    const exists = await prisma.user.findUnique({ where: { username: candidate }, select: { id: true } });
+    const exists = await prisma.user.findUnique({
+      where: { username: candidate },
+      select: { id: true },
+    });
     if (!exists) return candidate;
   }
   return `${clean}${Date.now().toString(36)}`;
@@ -379,7 +378,16 @@ export const loginWithOAuth = async (
       },
     },
     select: {
-      user: { select: { id: true, role: true, phone: true, isPhoneVerified: true, isActive: true, avatarUrl: true } },
+      user: {
+        select: {
+          id: true,
+          role: true,
+          phone: true,
+          isPhoneVerified: true,
+          isActive: true,
+          avatarUrl: true,
+        },
+      },
     },
   });
 
@@ -387,7 +395,14 @@ export const loginWithOAuth = async (
   if (!user && profile.email) {
     user = await prisma.user.findUnique({
       where: { email: profile.email },
-      select: { id: true, role: true, phone: true, isPhoneVerified: true, isActive: true, avatarUrl: true },
+      select: {
+        id: true,
+        role: true,
+        phone: true,
+        isPhoneVerified: true,
+        isActive: true,
+        avatarUrl: true,
+      },
     });
   }
   if (!user) return { pending: true };
@@ -453,10 +468,15 @@ export const completeOAuthSignup = async (
   const existingPhone = input.phone
     ? await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } })
     : null;
-  if (existingPhone) throw new ConflictError('This phone number is already registered. Please sign in instead.');
+  if (existingPhone)
+    throw new ConflictError('This phone number is already registered. Please sign in instead.');
   if (profile.email) {
-    const existingEmail = await prisma.user.findUnique({ where: { email: profile.email }, select: { id: true } });
-    if (existingEmail) throw new ConflictError('An account already uses this email. Please sign in instead.');
+    const existingEmail = await prisma.user.findUnique({
+      where: { email: profile.email },
+      select: { id: true },
+    });
+    if (existingEmail)
+      throw new ConflictError('An account already uses this email. Please sign in instead.');
   }
 
   try {
@@ -487,7 +507,9 @@ export const completeOAuthSignup = async (
     return { user, tokens };
   } catch (err) {
     if ((err as { code?: string }).code === 'P2002') {
-      throw new ConflictError('This phone or OAuth account is already registered. Please sign in instead.');
+      throw new ConflictError(
+        'This phone or OAuth account is already registered. Please sign in instead.',
+      );
     }
     throw err;
   }
@@ -506,16 +528,27 @@ export const completePhoneVerification = async (
     throw new UnauthorizedError('Phone verification token belongs to another account');
   }
 
-  const owner = await prisma.user.findUnique({ where: { phone: input.phone }, select: { id: true } });
+  const owner = await prisma.user.findUnique({
+    where: { phone: input.phone },
+    select: { id: true },
+  });
   if (owner && owner.id !== userId) {
     throw new ConflictError('That phone number is already registered to another account');
   }
 
-  return prisma.user.update({
+  const updated = await prisma.user.update({
     where: { id: userId },
     data: { phone: input.phone, isPhoneVerified: true },
     select: { phone: true, isPhoneVerified: true },
   });
+  void writeUserAudit({
+    userId,
+    action: 'AUTH.PHONE_BOUND',
+    resourceType: 'ACCOUNT',
+    resourceId: userId,
+    meta: { phone: input.phone },
+  });
+  return updated;
 };
 
 // ==========================================
@@ -529,11 +562,23 @@ export const completePhoneVerification = async (
 export const setPin = async (userId: string, pin: string): Promise<void> => {
   const pinHash = await hashPassword(pin);
   await prisma.user.update({ where: { id: userId }, data: { pinHash } });
+  void writeUserAudit({
+    userId,
+    action: 'AUTH.PIN_SET',
+    resourceType: 'ACCOUNT',
+    resourceId: userId,
+  });
 };
 
 /** Remove the user's PIN (they can always set a new one). */
 export const removePin = async (userId: string): Promise<void> => {
   await prisma.user.update({ where: { id: userId }, data: { pinHash: null } });
+  void writeUserAudit({
+    userId,
+    action: 'AUTH.PIN_REMOVED',
+    resourceType: 'ACCOUNT',
+    resourceId: userId,
+  });
 };
 
 /**
@@ -594,7 +639,12 @@ export const refresh = async (
   const stored = await prisma.refreshToken.findUnique({
     where: { tokenHash: sha256(decoded.jti) },
   });
-  if (!stored || stored.revokedAt || stored.expiresAt < new Date() || stored.userId !== decoded.sub) {
+  if (
+    !stored ||
+    stored.revokedAt ||
+    stored.expiresAt < new Date() ||
+    stored.userId !== decoded.sub
+  ) {
     // Possible token reuse — revoke ALL user tokens (defensive)
     if (stored?.userId) {
       await prisma.refreshToken.updateMany({

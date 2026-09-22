@@ -737,10 +737,39 @@
     "availability": "Availability",
     "paymentMethods": "Payment methods",
     "savedSearches": "Saved searches",
-    "skills": "Skills"
+    "skills": "Skills",
+    "activity": "Recent activity"
   },
   "gigs": {
     "saved": "Gig saved",
     "removedSaved": "Gig removed from saved"
+  },
+  "activity": {
+    "subtitle": "Security and money events on your account — newest first.",
+    "empty": "Nothing yet",
+    "emptyBody": "Your deliveries, approvals, payouts and sign-ins will appear here.",
+    "system": "Automatic",
+    "orderFunded": "Escrow funded",
+    "orderApproved": "Order approved — funds released",
+    "orderDelivered": "Work delivered",
+    "orderRevision": "Revision requested",
+    "orderCancelled": "Order cancelled",
+    "orderAutoReleased": "Escrow auto-released",
+    "milestoneDelivered": "Milestone delivered",
+    "milestoneApproved": "Milestone approved — funds released",
+    "milestoneDisputed": "Milestone disputed",
+    "milestoneAutoReleased": "Milestone auto-released",
+    "disputeOpened": "Dispute opened",
+    "disputeResolved": "Dispute resolved",
+    "payoutRequested": "Payout requested",
+    "payoutSent": "Payout sent to provider",
+    "payoutSucceeded": "Payout completed",
+    "payoutFailed": "Payout failed",
+    "payoutCancelled": "Payout cancelled",
+    "pinSet": "Sign-in PIN set",
+    "pinRemoved": "Sign-in PIN removed",
+    "phoneBound": "Phone number linked",
+    "deviceAdded": "New device signed in",
+    "updated": "Account updated"
   }
 }

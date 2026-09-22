@@ -16,6 +16,7 @@ import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { MIN_WITHDRAWAL_ETB, withdrawalFeeEtb } from '@apex-work/shared';
 import { notify } from './notifications.service.js';
+import { writeUserAudit } from '../lib/audit.js';
 import { chapa } from './chapa.service.js';
 import { logger } from '../config/logger.js';
 
@@ -100,6 +101,13 @@ export async function requestWithdrawal(input: {
     body: 'We got your request. Funds usually arrive within 1–2 business days.',
     payload: { withdrawalId: wd.id },
   });
+  void writeUserAudit({
+    userId: input.userId,
+    action: 'PAYOUT.REQUESTED',
+    resourceType: 'PAYOUT',
+    resourceId: wd.id,
+    meta: { amountEtb: input.amountEtb, netEtb: net, destination: input.destination },
+  });
 
   // Automated transfers are explicitly opt-in. Until the feature flag is
   // enabled, the existing admin review flow remains the safe default.
@@ -150,6 +158,14 @@ async function tryAutomatedPayout(
       providerRef: transfer.reference ?? reference,
       failureReason: transfer.error ?? 'Chapa rejected the transfer',
     });
+    void writeUserAudit({
+      actorType: 'SYSTEM',
+      systemName: 'Chapa transfers',
+      action: 'PAYOUT.FAILED',
+      resourceType: 'PAYOUT',
+      resourceId: withdrawalId,
+      meta: { reason: transfer.error ?? 'Chapa rejected the transfer' },
+    });
     await notify({
       userId: input.userId,
       type: 'PAYMENT',
@@ -162,6 +178,14 @@ async function tryAutomatedPayout(
 
   if (transfer.status === 'pending' && transfer.reference) {
     await markStatus(withdrawalId, 'PROCESSING', { providerRef: transfer.reference });
+    void writeUserAudit({
+      actorType: 'SYSTEM',
+      systemName: 'Chapa transfers',
+      action: 'PAYOUT.SENT_TO_PROVIDER',
+      resourceType: 'PAYOUT',
+      resourceId: withdrawalId,
+      meta: { providerRef: transfer.reference },
+    });
     await notify({
       userId: input.userId,
       type: 'PAYMENT',
@@ -197,6 +221,14 @@ export async function syncProcessingWithdrawals(limit = 25) {
     const result = await chapa.verifyTransfer(item.providerRef);
     if (result.ok) {
       await markStatus(item.id, 'SUCCESS', { providerRef: item.providerRef });
+      void writeUserAudit({
+        actorType: 'SYSTEM',
+        systemName: 'Chapa transfer sync',
+        action: 'PAYOUT.SUCCEEDED',
+        resourceType: 'PAYOUT',
+        resourceId: item.id,
+        meta: { amountEtb: item.amountEtb, providerRef: item.providerRef },
+      });
       await notify({
         userId: item.userId,
         type: 'PAYMENT',
@@ -209,6 +241,14 @@ export async function syncProcessingWithdrawals(limit = 25) {
       await markStatus(item.id, 'FAILED', {
         providerRef: item.providerRef,
         failureReason: result.error ?? 'Chapa transfer failed',
+      });
+      void writeUserAudit({
+        actorType: 'SYSTEM',
+        systemName: 'Chapa transfer sync',
+        action: 'PAYOUT.FAILED',
+        resourceType: 'PAYOUT',
+        resourceId: item.id,
+        meta: { amountEtb: item.amountEtb, reason: result.error ?? 'Chapa transfer failed' },
       });
       await notify({
         userId: item.userId,
@@ -299,7 +339,15 @@ export async function cancelWithdrawal(userId: string, withdrawalId: string) {
   if (wd.status !== 'PENDING') {
     throw new ConflictError('Only pending withdrawals can be cancelled');
   }
-  return markStatus(withdrawalId, 'CANCELLED', { failureReason: 'User cancelled' });
+  const updated = await markStatus(withdrawalId, 'CANCELLED', { failureReason: 'User cancelled' });
+  void writeUserAudit({
+    userId,
+    action: 'PAYOUT.CANCELLED',
+    resourceType: 'PAYOUT',
+    resourceId: withdrawalId,
+    meta: { amountEtb: wd.amountEtb },
+  });
+  return updated;
 }
 
 export async function listMyWithdrawals(userId: string, limit = 30) {

@@ -49,7 +49,7 @@ export function AuditTab() {
         title={dt('Audit log')}
         subtitle={
           mediaCount > 0
-            ? `Every admin mutation — ${mediaCount} media actions (image approvals)`
+            ? `Every admin, user & system event — ${mediaCount} media actions (image approvals)`
             : 'Every admin mutation, who/what/when'
         }
         actions={<ExportButton kind="audit" params={resourceType ? { resourceType } : {}} />}
@@ -98,7 +98,14 @@ export function AuditTab() {
             {items.map((a) => (
               <tr key={a.id} className="border-b border-border/50">
                 <Td>
-                  <div className="font-bold">{a.adminName}</div>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    {a.adminName}
+                    {a.actorType && a.actorType !== 'ADMIN' ? (
+                      <Badge tone={a.actorType === 'SYSTEM' ? 'neutral' : 'ok'}>
+                        {a.actorType}
+                      </Badge>
+                    ) : null}
+                  </div>
                   <div className="text-[11px] text-muted-foreground">{a.adminRole}</div>
                 </Td>
                 <Td>

@@ -164,7 +164,7 @@ model User {
   reviewsWritten Review[]             @relation("ReviewAuthor")
   reviewsAbout   Review[]             @relation("ReviewSubject")
   reviewsHidden  Review[]             @relation("ReviewHiddenBy")
-  adminActions   AdminAuditLog[]      @relation("AdminActor")
+  adminActions   AuditLog[]            @relation("AdminActor")
   settingsUpdated AppSetting[]        @relation("SettingUpdatedBy")
   categoriesUpdated Category[]        @relation("CategoryUpdatedBy")
   kpiThresholdsUpdated KpiThreshold[] @relation("KpiThresholdUpdatedBy")
@@ -1452,18 +1452,28 @@ model EmailQueue {
 /// Append-only log of every admin mutation. Every state-changing admin
 /// endpoint must call `adminAudit()` (apps/api/src/lib/audit.ts) so the
 /// platform can answer "who changed what and when".
-model AdminAuditLog {
+/// Generalized audit trail. One row per security/money/trust-relevant event,
+/// regardless of who acted: admins (ADMIN), users themselves (USER), or the
+/// platform's own scheduled jobs (SYSTEM — e.g. escrow auto-release). Rows are
+/// hash-chained (prevHash → hash over the canonical payload) so any edit or
+/// deletion of history is detectable by verifyAuditChain(); see lib/audit.ts.
+/// Physical table name kept from the admin-only era (no data migration needed).
+model AuditLog {
   id           String   @id @default(cuid())
-  adminId      String
-  adminName    String
-  adminRole    String
-  action       String   // e.g. "GIG.MODERATE", "USER.SUSPEND", "MONEY.CREDIT"
-  resourceType String   // e.g. "GIG", "ORDER"
+  adminId      String   // actor id ('system' for SYSTEM rows)
+  adminName    String   // actor display name
+  adminRole    String   // actor role; 'SYSTEM' for system rows
+  actorType    String   @default("ADMIN") // ADMIN | USER | SYSTEM
+  action       String   // e.g. "ORDER.APPROVED", "PAYOUT.REQUESTED", "GIG.MODERATE"
+  resourceType String   // e.g. "ORDER", "PAYOUT"
   resourceId   String?
   before       Json?
   after        Json?
   meta         Json?
   ip           String?
+  prevHash     String?  // hash of the previous chained row (null = chain start)
+  hash         String?  // sha256(prevHash|payload) — null = legacy pre-chain row
+  payload      String?  // canonical JSON hashed into `hash` (for verification)
   createdAt    DateTime @default(now())
 
   admin        User     @relation("AdminActor", fields: [adminId], references: [id], onDelete: Cascade)
@@ -1471,6 +1481,8 @@ model AdminAuditLog {
   @@index([adminId, createdAt(sort: Desc)])
   @@index([resourceType, resourceId])
   @@index([action, createdAt(sort: Desc)])
+  @@index([actorType, createdAt(sort: Desc)])
+  @@map("AdminAuditLog")
 }
 
 /// Typed key/value store for runtime-tunable platform settings, feature flags

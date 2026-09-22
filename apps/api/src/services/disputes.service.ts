@@ -14,6 +14,7 @@ import type { DisputeStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { notify } from './notifications.service.js';
+import { writeUserAudit } from '../lib/audit.js';
 import { sendPush } from './push.service.js';
 
 export async function openDispute(userId: string, input: { orderId: string; reason: string }) {
@@ -54,6 +55,13 @@ export async function openDispute(userId: string, input: { orderId: string; reas
     url: `/orders/${order.id}`,
     tag: `dispute-${dispute.id}`,
   });
+  void writeUserAudit({
+    userId,
+    action: 'DISPUTE.OPENED',
+    resourceType: 'ORDER',
+    resourceId: order.id,
+    meta: { disputeId: dispute.id, title: order.title, reason: input.reason.slice(0, 200) },
+  });
   return dispute;
 }
 
@@ -71,8 +79,13 @@ export async function listMyDisputes(userId: string) {
     include: {
       order: {
         select: {
-          id: true, title: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true,
-          clientId: true, sellerId: true,
+          id: true,
+          title: true,
+          amountEtb: true,
+          sellerNetEtb: true,
+          platformFeeEtb: true,
+          clientId: true,
+          sellerId: true,
           client: { select: { username: true, fullName: true, avatarUrl: true } },
           seller: { select: { username: true, fullName: true, avatarUrl: true } },
         },
@@ -91,8 +104,13 @@ export async function adminList(status?: DisputeStatus, limit = 50) {
     include: {
       order: {
         select: {
-          id: true, title: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true,
-          clientId: true, sellerId: true,
+          id: true,
+          title: true,
+          amountEtb: true,
+          sellerNetEtb: true,
+          platformFeeEtb: true,
+          clientId: true,
+          sellerId: true,
           client: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
           seller: { select: { id: true, username: true, fullName: true, avatarUrl: true } },
         },
@@ -122,10 +140,18 @@ export async function adminResolve(
   const d = await prisma.dispute.findUnique({
     where: { id: disputeId },
     include: {
-      order: { select: {
-        id: true, amountEtb: true, sellerNetEtb: true, platformFeeEtb: true,
-        clientId: true, sellerId: true, title: true, status: true,
-      } },
+      order: {
+        select: {
+          id: true,
+          amountEtb: true,
+          sellerNetEtb: true,
+          platformFeeEtb: true,
+          clientId: true,
+          sellerId: true,
+          title: true,
+          status: true,
+        },
+      },
     },
   });
   if (!d) throw new NotFoundError('Dispute');
@@ -178,21 +204,34 @@ export async function adminResolve(
       });
       await tx.transaction.create({
         data: {
-          userId: order.clientId, type: 'ORDER_REFUND', amountEtb: clientRefund,
-          description: `Dispute resolved — refund for "${order.title}"`, relatedId: order.id,
+          userId: order.clientId,
+          type: 'ORDER_REFUND',
+          amountEtb: clientRefund,
+          description: `Dispute resolved — refund for "${order.title}"`,
+          relatedId: order.id,
         },
       });
     }
     if (sellerRelease > 0) {
       await tx.wallet.upsert({
         where: { userId: order.sellerId },
-        create: { userId: order.sellerId, balanceEtb: sellerRelease, lifetimeEarnedEtb: sellerRelease },
-        update: { balanceEtb: { increment: sellerRelease }, lifetimeEarnedEtb: { increment: sellerRelease } },
+        create: {
+          userId: order.sellerId,
+          balanceEtb: sellerRelease,
+          lifetimeEarnedEtb: sellerRelease,
+        },
+        update: {
+          balanceEtb: { increment: sellerRelease },
+          lifetimeEarnedEtb: { increment: sellerRelease },
+        },
       });
       await tx.transaction.create({
         data: {
-          userId: order.sellerId, type: 'ORDER_PAYOUT', amountEtb: sellerRelease,
-          description: `Dispute resolved — release for "${order.title}"`, relatedId: order.id,
+          userId: order.sellerId,
+          type: 'ORDER_PAYOUT',
+          amountEtb: sellerRelease,
+          description: `Dispute resolved — release for "${order.title}"`,
+          relatedId: order.id,
         },
       });
     }
@@ -200,8 +239,12 @@ export async function adminResolve(
     await tx.order.update({
       where: { id: order.id },
       data: {
-        status: input.ruling === 'WITHDRAWN' ? 'ACTIVE' :
-                clientRefund > 0 && sellerRelease === 0 ? 'CANCELLED' : 'COMPLETED',
+        status:
+          input.ruling === 'WITHDRAWN'
+            ? 'ACTIVE'
+            : clientRefund > 0 && sellerRelease === 0
+              ? 'CANCELLED'
+              : 'COMPLETED',
         completedAt: input.ruling !== 'WITHDRAWN' && sellerRelease > 0 ? new Date() : undefined,
         cancelledAt: input.ruling === 'RESOLVED_CLIENT' ? new Date() : undefined,
       },
@@ -214,17 +257,29 @@ export async function adminResolve(
   // Notify both parties.
   await Promise.all([
     notify({
-      userId: order.clientId, type: 'ORDER_UPDATE',
-      title: 'Dispute resolved', body: order.title,
+      userId: order.clientId,
+      type: 'ORDER_UPDATE',
+      title: 'Dispute resolved',
+      body: order.title,
       payload: { orderId: order.id, ruling: input.ruling, refund: clientRefund },
     }),
     notify({
-      userId: order.sellerId, type: 'ORDER_UPDATE',
-      title: 'Dispute resolved', body: order.title,
+      userId: order.sellerId,
+      type: 'ORDER_UPDATE',
+      title: 'Dispute resolved',
+      body: order.title,
       payload: { orderId: order.id, ruling: input.ruling, release: sellerRelease },
     }),
   ]);
-  void sendPush(order.clientId, { title: 'Dispute resolved', body: order.title, url: `/orders/${order.id}` });
-  void sendPush(order.sellerId, { title: 'Dispute resolved', body: order.title, url: `/orders/${order.id}` });
+  void sendPush(order.clientId, {
+    title: 'Dispute resolved',
+    body: order.title,
+    url: `/orders/${order.id}`,
+  });
+  void sendPush(order.sellerId, {
+    title: 'Dispute resolved',
+    body: order.title,
+    url: `/orders/${order.id}`,
+  });
   return resolved;
 }

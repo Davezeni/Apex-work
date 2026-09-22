@@ -13,6 +13,7 @@ import type { MilestoneInput } from '@apex-work/shared';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../lib/errors.js';
 import { splitPayout } from './financialIdempotency.js';
 import { notify } from './notifications.service.js';
+import { writeUserAudit } from '../lib/audit.js';
 import { sendPush } from './push.service.js';
 
 async function assertOrderParty(orderId: string, userId: string) {
@@ -109,6 +110,13 @@ export async function markDelivered(milestoneId: string, userId: string) {
     url: `/orders/${m.order.id}`,
     tag: `ms-${m.id}`,
   });
+  void writeUserAudit({
+    userId,
+    action: 'MILESTONE.DELIVERED',
+    resourceType: 'ORDER',
+    resourceId: m.order.id,
+    meta: { milestoneId: m.id, title: m.title },
+  });
   return updated;
 }
 
@@ -139,7 +147,7 @@ export async function approve(milestoneId: string, userId: string) {
   if (!m) throw new NotFoundError('Milestone');
   if (m.order.clientId !== userId) throw new ForbiddenError('Only the client can approve');
   if (m.status !== 'DELIVERED') throw new BadRequestError('Milestone must be delivered first');
-  return approveMilestoneCore(milestoneId, m);
+  return approveMilestoneCore(milestoneId, m, { type: 'USER', userId });
 }
 
 /**
@@ -163,6 +171,7 @@ async function approveMilestoneCore(
     amountEtb: number;
     title: string;
   },
+  actor: { type: 'USER'; userId: string } | { type: 'SYSTEM' } = { type: 'SYSTEM' },
 ) {
   // Pro-rated payout: this milestone's slice of sellerNetEtb.
   const ratio = m.amountEtb / m.order.amountEtb;
@@ -184,7 +193,11 @@ async function approveMilestoneCore(
     const updated = await tx.milestone.findUniqueOrThrow({ where: { id: milestoneId } });
     await tx.wallet.upsert({
       where: { userId: m.order.sellerId },
-      create: { userId: m.order.sellerId, balanceEtb: split.sellerAmt, lifetimeEarnedEtb: split.sellerAmt },
+      create: {
+        userId: m.order.sellerId,
+        balanceEtb: split.sellerAmt,
+        lifetimeEarnedEtb: split.sellerAmt,
+      },
       update: {
         balanceEtb: { increment: split.sellerAmt },
         lifetimeEarnedEtb: { increment: split.sellerAmt },
@@ -267,6 +280,24 @@ async function approveMilestoneCore(
     url: `/orders/${m.order.id}`,
     tag: `pay-${m.id}`,
   });
+  void writeUserAudit(
+    actor.type === 'SYSTEM'
+      ? {
+          actorType: 'SYSTEM',
+          systemName: 'Milestone auto-release',
+          action: 'MILESTONE.AUTO_RELEASED',
+          resourceType: 'ORDER',
+          resourceId: m.order.id,
+          meta: { milestoneId: m.id, title: m.title, releasedEtb: payout },
+        }
+      : {
+          userId: actor.userId,
+          action: 'MILESTONE.APPROVED',
+          resourceType: 'ORDER',
+          resourceId: m.order.id,
+          meta: { milestoneId: m.id, title: m.title, releasedEtb: payout },
+        },
+  );
   return result;
 }
 
@@ -287,6 +318,13 @@ export async function dispute(milestoneId: string, userId: string, reason?: stri
     title: 'Milestone disputed',
     body: reason?.slice(0, 200) ?? m.title,
     payload: { orderId: m.orderId, milestoneId: m.id },
+  });
+  void writeUserAudit({
+    userId,
+    action: 'MILESTONE.DISPUTED',
+    resourceType: 'ORDER',
+    resourceId: m.orderId,
+    meta: { milestoneId: m.id, title: m.title, reason: reason ?? null },
   });
   return updated;
 }
@@ -364,7 +402,7 @@ export async function autoReleaseMilestones(): Promise<{ released: number; remin
   let released = 0;
   for (const m of due) {
     try {
-      await approveMilestoneCore(m.id, m);
+      await approveMilestoneCore(m.id, m, { type: 'SYSTEM' });
       await notify({
         userId: m.order.clientId,
         type: 'ORDER_UPDATE',

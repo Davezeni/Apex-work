@@ -12,7 +12,7 @@ import { requireAdmin, requireCapability } from '../middleware/adminOnly.js';
 import { can } from '../lib/adminRbac.js';
 import { success } from '../lib/response.js';
 import { paginate } from '../lib/adminPage.js';
-import { loadActor, adminAudit } from '../lib/audit.js';
+import { loadActor, adminAudit, verifyAuditChain } from '../lib/audit.js';
 import { prisma } from '../lib/prisma.js';
 import {
   gigModerateSchema,
@@ -1169,6 +1169,15 @@ router.get(
         ops.listAudit({ adminId, resourceType, limit: p.limit, cursorWhere: p.cursorWhere }),
     });
     return success(res, result);
+  }),
+);
+
+/** Tamper-evidence check over the audit hash chain (staff-only). */
+router.get(
+  '/audit/integrity',
+  requireCapability('audit:view'),
+  asyncHandler(async (_req, res) => {
+    return success(res, await verifyAuditChain());
   }),
 );
 

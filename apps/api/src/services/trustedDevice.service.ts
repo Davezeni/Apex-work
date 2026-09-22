@@ -19,6 +19,7 @@
 import type { User } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { randomToken, sha256 } from '../lib/hash.js';
+import { writeUserAudit } from '../lib/audit.js';
 
 const TRUST_DAYS = 30;
 const TRUST_MS = TRUST_DAYS * 24 * 60 * 60 * 1000;
@@ -28,17 +29,26 @@ export function labelForUA(ua: string | undefined | null): string {
   if (!ua) return 'Unknown device';
   // Extremely cheap heuristics — no ua-parser-js needed for our purposes.
   const isMobile = /Mobile|Android|iPhone|iPad/i.test(ua);
-  const os =
-    /iPhone|iPad|iOS/i.test(ua) ? 'iOS' :
-    /Android/i.test(ua) ? 'Android' :
-    /Mac OS X/i.test(ua) ? 'macOS' :
-    /Windows/i.test(ua) ? 'Windows' :
-    /Linux/i.test(ua) ? 'Linux' : 'Unknown';
-  const browser =
-    /Edg\//i.test(ua) ? 'Edge' :
-    /Chrome/i.test(ua) ? 'Chrome' :
-    /Firefox/i.test(ua) ? 'Firefox' :
-    /Safari/i.test(ua) ? 'Safari' : 'Browser';
+  const os = /iPhone|iPad|iOS/i.test(ua)
+    ? 'iOS'
+    : /Android/i.test(ua)
+      ? 'Android'
+      : /Mac OS X/i.test(ua)
+        ? 'macOS'
+        : /Windows/i.test(ua)
+          ? 'Windows'
+          : /Linux/i.test(ua)
+            ? 'Linux'
+            : 'Unknown';
+  const browser = /Edg\//i.test(ua)
+    ? 'Edge'
+    : /Chrome/i.test(ua)
+      ? 'Chrome'
+      : /Firefox/i.test(ua)
+        ? 'Firefox'
+        : /Safari/i.test(ua)
+          ? 'Safari'
+          : 'Browser';
   return `${os}${isMobile ? ' Mobile' : ''} · ${browser}`;
 }
 
@@ -56,16 +66,31 @@ export async function issueTrustedDevice(input: IssueDeviceInput): Promise<{
   const raw = randomToken(32);
   const tokenHash = sha256(raw);
   const expiresAt = new Date(Date.now() + TRUST_MS);
-  await prisma.trustedDevice.create({
+  // First time we see this device type for this user → worth an audit row.
+  // Repeat logins from the same browser stay silent (no noise).
+  const label = labelForUA(input.userAgent);
+  const seenBefore = await prisma.trustedDevice.count({
+    where: { userId: input.userId, label },
+  });
+  const created = await prisma.trustedDevice.create({
     data: {
       userId: input.userId,
       tokenHash,
-      label: labelForUA(input.userAgent),
+      label,
       userAgent: input.userAgent,
       ipAddress: input.ipAddress,
       expiresAt,
     },
   });
+  if (seenBefore === 0) {
+    void writeUserAudit({
+      userId: input.userId,
+      action: 'AUTH.DEVICE_ADDED',
+      resourceType: 'DEVICE',
+      resourceId: created.id,
+      meta: { label },
+    });
+  }
   return { deviceToken: raw, expiresAt };
 }
 

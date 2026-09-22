@@ -737,10 +737,39 @@
     "availability": "Yeroo bilisaa",
     "paymentMethods": "Karaa kaffaltii",
     "savedSearches": "Barbaacha olkaa'ame",
-    "skills": "Dandeettoota"
+    "skills": "Dandeettoota",
+    "activity": "Sochii dhiyoo"
   },
   "gigs": {
     "saved": "Gig olkaa'ame",
     "removedSaved": "Gig irraa haqame"
+  },
+  "activity": {
+    "subtitle": "Taatee nageenyaa fi maallaqa herrega keetti — isa haaraa dura.",
+    "empty": "Yeroo ammaa duwwaa dha",
+    "emptyBody": "Dhiyeessii, mirkanaa, kaffaltii fi seensiin kee asitti mul’ata.",
+    "system": "Ofumaan",
+    "orderFunded": "Escrow guutameera",
+    "orderApproved": "Ajaja mirkanaa’e — maqaan gadhiifame",
+    "orderDelivered": "Hojiin dhiyeessameera",
+    "orderRevision": "Fooyyii gaafatameera",
+    "orderCancelled": "Ajajni haqameera",
+    "orderAutoReleased": "Escrow ofumaan gadhiifame",
+    "milestoneDelivered": "Kutaan hojii dhiyeessameera",
+    "milestoneApproved": "Kutaan hojii mirkanaa’e — maqaan gadhiifame",
+    "milestoneDisputed": "Kutaan hojii falmaame",
+    "milestoneAutoReleased": "Kutaan hojii ofumaan gadhiifame",
+    "disputeOpened": "Falmeen banameera",
+    "disputeResolved": "Falmeen furmeera",
+    "payoutRequested": "Gaaffii kaffaltii dhiyeessameera",
+    "payoutSent": "Kaffaltiin ergameera",
+    "payoutSucceeded": "Kaffaltiin xumurameera",
+    "payoutFailed": "Kaffaltiin hin milkoofne",
+    "payoutCancelled": "Kaffaltiin haqameera",
+    "pinSet": "PIIN seensameera",
+    "pinRemoved": "PIIN haqameera",
+    "phoneBound": "Lakkoobsi bilbaa walitti qabameera",
+    "deviceAdded": "Meeshaan haaraan seeneera",
+    "updated": "Herregni haaromeera"
   }
 }

@@ -128,9 +128,13 @@ export async function listAudit(opts: {
   if (opts.adminId) conditions.push({ adminId: opts.adminId });
   if (opts.resourceType) conditions.push({ resourceType: opts.resourceType });
   if (opts.cursorWhere) conditions.push(opts.cursorWhere);
-  const where: Record<string, unknown> = conditions.length === 0 ? {}
-    : conditions.length === 1 ? (conditions[0] as Record<string, unknown>) : { AND: conditions };
-  return prisma.adminAuditLog.findMany({
+  const where: Record<string, unknown> =
+    conditions.length === 0
+      ? {}
+      : conditions.length === 1
+        ? (conditions[0] as Record<string, unknown>)
+        : { AND: conditions };
+  return prisma.auditLog.findMany({
     where,
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     take: opts.limit + 1,
@@ -141,7 +145,15 @@ export async function listAudit(opts: {
 export async function listAdminRoles() {
   return prisma.user.findMany({
     where: { role: { in: ['ADMIN', 'MODERATOR', 'SUPPORT', 'FINANCE'] } },
-    select: { id: true, username: true, fullName: true, email: true, role: true, isActive: true, createdAt: true },
+    select: {
+      id: true,
+      username: true,
+      fullName: true,
+      email: true,
+      role: true,
+      isActive: true,
+      createdAt: true,
+    },
     orderBy: { createdAt: 'asc' },
   });
 }
