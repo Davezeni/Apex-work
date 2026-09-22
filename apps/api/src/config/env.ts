@@ -32,7 +32,10 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 chars'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
-  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(12),
+  // 10 not 12: bcryptjs is pure JS — cost 12 took seconds per PIN/password check
+  // on the free-tier CPU. 10 is the OWASP-recommended floor and we sit behind
+  // strict auth rate limits. Set BCRYPT_ROUNDS env to override.
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(15).default(10),
 
   SMSETHIOPIA_API_KEY: z.string().optional(),
   // 'auto' (default): SMSEthiopia when its key is set, else console (dev OTP logging).

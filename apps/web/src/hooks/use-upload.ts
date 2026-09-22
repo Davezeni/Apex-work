@@ -3,6 +3,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { downscaleForBucket } from '@/lib/image-downscale';
 import type { UploadBucket } from '@apex-work/shared';
 import { contentTypeForFile } from '@/lib/file-types';
 
@@ -160,6 +161,10 @@ export function useUpload() {
     { file: File; bucket: UploadBucket; onProgress?: (pct: number) => void }
   >({
     mutationFn: async ({ file, bucket, onProgress }) => {
+      // Resize big phone photos in the browser BEFORE anything hits the wire —
+      // avatars land in the file gateway (Postgres-backed) and everything else
+      // goes to Supabase, so smaller bytes = faster loads everywhere.
+      file = await downscaleForBucket(file, bucket);
       const contentType = contentTypeForFile(file);
       // Avatars must be readable by any bare <img> tag everywhere (chat header,
       // gig cards, profile, reviews). The API's self-hosted file gateway serves
