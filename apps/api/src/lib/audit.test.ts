@@ -85,7 +85,7 @@ describe('tamper-evident hash chain', () => {
 
   it('chains rows: second row references first row hash', async () => {
     prismaMock.auditLog.create.mockResolvedValue({ id: 'x' });
-    let stored: Array<Record<string, unknown>> = [];
+    const stored: Array<Record<string, unknown>> = [];
     prismaMock.auditLog.create.mockImplementation(
       async ({ data }: { data: Record<string, unknown> }) => {
         stored.push(data);
