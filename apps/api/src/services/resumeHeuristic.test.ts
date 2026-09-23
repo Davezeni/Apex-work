@@ -195,6 +195,232 @@ describe('resume heuristic fallback parser', () => {
     expect(r2.certifications[0]?.issueYear).toBe(2021);
   });
 
+  it('parses the real-world Ethiopian bank-CV template (date+role same line, personal block mid-document)', () => {
+    const CV2 = `Dawit Tamiru Asfaw
+EDUCATION
+Jun 2017 - Jul 2022 Computer Science
+Rift Valley University, Addis Ababa
+In-depth knowledge of algorithms and data structures to optimize
+software performance and solve complex problems.
+Proficiency  in  multiple  programming  languages  including  Python,
+Java, and C++ for diverse application development.
+Understanding  of  computer  architecture,  operating  systems,  and
+networking principles to design efficient systems.
+Familiarity  with  database  management  systems,  SQL,  and  data
+modeling for robust data storage and retrieval solutions.
+Jun 2016 - Jul 2019 Accounting and Finance
+Addis Ababa University, Addis Ababa
+Comprehensive  understanding  of  financial  accounting  principles,
+including GAAP and IFRS standards.
+Proficiency  in  financial  statement  preparation,  analysis,  and
+interpretation to support business decision-making.
+Knowledge of managerial accounting techniques such as budgeting,
+cost analysis, and performance measurement.
+Skills  in  financial  management,  including  capital  budgeting,
+investment analysis, and risk management.
+Experience with accounting software and ERP systems for accurate
+financial reporting and audit preparedness.
+Understanding of auditing principles and practices, including internal
+controls and compliance requirements.
+EMPLOYMENT
+Sep 2023 - Present Internal Control - II
+Amhara Bank S.C, Addis Ababa
+Conducted  comprehensive  internal  audits  to  evaluate  the
+effectiveness  of  internal  controls  and  compliance  with  regulatory
+requirements in Addis Ababa operations.
+Developed and implemented risk management strategies to identify,
+assess,  and  mitigate  financial  and  operational  risks  within  the
+organization.
+Monitored adherence to internal policies and procedures, ensuring
+alignment  with  corporate  governance  standards  and  minimizing
+fraud risks.
+Dawit Tamiru
+Name
+Dawit Tamiru Asfaw
+Email address
+tamirud8@gmail.com
+Phone number
+0931503559
+Address
+Addis Ababa, Ethiopia
+1000 Addis Ababa
+Date of birth
+April 6, 1992
+Place of birth
+Addis Ababa
+Driver's license
+Auto, Taxi-2
+Gender
+Male
+Nationality
+Ethiopian
+Civil status
+Married
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+Sep 2022 - Sep 2023 Customer Service executive - II
+Amhara Bank S.C, Addis Ababa
+Managed daily customer interactions, ensuring timely resolution of
+inquiries and complaints to enhance customer satisfaction.
+Processed orders and transactions accurately, maintaining detailed
+records to support financial and operational reporting.
+Collaborated with cross-functional teams to address customer needs
+and provide tailored solutions, improving service delivery.
+Conducted  customer  feedback  analysis  to  identify  trends  and
+recommend service improvements to management.
+Jun 2021 - Sep 2022 Customer service Officer - II
+Abay Bank S.C, Addis Ababa
+Managed daily customer interactions, ensuring timely resolution of
+inquiries  and  complaints  to  enhance  customer  satisfaction  in  the
+Addis Ababa branch.
+Processed  customer  orders  and  transactions  accurately  while
+maintaining  detailed  records  to  support  operational  reporting  and
+compliance.
+Collaborated  with  cross-functional  teams  to  identify  and  address
+customer  needs,  delivering  tailored  solutions  to  improve  service
+quality.
+Analyzed  customer  feedback  and  data  to  identify  trends  and
+recommend  actionable  improvements  to  customer  service
+management.
+Developed and maintained strong relationships with clients in Addis
+Ababa to foster loyalty and encourage repeat business.
+Jan 2021 - Jun 2021 Internal - I
+Belayab Motors Pvt.Ltd.Co, Addis Ababa
+Developed and implemented risk management strategies tailored to
+mitigate  financial  and  operational  risks  specific  to  Addis  Ababa
+operations.
+Conducted  comprehensive  internal  audits  to  evaluate  the
+effectiveness of internal controls and regulatory compliance within
+the Addis Ababa branch.
+Prepared detailed audit reports with actionable recommendations for
+senior  management  to  drive  continuous  improvement  in  Addis
+Ababa's internal control frameworks.
+Collaborated  closely  with  department  heads  in  Addis  Ababa  to
+develop and implement corrective action plans strengthening internal
+controls and compliance.
+Sep 2019 - Jan 2021 Purchase Clerk
+Belayab Motors Pvt.Ltd.Co, Addis Ababa
+Processed purchase orders efficiently, ensuring timely procurement
+of goods and services to meet organizational needs in Addis Ababa.
+Maintained  accurate  records  of  purchase  transactions,  vendor
+invoices, and delivery schedules to support financial reporting and
+auditing.
+Coordinated with suppliers and vendors to negotiate pricing, terms,
+and delivery schedules, optimizing costs and ensuring supply chain
+reliability.
+Reviewed and verified purchase requisitions and approvals to ensure
+compliance with company policies and budget constraints.
+SKILLS
+Internal Auditing
+Risk Management
+Financial Reporting
+Customer Service
+Data Analysis
+Compliance Monitoring
+Programming (Python, Java, C++)
+Database Management
+Financial Accounting
+Team Collaboration
+Audit Reporting
+Transaction Reconciliation
+Software Development Lifecycle
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+CERTIFICATES
+Jul 2019 Peachtree and QuickBooks software based IFRS
+training
+Completed  comprehensive  training  on  Peachtree  accounting
+software with a focus on IFRS standards and compliance.
+Achieved  proficiency  in  QuickBooks  software  for  financial  data
+management and IFRS-based financial reporting.
+Certified in advanced bookkeeping and accounting principles using
+Peachtree and QuickBooks under IFRS guidelines.
+Feb 2024 Internal control and Auditing
+Certified Internal Auditor (CIA) demonstrating expertise in internal
+control and auditing principles.
+Association  of  Certified  Fraud  Examiners  (ACFE)  certification
+emphasizing fraud prevention and detection within internal audits.
+Certified  Risk  Management  Assurance  (CRMA)  credential
+showcasing skills in risk management and control assurance.
+May 2022 Customer Service and experience
+Certified  Customer  Service  Professional  (CCSP)  highlighting
+expertise  in  managing  customer  interactions  and  improving
+satisfaction.
+Certification in Customer Experience Management emphasizing the
+development and implementation of customer retention strategies.
+LANGUAGES
+English
+Amharic
+HOBBIES
+Reading■
+Coding■
+Hiking■
+Traveling■
+Gaming■
+Fitness■
+Cooking■
+Volunteering■
+• 
+• 
+• 
+• 
+• 
+• 
+• 
+• `;
+    const r2 = parseResumeHeuristic(CV2);
+    expect(r2.name).toBe('Dawit Tamiru Asfaw');
+    // every job paired with its true employer — nothing invented, none missing
+    expect(r2.experiences.map((e) => [e.company, e.role, e.startYear])).toEqual([
+      ['Amhara Bank S.C, Addis Ababa', 'Internal Control - II', 2023],
+      ['Amhara Bank S.C, Addis Ababa', 'Customer Service executive - II', 2022],
+      ['Abay Bank S.C, Addis Ababa', 'Customer service Officer - II', 2021],
+      ['Belayab Motors Pvt.Ltd.Co, Addis Ababa', 'Internal - I', 2021],
+      ['Belayab Motors Pvt.Ltd.Co, Addis Ababa', 'Purchase Clerk', 2019],
+    ]);
+    expect(r2.experiences[0]?.endYear).toBeNull(); // Present
+    // personal block must never become an entry
+    expect(r2.experiences.some((e) => /driver|marital|married/i.test(e.role + e.company))).toBe(
+      false,
+    );
+    // education: degree+years stay with the right institution
+    expect(r2.education.map((e) => [e.school, e.degree, e.startYear, e.endYear])).toEqual([
+      ['Rift Valley University, Addis Ababa', 'Computer Science', 2017, 2022],
+      ['Addis Ababa University, Addis Ababa', 'Accounting and Finance', 2016, 2019],
+    ]);
+    // proficiency labels are not languages
+    expect(r2.languages).toEqual(['English', 'Amharic']);
+    // skill with parentheses survives as one item; cert dates stripped
+    expect(r2.skills).toContain('Programming (Python, Java, C++)');
+    expect(r2.certifications[0]?.name).not.toMatch(/^Jul 2019/);
+  });
+
   it('never throws on garbage', () => {
     const junk = parseResumeHeuristic('\n\n@@@\n   \n---\n');
     expect(junk.skills).toEqual([]);

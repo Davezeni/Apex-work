@@ -125,6 +125,18 @@ const INSTITUTION_RE =
 const DEGREE_TOKEN_RE =
   /\b(BSc|B\.?Sc|BA|B\.?A\.?|BEd|MSc|M\.?Sc|MA|M\.?A\.?|MBA|MEd|PhD|Ph\.?D|Diploma|Certificate|Bachelor(?:'s)?|Master(?:'s)?|Doctorate|High School|Degree|TVET|Level [-–]?\s?[1-5])\b/i;
 
+/** Personal-information labels — NEVER a job role, company, or school. */
+const PERSONAL_LABEL_RE =
+  /^(driver'?s? ?licen[cs]e|licence|name|full name|email( address)?|e-mail|phone( number)?|mobile|address|date of birth|place of birth|gender|sex|nationality|civil status|marital status|religion|birth date|linkedin|github|portfolio|website)\b\s*:?\s*$/i;
+
+/** Personal-information VALUES — never a job role or employer. */
+const PERSONAL_VALUE_RE =
+  /^(married|single|divorced|widowed|male|female|ethiopian|none|n\/a|auto(.*,?.*)?|taxi[- ]?2?)\s*$/i;
+
+/** Language proficiency labels — they DESCRIBE a language, they are not one. */
+const PROFICIENCY_RE =
+  /^(native|bilingual|mother tongue|professional|full professional|limited working|advanced|intermediate|elementary|beginner|fluent|conversational)\b/i;
+
 /** Exact provider names — an issuer-FIRST cert line swaps onto these. */
 const STRICT_ISSUER_RE =
   /^(coursera|udemy|google|aws|amazon web services|amazon|microsoft|ibm|linkedin( learning)?|meta|huawei|oracle|cisco|adobe|edx|udacity|freecodecamp|hubspot|salesforce|ethio telecom)$/i;
@@ -353,10 +365,24 @@ function splitSkillLine(line: string): string[] {
   const cleaned = line.replace(BULLET, '').trim();
   const toItems = (chunk: string): string[] =>
     chunk
+      // protect parenthesised groups ("Programming (Python, Java, C++)")
+      .replace(
+        /\(([^)]*)\)/g,
+        (_m, inner: string) => `\u0001${String(inner).replace(/,/g, '\u0003')}\u0002`,
+      )
       .split(/[,|·;/]| {2,}/)
-      .map((item) => clampStr(item.replace(/\([^)]*\)/g, '').replace(/\.+$/, ''), LIMITS.skill))
+      .map((item) =>
+        clampStr(
+          item
+            .replace(/\u0001/g, '(')
+            .replace(/\u0002/g, ')')
+            .replace(/\u0003/g, ',')
+            .replace(/\.+$/, ''),
+          LIMITS.skill,
+        ),
+      )
       .filter(
-        (item): item is string => !!item && item.length >= 2 && item.split(/\s+/).length <= 4,
+        (item): item is string => !!item && item.length >= 2 && item.split(/\s+/).length <= 6,
       );
   const labeled = cleaned.match(/^([A-Za-z][A-Za-z0-9 /&+.#-]{1,40}?)\s*:\s*(.+)$/);
   if (labeled) {
@@ -450,7 +476,21 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
   let skills: string[] = [];
   const skillsSection = get('skills');
   if (skillsSection) {
-    for (const line of skillsSection.lines) {
+    // Two-column PDFs often split one skill across lines ("Programming
+    // (Python" / "Java" / "C++)") — re-join while parentheses stay unbalanced.
+    const merged: string[] = [];
+    for (const raw of skillsSection.lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      const open = (merged[merged.length - 1] ?? '').split('(').length - 1;
+      const close = (merged[merged.length - 1] ?? '').split(')').length - 1;
+      if (merged.length > 0 && open > close) {
+        merged[merged.length - 1] = `${merged[merged.length - 1]} ${line}`;
+      } else {
+        merged.push(line);
+      }
+    }
+    for (const line of merged) {
       if (HEADING_RE.test(line)) continue;
       skills.push(...splitSkillLine(line));
     }
@@ -471,7 +511,18 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
     if (labeled) spoken = splitSkillLine(labeled[1] ?? '');
   }
   const languages = dedupe(
-    spoken.map((s) => clampStr(s, LIMITS.language)).filter((s): s is string => !!s),
+    spoken
+      .map((s) =>
+        clampStr(
+          s.replace(
+            /\s*\((?:native|fluent|advanced|intermediate|beginner|elementary|professional|conversational)[^)]*\)/i,
+            '',
+          ),
+          LIMITS.language,
+        ),
+      )
+      .filter((s): s is string => !!s && !PROFICIENCY_RE.test(s))
+      .filter((s) => s.split(/\s+/).length <= 3),
   ).slice(0, 15);
 
   // ---- achievements ----
@@ -523,12 +574,34 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
       // write "Acme Corp — Software Developer Jan 2021 - Present" on one
       // line). The job-title keyword decides which line is the ROLE; page
       // order varies between CVs, so adjacency alone kept swapping them.
+      // Helper: skip personal-info noise (labels, the candidate's own name,
+      // emails, proficiency words) — a "Driver's license" line must never
+      // become a job title.
+      const isNoise = (line: string): boolean => {
+        const t = line.trim();
+        if (!t) return true;
+        if (PERSONAL_LABEL_RE.test(t)) return true;
+        if (PERSONAL_VALUE_RE.test(t)) return true;
+        if (PROFICIENCY_RE.test(t) && t.split(/\s+/).length <= 3) return true;
+        if (t.includes('@') || /^https?:/i.test(t)) return true;
+        if (name && t.length >= 4) {
+          const n = name.toLowerCase();
+          const l = t.toLowerCase();
+          if (l === n || n.startsWith(l) || l.startsWith(n.split(' ').slice(0, 2).join(' '))) {
+            return true;
+          }
+        }
+        return false;
+      };
+
       const above: string[] = [];
       const startScan = d > 0 ? (dateHits[d - 1]?.index ?? 0) + 1 : 0;
       for (let i = startScan; i < hit.index; i += 1) {
         const line = body[i] ?? '';
+        if (isNoise(line)) continue;
         if (looksLikeShortName(line)) above.push(line);
       }
+      const aboveLenBeforeSegs = above.length; // segs from the date line land AFTER this mark
       const sameLine = stripRange(body[hit.index] ?? '');
       if (sameLine) {
         // "Acme Corp — Software Developer" / "Acme | Developer" / "Acme at NGO"
@@ -539,13 +612,38 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
 
       let role: string | null = null;
       let company: string | null = null;
+      // "DATE + Role" layout ("Sep 2023 - Present Internal Control - II" with
+      // the employer on the NEXT line) — very common in CV templates. The
+      // remainder after the date IS the role; the company follows below.
+      const singleSeg =
+        sameLine && looksLikeShortName(sameLine) && !/[\u2014\u2013|]/.test(sameLine)
+          ? sameLine
+          : null;
+      let companyBelowIndex = -1;
+      if (singleSeg && !TITLE_RE.test(sameLine)) {
+        role = clampStr(singleSeg, LIMITS.headline);
+        for (let i = hit.index + 1; i < end; i += 1) {
+          const line = body[i] ?? '';
+          if (BULLET.test(line)) continue;
+          if (isNoise(line)) continue;
+          if (looksLikeShortName(line)) {
+            company = clampStr(line, LIMITS.name);
+            companyBelowIndex = i;
+            break;
+          }
+          break;
+        }
+      }
       const titleIndex = (() => {
         for (let i = above.length - 1; i >= 0; i -= 1) {
           if (TITLE_RE.test(above[i] ?? '')) return i;
         }
         return -1;
       })();
-      if (titleIndex >= 0) {
+      if (role && companyBelowIndex >= 0) {
+        // date-leading layout already resolved — description starts BELOW
+        // the company line we consumed.
+      } else if (titleIndex >= 0) {
         role = clampStr(above[titleIndex] ?? null, LIMITS.headline);
         // company = nearest short line ABOVE the role (the org comes first in
         // most layouts); fall back to the nearest one below.
@@ -565,6 +663,27 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
             }
           }
         }
+        // Template layout: the title sat ON the date line ALONE ("Sep 2023 -
+        // Present Internal Control - II") — the employer is the first short
+        // line BELOW the date. But when the date line carried BOTH parts
+        // ("Acme — Developer Jan 2021 - Present"), the employer is the other
+        // segment right above the title — do NOT go looking below.
+        const sameLineSegCount = above.length - aboveLenBeforeSegs;
+        const titleFromSameLine = titleIndex >= aboveLenBeforeSegs && sameLineSegCount <= 1;
+        if (titleFromSameLine || (company && isNoise(company))) company = null;
+        if (!company) {
+          for (let i = hit.index + 1; i < end; i += 1) {
+            const line = body[i] ?? '';
+            if (BULLET.test(line)) continue;
+            if (isNoise(line)) continue;
+            if (looksLikeShortName(line) && !TITLE_RE.test(line)) {
+              company = clampStr(line, LIMITS.name);
+              companyBelowIndex = i;
+              break;
+            }
+            break;
+          }
+        }
       } else {
         // No recognizable title: keep the legacy adjacency heuristic
         // (role directly above the date, company above the role).
@@ -573,12 +692,17 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
         role = clampStr(roleCandidate, LIMITS.headline);
         company = clampStr(companyCandidate, LIMITS.name);
       }
+      // Final safety: personal-info noise can never be a role or employer.
+      if (role && isNoise(role)) role = null;
+      if (company && isNoise(company)) company = null;
       // description: bullets/labels between the date and the next entry
+      const descStart = role && companyBelowIndex >= 0 ? companyBelowIndex + 1 : hit.index + 1;
       const descLines: string[] = [];
-      for (let i = hit.index + 1; i < end; i += 1) {
+      for (let i = descStart; i < end; i += 1) {
         const line = body[i] ?? '';
         if (/^core competencies/i.test(line)) break;
-        if (looksLikeShortName(line) && i > hit.index + 1 && descLines.length > 0) break;
+        if (isNoise(line)) continue;
+        if (looksLikeShortName(line) && i > descStart && descLines.length > 0) break;
         descLines.push(line);
       }
       if (role && company && hit.range.startYear >= YEAR_MIN) {
@@ -605,6 +729,13 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
   if (eduSection) {
     const body = eduSection.lines;
     let current: HeuristicEducation | null = null;
+    // "DATE + Degree" templates put the years BEFORE the institution line
+    // ("Jun 2017 - Jul 2022 Computer Science" / "Rift Valley University").
+    // Carry them forward so they land on the entry that follows.
+    let pending: {
+      range: NonNullable<ReturnType<typeof rangeFrom>>;
+      degree: string | null;
+    } | null = null;
     const flush = () => {
       if (current && current.school) {
         if (!education.some((e) => e.school.toLowerCase() === current!.school!.toLowerCase())) {
@@ -622,19 +753,21 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
       const isInstitution = INSTITUTION_RE.test(line) && looksLikeShortName(line);
 
       if (isInstitution) {
-        // A new institution line: flush the previous entry, start a new one.
+        // A new institution line: flush the previous entry, start a new one —
+        // adopting any "DATE + Degree" pair pending from the line above.
         flush();
         const school = clampStr(line, LIMITS.name);
         if (school) {
           current = {
             school,
-            degree: null,
+            degree: pending?.degree ?? null,
             fieldOfStudy: null,
-            startYear: range?.startYear ?? null,
-            endYear: range?.endYear ?? null,
+            startYear: pending?.range.startYear ?? range?.startYear ?? null,
+            endYear: pending?.range.endYear ?? range?.endYear ?? null,
             description: null,
           };
         }
+        pending = null;
         continue;
       }
       if (inline && inline.school && (!current || INSTITUTION_RE.test(cleaned))) {
@@ -667,6 +800,18 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
             }
           : null;
       const deg = degreePart ?? directDegree;
+      // A bare "DATE + degree/field" line BEFORE any institution belongs to
+      // the NEXT institution ("Jun 2017 - Jul 2022 Computer Science").
+      if (range && !current) {
+        pending = {
+          range,
+          degree:
+            cleaned && cleaned.length <= 60 && looksLikeShortName(cleaned)
+              ? clampStr(cleaned, LIMITS.name)
+              : null,
+        };
+        continue;
+      }
       if (current) {
         if (deg?.degree && !current.degree) current.degree = clampStr(deg.degree, LIMITS.name);
         if (deg?.fieldOfStudy && !current.fieldOfStudy) {
@@ -674,8 +819,21 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
         }
         if (degreePart?.school && !current.school) current.school = degreePart.school;
         if (range) {
-          current.startYear = range.startYear;
-          current.endYear = range.endYear;
+          // Years for an entry that already has years signal the NEXT
+          // entry starting (this template) — flush and carry forward.
+          if (current.startYear !== null) {
+            flush();
+            pending = {
+              range,
+              degree:
+                cleaned && cleaned.length <= 60 && looksLikeShortName(cleaned)
+                  ? clampStr(cleaned, LIMITS.name)
+                  : null,
+            };
+          } else {
+            current.startYear = range.startYear;
+            current.endYear = range.endYear;
+          }
         }
       } else if (degreePart?.school) {
         const school = clampStr(degreePart.school, LIMITS.name);
@@ -725,6 +883,20 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
       let certName: string | null = parts[0] ?? null;
       let issuer: string | null =
         parts.slice(1).find((x) => KNOWN_ISSUER_RE.test(x)) ?? parts[1] ?? certName;
+      // A leading month-year ("Jul 2019 Peachtree and QuickBooks…") is the
+      // ISSUE DATE, not part of the certificate title.
+      certName = certName
+        ? clampStr(
+            certName.replace(/^[A-Za-z]{3,9}\.?\s+(?:19|20)\d{2}\s*[-–—|,]?\s*/, ''),
+            LIMITS.cert,
+          )
+        : null;
+      issuer = issuer
+        ? clampStr(
+            issuer.replace(/^[A-Za-z]{3,9}\.?\s+(?:19|20)\d{2}\s*[-–—|,]?\s*/, ''),
+            LIMITS.cert,
+          )
+        : null;
       if (
         parts.length > 1 &&
         STRICT_ISSUER_RE.test(parts[0] ?? '') &&
