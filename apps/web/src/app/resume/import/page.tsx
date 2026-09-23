@@ -31,7 +31,14 @@ import {
   useUpdateResume,
 } from '@/hooks/use-resume';
 import type { Resume } from '@/hooks/use-resume';
-import { parseResumeHeuristic, type ResumeContent } from '@apex-work/shared';
+import {
+  parseResumeHeuristic,
+  certificationSchema,
+  educationSchema,
+  resumeSchema,
+  workExperienceSchema,
+  type ResumeContent,
+} from '@apex-work/shared';
 import { API_BASE } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { safeBack } from '@/lib/safe-back';
@@ -542,7 +549,11 @@ export default function ResumeImportPage() {
         sanitizeEmail(next) ?? (existing && sanitizeEmail(existing) ? existing : undefined);
 
       const finalHeadline = clamp(ex.headline, 120) || resume.headline;
-      await update.mutateAsync({
+      // Pre-validate with the API's own schema and strip anything that would
+      // 400 — "Validation failed" must never kill a whole import. If the
+      // merged content is the problem, retry once without it (rows below
+      // still import through their own endpoints).
+      const buildBody = (withContent: boolean) => ({
         headline: finalHeadline,
         summary: summaryFinal || resume.summary,
         phone: clamp(ex.phone, 40) || resume.phone,
@@ -554,8 +565,12 @@ export default function ResumeImportPage() {
         targetRole: clamp(ex.targetRole, 120) || resume.targetRole,
         languages,
         theme: resume.theme,
-        content,
+        ...(withContent ? { content } : {}),
       });
+      let core = resumeSchema.safeParse(buildBody(true));
+      if (!core.success) core = resumeSchema.safeParse(buildBody(false));
+      if (!core.success) throw new Error('Nothing in the import could be validated');
+      await update.mutateAsync(core.data);
 
       // 2) Work experience — one row per entry, in CV order
       const yearMax = new Date().getFullYear() + 1;
@@ -592,17 +607,22 @@ export default function ResumeImportPage() {
           endMonth = null;
           setExp(i, { current: true, endYear: '', endMonth: '' });
         }
+        const row = workExperienceSchema.safeParse({
+          company,
+          role,
+          location: e.location.trim().slice(0, 120) || null,
+          startYear,
+          startMonth,
+          endYear: validYear(endYear) ? endYear : null,
+          endMonth,
+          description: e.description.trim().slice(0, 2000) || null,
+        });
+        if (!row.success) {
+          skipped += 1;
+          continue;
+        }
         try {
-          await addExperience.mutateAsync({
-            company,
-            role,
-            location: e.location.trim().slice(0, 120) || null,
-            startYear,
-            startMonth,
-            endYear: validYear(endYear) ? endYear : null,
-            endMonth,
-            description: e.description.trim().slice(0, 2000) || null,
-          });
+          await addExperience.mutateAsync(row.data);
           expKeys.add(key);
           addedExp += 1;
         } catch (err) {
@@ -635,15 +655,20 @@ export default function ResumeImportPage() {
           dupeEdu += 1;
           continue;
         }
+        const row = educationSchema.safeParse({
+          school,
+          degree: d.degree.trim().slice(0, 120) || null,
+          fieldOfStudy: d.fieldOfStudy.trim().slice(0, 120) || null,
+          startYear,
+          endYear,
+          description: d.description.trim().slice(0, 1000) || null,
+        });
+        if (!row.success) {
+          skipped += 1;
+          continue;
+        }
         try {
-          await addEducation.mutateAsync({
-            school,
-            degree: d.degree.trim().slice(0, 120) || null,
-            fieldOfStudy: d.fieldOfStudy.trim().slice(0, 120) || null,
-            startYear,
-            endYear,
-            description: d.description.trim().slice(0, 1000) || null,
-          });
+          await addEducation.mutateAsync(row.data);
           eduKeys.add(key);
           addedEdu += 1;
         } catch (err) {
@@ -668,8 +693,13 @@ export default function ResumeImportPage() {
           dupeCert += 1;
           continue;
         }
+        const row = certificationSchema.safeParse({ name, issuer, issueYear });
+        if (!row.success) {
+          skipped += 1;
+          continue;
+        }
         try {
-          await addCertification.mutateAsync({ name, issuer, issueYear });
+          await addCertification.mutateAsync(row.data);
           certKeys.add(key);
           addedCert += 1;
         } catch (err) {

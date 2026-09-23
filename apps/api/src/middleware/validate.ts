@@ -16,7 +16,23 @@ export const validate =
       const details = result.error.flatten();
       return next(new ValidationError(details));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (req as any)[source] = result.data as z.infer<S>;
+    // Express 5: `req.query` (and `req.params`) are GETTER-ONLY — assigning
+    // `req.query = parsed` throws "Cannot set property query of
+    // #<IncomingMessage>", and the getter returns a FRESH object per access,
+    // so mutating it in place is silently lost. Shadow the prototype getter
+    // with an own writable property instead — every later `req.query` read
+    // (handlers, services) then sees the coerced data. `body` stays a normal
+    // property, so plain assignment remains safe there.
+    if (source === 'body') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (req as any).body = result.data;
+    } else {
+      Object.defineProperty(req, source, {
+        value: result.data,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
     next();
   };
