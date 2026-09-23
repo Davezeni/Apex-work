@@ -124,8 +124,75 @@ describe('resume heuristic fallback parser', () => {
       }).success,
     ).toBe(true);
     for (const e of r.experiences) expect(workExperienceSchema.safeParse(e).success).toBe(true);
-    for (const d of r.education) expect(educationSchema.safeParse(d).success).toBe(true);
+    for (const d of r.education) {
+      if (d.startYear !== null) expect(educationSchema.safeParse(d).success).toBe(true);
+    }
     for (const c of r.certifications) expect(certificationSchema.safeParse(c).success).toBe(true);
+  });
+
+  it('classifies role vs company by TITLE, not page order (role above company)', () => {
+    const cv = [
+      'Work Experience',
+      'Software Developer',
+      'Privacy Electronics',
+      'January 2021 - Present',
+      'Built embedded dashboards.',
+    ].join('\n');
+    const r2 = parseResumeHeuristic(cv);
+    expect(r2.experiences).toHaveLength(1);
+    expect(r2.experiences[0]?.role).toBe('Software Developer');
+    expect(r2.experiences[0]?.company).toBe('Privacy Electronics');
+    expect(r2.experiences[0]?.startYear).toBe(2021);
+    expect(r2.experiences[0]?.endYear).toBeNull();
+  });
+
+  it('parses company + role + dates written on ONE line', () => {
+    const cv = [
+      'Work Experience',
+      'Privacy Electronics — Software Developer Jan 2021 - Present',
+      'Built embedded dashboards.',
+    ].join('\n');
+    const r2 = parseResumeHeuristic(cv);
+    expect(r2.experiences).toHaveLength(1);
+    expect(r2.experiences[0]?.company).toBe('Privacy Electronics');
+    expect(r2.experiences[0]?.role).toBe('Software Developer');
+    expect(r2.experiences[0]?.startYear).toBe(2021);
+  });
+
+  it('splits a single-line education entry into degree / school / years', () => {
+    const cv = ['Education', 'BSc in Computer Science, Unity University, 2018 - 2022'].join('\n');
+    const r2 = parseResumeHeuristic(cv);
+    expect(r2.education).toHaveLength(1);
+    expect(r2.education[0]?.school).toBe('Unity University');
+    expect(r2.education[0]?.degree).toContain('BSc');
+    expect(r2.education[0]?.fieldOfStudy).toBe('Computer Science');
+    expect(r2.education[0]?.startYear).toBe(2018);
+    expect(r2.education[0]?.endYear).toBe(2022);
+  });
+
+  it('never invents education years the CV does not show', () => {
+    const cv = ['Education', 'Addis Ababa University', 'BSc in Computer Science'].join('\n');
+    const r2 = parseResumeHeuristic(cv);
+    expect(r2.education).toHaveLength(1);
+    expect(r2.education[0]?.school).toBe('Addis Ababa University');
+    expect(r2.education[0]?.degree).toContain('BSc');
+    expect(r2.education[0]?.startYear).toBeNull();
+    expect(r2.education[0]?.endYear).toBeNull();
+  });
+
+  it('never echoes the name as the headline', () => {
+    const r2 = parseResumeHeuristic('Sara Haile\nSome intro text that is long enough here.\n');
+    expect(r2.name).toBe('Sara Haile');
+    expect(r2.headline).toBeNull();
+  });
+
+  it('picks the issuer and the LAST year from a certification line', () => {
+    const cv = ['Certifications', 'Google Data Analytics Certificate (2021)'].join('\n');
+    const r2 = parseResumeHeuristic(cv);
+    expect(r2.certifications).toHaveLength(1);
+    expect(r2.certifications[0]?.name).toContain('Data Analytics');
+    expect(r2.certifications[0]?.issuer).toBe('Google Data Analytics Certificate');
+    expect(r2.certifications[0]?.issueYear).toBe(2021);
   });
 
   it('never throws on garbage', () => {

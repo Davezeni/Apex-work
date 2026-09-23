@@ -622,9 +622,14 @@ export default function ResumeImportPage() {
         }
         const endYearRaw = Number(d.endYear.replace(/[^0-9]/g, '')) || null;
         const endYear = validYear(endYearRaw) ? endYearRaw : null;
-        const startYearRaw =
-          Number(d.startYear.replace(/[^0-9]/g, '')) || endYear || new Date().getFullYear() - 4;
-        const startYear = validYear(startYearRaw) ? startYearRaw : new Date().getFullYear() - 4;
+        // Honest years only: the CV (or the user fixing the box below) must
+        // supply one. A blank year is NEVER defaulted to "current year - 4".
+        const startYearRaw = Number(d.startYear.replace(/[^0-9]/g, '')) || endYear;
+        if (!validYear(startYearRaw)) {
+          skipped += 1;
+          continue;
+        }
+        const startYear: number = startYearRaw;
         const key = `${school.toLowerCase()}|${d.degree.trim().toLowerCase()}|${startYear}`;
         if (eduKeys.has(key)) {
           dupeEdu += 1;

@@ -40,7 +40,7 @@ export interface ExtractedEducation {
   school: string;
   degree: string | null;
   fieldOfStudy: string | null;
-  startYear: number;
+  startYear: number | null; // null when the CV never shows a year — never invent one
   endYear: number | null;
   description: string | null;
 }
@@ -95,7 +95,9 @@ STRICT RULES:
 11. If the first line is "Name - Title(s)" or "Name | Title", SPLIT it: the person's name goes to name, the title part becomes headline.
 12. Undated "Role:" / "Tasks:" blocks describing a product or client engagement are PROJECTS (portfolio pieces): title = the product/project name, description = what was built + tasks. Only blocks with explicit date ranges are experience entries.
 13. For "Category: item, item, item" lines, extract the ITEMS after the colon (concrete skills), never the category label and never sentences.
-14. FIELD DISCIPLINE: email/phone/address/ nationality / "personal information" NEVER go into education, certifications, projects or experience — only into their own fields. education.school = institution name ONLY. certification.name = the certificate title (never a bare year or number). project.title = the project/product name (never the person's name or job title). experience.company = employer name (never the candidate's name). A date range like "January 2021 - Present" is NEVER the role, certification name, or project title — it belongs in startYear/startMonth/endYear/endMonth.`;
+14. FIELD DISCIPLINE: email/phone/address/ nationality / "personal information" NEVER go into education, certifications, projects or experience — only into their own fields. education.school = institution name ONLY. certification.name = the certificate title (never a bare year or number). project.title = the project/product name (never the person's name or job title). experience.company = employer name (never the candidate's name). A date range like "January 2021 - Present" is NEVER the role, certification name, or project title — it belongs in startYear/startMonth/endYear/endMonth.
+15. EDUCATION SPLITTING: an education entry written on ONE line (e.g. "BSc in Computer Science, Addis Ababa University, 2018-2022" or "High School Diploma 2016") must be SPLIT: the institution (contains University/College/Institute/Academy/School) goes to school, the degree phrase (BSc, Diploma, Bachelor...) to degree, "in/of X" to fieldOfStudy, years to startYear/endYear. Never leave a whole comma-separated line as school, and never put the degree into school. If the CV shows no years for an entry, return null years — do not guess.
+16. ROLE vs COMPANY: within experience, the job-title phrase (Software Developer, Accountant, Manager, Nurse, Consultant, ...) is the role; the organization name (company, NGO, government office, shop name) is company — the page order varies between CVs, so decide by which phrase is a job TITLE, not by position. Strip date ranges and location parentheses out of both.`;
 
 async function ask(messages: ChatMessage[]): Promise<string> {
   if (!env.GROQ_API_KEY) throw new Error('GROQ_NOT_CONFIGURED');
@@ -108,7 +110,10 @@ async function ask(messages: ChatMessage[]): Promise<string> {
     try {
       const response = await fetch(GROQ_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${env.GROQ_API_KEY}`,
+        },
         body: JSON.stringify({
           model: MODEL,
           messages,
@@ -270,8 +275,11 @@ function coerce(raw: unknown): ExtractedResume {
   for (const e of objArr(o.education, 10)) {
     const school = str(e.school, 120);
     if (!school) continue;
+    // Honest years: only what the CV shows. endYear may imply startYear (a
+    // graduation year alone), but NOTHING is defaulted to "current year" —
+    // a missing year reaches the review screen empty instead of wrong.
     const endYear = year(e.endYear);
-    const startYear = year(e.startYear) ?? endYear ?? YEAR_MAX - 1;
+    const startYear = year(e.startYear) ?? endYear;
     education.push({
       school,
       degree: str(e.degree, 120),
@@ -320,13 +328,13 @@ function coerce(raw: unknown): ExtractedResume {
   };
 }
 
-
 // ---------- semantic sanitation (cross-field mis-file defense) ----------
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[0-9][0-9\s()-]{6,}$/;
 const URLISH_RE = /^(https?:\/\/|www\.)[^\s]+$/i;
 const YEAR_ONLY_RE = /^(19|20)\d{2}$/;
-const DATE_RANGE_ONLY_RE = /^[A-Za-z]{3,9}\.?\s+\d{4}\s*(-|–|—|to|until)\s*(Present|Now|Current|[A-Za-z]{3,9}\.?\s*\d{4})$/i;
+const DATE_RANGE_ONLY_RE =
+  /^[A-Za-z]{3,9}\.?\s+\d{4}\s*(-|–|—|to|until)\s*(Present|Now|Current|[A-Za-z]{3,9}\.?\s*\d{4})$/i;
 const letters = (v: string): number => (v.match(/[A-Za-z]/g) ?? []).length;
 
 /**
@@ -346,7 +354,11 @@ export function sanitizeSemantics(x: ExtractedResume): ExtractedResume {
       if (!out.headline) out.headline = (split[2] ?? '').trim().slice(0, 120) || null;
     }
   }
-  if (out.headline && (out.name ?? '') && out.headline.toLowerCase() === (out.name ?? '').toLowerCase()) {
+  if (
+    out.headline &&
+    (out.name ?? '') &&
+    out.headline.toLowerCase() === (out.name ?? '').toLowerCase()
+  ) {
     out.headline = null;
   }
 
@@ -428,7 +440,11 @@ export function sanitizeSemantics(x: ExtractedResume): ExtractedResume {
     }
     entry.company = company;
     const role = inspect(entry.role);
-    if (!role || DATE_RANGE_ONLY_RE.test(role) || (out.name && role.toLowerCase() === (out.name ?? '').toLowerCase())) {
+    if (
+      !role ||
+      DATE_RANGE_ONLY_RE.test(role) ||
+      (out.name && role.toLowerCase() === (out.name ?? '').toLowerCase())
+    ) {
       poisoned.push('experience.role');
       return false;
     }
