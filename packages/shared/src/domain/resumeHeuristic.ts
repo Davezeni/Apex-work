@@ -644,7 +644,17 @@ export function parseResumeHeuristic(raw: string): HeuristicResume {
         // date-leading layout already resolved — description starts BELOW
         // the company line we consumed.
       } else if (titleIndex >= 0) {
-        role = clampStr(above[titleIndex] ?? null, LIMITS.headline);
+        const titleLine = (above[titleIndex] ?? '').trim();
+        role = clampStr(titleLine, LIMITS.headline);
+        // "Ethio Telecom | Customer Service Officer" — employer and title on
+        // ONE line: the title segment is the role, the other is the company.
+        if (/[\u2014\u2013|]/.test(titleLine)) {
+          const segs = titleLine.split(/\s*[\u2014\u2013|]\s*/).filter((seg) => seg);
+          const titleSeg = segs.find((seg) => TITLE_RE.test(seg));
+          const otherSeg = segs.find((seg) => seg !== titleSeg && looksLikeShortName(seg));
+          if (titleSeg) role = clampStr(titleSeg, LIMITS.headline);
+          if (!company && otherSeg) company = clampStr(otherSeg, LIMITS.name);
+        }
         // company = nearest short line ABOVE the role (the org comes first in
         // most layouts); fall back to the nearest one below.
         for (let i = titleIndex - 1; i >= 0; i -= 1) {

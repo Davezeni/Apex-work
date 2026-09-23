@@ -245,6 +245,7 @@ export default function ResumeImportPage() {
   const [ex, setEx] = useState<Extracted | null>(null);
   const [engine, setEngine] = useState<'ai' | 'basic' | null>(null);
   const [aiNote, setAiNote] = useState<string | null>(null);
+  const [importMode, setImportMode] = useState<'replace' | 'merge'>('replace');
   const [alsoProfile, setAlsoProfile] = useState(true);
   const [alsoName, setAlsoName] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -570,14 +571,22 @@ export default function ResumeImportPage() {
       let core = resumeSchema.safeParse(buildBody(true));
       if (!core.success) core = resumeSchema.safeParse(buildBody(false));
       if (!core.success) throw new Error('Nothing in the import could be validated');
-      await update.mutateAsync(core.data);
 
-      // 2) Work experience — one row per entry, in CV order
-      const yearMax = new Date().getFullYear() + 1;
-      const validYear = (y: number | null): y is number => y !== null && y >= 1950 && y <= yearMax;
       let addedExp = 0;
       let dupeExp = 0;
+      let addedEdu = 0;
+      let dupeEdu = 0;
+      let addedCert = 0;
+      let dupeCert = 0;
       let skipped = 0;
+
+      // Pre-validate EVERY row with the API's own schemas BEFORE sending
+      // anything — invalid rows are skipped (and counted), never a 400.
+      const yearMax = new Date().getFullYear() + 1;
+      const validYear = (y: number | null): y is number => y !== null && y >= 1950 && y <= yearMax;
+      const expRows: import('@apex-work/shared').WorkExperienceInput[] = [];
+      const eduRows: import('@apex-work/shared').EducationInput[] = [];
+      const certRows: import('@apex-work/shared').CertificationInput[] = [];
       for (let i = 0; i < ex.experiences.length; i += 1) {
         const e = ex.experiences[i];
         if (!e) continue;
@@ -588,16 +597,10 @@ export default function ResumeImportPage() {
           skipped += 1;
           continue;
         }
-        const key = `${company.toLowerCase()}|${role.toLowerCase()}|${startYear}`;
-        if (expKeys.has(key)) {
-          dupeExp += 1;
-          continue;
-        }
         const startMonth = Math.min(12, Math.max(1, Number(e.startMonth) || 1));
         let endYear = e.current || !e.endYear ? null : Number(e.endYear) || null;
         let endMonth =
           e.current || !e.endMonth ? null : Math.min(12, Math.max(1, Number(e.endMonth) || 1));
-        // Schema invariant: end >= start — otherwise treat the role as current.
         if (
           validYear(endYear) &&
           endMonth !== null &&
@@ -621,19 +624,13 @@ export default function ResumeImportPage() {
           skipped += 1;
           continue;
         }
-        try {
-          await addExperience.mutateAsync(row.data);
-          expKeys.add(key);
-          addedExp += 1;
-        } catch (err) {
-          console.error('experience row failed', err);
-          skipped += 1;
+        const key = `${company.toLowerCase()}|${role.toLowerCase()}|${startYear}`;
+        if (importMode === 'merge' && expKeys.has(key)) {
+          dupeExp += 1;
+          continue;
         }
+        expRows.push(row.data);
       }
-
-      // 3) Education
-      let addedEdu = 0;
-      let dupeEdu = 0;
       for (const d of ex.education) {
         const school = d.school.trim().slice(0, 120);
         if (!school) {
@@ -642,19 +639,12 @@ export default function ResumeImportPage() {
         }
         const endYearRaw = Number(d.endYear.replace(/[^0-9]/g, '')) || null;
         const endYear = validYear(endYearRaw) ? endYearRaw : null;
-        // Honest years only: the CV (or the user fixing the box below) must
-        // supply one. A blank year is NEVER defaulted to "current year - 4".
         const startYearRaw = Number(d.startYear.replace(/[^0-9]/g, '')) || endYear;
         if (!validYear(startYearRaw)) {
           skipped += 1;
           continue;
         }
         const startYear: number = startYearRaw;
-        const key = `${school.toLowerCase()}|${d.degree.trim().toLowerCase()}|${startYear}`;
-        if (eduKeys.has(key)) {
-          dupeEdu += 1;
-          continue;
-        }
         const row = educationSchema.safeParse({
           school,
           degree: d.degree.trim().slice(0, 120) || null,
@@ -667,19 +657,13 @@ export default function ResumeImportPage() {
           skipped += 1;
           continue;
         }
-        try {
-          await addEducation.mutateAsync(row.data);
-          eduKeys.add(key);
-          addedEdu += 1;
-        } catch (err) {
-          console.error('education row failed', err);
-          skipped += 1;
+        const key = `${school.toLowerCase()}|${d.degree.trim().toLowerCase()}|${startYear}`;
+        if (importMode === 'merge' && eduKeys.has(key)) {
+          dupeEdu += 1;
+          continue;
         }
+        eduRows.push(row.data);
       }
-
-      // 4) Certifications
-      let addedCert = 0;
-      let dupeCert = 0;
       for (const c of ex.certifications) {
         const name = c.name.trim().slice(0, 160);
         const issuer = c.issuer.trim().slice(0, 160);
@@ -688,23 +672,75 @@ export default function ResumeImportPage() {
           skipped += 1;
           continue;
         }
-        const key = `${name.toLowerCase()}|${issuer.toLowerCase()}|${issueYear}`;
-        if (certKeys.has(key)) {
-          dupeCert += 1;
-          continue;
-        }
         const row = certificationSchema.safeParse({ name, issuer, issueYear });
         if (!row.success) {
           skipped += 1;
           continue;
         }
-        try {
-          await addCertification.mutateAsync(row.data);
-          certKeys.add(key);
-          addedCert += 1;
-        } catch (err) {
-          console.error('certification row failed', err);
-          skipped += 1;
+        const key = `${name.toLowerCase()}|${issuer.toLowerCase()}|${issueYear}`;
+        if (importMode === 'merge' && certKeys.has(key)) {
+          dupeCert += 1;
+          continue;
+        }
+        certRows.push(row.data);
+      }
+
+      if (importMode === 'replace') {
+        // ONE atomic call: server wipes the old rows and inserts the new CV
+        // in a transaction — the new upload fully overrides the old one.
+        const res = await fetch(`${API_BASE}/v1/me/resume/import`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'replace',
+            profile: core.data,
+            experiences: expRows,
+            education: eduRows,
+            certifications: certRows,
+          }),
+        });
+        const json = (await res.json()) as {
+          ok?: boolean;
+          data?: { counts?: { experiences: number; education: number; certifications: number } };
+          error?: { message?: string };
+        };
+        if (!res.ok || !json.ok) {
+          throw new Error(json.error?.message || 'Import failed');
+        }
+        addedExp = json.data?.counts?.experiences ?? expRows.length;
+        addedEdu = json.data?.counts?.education ?? eduRows.length;
+        addedCert = json.data?.counts?.certifications ?? certRows.length;
+        expKeys.clear();
+        eduKeys.clear();
+        certKeys.clear();
+      } else {
+        await update.mutateAsync(core.data);
+        for (const row of expRows) {
+          try {
+            await addExperience.mutateAsync(row);
+            addedExp += 1;
+          } catch (err) {
+            console.error('experience row failed', err);
+            skipped += 1;
+          }
+        }
+        for (const row of eduRows) {
+          try {
+            await addEducation.mutateAsync(row);
+            addedEdu += 1;
+          } catch (err) {
+            console.error('education row failed', err);
+            skipped += 1;
+          }
+        }
+        for (const row of certRows) {
+          try {
+            await addCertification.mutateAsync(row);
+            addedCert += 1;
+          } catch (err) {
+            console.error('certification row failed', err);
+            skipped += 1;
+          }
         }
       }
 
@@ -744,9 +780,13 @@ export default function ResumeImportPage() {
       const fresh = queryClient.getQueryData<Resume>(['me', 'resume']);
       const rowsOk =
         !!fresh &&
-        fresh.experiences.length >= beforeExp + addedExp &&
-        fresh.education.length >= beforeEdu + addedEdu &&
-        fresh.certifications.length >= beforeCert + addedCert;
+        (importMode === 'replace'
+          ? fresh.experiences.length === addedExp &&
+            fresh.education.length === addedEdu &&
+            fresh.certifications.length === addedCert
+          : fresh.experiences.length >= beforeExp + addedExp &&
+            fresh.education.length >= beforeEdu + addedEdu &&
+            fresh.certifications.length >= beforeCert + addedCert);
       const coreOk = !finalHeadline || !!fresh?.headline || !ex.headline.trim();
 
       const lines: string[] = [];
@@ -1461,6 +1501,36 @@ export default function ResumeImportPage() {
 
             {/* Import + profile mirror */}
             <div className="mt-4 rounded-2xl border border-border bg-card p-4">
+              <div className="mb-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setImportMode('replace')}
+                  className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition-colors ${
+                    importMode === 'replace'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  {dt('Replace my CV')}
+                  <span className="mt-0.5 block font-normal">
+                    {dt('Old entries are removed, the new CV takes over')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImportMode('merge')}
+                  className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition-colors ${
+                    importMode === 'merge'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  {dt('Add to my CV')}
+                  <span className="mt-0.5 block font-normal">
+                    {dt('Keep existing entries, skip duplicates')}
+                  </span>
+                </button>
+              </div>
               {ex.name && ex.name.trim().length >= 2 && (
                 <label className="flex items-center gap-2 text-sm font-semibold">
                   <input
@@ -1483,9 +1553,13 @@ export default function ResumeImportPage() {
                 {dt('Also update my Apex profile (title & bio)')}
               </label>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {dt(
-                  'Import is additive: existing content stays, duplicates are skipped. Experience, education and certifications are added as new entries.',
-                )}
+                {importMode === 'replace'
+                  ? dt(
+                      'Replace mode: your existing experience, education, certifications and skills are replaced with this CV in one atomic save.',
+                    )
+                  : dt(
+                      'Import is additive: existing content stays, duplicates are skipped. Experience, education and certifications are added as new entries.',
+                    )}
               </p>
               <Button
                 type="button"

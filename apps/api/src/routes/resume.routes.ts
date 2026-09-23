@@ -2,6 +2,7 @@ import { Router } from 'express';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import {
+  resumeImportSchema,
   resumeSchema,
   workExperienceSchema,
   educationSchema,
@@ -71,10 +72,29 @@ router.post(
         aiNote = null;
       } catch (error) {
         aiNote = `AI_ERROR: ${error instanceof Error ? error.message : 'unknown'}`;
-        logger.warn({ note: aiNote }, 'resume AI extraction failed — client falls back to heuristic');
+        logger.warn(
+          { note: aiNote },
+          'resume AI extraction failed — client falls back to heuristic',
+        );
       }
     }
     return success(res, { text: clean, extracted, engine, aiNote });
+  }),
+);
+
+/**
+ * POST /me/resume/import — whole-CV import in ONE atomic call. mode=replace
+ * (default) wipes the existing experiences/education/certifications and
+ * inserts the imported rows inside a transaction, so uploading a new CV
+ * fully overrides the old one without manual cleanup.
+ */
+router.post(
+  '/import',
+  validate(resumeImportSchema),
+  asyncHandler(async (req, res) => {
+    const body = req.body as import('@apex-work/shared').ResumeImportInput;
+    const result = await resume.importResume(req.user!.sub, body);
+    return success(res, result);
   }),
 );
 
@@ -87,9 +107,14 @@ router.post(
   validate(extractResumeTextSchema),
   asyncHandler(async (req, res) => {
     const body = req.body as import('@apex-work/shared').ExtractResumeTextInput;
-    if (!isAiConfigured()) return success(res, { extracted: null, engine: 'basic', aiNote: 'AI_NOT_CONFIGURED' });
+    if (!isAiConfigured())
+      return success(res, { extracted: null, engine: 'basic', aiNote: 'AI_NOT_CONFIGURED' });
     try {
-      return success(res, { extracted: await extractResumeData(body.text), engine: 'ai', aiNote: null });
+      return success(res, {
+        extracted: await extractResumeData(body.text),
+        engine: 'ai',
+        aiNote: null,
+      });
     } catch (error) {
       const note = `AI_ERROR: ${error instanceof Error ? error.message : 'unknown'}`;
       logger.warn({ note }, 'resume AI extraction failed — client falls back to heuristic');

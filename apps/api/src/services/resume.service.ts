@@ -9,10 +9,11 @@
 import { prisma } from '../lib/prisma.js';
 import { resumeContentSchema } from '@apex-work/shared';
 import type {
+  CertificationInput,
+  EducationInput,
+  ResumeImportInput,
   ResumeInput,
   WorkExperienceInput,
-  EducationInput,
-  CertificationInput,
 } from '@apex-work/shared';
 import { NotFoundError } from '../lib/errors.js';
 import { assertUnlocked } from './resumeTemplates.service.js';
@@ -22,6 +23,132 @@ async function ensureResume(userId: string) {
     where: { userId },
     create: { userId },
     update: {},
+  });
+}
+
+/**
+ * Whole-CV import. 'replace' mode wipes the existing experiences, education
+ * and certifications and inserts the imported ones — all inside ONE
+ * transaction, so an interrupted import can never leave a half-replaced CV.
+ * The profile (headline/summary/contact/languages/content) is overwritten
+ * with whatever the import provides (missing fields fall back to the stored
+ * values so a CV without an email, say, does not erase the user's email).
+ */
+export async function importResume(userId: string, input: ResumeImportInput) {
+  const existing = await ensureResume(userId);
+  const replace = input.mode !== 'merge';
+  const profile: ResumeInput = input.profile ?? ({} as ResumeInput);
+  const emptyContent = resumeContentSchema.parse({});
+
+  return prisma.$transaction(async (tx) => {
+    const removed = { experiences: 0, education: 0, certifications: 0 };
+    if (replace) {
+      removed.experiences = (
+        await tx.workExperience.deleteMany({ where: { resumeId: existing.id } })
+      ).count;
+      removed.education = (
+        await tx.education.deleteMany({ where: { resumeId: existing.id } })
+      ).count;
+      removed.certifications = (
+        await tx.certification.deleteMany({ where: { resumeId: existing.id } })
+      ).count;
+    }
+
+    const basePos = replace
+      ? 0
+      : await tx.workExperience.count({ where: { resumeId: existing.id } });
+    if (input.experiences.length > 0) {
+      await tx.workExperience.createMany({
+        data: input.experiences.map((e, i) => ({
+          resumeId: existing.id,
+          company: e.company,
+          role: e.role,
+          location: e.location ?? null,
+          startYear: e.startYear,
+          startMonth: e.startMonth,
+          endYear: e.endYear ?? null,
+          endMonth: e.endMonth ?? null,
+          description: e.description ?? null,
+          position: basePos + i,
+        })),
+      });
+    }
+
+    const baseEdu = replace ? 0 : await tx.education.count({ where: { resumeId: existing.id } });
+    if (input.education.length > 0) {
+      await tx.education.createMany({
+        data: input.education.map((d, i) => ({
+          resumeId: existing.id,
+          school: d.school,
+          degree: d.degree ?? null,
+          fieldOfStudy: d.fieldOfStudy ?? null,
+          startYear: d.startYear,
+          endYear: d.endYear ?? null,
+          description: d.description ?? null,
+          position: baseEdu + i,
+        })),
+      });
+    }
+
+    const baseCert = replace
+      ? 0
+      : await tx.certification.count({ where: { resumeId: existing.id } });
+    if (input.certifications.length > 0) {
+      await tx.certification.createMany({
+        data: input.certifications.map((c, i) => ({
+          resumeId: existing.id,
+          name: c.name,
+          issuer: c.issuer,
+          issueYear: c.issueYear,
+          issueMonth: c.issueMonth ?? null,
+          credentialUrl: null,
+          position: baseCert + i,
+        })),
+      });
+    }
+
+    const storedContent = parsedContent((existing as { contentJson?: unknown }).contentJson);
+    const importedContent = profile.content
+      ? parsedContent(profile.content as unknown)
+      : emptyContent;
+    const content = replace
+      ? {
+          ...emptyContent,
+          skills: importedContent.skills,
+          projects: importedContent.projects,
+          achievements: importedContent.achievements,
+        }
+      : storedContent;
+
+    const updated = await tx.resume.update({
+      where: { userId },
+      data: {
+        headline: profile.headline ?? existing.headline,
+        summary: profile.summary ?? existing.summary,
+        phone: profile.phone ?? existing.phone,
+        email: profile.email ?? existing.email,
+        city: profile.city ?? existing.city,
+        website: profile.website ?? existing.website,
+        linkedin: profile.linkedin ?? existing.linkedin,
+        github: profile.github ?? existing.github,
+        targetRole: profile.targetRole ?? existing.targetRole,
+        languages: replace
+          ? (profile.languages ?? [])
+          : Array.from(new Set([...existing.languages, ...(profile.languages ?? [])])),
+        contentJson: content as never,
+      },
+    });
+
+    return {
+      resume: updated,
+      counts: {
+        replaced: replace,
+        removed,
+        experiences: input.experiences.length,
+        education: input.education.length,
+        certifications: input.certifications.length,
+      },
+    };
   });
 }
 

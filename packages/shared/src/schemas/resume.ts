@@ -148,6 +148,22 @@ export const certificationSchema = z.object({
 });
 export type CertificationInput = z.infer<typeof certificationSchema>;
 
+/**
+ * Whole-CV import (file upload → structured replace). One atomic endpoint
+ * instead of N row calls: in 'replace' mode the server wipes the existing
+ * experiences/education/certifications inside a transaction and inserts the
+ * imported ones, so a new CV upload fully overrides the old one and can
+ * never leave a half-imported state.
+ */
+export const resumeImportSchema = z.object({
+  mode: z.enum(['replace', 'merge']).default('replace'),
+  profile: resumeSchema.optional(),
+  experiences: z.array(workExperienceSchema).max(15).default([]),
+  education: z.array(educationSchema).max(10).default([]),
+  certifications: z.array(certificationSchema).max(10).default([]),
+});
+export type ResumeImportInput = z.infer<typeof resumeImportSchema>;
+
 /** AI CV extraction — raw CV text (from paste or a parsed file) in, structured data out. */
 export const extractResumeTextSchema = z.object({
   text: z.string().trim().min(20).max(20_000),

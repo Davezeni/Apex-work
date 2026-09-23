@@ -421,6 +421,71 @@ Volunteering■
     expect(r2.certifications[0]?.name).not.toMatch(/^Jul 2019/);
   });
 
+  it('parses more template shapes: long months, pipe layouts, single-line BSc', () => {
+    const t1 = parseResumeHeuristic(
+      [
+        'WORK EXPERIENCE',
+        'January 2020 - March 2022 Senior Accountant',
+        'Commercial Bank of Ethiopia',
+        '- Reconciled ledgers.',
+        '',
+        'EDUCATION',
+        'September 2015 - July 2019 BSc in Accounting',
+        'Mekelle University',
+      ].join('\n'),
+    );
+    expect(t1.experiences[0]).toMatchObject({
+      company: 'Commercial Bank of Ethiopia',
+      role: 'Senior Accountant',
+      startYear: 2020,
+      endYear: 2022,
+    });
+    expect(t1.education[0]).toMatchObject({
+      school: 'Mekelle University',
+      degree: 'BSc in Accounting',
+      startYear: 2015,
+      endYear: 2019,
+    });
+
+    const t2 = parseResumeHeuristic(
+      [
+        'Work Experience',
+        'Ethio Telecom | Customer Service Officer',
+        'Feb 2019 - Dec 2021',
+        'Handled billing inquiries.',
+        'EDUCATION',
+        'BSc, Addis Ababa University, 2014-2018',
+      ].join('\n'),
+    );
+    expect(t2.experiences[0]).toMatchObject({
+      company: 'Ethio Telecom',
+      role: 'Customer Service Officer',
+      startYear: 2019,
+      endYear: 2021,
+    });
+    expect(t2.education[0]).toMatchObject({
+      school: 'Addis Ababa University',
+      degree: 'BSc',
+      startYear: 2014,
+      endYear: 2018,
+    });
+
+    const t3 = parseResumeHeuristic(
+      [
+        'Experience',
+        'Software Engineer',
+        'Google',
+        '2020 - Present',
+        'Shipped search features.',
+      ].join('\n'),
+    );
+    expect(t3.experiences[0]).toMatchObject({
+      company: 'Google',
+      role: 'Software Engineer',
+      startYear: 2020,
+    });
+  });
+
   it('never throws on garbage', () => {
     const junk = parseResumeHeuristic('\n\n@@@\n   \n---\n');
     expect(junk.skills).toEqual([]);
