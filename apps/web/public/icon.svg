@@ -1,21 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="118" fill="#0D9488"/>
-  <g transform="translate(56,44) scale(0.782)">
-    <path d="M256 76 L448 436 L64 436 Z M256 230 L330 396 L182 396 Z" fill-rule="evenodd" fill="#FDF6E3"/>
-    <path d="M256 76 L448 436 L256 436 Z M256 230 L330 396 L182 396 Z" fill-rule="evenodd" fill="#E9E0CC" clip-path="url(#rh)"/>
-    <clipPath id="rh"><path d="M256 76 L448 436 L256 436 Z"/></clipPath>
-    <clipPath id="ot"><path d="M256 76 L448 436 L64 436 Z"/></clipPath>
-    <g clip-path="url(#ot)">
-      <rect x="64" y="290" width="384" height="6" fill="#F59E0B"/>
-      <rect x="64" y="298" width="384" height="52" fill="#0D9488"/>
-      <rect x="64" y="350" width="384" height="6" fill="#F59E0B"/>
-      <g fill="#FDF6E3">
-        <path d="M116 324 L146 296 L176 324 L146 352 Z"/>
-        <path d="M206 324 L236 296 L266 324 L236 352 Z"/>
-        <path d="M296 324 L326 296 L356 324 L326 352 Z"/>
-        <path d="M386 324 L416 296 L446 324 L416 352 Z"/>
-      </g>
-      <path d="M256 354 L286 324 L256 294 L226 324 Z" fill="#FBBF24"/>
-    </g>
+  <rect width="512" height="512" rx="118" fill="#0F172A"/>
+  <g transform="translate(62,58) scale(0.76)">
+    <circle cx="178" cy="140" r="46" fill="#F59E0B"/>
+    <path d="M138 210 L232 210 L172 436 L36 436 Z" fill="#14A08D"/>
+    <circle cx="334" cy="140" r="46" fill="#FDF6E3"/>
+    <path d="M280 210 L374 210 L476 436 L340 436 Z" fill="#0D9488"/>
+    <path d="M208 356 L304 356 L312 394 L200 394 Z" fill="#F59E0B"/>
   </g>
 </svg>
