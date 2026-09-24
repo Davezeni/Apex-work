@@ -37,7 +37,7 @@ const HERO_CHIPS = [
 ] as const;
 
 const DEFAULT_HOME: HomeConfig = {
-  heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
+  heroBadge: '',
   heroTitle: 'Skip the Overhead.',
   heroTitleAccent: 'Hire the Expert.',
   heroSubtitle:
@@ -45,12 +45,7 @@ const DEFAULT_HOME: HomeConfig = {
   heroCtaPrimary: 'Find talent',
   heroCtaSecondary: 'Become a freelancer',
   searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
-  stats: [
-    { value: '12.4K', label: 'Verified freelancers' },
-    { value: '47', label: 'Skill categories' },
-    { value: '98%', label: 'Client satisfaction' },
-    { value: '24h', label: 'Avg. delivery' },
-  ],
+  stats: [],
   howItWorks: [
     {
       title: 'Post your project',

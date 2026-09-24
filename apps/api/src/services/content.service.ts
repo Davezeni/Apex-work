@@ -468,7 +468,7 @@ const homeConfigSchema = z.object({
 });
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
-  heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
+  heroBadge: '',
   heroTitle: 'Skip the Overhead.',
   heroTitleAccent: 'Hire the Expert.',
   heroSubtitle:
@@ -476,12 +476,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   heroCtaPrimary: 'Find talent',
   heroCtaSecondary: 'Become a freelancer',
   searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
-  stats: [
-    { value: '12.4K', label: 'Verified freelancers' },
-    { value: '47', label: 'Skill categories' },
-    { value: '98%', label: 'Client satisfaction' },
-    { value: '24h', label: 'Avg. delivery' },
-  ],
+  stats: [],
   howItWorks: [
     {
       title: 'Post your project',
