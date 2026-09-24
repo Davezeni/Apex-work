@@ -303,6 +303,25 @@
   }
 }
 
+/* Hero floating category labels — gentle vertical drift */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+.animate-float {
+  animation: float-y 6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+}
+
 /* Browse category chips: slow auto-scroll marquee. Pauses on hover/press,
    disabled for reduced-motion users, and stops entirely while a filter is
    active (the row becomes a normal scrollable row — see browse/page.tsx). */

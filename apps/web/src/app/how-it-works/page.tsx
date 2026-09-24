@@ -120,7 +120,7 @@ export default function HowItWorksPage() {
         <h1 className="text-lg font-extrabold tracking-tight">{data?.title ?? 'How it works'}</h1>
       </header>
 
-      <main className="mx-auto w-full max-w-3xl px-4">
+      <main className="mx-auto w-full max-w-5xl px-4">
         {/* Hero */}
         <section className="grad-hero relative mt-4 overflow-hidden rounded-3xl p-6 text-white shadow-xl shadow-primary/30 sm:p-10">
           <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-white/10 blur-3xl" />

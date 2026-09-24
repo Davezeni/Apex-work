@@ -84,7 +84,7 @@ export default function ProfilePage() {
 
   return (
     <MobileShell activeTab="profile">
-      <div className="mx-auto w-full max-w-2xl">
+      <div className="mx-auto w-full max-w-4xl">
         {/* Hero */}
         <div className="relative overflow-hidden pb-6 pt-6 text-center">
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-muted/70 to-transparent dark:from-muted/40" />

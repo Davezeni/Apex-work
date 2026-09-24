@@ -148,20 +148,36 @@ export function MobileHome() {
               {t('home.seeAll')}
             </Link>
           </div>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pb-6">
-            <CategoryChip
-              label={t('home.forYou')}
-              active={activeCategory === 'for-you'}
-              onClick={() => setActiveCategory('for-you')}
-            />
-            {CATEGORIES.map((c) => (
-              <CategoryChip
-                key={c.id}
-                label={`${c.icon} ${c.label}`}
-                active={activeCategory === c.id}
-                onClick={() => setActiveCategory(c.id)}
-              />
-            ))}
+          {/* Auto-scrolling marquee (same .chip-marquee machinery as browse);
+              pauses while pressed, static for reduced-motion users. */}
+          <div className="overflow-hidden pb-6">
+            <div className="chip-marquee flex w-max">
+              <div className="flex shrink-0 gap-2 px-5">
+                <CategoryChip
+                  label={t('home.forYou')}
+                  active={activeCategory === 'for-you'}
+                  onClick={() => setActiveCategory('for-you')}
+                />
+                {CATEGORIES.map((c) => (
+                  <CategoryChip
+                    key={c.id}
+                    label={`${c.icon} ${c.label}`}
+                    active={activeCategory === c.id}
+                    onClick={() => setActiveCategory(c.id)}
+                  />
+                ))}
+              </div>
+              <div aria-hidden="true" className="flex shrink-0 gap-2 px-5">
+                {CATEGORIES.map((c) => (
+                  <CategoryChip
+                    key={`dup-${c.id}`}
+                    label={`${c.icon} ${c.label}`}
+                    active={false}
+                    onClick={() => setActiveCategory(c.id)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Feed */}

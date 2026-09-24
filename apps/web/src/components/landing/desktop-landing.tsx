@@ -10,7 +10,31 @@ import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
+import { CATEGORY_COLORS } from '@/lib/category-colors';
 import { cn, formatEtb } from '@/lib/utils';
+import Image from 'next/image';
+/** Floating hero labels: category chips drifting on the photo's empty space.
+ *  Each uses the color that best describes its category. */
+const HERO_CHIPS = [
+  { id: 'development', label: 'Development', pos: { top: '5%', left: '-3%' }, duration: '5.5s' },
+  { id: 'design', label: 'Design', pos: { top: '13%', right: '-2%' }, duration: '6.5s' },
+  {
+    id: 'marketing',
+    label: 'Digital Marketing',
+    pos: { top: '34%', right: '8%' },
+    duration: '6.8s',
+  },
+  {
+    id: 'writing',
+    label: 'Writing & Translation',
+    pos: { top: '44%', left: '-6%' },
+    duration: '6s',
+  },
+  { id: 'video', label: 'Video & Animation', pos: { top: '58%', right: '-4%' }, duration: '5s' },
+  { id: 'audio', label: 'Music & Audio', pos: { bottom: '16%', left: '1%' }, duration: '7s' },
+  { id: 'data', label: 'Data & AI', pos: { bottom: '5%', right: '5%' }, duration: '5.8s' },
+] as const;
+
 const DEFAULT_HOME: HomeConfig = {
   heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
   heroTitle: 'Hire the top 3% of',
@@ -179,78 +203,133 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pb-20 pt-24 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-pulse-brand rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-          </span>
-          {home.heroBadge}
-        </motion.div>
+      <section className="container relative pb-20 pt-24 text-center lg:text-left">
+        <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+          <div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-pulse-brand rounded-full bg-accent opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              </span>
+              {home.heroBadge}
+            </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-auto mt-6 max-w-4xl text-balance font-display text-5xl font-extrabold leading-[1.02] tracking-tighter md:text-7xl lg:text-8xl"
-        >
-          {home.heroTitle}
-          <br />
-          <span className="grad-text">{home.heroTitleAccent}</span>
-        </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="mx-auto mt-6 max-w-4xl text-balance font-display text-5xl font-extrabold leading-[1.02] tracking-tighter md:text-6xl lg:text-7xl xl:text-8xl"
+            >
+              {home.heroTitle}
+              <br />
+              <span className="grad-text">{home.heroTitleAccent}</span>
+            </motion.h1>
 
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground md:text-xl"
-        >
-          {home.heroSubtitle}
-        </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground md:text-xl lg:mx-0"
+            >
+              {home.heroSubtitle}
+            </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
-        >
-          <Button asChild variant="brand" size="lg">
-            <Link href="/browse">
-              {home.heroCtaPrimary} <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild size="lg">
-            <Link href="/signup">{home.heroCtaSecondary}</Link>
-          </Button>
-        </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
+            >
+              <Button asChild variant="brand" size="lg">
+                <Link href="/browse">
+                  {home.heroCtaPrimary} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg">
+                <Link href="/signup">{home.heroCtaSecondary}</Link>
+              </Button>
+            </motion.div>
 
-        {/* Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mx-auto mt-12 flex max-w-2xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20"
-        >
-          <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') runSearch();
-            }}
-            className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
-            placeholder={home.searchPlaceholder}
-            aria-label={dt('Search freelancers and services')}
-          />
-          <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
-            Search
-          </Button>
-        </motion.div>
+            {/* Search */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="mx-auto mt-12 flex max-w-2xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 lg:mx-0"
+            >
+              <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') runSearch();
+                }}
+                className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
+                placeholder={home.searchPlaceholder}
+                aria-label={dt('Search freelancers and services')}
+              />
+              <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
+                Search
+              </Button>
+            </motion.div>
+          </div>
+
+          {/* Hero visual — the photo doubles as the stage: floating category
+              labels drift on its empty white space, each in the color that
+              best describes the category. Left edge fades into the hero. */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="relative hidden lg:block"
+          >
+            <div
+              className="overflow-hidden rounded-[2rem]"
+              style={{
+                maskImage:
+                  'linear-gradient(to right, transparent, black 9%, black 91%, transparent)',
+                WebkitMaskImage:
+                  'linear-gradient(to right, transparent, black 9%, black 91%, transparent)',
+              }}
+            >
+              <Image
+                src="/hero/hero-beanbag.jpg"
+                alt={dt('A freelancer working comfortably on a laptop')}
+                width={626}
+                height={428}
+                priority
+                className="h-auto w-full object-cover"
+              />
+            </div>
+            {HERO_CHIPS.map((chip, i) => (
+              <div
+                key={chip.id}
+                className="animate-float absolute z-10 flex items-center gap-2 rounded-full border border-border bg-card/95 py-2 pl-3 pr-4 shadow-xl backdrop-blur"
+                style={{
+                  ...chip.pos,
+                  animationDelay: `${i * 0.7}s`,
+                  animationDuration: chip.duration,
+                }}
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: CATEGORY_COLORS[chip.id] }}
+                />
+                <span
+                  className="whitespace-nowrap text-xs font-bold"
+                  style={{ color: CATEGORY_COLORS[chip.id] }}
+                >
+                  {chip.label}
+                </span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
 
         {/* Stats */}
         <motion.div
@@ -273,20 +352,49 @@ export function DesktopLanding() {
       {/* Categories */}
       <section className="container py-20">
         <SectionHeader eyebrow="Explore" title={dt('Digital skills, all in one place')} />
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c.id}
-              href={`/browse?category=${c.slug}`}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
-            >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/15 text-2xl text-primary transition-transform group-hover:-rotate-6 group-hover:scale-110">
-                {c.icon}
-              </div>
-              <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
-            </Link>
-          ))}
+        {/* Auto-scrolling marquee — same machinery as the browse chips
+            (.chip-marquee: pauses on hover/press, static for reduced-motion).
+            The clone half makes the -50% translate loop seamless. */}
+        <div className="mt-10 overflow-hidden">
+          <div className="chip-marquee flex w-max">
+            <div className="flex shrink-0 gap-4 pr-4">
+              {CATEGORIES.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/browse?category=${c.slug}`}
+                  className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
+                >
+                  <div
+                    className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110"
+                    style={{ backgroundColor: `${CATEGORY_COLORS[c.id]}1A` }}
+                  >
+                    {c.icon}
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
+                </Link>
+              ))}
+            </div>
+            <div aria-hidden="true" className="flex shrink-0 gap-4 pr-4">
+              {CATEGORIES.map((c) => (
+                <Link
+                  key={`dup-${c.id}`}
+                  tabIndex={-1}
+                  href={`/browse?category=${c.slug}`}
+                  className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
+                >
+                  <div
+                    className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110"
+                    style={{ backgroundColor: `${CATEGORY_COLORS[c.id]}1A` }}
+                  >
+                    {c.icon}
+                  </div>
+                  <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

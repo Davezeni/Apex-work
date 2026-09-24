@@ -39,7 +39,7 @@ export default function SettingsPage() {
   const logout = useLogout();
 
   return (
-    <div className="min-h-dvh bg-background pb-24 md:mx-auto md:max-w-3xl">
+    <div className="min-h-dvh bg-background pb-24 md:mx-auto md:max-w-5xl">
       <header className="safe-top sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-3 py-3 backdrop-blur-xl">
         <button
           onClick={() => safeBack(router)}
