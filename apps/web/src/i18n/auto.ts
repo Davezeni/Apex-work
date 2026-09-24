@@ -15,7 +15,6 @@ import { AUTO_DICT_TI } from './dict-ti';
 export const AUTO_DICT: Record<string, string> = {
   '••••••': '••••••',
   '1–90 days': '1–90 ቀናት',
-  '12.4K': '12.4K',
   '6-digit PIN': 'ባለ 6 አሃዝ PIN',
   About: 'ስለ',
   'About us': 'ስለ እኛ',
@@ -145,7 +144,6 @@ export const AUTO_DICT: Record<string, string> = {
   'Build with a team': 'ከቡድን ጋር ይገንቡ',
   'Build your professional CV': 'የሙያ ሲቪ ይገንቡ',
   'Building SLA…': 'SLA በመገንባት ላይ…',
-  'Built on 100% open source': 'በ100% ክፍት ምንጭ ላይ የተገነባ',
   'Bulk import users': 'ተጠቃሚዎችን በብዛት አስገባ',
   'Bullet list': 'ነጥብ ዝርዝር',
   'Cache & offline data': 'መሸጎጫ እና ከመስመር ውጭ መረጃ',

@@ -134,7 +134,6 @@ export const AUTO_DICT_TI: Record<string, string> = {
   'Build with a team': 'ምስ ሓደ ጉጅለ ተዘራረብ',
   'Build your professional CV': 'ሞያዊ CV ሃንደሰ',
   'Building SLA…': 'ናይ ምስሊ መግለጺ',
-  'Built on 100% open source': '100% ክፍት ምንጪ ዝተሃንጸ',
   'Bulk import users': 'ናይ ሓፈሻዊ ኣቑሑት ተጠቀምቲ',
   'Bullet list': 'ዝርዝር ወረቐት',
   'Cache & offline data': 'ካሽ & ኦንላይን ዳታ',

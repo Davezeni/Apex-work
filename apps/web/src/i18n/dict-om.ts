@@ -8,7 +8,6 @@
  */
 
 export const AUTO_DICT_OM: Record<string, string> = {
-  '12.4K': '12.4K irratti',
   '1–90 days': 'guyyoota 1–90',
   '6-digit PIN': 'PIN dijiitii 6 qabu',
   About: "Waa'ee",
@@ -138,7 +137,6 @@ export const AUTO_DICT_OM: Record<string, string> = {
   'Build with a team': 'Garee waliin ijaaraa',
   'Build your professional CV': 'CV ogeessummaa ijaari',
   'Building SLA…': 'Gamoo SLA...',
-  'Built on 100% open source': 'Madda banaa 100% irratti kan ijaarame',
   'Bulk import users': 'Fayyadamtoota galtee hedduu',
   'Bullet list': 'Tarree rasaasaa',
   'Cache & offline data': 'Cache & deetaa sarara ala',
