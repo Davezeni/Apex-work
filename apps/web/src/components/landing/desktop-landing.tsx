@@ -80,7 +80,7 @@ const DEFAULT_HOME: HomeConfig = {
       reviews: 198,
       skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
       price: 4800,
-      gradient: 'from-indigo-600 to-slate-600',
+      gradient: 'from-amber-500 to-orange-500',
     },
     {
       name: 'Hanna Wolde',
@@ -203,7 +203,7 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pb-20 pt-24 text-center lg:text-left">
+      <section className="container relative pb-20 pt-8 text-center lg:text-left">
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
             <motion.div
@@ -364,10 +364,7 @@ export function DesktopLanding() {
                   href={`/browse?category=${c.slug}`}
                   className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
                 >
-                  <div
-                    className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110"
-                    style={{ backgroundColor: `${CATEGORY_COLORS[c.id]}1A` }}
-                  >
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
                     {c.icon}
                   </div>
                   <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
@@ -383,10 +380,7 @@ export function DesktopLanding() {
                   href={`/browse?category=${c.slug}`}
                   className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
                 >
-                  <div
-                    className="grid h-11 w-11 place-items-center rounded-xl text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110"
-                    style={{ backgroundColor: `${CATEGORY_COLORS[c.id]}1A` }}
-                  >
+                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
                     {c.icon}
                   </div>
                   <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>

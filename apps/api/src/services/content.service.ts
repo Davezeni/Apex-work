@@ -469,8 +469,8 @@ const homeConfigSchema = z.object({
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
   heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
-  heroTitle: "Ethiopia's most powerful",
-  heroTitleAccent: 'freelance marketplace.',
+  heroTitle: 'The apex of',
+  heroTitleAccent: "Ethiopia's freelance talent.",
   heroSubtitle:
     'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
   heroCtaPrimary: 'Find talent',
@@ -502,7 +502,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       reviews: 312,
       skills: ['Figma', 'Design Systems', 'Webflow', 'Branding'],
       price: 2500,
-      gradient: 'from-violet-600 to-indigo-600',
+      gradient: 'from-primary to-primary/50',
     },
     {
       name: 'Dawit Tesfaye',
@@ -512,7 +512,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       reviews: 198,
       skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
       price: 4800,
-      gradient: 'from-indigo-600 to-slate-600',
+      gradient: 'from-amber-500 to-orange-500',
     },
     {
       name: 'Hanna Wolde',
@@ -522,7 +522,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
       reviews: 421,
       skills: ['Amharic', 'SEO', 'Translation', 'Storytelling'],
       price: 1200,
-      gradient: 'from-purple-600 to-violet-600',
+      gradient: 'from-teal-600 to-emerald-600',
     },
   ],
   pricingClient: {
