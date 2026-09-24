@@ -2,23 +2,17 @@
   "id": "/",
   "name": "Apex-Work",
   "short_name": "Apex-Work",
-  "description": "The apex of Ethiopia's freelance talent \u2014 vetted, AI-matched, escrow-protected.",
+  "description": "Skip the Overhead. Hire the Expert. \u2014 Ethiopia's vetted freelance marketplace.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "minimal-ui"
-  ],
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0a0a0f",
   "theme_color": "#0D9488",
   "orientation": "portrait",
   "lang": "en",
   "dir": "ltr",
-  "categories": [
-    "business",
-    "productivity"
-  ],
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon.svg",

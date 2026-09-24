@@ -37,8 +37,8 @@ const HERO_CHIPS = [
 
 const DEFAULT_HOME: HomeConfig = {
   heroBadge: 'Now live in Addis Ababa · 12,400+ freelancers',
-  heroTitle: 'Hire the top 3% of',
-  heroTitleAccent: 'independent talent on Apex-Work.',
+  heroTitle: 'Skip the Overhead.',
+  heroTitleAccent: 'Hire the Expert.',
   heroSubtitle:
     'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
   heroCtaPrimary: 'Find talent',
@@ -80,7 +80,7 @@ const DEFAULT_HOME: HomeConfig = {
       reviews: 198,
       skills: ['React', 'Node.js', 'Next.js', 'PostgreSQL'],
       price: 4800,
-      gradient: 'from-amber-500 to-orange-500',
+      gradient: 'from-indigo-600 to-slate-600',
     },
     {
       name: 'Hanna Wolde',
@@ -203,7 +203,7 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pb-20 pt-8 text-center lg:text-left">
+      <section className="container relative pb-20 pt-2 text-center lg:text-left">
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
             <motion.div
@@ -223,7 +223,7 @@ export function DesktopLanding() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-6 max-w-4xl text-balance font-display text-5xl font-extrabold leading-[1.02] tracking-tighter md:text-6xl lg:text-7xl xl:text-8xl"
+              className="mx-auto mt-6 max-w-4xl text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tighter md:text-5xl lg:text-6xl xl:text-7xl"
             >
               {home.heroTitle}
               <br />
@@ -533,7 +533,7 @@ function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-xl">
       <div className={cn('h-24 bg-gradient-to-br', f.gradient)} />
       <div className="px-5 pb-5">
-        <div className="-mt-8 flex items-end gap-3">
+        <div className="-mt-8 flex items-center gap-3">
           <div
             className={cn(
               'grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br text-xl font-bold text-white ring-4 ring-card',
@@ -542,7 +542,7 @@ function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
           >
             {initials}
           </div>
-          <div className="pb-1">
+          <div className="">
             <h3 className="flex items-center gap-1.5 text-base font-bold">
               {f.name}
               <CheckCircle2 className="h-4 w-4 text-cyan-400" />
