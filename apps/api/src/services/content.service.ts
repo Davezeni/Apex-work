@@ -468,7 +468,7 @@ const homeConfigSchema = z.object({
 });
 
 export const DEFAULT_HOME_CONFIG: HomeConfig = {
-  heroBadge: '',
+  heroBadge: 'Live on Apex-Work',
   heroTitle: 'Skip the Overhead.',
   heroTitleAccent: 'Hire the Expert.',
   heroSubtitle:
@@ -476,7 +476,12 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   heroCtaPrimary: 'Find talent',
   heroCtaSecondary: 'Become a freelancer',
   searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
-  stats: [],
+  stats: [
+    { value: '10%', label: 'Platform fee' },
+    { value: '24/7', label: 'Support' },
+    { value: '7d', label: 'Escrow window' },
+    { value: '2', label: 'Tap to hire' },
+  ],
   howItWorks: [
     {
       title: 'Post your project',
