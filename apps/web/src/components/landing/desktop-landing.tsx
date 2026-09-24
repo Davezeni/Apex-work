@@ -227,7 +227,7 @@ export function DesktopLanding() {
             >
               {home.heroTitle}
               <br />
-              <span className="grad-text">{home.heroTitleAccent}</span>
+              <span className="text-[#0D9488] dark:text-[#2DD4BF]">{home.heroTitleAccent}</span>
             </motion.h1>
 
             <motion.p
@@ -252,29 +252,6 @@ export function DesktopLanding() {
               </Button>
               <Button asChild size="lg">
                 <Link href="/signup">{home.heroCtaSecondary}</Link>
-              </Button>
-            </motion.div>
-
-            {/* Search */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="mx-auto mt-12 flex max-w-2xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20 lg:mx-0"
-            >
-              <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') runSearch();
-                }}
-                className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
-                placeholder={home.searchPlaceholder}
-                aria-label={dt('Search freelancers and services')}
-              />
-              <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
-                Search
               </Button>
             </motion.div>
           </div>
@@ -330,6 +307,29 @@ export function DesktopLanding() {
             ))}
           </motion.div>
         </div>
+
+        {/* Search — centered across the full hero, a touch wider */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="mx-auto mt-10 flex w-full max-w-3xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20"
+        >
+          <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') runSearch();
+            }}
+            className="flex-1 bg-transparent px-2 py-2 text-sm outline-none placeholder:text-muted-foreground"
+            placeholder={home.searchPlaceholder}
+            aria-label={dt('Search freelancers and services')}
+          />
+          <Button variant="brand" className="hidden sm:inline-flex" onClick={runSearch}>
+            Search
+          </Button>
+        </motion.div>
 
         {/* Stats */}
         <motion.div
