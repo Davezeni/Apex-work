@@ -18,6 +18,7 @@ import {
   Search,
 } from 'lucide-react';
 import { CATEGORIES } from '@apex-work/shared';
+import { Marquee } from '@/components/ui/marquee';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import Image from 'next/image';
@@ -240,17 +241,29 @@ function BrowseInner() {
 
       {!waitingForRole && tab !== 'jobs' && (
         <>
-          {/* Category filter — slow auto-scroll marquee while idle; a normal
-              scrollable row once a filter is picked. The clone half makes the
-              -50% translate loop seamless. */}
-          <div
-            className={cn(
-              'py-4',
-              category ? 'no-scrollbar overflow-x-auto px-4 md:px-6' : 'overflow-hidden',
-            )}
-          >
-            <div className={cn('flex w-max', !category && 'chip-marquee')}>
-              <div className="flex shrink-0 gap-2 px-4 md:px-6">
+          {/* Category filter — auto-scrolls while idle (rAF marquee); a
+              normal scrollable row once a filter is picked. */}
+          <div className="py-4">
+            {!category ? (
+              <Marquee className="overflow-hidden" speed={50}>
+                <div className="flex shrink-0 gap-2 px-4 md:px-6">
+                  <FilterChip
+                    label={t('browse.allCategories')}
+                    active={!category}
+                    onClick={() => setCategoryUrl(null)}
+                  />
+                  {CATEGORIES.map((c) => (
+                    <FilterChip
+                      key={c.id}
+                      label={`${c.icon} ${c.label}`}
+                      active={category === c.id}
+                      onClick={() => setCategoryUrl(c.id)}
+                    />
+                  ))}
+                </div>
+              </Marquee>
+            ) : (
+              <div className="no-scrollbar flex w-max gap-2 overflow-x-auto px-4 md:px-6">
                 <FilterChip
                   label={t('browse.allCategories')}
                   active={!category}
@@ -265,20 +278,7 @@ function BrowseInner() {
                   />
                 ))}
               </div>
-              {!category && (
-                <div aria-hidden="true" className="flex shrink-0 gap-2 px-4 md:px-6">
-                  {CATEGORIES.map((c) => (
-                    <FilterChip
-                      key={`dup-${c.id}`}
-                      tabIndex={-1}
-                      label={`${c.icon} ${c.label}`}
-                      active={false}
-                      onClick={() => setCategoryUrl(c.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
           {/* Device-local recently viewed gigs — shown only when browsing unfiltered */}

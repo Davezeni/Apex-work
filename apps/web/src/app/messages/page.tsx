@@ -30,7 +30,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 /** Build marker shown in the inbox header so users/reviewers can confirm a
  *  given device is running the latest deployed bundle (helps catch a stale
  *  service-worker cache). */
-const APP_BUILD = '2026-09-09.170';
+const APP_BUILD = '2026-09-09.171';
 
 export default function MessagesPage() {
   const { data: me, isAuthed } = useMe();

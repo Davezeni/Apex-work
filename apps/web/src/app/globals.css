@@ -321,27 +321,3 @@
     animation: none;
   }
 }
-
-/* Browse category chips: slow auto-scroll marquee. Pauses on hover/press,
-   disabled for reduced-motion users, and stops entirely while a filter is
-   active (the row becomes a normal scrollable row — see browse/page.tsx). */
-@keyframes chip-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.chip-marquee {
-  animation: chip-marquee 45s linear infinite;
-}
-.chip-marquee:hover,
-.chip-marquee:active {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .chip-marquee {
-    animation: none;
-  }
-}

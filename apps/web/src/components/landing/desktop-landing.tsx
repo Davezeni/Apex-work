@@ -9,6 +9,7 @@ import { Search, Moon, Sun, Menu, X, ArrowRight, Star, MapPin, CheckCircle2 } fr
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
+import { Marquee } from '@/components/ui/marquee';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { CATEGORY_COLORS } from '@/lib/category-colors';
 import { cn, formatEtb } from '@/lib/utils';
@@ -137,8 +138,8 @@ export function DesktopLanding() {
   return (
     <div className="mesh-bg min-h-screen">
       {/* Navigation */}
-      <nav className="sticky top-4 z-50 mx-auto mt-4 max-w-[1240px] px-4">
-        <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-3 shadow-lg backdrop-blur-xl backdrop-saturate-150">
+      <nav className="sticky top-4 z-50 mx-auto mt-3 max-w-[1240px] px-4">
+        <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-2 shadow-lg backdrop-blur-xl backdrop-saturate-150">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <span className="grad-hero grid h-8 w-8 place-items-center rounded-xl font-extrabold text-white shadow-md shadow-primary/40">
               A
@@ -203,27 +204,14 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pb-20 pt-2 text-center lg:text-left">
+      <section className="container relative pb-14 pt-2 text-center lg:text-left">
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-pulse-brand rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-              </span>
-              {home.heroBadge}
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-6 max-w-4xl text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tighter md:text-5xl lg:text-6xl xl:text-7xl"
+              className="mx-auto mt-1 max-w-4xl text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tighter md:text-5xl lg:text-6xl xl:text-7xl"
             >
               {home.heroTitle}
               <br />
@@ -234,7 +222,7 @@ export function DesktopLanding() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-6 max-w-2xl text-base text-muted-foreground md:text-xl lg:mx-0"
+              className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-xl lg:mx-0"
             >
               {home.heroSubtitle}
             </motion.p>
@@ -243,7 +231,7 @@ export function DesktopLanding() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
+              className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
             >
               <Button asChild variant="brand" size="lg">
                 <Link href="/browse">
@@ -313,7 +301,7 @@ export function DesktopLanding() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="mx-auto mt-10 flex w-full max-w-3xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20"
+          className="mx-auto mt-8 flex w-full max-w-3xl items-center gap-2 rounded-full border border-border bg-card p-2 shadow-lg focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/20"
         >
           <Search className="ml-4 h-5 w-5 shrink-0 text-muted-foreground" />
           <input
@@ -330,71 +318,31 @@ export function DesktopLanding() {
             Search
           </Button>
         </motion.div>
-
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-16 grid grid-cols-2 gap-8 md:flex md:justify-center md:gap-16"
-        >
-          {home.stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="grad-text text-3xl font-extrabold tracking-tight md:text-4xl">
-                {s.value}
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground md:text-sm">{s.label}</div>
-            </div>
-          ))}
-        </motion.div>
       </section>
 
       {/* Categories */}
-      <section className="container py-20">
-        <SectionHeader eyebrow="Explore" title={dt('Digital skills, all in one place')} />
-        {/* Auto-scrolling marquee — same machinery as the browse chips
-            (.chip-marquee: pauses on hover/press, static for reduced-motion).
-            The clone half makes the -50% translate loop seamless. */}
-        <div className="mt-10 overflow-hidden">
-          <div className="chip-marquee flex w-max">
-            <div className="flex shrink-0 gap-4 pr-4">
-              {CATEGORIES.map((c) => (
-                <Link
-                  key={c.id}
-                  href={`/browse?category=${c.slug}`}
-                  className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
-                >
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
-                    {c.icon}
-                  </div>
-                  <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
-                </Link>
-              ))}
-            </div>
-            <div aria-hidden="true" className="flex shrink-0 gap-4 pr-4">
-              {CATEGORIES.map((c) => (
-                <Link
-                  key={`dup-${c.id}`}
-                  tabIndex={-1}
-                  href={`/browse?category=${c.slug}`}
-                  className="group relative w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
-                >
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
-                    {c.icon}
-                  </div>
-                  <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
+      <section className="container py-14">
+        <SectionHeader title={dt('Digital skills, all in one place')} />
+        <Marquee className="mt-8 overflow-hidden" speed={45}>
+          {CATEGORIES.map((c) => (
+            <Link
+              key={c.id}
+              href={`/browse?category=${c.slug}`}
+              className="group relative mr-4 w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
+            >
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
+                {c.icon}
+              </div>
+              <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>
+            </Link>
+          ))}
+        </Marquee>
       </section>
 
       {/* Featured freelancers */}
-      <section className="container py-20">
-        <SectionHeader eyebrow="Top talent" title={`Meet Ethiopia's finest`} />
+      <section className="container py-14">
+        <SectionHeader title={`Meet Ethiopia's finest`} />
         <div className="grid gap-5 md:grid-cols-3">
           {home.featured.map((f) => (
             <FreelancerCard key={f.name} f={f} />
@@ -403,8 +351,8 @@ export function DesktopLanding() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="container scroll-mt-24 py-20">
-        <SectionHeader eyebrow="Simple process" title={dt('Hire in 3 steps')} />
+      <section id="how" className="container scroll-mt-24 py-14">
+        <SectionHeader title={dt('Hire in 3 steps')} />
         <div className="grid gap-8 md:grid-cols-3">
           {home.howItWorks.map((s, idx) => (
             <div key={idx} className="text-center">
@@ -419,9 +367,8 @@ export function DesktopLanding() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="container scroll-mt-24 py-20">
+      <section id="pricing" className="container scroll-mt-24 py-14">
         <SectionHeader
-          eyebrow="Simple pricing"
           title={dt('Keep more of what you earn')}
           description="Start free. Pay only when you complete a paid project."
         />
@@ -448,7 +395,7 @@ export function DesktopLanding() {
       </section>
 
       {/* CTA */}
-      <section className="container py-20">
+      <section className="container py-14">
         <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-12 text-center md:p-20">
           <div className="mesh-bg absolute inset-0" />
           <div className="relative">
@@ -494,7 +441,6 @@ export function DesktopLanding() {
               <Link className="hover:text-foreground" href="/legal/terms">
                 Terms
               </Link>
-              <span>{dt('Built on 100% open source')}</span>
             </div>
           </div>
         </div>
@@ -503,20 +449,11 @@ export function DesktopLanding() {
   );
 }
 
-function SectionHeader({
-  eyebrow,
-  title,
-  description,
-}: {
-  eyebrow: string;
-  title: string;
-  description?: string;
-}) {
+function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="mx-auto mb-12 max-w-xl text-center">
-      <span className="text-xs font-bold uppercase tracking-widest text-accent">{eyebrow}</span>
-      <h2 className="mt-3 text-3xl font-extrabold tracking-tight md:text-5xl">{title}</h2>
-      {description && <p className="mt-3 text-muted-foreground">{description}</p>}
+    <div className="mx-auto mb-8 max-w-xl text-center">
+      <h2 className="text-2xl font-extrabold tracking-tight md:text-4xl">{title}</h2>
+      {description && <p className="mt-2 text-muted-foreground">{description}</p>}
     </div>
   );
 }

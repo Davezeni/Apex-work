@@ -16,6 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@apex-work/shared';
+import { Marquee } from '@/components/ui/marquee';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
 import { JobsBoard } from '@/app/jobs/page';
@@ -148,37 +149,24 @@ export function MobileHome() {
               {t('home.seeAll')}
             </Link>
           </div>
-          {/* Auto-scrolling marquee (same .chip-marquee machinery as browse);
-              pauses while pressed, static for reduced-motion users. */}
-          <div className="overflow-hidden pb-6">
-            <div className="chip-marquee flex w-max">
-              <div className="flex shrink-0 gap-2 px-5">
+          {/* Auto-scrolling category strip (rAF marquee; pauses while pressed) */}
+          <Marquee className="overflow-hidden pb-6" speed={40}>
+            <div className="flex shrink-0 gap-2 px-5">
+              <CategoryChip
+                label={t('home.forYou')}
+                active={activeCategory === 'for-you'}
+                onClick={() => setActiveCategory('for-you')}
+              />
+              {CATEGORIES.map((c) => (
                 <CategoryChip
-                  label={t('home.forYou')}
-                  active={activeCategory === 'for-you'}
-                  onClick={() => setActiveCategory('for-you')}
+                  key={c.id}
+                  label={`${c.icon} ${c.label}`}
+                  active={activeCategory === c.id}
+                  onClick={() => setActiveCategory(c.id)}
                 />
-                {CATEGORIES.map((c) => (
-                  <CategoryChip
-                    key={c.id}
-                    label={`${c.icon} ${c.label}`}
-                    active={activeCategory === c.id}
-                    onClick={() => setActiveCategory(c.id)}
-                  />
-                ))}
-              </div>
-              <div aria-hidden="true" className="flex shrink-0 gap-2 px-5">
-                {CATEGORIES.map((c) => (
-                  <CategoryChip
-                    key={`dup-${c.id}`}
-                    label={`${c.icon} ${c.label}`}
-                    active={false}
-                    onClick={() => setActiveCategory(c.id)}
-                  />
-                ))}
-              </div>
+              ))}
             </div>
-          </div>
+          </Marquee>
 
           {/* Feed */}
           <div className="mb-4 flex items-center justify-between px-5">
