@@ -542,7 +542,7 @@ function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
           >
             {initials}
           </div>
-          <div className="">
+          <div className="self-start pt-1.5">
             <h3 className="flex items-center gap-1.5 text-base font-bold">
               {f.name}
               <CheckCircle2 className="h-4 w-4 text-cyan-400" />

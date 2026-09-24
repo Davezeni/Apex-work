@@ -555,7 +555,7 @@ export async function getHomeConfig(): Promise<HomeConfig> {
       const parsed = homeConfigSchema.safeParse(row.value);
       return parsed.success ? parsed.data : null;
     },
-    300,
+    60,
   );
   // Defaults for any missing pieces, so partial edits still render.
   return {
