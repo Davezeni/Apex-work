@@ -118,7 +118,7 @@ async function ask(messages: ChatMessage[]): Promise<string> {
           model: MODEL,
           messages,
           temperature: 0.1, // extraction = facts, not creativity
-          max_tokens: 4000,
+          max_tokens: 8000,
           response_format: { type: 'json_object' }, // the model MUST answer with JSON
         }),
         signal: AbortSignal.timeout(45_000),

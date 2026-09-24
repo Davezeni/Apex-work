@@ -79,7 +79,9 @@ async function uploadDirect(
   // boundary. Setting it to the file MIME is the common cause of a 400/CORS
   // failure here.
   const form = new FormData();
-  form.append('cacheControl', '3600');
+  // Uploaded media (avatars/portfolio) never changes at the same key —
+  // cache for a year at the CDN edge instead of revalidating every hour.
+  form.append('cacheControl', '31536000');
   form.append('', file, file.name);
 
   const result = await xhrUpload({
