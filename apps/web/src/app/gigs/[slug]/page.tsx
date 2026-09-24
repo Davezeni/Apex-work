@@ -252,7 +252,7 @@ export default function GigDetailPage() {
   });
 
   return (
-    <div className="min-h-dvh pb-32">
+    <div className="min-h-dvh pb-32 md:mx-auto md:max-w-5xl">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ld }} />
       {/*
         Header/hero. Two shapes:

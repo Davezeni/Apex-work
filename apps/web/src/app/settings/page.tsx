@@ -35,8 +35,21 @@ export default function SettingsPage() {
     window.scrollTo(0, 0);
   }, []);
   const { t } = useI18n();
-  const { data: me } = useMe();
+  const { data: me, isLoading: meLoading, isAuthed } = useMe();
   const logout = useLogout();
+
+  // Auth gate: unregistered / signed-out users never see Settings.
+  useEffect(() => {
+    if (!meLoading && !isAuthed) router.replace('/login?next=/settings');
+  }, [meLoading, isAuthed, router]);
+
+  if (!isAuthed) {
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-background pb-24 md:mx-auto md:max-w-5xl">

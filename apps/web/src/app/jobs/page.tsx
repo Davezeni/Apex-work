@@ -14,6 +14,7 @@ import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
 import { CATEGORIES } from '@apex-work/shared';
+import { Marquee } from '@/components/ui/marquee';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 export function JobsBoard() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export function JobsBoard() {
             </div>
           </div>
 
-          <div className="relative mt-3">
+          <div className="relative mx-auto mt-3 max-w-3xl">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={q}
@@ -59,23 +60,25 @@ export function JobsBoard() {
             />
           </div>
 
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible">
-            <CategoryChip
-              label={dt('All')}
-              icon="✨"
-              active={!category}
-              onClick={() => setCategory(undefined)}
-            />
-            {CATEGORIES.map((c) => (
+          <Marquee className="mt-2 pb-1" speed={50}>
+            <div className="flex shrink-0 gap-1.5">
               <CategoryChip
-                key={c.id}
-                label={c.label}
-                icon={c.icon}
-                active={category === c.id}
-                onClick={() => setCategory(c.id === category ? undefined : c.id)}
+                label={dt('All')}
+                icon="✨"
+                active={!category}
+                onClick={() => setCategory(undefined)}
               />
-            ))}
-          </div>
+              {CATEGORIES.map((c) => (
+                <CategoryChip
+                  key={c.id}
+                  label={c.label}
+                  icon={c.icon}
+                  active={category === c.id}
+                  onClick={() => setCategory(c.id === category ? undefined : c.id)}
+                />
+              ))}
+            </div>
+          </Marquee>
         </header>
 
         {isLoading && (

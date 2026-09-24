@@ -471,8 +471,7 @@ export const DEFAULT_HOME_CONFIG: HomeConfig = {
   heroBadge: 'Live on Apex-Work',
   heroTitle: 'Skip the Overhead.',
   heroTitleAccent: 'Hire the Expert.',
-  heroSubtitle:
-    'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
+  heroSubtitle: 'Vetted Ethiopian talent, escrow-protected.',
   heroCtaPrimary: 'Find talent',
   heroCtaSecondary: 'Become a freelancer',
   searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",

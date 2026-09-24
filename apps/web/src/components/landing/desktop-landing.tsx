@@ -40,8 +40,7 @@ const DEFAULT_HOME: HomeConfig = {
   heroBadge: '',
   heroTitle: 'Skip the Overhead.',
   heroTitleAccent: 'Hire the Expert.',
-  heroSubtitle:
-    'Hire vetted digital talent or land your next gig — powered by AI, paid in Telebirr, built for አማርኛ speakers.',
+  heroSubtitle: '',
   heroCtaPrimary: 'Find talent',
   heroCtaSecondary: 'Become a freelancer',
   searchPlaceholder: "Try 'Amharic translator' or 'React developer'…",
@@ -199,28 +198,19 @@ export function DesktopLanding() {
       </nav>
 
       {/* Hero */}
-      <section className="container relative pb-14 pt-2 text-center lg:text-left">
+      <section className="container relative pb-28 pt-10 text-center lg:text-left">
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           <div>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-1 max-w-4xl text-balance font-display text-4xl font-extrabold leading-[1.05] tracking-tighter md:text-5xl lg:text-6xl xl:text-7xl"
+              className="mx-auto mt-1 max-w-4xl text-balance font-display text-4xl font-extrabold leading-[1.22] tracking-tighter md:text-5xl lg:text-6xl xl:text-7xl"
             >
               {home.heroTitle}
               <br />
               <span className="text-[#0D9488] dark:text-[#2DD4BF]">{home.heroTitleAccent}</span>
             </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground md:text-xl lg:mx-0"
-            >
-              {home.heroSubtitle}
-            </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}

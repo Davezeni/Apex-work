@@ -204,9 +204,9 @@ function BrowseInner() {
             </div>
           </div>
 
-          {/* Desktop search input with focus glow */}
+          {/* Desktop search input with focus glow — centered, widened */}
           <div className="mt-4 hidden md:block">
-            <div className="flex h-12 max-w-xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
+            <div className="mx-auto flex h-12 max-w-3xl items-center gap-2.5 rounded-2xl border border-border bg-card px-4 shadow-sm transition-all focus-within:border-primary/40 focus-within:shadow-lg focus-within:shadow-primary/10 focus-within:ring-2 focus-within:ring-primary/15">
               <Search className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
               <input
                 id="browse-search"
@@ -336,9 +336,7 @@ function BrowseInner() {
             <div
               className={cn(
                 'mx-auto grid max-w-7xl gap-4 px-4 pb-8 transition-all',
-                view === 'grid'
-                  ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
-                  : 'grid-cols-1',
+                view === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3' : 'grid-cols-1',
               )}
               aria-hidden="true"
             >
@@ -369,7 +367,7 @@ function BrowseInner() {
             className={cn(
               'px-4 pb-8 transition-all',
               view === 'grid'
-                ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5'
+                ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3'
                 : 'mx-auto flex max-w-7xl flex-col gap-3',
             )}
           >

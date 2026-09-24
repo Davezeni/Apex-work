@@ -46,6 +46,7 @@ function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const setSession = useAuthStore((s) => s.setSession);
+  const accessToken = useAuthStore((s) => s.accessToken);
   const rememberedPhone = useAuthStore((s) => s.lastPhone);
   const setLastPhone = useAuthStore((s) => s.setLastPhone);
 
@@ -70,6 +71,14 @@ function LoginInner() {
     toast.success(t('loginSmart.welcomeBack'));
     router.push(next);
   };
+
+  // Already signed in (e.g. back-navigation landed on /login)? Redirect
+  // silently — never re-run the trusted-device flow, which toasts
+  // 'Welcome back' and made back buttons feel broken.
+  useEffect(() => {
+    if (accessToken) router.replace(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
 
   // On mount: if this device is trusted (deviceToken present) AND we remember
   // the phone, try the invisible fast path immediately — no user interaction.
