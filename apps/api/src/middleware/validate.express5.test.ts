@@ -46,9 +46,7 @@ async function withServer(run: (base: string) => Promise<void>): Promise<void> {
   try {
     await run(`http://127.0.0.1:${addr.port}`);
   } finally {
-    await new Promise<void>((resolve, reject) =>
-      server.close((e) => (e ? reject(e) : resolve())),
-    );
+    await new Promise<void>((resolve, reject) => server.close((e) => (e ? reject(e) : resolve())));
   }
 }
 
