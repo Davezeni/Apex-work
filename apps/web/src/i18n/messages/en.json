@@ -520,8 +520,7 @@
     "similar": "Similar gigs"
   },
   "footer": {
-    "madeWith": "© 2026 {name} · Made with 🇪🇹 in Addis Ababa",
-    "builtOn": "Built on 100% open source"
+    "madeWith": "© 2026 {name} · Made with 🇪🇹 in Addis Ababa"
   },
   "review": {
     "title": "Rate your experience",
