@@ -6,6 +6,7 @@ import { ArrowLeft, FileText, Shield, Cookie, Trash2, Info, MessageCircle } from
 import Link from 'next/link';
 import { useI18n } from '@/i18n';
 import { safeBack } from '@/lib/safe-back';
+import { BrandMark } from '@/components/brand/brand-logo';
 export default function LegalPage() {
   const router = useRouter();
   const { t } = useI18n();
@@ -24,8 +25,8 @@ export default function LegalPage() {
       </header>
 
       <section className="mx-4 mt-6 text-center">
-        <div className="grad-hero mx-auto grid h-16 w-16 place-items-center rounded-2xl text-white shadow-lg shadow-primary/40">
-          <span className="text-2xl font-extrabold">A</span>
+        <div className="mx-auto">
+          <BrandMark size={64} />
         </div>
         <div className="mt-3 text-xl font-extrabold">{dt('Apex-Work')}</div>
         <div className="text-xs text-muted-foreground">Version 1.0.0 · Made in Ethiopia 🇪🇹</div>

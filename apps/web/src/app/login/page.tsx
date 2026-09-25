@@ -18,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { GithubIcon, GoogleIcon } from '@/components/ui/brand-icons';
 import { OtpInput } from '@/components/auth/otp-input';
+import { BrandMark } from '@/components/brand/brand-logo';
 import { PinInput } from '@/components/auth/pin-input';
 import { apiFetch, ApiError } from '@/lib/api';
 import { ETHIOPIAN_PHONE_REGEX, OTP_LENGTH } from '@apex-work/shared';
@@ -290,8 +291,8 @@ function LoginInner() {
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-10">
-        <div className="grad-hero mb-6 grid h-12 w-12 place-items-center rounded-2xl text-xl font-extrabold text-white shadow-lg shadow-primary/40">
-          A
+        <div className="mb-6">
+          <BrandMark size={48} />
         </div>
 
         <AnimatePresence mode="wait">

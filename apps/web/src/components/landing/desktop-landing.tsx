@@ -10,6 +10,7 @@ import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
 import { Marquee } from '@/components/ui/marquee';
+import { BrandLogo, BrandMark } from '@/components/brand/brand-logo';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { CATEGORY_COLORS } from '@/lib/category-colors';
 import { cn, formatEtb } from '@/lib/utils';
@@ -135,12 +136,7 @@ export function DesktopLanding() {
       <nav className="sticky top-4 z-50 mx-auto mt-3 max-w-[1240px] px-4">
         <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-2 shadow-lg backdrop-blur-xl backdrop-saturate-150">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <span className="grad-hero grid h-8 w-8 place-items-center rounded-xl font-extrabold text-white shadow-md shadow-primary/40">
-              A
-            </span>
-            <span>
-              Apex<span className="text-accent">-Work</span>
-            </span>
+            <BrandLogo height={34} />
           </Link>
           <div className="ml-auto hidden gap-1 md:flex">
             {navLinks.map((link) => (
@@ -405,10 +401,7 @@ export function DesktopLanding() {
         <div className="border-t border-border pt-8">
           <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="grad-hero grid h-6 w-6 place-items-center rounded-md text-xs font-bold text-white">
-                A
-              </span>
-              © 2026 {APP_NAME} · Made with 🇪🇹 in Addis Ababa
+              <BrandMark size={24} />© 2026 {APP_NAME} · Made with 🇪🇹 in Addis Ababa
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <Link className="hover:text-foreground" href="/about">
