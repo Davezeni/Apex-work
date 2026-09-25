@@ -15,8 +15,10 @@ import { cn } from '@/lib/utils';
  *   public/brand/logo-full.png   — mark + wordmark, stacked
  *   public/brand/logo-wordmark.png — the wordmark alone (horizontal)
  *
- * …then bump /public/brand/version.png content or BRAND_VERSION below so
- * caches bust. Nothing else needs touching.
+ * …then bump BRAND_VERSION below (cache-busting) — nothing else needs
+ * touching. The icon/favicons derive from the SAME folder:
+ *   icon-192/512.png ('any'), icon-*-maskable.png (Android), apple-icon.png
+ * A logo swap = replace those PNG files (same names/sizes) in /public/brand/.
  */
 
 export const BRAND = {

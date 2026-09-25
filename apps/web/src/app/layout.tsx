@@ -47,8 +47,8 @@ export const metadata: Metadata = {
     title: 'Apex-Work',
   },
   icons: {
-    icon: '/icon.svg',
-    apple: '/apple-icon.png',
+    icon: '/brand/icon-192.png',
+    apple: '/brand/apple-icon.png',
   },
 };
 

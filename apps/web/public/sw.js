@@ -22,7 +22,7 @@ const RUNTIME_CACHE = `apex-runtime-${VERSION}`;
 const IMAGE_CACHE = `apex-img-${VERSION}`;
 
 // Minimal set — the rest is filled in at runtime on first navigation.
-const PRECACHE = ['/', '/manifest.webmanifest', '/icon.svg', '/apple-icon.png'];
+const PRECACHE = ['/', '/manifest.webmanifest', '/brand/icon-192.png', '/brand/apple-icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

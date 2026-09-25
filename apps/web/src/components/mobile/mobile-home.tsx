@@ -16,6 +16,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CATEGORIES } from '@apex-work/shared';
+import { BrandMark } from '@/components/brand/brand-logo';
 import { Marquee } from '@/components/ui/marquee';
 import { cn, formatEtb } from '@/lib/utils';
 import { useGigs, type GigListItem } from '@/hooks/use-gigs';
@@ -66,11 +67,14 @@ export function MobileHome() {
     <div className="min-h-dvh">
       {/* Sticky header */}
       <header className="safe-top sticky top-0 z-30 flex items-center justify-between bg-background/85 px-5 pb-3 pt-4 backdrop-blur-xl">
-        <div>
-          <div className="text-xs text-muted-foreground">
-            {me ? t('home.greeting') : t('home.greetingGuest')}
+        <div className="flex items-center gap-2.5">
+          <BrandMark size={30} />
+          <div>
+            <div className="text-xs text-muted-foreground">
+              {me ? t('home.greeting') : t('home.greetingGuest')}
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight">{firstName}</h1>
         </div>
         <div className="flex items-center gap-1.5 md:mr-14">
           <NotificationsPanel />
@@ -87,9 +91,7 @@ export function MobileHome() {
                 className="h-10 w-10 text-sm font-bold"
               />
             ) : (
-              <span className="grad-hero grid h-10 w-10 place-items-center rounded-full text-sm font-bold text-white">
-                A
-              </span>
+              <BrandMark size={34} />
             )}
           </Link>
         </div>
