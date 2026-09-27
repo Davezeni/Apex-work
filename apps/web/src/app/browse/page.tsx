@@ -1,5 +1,5 @@
+'use client';
 import type { ReactNode } from 'react';
-('use client');
 
 import { dt } from '@/i18n/auto';
 import { Suspense, useEffect, useRef, useState } from 'react';
