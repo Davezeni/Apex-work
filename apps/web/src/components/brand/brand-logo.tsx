@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  *
  *   public/brand/logo-mark.png     — the mark alone (current: 333x306)
  *   public/brand/logo-lockup.png   — mark + wordmark BAKED side by side
- *                                    (1481x306; regenerate from the two
+ *                                    (1418x306; regenerate from the two
  *                                    files above after any swap)
  *   public/brand/logo-full.png     — mark + wordmark, stacked
  *   public/brand/logo-wordmark.png — the wordmark alone (current: 1219x65)
@@ -31,12 +31,12 @@ export const BRAND = {
   wordmark: '/brand/logo-wordmark.png',
   markWidth: 333,
   markHeight: 306,
-  lockupWidth: 1481,
+  lockupWidth: 1418,
   lockupHeight: 306,
   wordmarkWidth: 582,
   wordmarkHeight: 65,
   /** appended to every brand URL (?v=N) — bump to bust caches after a swap */
-  version: '8',
+  version: '9',
 } as const;
 
 /** The mark alone (scales by height in px). */
