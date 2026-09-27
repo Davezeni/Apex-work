@@ -339,8 +339,8 @@ function BrowseInner() {
           {isLoading && (
             <div
               className={cn(
-                'mx-3 mt-3 grid gap-2 pb-8 transition-all',
-                view === 'grid' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1',
+                'mx-auto grid max-w-7xl gap-4 px-4 pb-8 transition-all',
+                view === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3' : 'grid-cols-1',
               )}
               aria-hidden="true"
             >
@@ -369,9 +369,9 @@ function BrowseInner() {
 
           <div
             className={cn(
-              'pb-8 transition-all',
+              'px-4 pb-8 transition-all',
               view === 'grid'
-                ? 'mx-3 mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3'
+                ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3'
                 : 'mx-auto flex max-w-7xl flex-col gap-3',
             )}
           >
@@ -436,13 +436,12 @@ function FilterChip({
       onClick={onClick}
       tabIndex={tabIndex}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-95',
+        'shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-95',
         active
           ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/40'
           : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
       )}
     >
-      {icon}
       {label}
     </button>
   );
@@ -520,7 +519,12 @@ function GridCard({ g }: { g: GigListItem }) {
         className="group flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border transition-all duration-300 hover:shadow-xl hover:shadow-primary/15 hover:ring-primary/40 active:scale-[.99]"
       >
         {/* Cover — real photo, or a rich category gradient fallback */}
-        <div className={cn('relative h-28 w-full shrink-0 overflow-hidden', gradientFor(g.id))}>
+        <div
+          className={cn(
+            'relative aspect-[16/10] w-full shrink-0 overflow-hidden',
+            gradientFor(g.id),
+          )}
+        >
           {g.coverImageUrl ? (
             <Image
               src={g.coverImageUrl}
@@ -548,9 +552,11 @@ function GridCard({ g }: { g: GigListItem }) {
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-3">
-          <div className="line-clamp-2 text-sm font-extrabold leading-snug">{g.title}</div>
-          <div className="mb-3 mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div className="flex flex-1 flex-col p-3.5">
+          <div className="line-clamp-2 min-h-[2.6rem] text-[13px] font-bold leading-[1.3] tracking-[-0.01em]">
+            {g.title}
+          </div>
+          <div className="mb-3 mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             {g.ratingCount > 0 ? (
               <span className="inline-flex items-center gap-1">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
