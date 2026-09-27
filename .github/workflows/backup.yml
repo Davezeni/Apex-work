@@ -38,6 +38,10 @@ jobs:
         env:
           DATABASE_URL_BACKUP: ${{ secrets.DATABASE_URL_BACKUP }}
         run: |
+          # pgdg installs client 18 under /usr/lib/postgresql/18/bin without
+          # touching /usr/bin/pg_dump (which stays Ubuntu's 16). Prepend it.
+          export PATH="/usr/lib/postgresql/18/bin:$PATH"
+          pg_dump --version
           TS=$(date -u +%Y%m%dT%H%M%SZ)
           pg_dump "$DATABASE_URL_BACKUP" --no-owner --no-privileges --format=custom -f "apexwork-$TS.dump"
           echo "BACKUP_FILE=apexwork-$TS.dump" >> "$GITHUB_ENV"
