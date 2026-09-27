@@ -2,15 +2,16 @@ import { Router } from 'express';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 import {
+  certificationSchema,
+  educationSchema,
+  parseResumeHeuristic,
   resumeImportSchema,
   resumeSchema,
-  workExperienceSchema,
-  educationSchema,
-  certificationSchema,
   resumeTemplateSelectSchema,
   resumeTemplateVerifySchema,
   resumeVersionCreateSchema,
   resumeVersionIdSchema,
+  workExperienceSchema,
 } from '@apex-work/shared';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import { validate } from '../middleware/validate.js';
@@ -50,8 +51,24 @@ router.post(
 
     let text = '';
     if (ext === 'pdf') {
-      const out = await pdfParse(buf);
-      text = out.text;
+      // unpdf (pdf.js) first — it reads PDFs the legacy pdf-parse misses;
+      // fall back to pdf-parse, then fail with scan guidance.
+      try {
+        const { extractText, getDocumentProxy } = await import('unpdf');
+        const pdf = await getDocumentProxy(new Uint8Array(buf));
+        const out = await extractText(pdf, { mergePages: true });
+        text = out.text;
+      } catch {
+        text = '';
+      }
+      if (text.replace(/\s+/g, '').length < 40) {
+        try {
+          const out = await pdfParse(buf);
+          text = out.text;
+        } catch {
+          text = '';
+        }
+      }
     } else if (ext === 'docx') {
       const out = await mammoth.extractRawText({ buffer: buf });
       text = out.value;
@@ -59,13 +76,22 @@ router.post(
       text = buf.toString('utf8');
     }
     if (text.replace(/\s+/g, '').length < 40) {
-      throw new BadRequestError('Could not find readable text — try a text-based PDF');
+      throw new BadRequestError(
+        'This PDF has no readable text — it looks like a scanned image. Export a text-based PDF from your editor, or paste your CV text instead.',
+      );
     }
     const clean = text.slice(0, 60_000);
-    let extracted: unknown = null;
+    // DETERMINISTIC-FIRST: the tested heuristic parser wins whenever it
+    // finds structure (it is regression-fixed against real CV templates
+    // that the LLM mis-maps). The AI is only a fallback for text the
+    // heuristic cannot read at all.
+    const heuristic = parseResumeHeuristic(clean);
+    const heuristicUsable = heuristic.experiences.length > 0 || heuristic.education.length > 0;
+    let extracted: unknown = heuristic;
     let engine = 'basic';
-    let aiNote: string | null = isAiConfigured() ? null : 'AI_NOT_CONFIGURED';
-    if (isAiConfigured()) {
+    let aiNote: string | null = null;
+    if (!heuristicUsable && isAiConfigured()) {
+      aiNote = 'HEURISTIC_EMPTY: trying AI';
       try {
         extracted = await extractResumeData(clean);
         engine = 'ai';
@@ -74,7 +100,7 @@ router.post(
         aiNote = `AI_ERROR: ${error instanceof Error ? error.message : 'unknown'}`;
         logger.warn(
           { note: aiNote },
-          'resume AI extraction failed — client falls back to heuristic',
+          'resume AI extraction failed — client keeps heuristic result',
         );
       }
     }

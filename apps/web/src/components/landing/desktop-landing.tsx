@@ -136,7 +136,7 @@ export function DesktopLanding() {
       <nav className="sticky top-4 z-50 mx-auto mt-3 max-w-[1240px] px-4">
         <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-2 shadow-lg backdrop-blur-xl backdrop-saturate-150">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <BrandLogo height={34} />
+            <BrandLogo height={44} />
           </Link>
           <div className="ml-auto hidden gap-1 md:flex">
             {navLinks.map((link) => (
@@ -446,15 +446,10 @@ function FreelancerCard({ f }: { f: HomeConfig['featured'][number] }) {
     .toUpperCase();
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-border bg-card transition-all hover:-translate-y-1 hover:shadow-xl">
-      <div className={cn('h-24 bg-gradient-to-br', f.gradient)} />
+      <div className="h-1.5 bg-primary/25" />
       <div className="px-5 pb-5">
         <div className="-mt-8 flex items-center gap-3">
-          <div
-            className={cn(
-              'grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br text-xl font-bold text-white ring-4 ring-card',
-              f.gradient,
-            )}
-          >
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-secondary text-xl font-bold text-foreground ring-4 ring-card">
             {initials}
           </div>
           <div className="self-start pt-1.5">

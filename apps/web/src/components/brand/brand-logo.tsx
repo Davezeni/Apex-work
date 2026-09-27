@@ -62,10 +62,10 @@ export function BrandLogo({ height = 32, className }: { height?: number; classNa
       <Image
         src={BRAND.wordmark}
         alt=""
-        width={Math.round((height * 1272) / 259)}
+        width={Math.round((height * 0.82 * 1272) / 259)}
         height={height}
         className="h-auto w-auto"
-        style={{ height: Math.round(height * 0.72), width: 'auto' }}
+        style={{ height: Math.round(height * 0.82), width: 'auto' }}
       />
     </span>
   );

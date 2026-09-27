@@ -272,11 +272,18 @@ export default function ResumeImportPage() {
         : prev,
     );
 
-  // Ask the API's AI extractor to identify every field; fall back to the
-  // shared deterministic parser (and say WHY) if the AI is unavailable.
+  // DETERMINISTIC-FIRST: the tested heuristic parser handles known CV
+  // templates correctly (the LLM mis-maps some of them), so it runs first.
+  // The AI route is only attempted when the heuristic finds no structure.
   const runExtraction = async (text: string) => {
     setBusy('ai');
     try {
+      const heuristic = parseResumeHeuristic(text);
+      const usable = heuristic.experiences.length > 0 || heuristic.education.length > 0;
+      if (usable) {
+        applyBasicExtraction(text, null);
+        return;
+      }
       const res = await fetch(`${API_BASE}/v1/me/resume/extract`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
