@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
  * favicon) renders through <BrandMark> / <BrandLogo> below. To change the
  * logo app-wide, replace these three files (keeping the filenames):
  *
- *   public/brand/logo-mark.png   — the mark alone (current: 333x306)
- *   public/brand/logo-full.png   — mark + wordmark, stacked
- *   public/brand/logo-wordmark.png — the wordmark alone (horizontal)
+ *   public/brand/logo-mark.png     — the mark alone (current: 333x306)
+ *   public/brand/logo-full.png     — mark + wordmark, stacked
+ *   public/brand/logo-wordmark.png — the wordmark alone (current: 1219x206)
  *
  * …then bump BRAND_VERSION below (cache-busting) — nothing else needs
  * touching. The icon/favicons derive from the SAME folder:
@@ -27,8 +27,10 @@ export const BRAND = {
   wordmark: '/brand/logo-wordmark.png',
   markWidth: 333,
   markHeight: 306,
-  /** bump to bust caches after a logo swap */
-  version: '1',
+  wordmarkWidth: 1219,
+  wordmarkHeight: 206,
+  /** appended to every brand URL (?v=N) — bump to bust caches after a swap */
+  version: '2',
 } as const;
 
 /** The mark alone (scales by height in px). */
@@ -43,7 +45,7 @@ export function BrandMark({
 }) {
   return (
     <Image
-      src={BRAND.mark}
+      src={`${BRAND.mark}?v=${BRAND.version}`}
       alt={alt}
       width={Math.round((size * BRAND.markWidth) / BRAND.markHeight)}
       height={size}
@@ -54,18 +56,29 @@ export function BrandMark({
   );
 }
 
-/** Horizontal lockup: mark + wordmark, matched heights. */
+/**
+ * Horizontal lockup. The wordmark TUCKS into the mark's box (the A-frame
+ * slants right, so its top-right corner is empty) and sits slightly low to
+ * meet the mark's visual mass. Factors are relative to `height`, derived
+ * from the 52px nav lockup: word 0.88x, tuck -0.21x, drop +0.10x.
+ */
 export function BrandLogo({ height = 32, className }: { height?: number; className?: string }) {
+  const wordHeight = Math.round(height * 0.88);
   return (
-    <span className={cn('inline-flex items-center gap-2', className)}>
+    <span className={cn('inline-flex items-center', className)}>
       <BrandMark size={height} />
       <Image
-        src={BRAND.wordmark}
+        src={`${BRAND.wordmark}?v=${BRAND.version}`}
         alt=""
-        width={Math.round((height * 0.82 * 1272) / 259)}
-        height={height}
+        width={Math.round((wordHeight * BRAND.wordmarkWidth) / BRAND.wordmarkHeight)}
+        height={wordHeight}
         className="h-auto w-auto"
-        style={{ height: Math.round(height * 0.82), width: 'auto' }}
+        style={{
+          height: wordHeight,
+          width: 'auto',
+          marginLeft: -Math.round(height * 0.21),
+          transform: `translateY(${Math.round(height * 0.1)}px)`,
+        }}
       />
     </span>
   );
