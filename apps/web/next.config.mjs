@@ -22,6 +22,9 @@ const nextConfig = {
 
   // Prefer smaller modern formats and cap DPR variants.
   images: {
+    // localPatterns is defined ONLY to let /brand images carry ?v= cache-
+    // busting; every other local image keeps exact-path (no query) behavior.
+    localPatterns: [{ pathname: '/brand/**' }, { pathname: '/**', search: '' }],
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 60 * 60 * 24 * 7, // 7 days at the CDN
     deviceSizes: [360, 414, 640, 768, 1024, 1280, 1600],
