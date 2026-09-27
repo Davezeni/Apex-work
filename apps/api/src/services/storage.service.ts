@@ -22,6 +22,18 @@ import { randomToken } from '../lib/hash.js';
 
 export type StorageBucket = 'portfolio' | 'chat-attachments' | 'avatars';
 
+/**
+ * Auth headers for Supabase Storage calls. New-format keys (`sb_secret_…`)
+ * must go on the `apikey` header ONLY — Supabase parses the Authorization
+ * header as a JWT and rejects sb_ keys with "Invalid JWT". Legacy JWT keys
+ * keep both headers. Works with whichever key is configured.
+ */
+function storageAuth(): Record<string, string> {
+  const key = env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return {};
+  return key.startsWith('sb_') ? { apikey: key } : { Authorization: `Bearer ${key}`, apikey: key };
+}
+
 const MAX_MB_PER_BUCKET: Record<StorageBucket, number> = {
   avatars: 5,
   portfolio: 25,
@@ -151,11 +163,12 @@ export class StorageService {
     const y = now.getUTCFullYear();
     const m = String(now.getUTCMonth() + 1).padStart(2, '0');
     const rand = randomToken(6);
-    const safe = filename
-      .toLowerCase()
-      .replace(/[^a-z0-9._-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'file';
+    const safe =
+      filename
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'file';
     return `${ownerId}/${y}/${m}/${rand}-${safe}`;
   }
 
@@ -179,8 +192,7 @@ export class StorageService {
     const path = this.buildPath(req.ownerId, req.filename);
     // Do NOT wrap `path` in encodeURIComponent — that turns every `/` into
     // `%2F`, while Supabase expects the user/year/month separators literally.
-    const endpoint =
-      `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
+    const endpoint = `${env.SUPABASE_URL}/storage/v1/object/upload/sign/${req.bucket}/${path}`;
 
     const sign = async (): Promise<{ status: number; body: string }> => {
       let res: Response;
@@ -188,8 +200,7 @@ export class StorageService {
         res = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-            apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+            ...storageAuth(),
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({}),
@@ -209,13 +220,19 @@ export class StorageService {
     // working even if boot-time provisioning was skipped or a bucket is gone.
     let res = await sign();
     if (res.status === 400 || res.status === 404) {
-      logger.warn({ status: res.status, bucket: req.bucket }, 'Supabase sign 404/400 — ensuring bucket, retrying');
+      logger.warn(
+        { status: res.status, bucket: req.bucket },
+        'Supabase sign 404/400 — ensuring bucket, retrying',
+      );
       await ensureStorageBuckets();
       res = await sign();
     }
 
     if (res.status !== 200) {
-      logger.error({ status: res.status, text: res.body.slice(0, 300) }, 'Supabase signed URL failed');
+      logger.error(
+        { status: res.status, text: res.body.slice(0, 300) },
+        'Supabase signed URL failed',
+      );
       throw new Error(`Storage sign failed (${res.status})`);
     }
 
@@ -297,8 +314,7 @@ export class StorageService {
         const res = await fetch(this.objectEndpoint(input.bucket, path), {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-            apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+            ...storageAuth(),
             'Content-Type': contentType,
             'x-upsert': 'false',
             'Content-Length': String(total),
@@ -326,11 +342,22 @@ export class StorageService {
       } catch (err) {
         // Supabase unreachable (e.g. project was deleted / DNS fails) → fall
         // through to the self-hosted store instead of surfacing a 500.
-        logger.warn({ err: (err as Error).message, bucket: input.bucket }, 'Supabase upload failed — storing locally');
+        logger.warn(
+          { err: (err as Error).message, bucket: input.bucket },
+          'Supabase upload failed — storing locally',
+        );
       }
     }
 
-    return this.storeLocal(input.ownerId, input.bucket, path, input.filename, contentType, total, bytes);
+    return this.storeLocal(
+      input.ownerId,
+      input.bucket,
+      path,
+      input.filename,
+      contentType,
+      total,
+      bytes,
+    );
   }
 
   /** Persist bytes in the Postgres-backed object store and return an API-served URL. */
@@ -379,8 +406,7 @@ export async function ensureStorageBuckets(): Promise<void> {
   try {
     const res = await fetch(`${env.SUPABASE_URL}/storage/v1/bucket`, {
       headers: {
-        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-        apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+        ...storageAuth(),
       },
     });
     if (res.ok) {
@@ -398,8 +424,7 @@ export async function ensureStorageBuckets(): Promise<void> {
       const res = await fetch(`${env.SUPABASE_URL}/storage/v1/bucket`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-          apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+          ...storageAuth(),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -411,9 +436,15 @@ export async function ensureStorageBuckets(): Promise<void> {
         }),
       });
       const created = res.ok || res.status === 409;
-      logger.info({ bucket, status: res.status }, created ? 'Storage bucket ensured' : 'Storage bucket create failed');
+      logger.info(
+        { bucket, status: res.status },
+        created ? 'Storage bucket ensured' : 'Storage bucket create failed',
+      );
     } catch (err) {
-      logger.warn({ bucket, err: (err as Error).message }, 'Storage bucket create skipped (non-fatal)');
+      logger.warn(
+        { bucket, err: (err as Error).message },
+        'Storage bucket create skipped (non-fatal)',
+      );
     }
   }
 }
