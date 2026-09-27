@@ -1,4 +1,5 @@
-'use client';
+import type { ReactNode } from 'react';
+('use client');
 
 import { dt } from '@/i18n/auto';
 import { useState } from 'react';
@@ -13,6 +14,8 @@ import { useJobs, type JobSummary } from '@/hooks/use-jobs';
 import { useMe } from '@/hooks/use-me';
 import { useI18n } from '@/i18n';
 import { cn, formatEtb, timeAgo } from '@/lib/utils';
+import { CategoryIcon } from '@/components/ui/category-icon';
+import { Sparkles } from 'lucide-react';
 import { CATEGORIES } from '@apex-work/shared';
 import { Marquee } from '@/components/ui/marquee';
 import { MobileShell } from '@/components/mobile/mobile-shell';
@@ -64,7 +67,7 @@ export function JobsBoard() {
             <div className="flex shrink-0 gap-1.5">
               <CategoryChip
                 label={dt('All')}
-                icon="✨"
+                icon={<Sparkles className="h-3.5 w-3.5" />}
                 active={!category}
                 onClick={() => setCategory(undefined)}
               />
@@ -72,7 +75,7 @@ export function JobsBoard() {
                 <CategoryChip
                   key={c.id}
                   label={c.label}
-                  icon={c.icon}
+                  icon={<CategoryIcon id={c.id} className="h-3.5 w-3.5" />}
                   active={category === c.id}
                   onClick={() => setCategory(c.id === category ? undefined : c.id)}
                 />
@@ -164,7 +167,7 @@ function CategoryChip({
   onClick,
 }: {
   label: string;
-  icon: string;
+  icon: ReactNode;
   active: boolean;
   onClick: () => void;
 }) {

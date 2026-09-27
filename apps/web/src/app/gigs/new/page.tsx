@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
 import { useCreateGig } from '@/hooks/use-gig-mutations';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { CATEGORIES, MIN_GIG_PRICE_ETB, MAX_GIG_PRICE_ETB } from '@apex-work/shared';
 import Image from 'next/image';
 import { cn, formatEtb } from '@/lib/utils';
@@ -94,10 +95,7 @@ export default function PostGigPage() {
   // accidentally satisfy the min-length check.
   const descPlainLen = description.replace(/<[^>]+>/g, '').trim().length;
   const canGoNext =
-    (step === 'overview' &&
-      title.trim().length >= 15 &&
-      !!categoryId &&
-      descPlainLen >= 50) ||
+    (step === 'overview' && title.trim().length >= 15 && !!categoryId && descPlainLen >= 50) ||
     (step === 'setup' &&
       packages.length >= 1 &&
       packages.every(
@@ -255,7 +253,6 @@ export default function PostGigPage() {
 
             {step === 'overview' && (
               <>
-
                 <div className="mt-6 grid grid-cols-2 gap-2">
                   {CATEGORIES.map((c) => (
                     <button
@@ -268,7 +265,9 @@ export default function PostGigPage() {
                           : 'border-border bg-card',
                       )}
                     >
-                      <div className="text-2xl">{c.icon}</div>
+                      <div>
+                        <CategoryIcon id={c.id} className="h-6 w-6 text-primary" />
+                      </div>
                       <div className="mt-2 text-sm font-semibold">{c.label}</div>
                     </button>
                   ))}
@@ -423,7 +422,6 @@ export default function PostGigPage() {
 
             {step === 'setup' && (
               <>
-
                 <div className="mt-6 space-y-4">
                   {packages.map((p, i) => (
                     <PackageCard

@@ -12,6 +12,7 @@ import { RichEditor } from '@/components/ui/rich-editor';
 import { useMe } from '@/hooks/use-me';
 import { useCreateJob } from '@/hooks/use-jobs';
 import { useI18n } from '@/i18n';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { CATEGORIES, MIN_GIG_PRICE_ETB } from '@apex-work/shared';
 import { cn } from '@/lib/utils';
 import { safeBack } from '@/lib/safe-back';
@@ -192,7 +193,9 @@ export default function NewJobPage() {
                         : 'border-border bg-card',
                     )}
                   >
-                    <div className="text-xl">{c.icon}</div>
+                    <div>
+                      <CategoryIcon id={c.id} className="h-5 w-5 text-primary" />
+                    </div>
                     <div className="mt-1 text-xs font-semibold">{c.label}</div>
                   </button>
                 ))}

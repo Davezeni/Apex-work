@@ -1,16 +1,22 @@
-'use client';
+import type { ReactNode } from 'react';
+('use client');
 
 import { dt } from '@/i18n/auto';
 import { useEffect, useState } from 'react';
 import {
-  Search,
-  Bookmark,
-  Star,
-  MapPin,
-  CheckCircle2,
-  Loader2,
-  Sparkles,
   ArrowRight,
+  Bookmark,
+  Building2,
+  CheckCircle2,
+  Flame,
+  Loader2,
+  MapPin,
+  Megaphone,
+  Search,
+  Sparkles,
+  Sprout,
+  Star,
+  Zap,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -32,6 +38,7 @@ import { NotificationsPanel } from '@/components/notifications-panel';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VoiceSearch } from '@/components/chat/voice-search';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { gradientFor } from '@/components/ui/avatar-gradient';
 import { UserAvatar } from '@/components/ui/user-avatar';
 /** Deterministic pick so a user's avatar color stays stable across renders. */
@@ -120,7 +127,9 @@ export function MobileHome() {
           href="/jobs"
           className="flex flex-col items-start gap-1 rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-primary/5 p-3 transition-transform active:scale-[0.98]"
         >
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-xl">📢</div>
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary/20 text-primary">
+            <Megaphone className="h-5 w-5" />
+          </div>
           <div className="text-xs font-extrabold">{t('jobs.title')}</div>
           <div className="line-clamp-1 text-[10px] text-muted-foreground">{t('jobs.subtitle')}</div>
         </Link>
@@ -162,7 +171,8 @@ export function MobileHome() {
               {CATEGORIES.map((c) => (
                 <CategoryChip
                   key={c.id}
-                  label={`${c.icon} ${c.label}`}
+                  label={c.label}
+                  icon={<CategoryIcon id={c.id} className="h-3.5 w-3.5" />}
                   active={activeCategory === c.id}
                   onClick={() => setActiveCategory(c.id)}
                 />
@@ -188,7 +198,7 @@ export function MobileHome() {
             )}
             {!isLoading && gigs.length === 0 && (
               <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <div className="text-2xl">🌱</div>
+                <Sprout className="mx-auto h-7 w-7 text-primary" />
                 <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
               </div>
@@ -294,10 +304,12 @@ function RecommendedJobCard({ job }: { job: RecommendedJob }) {
 
 function CategoryChip({
   label,
+  icon,
   active,
   onClick,
 }: {
   label: string;
+  icon?: ReactNode;
   active: boolean;
   onClick: () => void;
 }) {
@@ -311,6 +323,7 @@ function CategoryChip({
           : 'border-border bg-card text-muted-foreground',
       )}
     >
+      {icon}
       {label}
     </button>
   );
@@ -336,11 +349,13 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
         <Image src={g.coverImageUrl!} alt={g.title} fill sizes="400px" className="object-cover" />
         {g.isFeatured ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
-            ⚡ Featured
+            <Zap className="h-3.5 w-3.5" />
+            Featured
           </span>
         ) : g.rating >= 4.8 && g.ratingCount >= 10 ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
-            🔥 Top Rated
+            <Flame className="h-3.5 w-3.5" />
+            Top Rated
           </span>
         ) : null}
         <HomeSaveButton slug={g.slug} saved={saved} />
@@ -381,12 +396,14 @@ function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
             {g.owner.isVerified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />}
             {g.isFeatured && (
               <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
-                ⚡ Featured
+                <Zap className="h-3 w-3" />
+                Featured
               </span>
             )}
             {!g.isFeatured && g.rating >= 4.8 && g.ratingCount >= 10 && (
               <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                🔥 Top Rated
+                <Flame className="h-3 w-3" />
+                Top Rated
               </span>
             )}
           </div>
@@ -490,7 +507,8 @@ function CardBody({ g, noTopPadding = false }: { g: GigListItem; noTopPadding?: 
         <span className="truncate text-[11px] font-semibold">{g.owner.fullName}</span>
         {g.owner.agencyMemberships?.[0]?.agency && (
           <span className="truncate text-[10px] text-muted-foreground">
-            · 🏢 {g.owner.agencyMemberships[0].agency.name}
+            · <Building2 className="inline h-3 w-3 align-[-1px]" />{' '}
+            {g.owner.agencyMemberships[0].agency.name}
           </span>
         )}
         {g.owner.isVerified && (

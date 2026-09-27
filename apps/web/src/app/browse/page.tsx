@@ -1,4 +1,5 @@
-'use client';
+import type { ReactNode } from 'react';
+('use client');
 
 import { dt } from '@/i18n/auto';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -8,15 +9,19 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import {
   ArrowLeft,
-  Star,
-  MapPin,
-  Loader2,
-  SlidersHorizontal,
+  Building2,
+  CheckCircle2,
   LayoutGrid,
   LayoutList,
-  CheckCircle2,
+  Loader2,
+  MapPin,
   Search,
+  SlidersHorizontal,
+  Sprout,
+  Star,
+  Zap,
 } from 'lucide-react';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { CATEGORIES } from '@apex-work/shared';
 import { Marquee } from '@/components/ui/marquee';
 import { cn, formatEtb } from '@/lib/utils';
@@ -255,7 +260,8 @@ function BrowseInner() {
                   {CATEGORIES.map((c) => (
                     <FilterChip
                       key={c.id}
-                      label={`${c.icon} ${c.label}`}
+                      label={c.label}
+                      icon={<CategoryIcon id={c.id} className="h-3.5 w-3.5" />}
                       active={category === c.id}
                       onClick={() => setCategoryUrl(c.id)}
                     />
@@ -272,7 +278,8 @@ function BrowseInner() {
                 {CATEGORIES.map((c) => (
                   <FilterChip
                     key={c.id}
-                    label={`${c.icon} ${c.label}`}
+                    label={c.label}
+                    icon={<CategoryIcon id={c.id} className="h-3.5 w-3.5" />}
                     active={category === c.id}
                     onClick={() => setCategoryUrl(c.id)}
                   />
@@ -357,7 +364,7 @@ function BrowseInner() {
 
           {!isLoading && sorted.length === 0 && (
             <div className="mx-5 mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
-              <div className="text-3xl">🌱</div>
+              <Sprout className="mx-auto h-8 w-8 text-primary" />
               <p className="mt-2 text-sm font-semibold">{t('home.noGigsInCategory')}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
             </div>
@@ -413,11 +420,13 @@ function BrowseInner() {
 
 function FilterChip({
   label,
+  icon,
   active,
   onClick,
   tabIndex,
 }: {
   label: string;
+  icon?: ReactNode;
   active: boolean;
   onClick: () => void;
   tabIndex?: number;
@@ -499,7 +508,6 @@ function BrowseCard({ g }: { g: GigListItem }) {
 
 function GridCard({ g }: { g: GigListItem }) {
   const { t } = useI18n();
-  const catIcon = CATEGORIES.find((c) => c.id === g.categoryId)?.icon ?? '✨';
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -529,8 +537,8 @@ function GridCard({ g }: { g: GigListItem }) {
             <>
               <div className="absolute -right-6 -top-10 h-32 w-32 rounded-full border-[10px] border-white/10" />
               <div className="absolute -bottom-12 -left-8 h-36 w-36 rounded-full border-[14px] border-white/10" />
-              <span className="absolute inset-0 grid place-items-center text-5xl drop-shadow-sm transition-transform duration-500 group-hover:scale-110">
-                {catIcon}
+              <span className="absolute inset-0 grid place-items-center text-foreground/70 transition-transform duration-500 group-hover:scale-110">
+                <CategoryIcon id={g.categoryId} className="h-12 w-12" />
               </span>
             </>
           )}
@@ -538,7 +546,8 @@ function GridCard({ g }: { g: GigListItem }) {
           <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           {g.isFeatured && (
             <span className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-amber-400/95 px-2 py-0.5 text-[10px] font-extrabold text-amber-950 shadow-sm">
-              ⚡ {t('gig.featured')}
+              <Zap className="h-3 w-3" />
+              {t('gig.featured')}
             </span>
           )}
         </div>
@@ -570,7 +579,8 @@ function GridCard({ g }: { g: GigListItem }) {
               <>
                 <span aria-hidden>·</span>
                 <span className="truncate font-medium text-primary/80">
-                  🏢 {g.owner.agencyMemberships[0].agency.name}
+                  <Building2 className="inline h-3.5 w-3.5 align-[-2px]" />{' '}
+                  {g.owner.agencyMemberships[0].agency.name}
                 </span>
               </>
             )}

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bookmark, CheckCircle2, ChevronRight, Heart, Loader2, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { CATEGORIES } from '@apex-work/shared';
 import { MobileShell } from '@/components/mobile/mobile-shell';
 import { useMe } from '@/hooks/use-me';
@@ -168,8 +169,9 @@ function SavedGigCard({
         </div>
         <div className="p-3">
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <span>
-              {category?.icon ?? '💼'} {category?.label ?? 'Service'}
+            <span className="inline-flex items-center gap-1">
+              <CategoryIcon id={category?.id} className="h-3 w-3" />
+              {category?.label ?? 'Service'}
             </span>
             {gig.owner.city && (
               <>
