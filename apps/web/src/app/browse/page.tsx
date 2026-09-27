@@ -289,7 +289,7 @@ function BrowseInner() {
           </div>
 
           {/* Sort + view toggle */}
-          <div className="flex items-center justify-between gap-2 px-5 pb-3">
+          <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-2 px-4 pb-3">
             <span className="text-xs text-muted-foreground">
               {isLoading ? '…' : t('browse.resultsCount', { count: sorted.length })}
             </span>
@@ -339,7 +339,7 @@ function BrowseInner() {
           {isLoading && (
             <div
               className={cn(
-                'mx-auto grid max-w-7xl gap-4 px-4 pb-8 transition-all',
+                'mx-auto grid max-w-5xl gap-4 px-4 pb-8 transition-all',
                 view === 'grid' ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3' : 'grid-cols-1',
               )}
               aria-hidden="true"
@@ -371,8 +371,8 @@ function BrowseInner() {
             className={cn(
               'px-4 pb-8 transition-all',
               view === 'grid'
-                ? 'mx-auto grid max-w-7xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3'
-                : 'mx-auto flex max-w-7xl flex-col gap-3',
+                ? 'mx-auto grid max-w-5xl grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3'
+                : 'mx-auto flex max-w-5xl flex-col gap-3',
             )}
           >
             {sorted.map((g, i) => (
