@@ -208,11 +208,11 @@ export function DesktopSidebar() {
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 px-4 py-5">
+          <div className="flex items-center gap-2 px-3 py-5">
             <Link href="/" className="flex shrink-0 items-center">
-              <BrandLogo height={26} />
+              <BrandLogo height={22} />
             </Link>
-            <div className="ml-auto flex items-center gap-0.5">
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
               <button
                 onClick={toggleCollapse}
                 aria-label="Collapse sidebar"
