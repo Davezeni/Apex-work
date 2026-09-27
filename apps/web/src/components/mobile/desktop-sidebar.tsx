@@ -31,6 +31,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { NotificationsPanel } from '@/components/notifications-panel';
 import { useI18n } from '@/i18n';
+import { BrandLogo, BrandMark } from '@/components/brand/brand-logo';
 
 interface NavItem {
   label: string;
@@ -195,9 +196,7 @@ export function DesktopSidebar() {
         {collapsed ? (
           <div className="flex flex-col items-center gap-2 px-3 py-4">
             <Link href="/" className="flex shrink-0">
-              <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
-                A
-              </div>
+              <BrandMark size={32} />
             </Link>
             <button
               onClick={toggleCollapse}
@@ -210,17 +209,8 @@ export function DesktopSidebar() {
           </div>
         ) : (
           <div className="flex items-center gap-2.5 px-4 py-5">
-            <Link href="/" className="flex shrink-0 items-center gap-2.5">
-              <div className="grad-hero grid h-9 w-9 place-items-center rounded-xl text-lg font-extrabold text-white shadow-lg shadow-primary/40">
-                A
-              </div>
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="whitespace-nowrap text-lg font-extrabold tracking-tight"
-              >
-                Apex-Work
-              </motion.span>
+            <Link href="/" className="flex shrink-0 items-center">
+              <BrandLogo height={26} />
             </Link>
             <div className="ml-auto flex items-center gap-0.5">
               <button

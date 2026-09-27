@@ -291,7 +291,7 @@ function LoginInner() {
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 pb-10">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-center">
           <BrandMark size={48} />
         </div>
 
