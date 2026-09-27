@@ -21,6 +21,7 @@ import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
 import { Marquee } from '@/components/ui/marquee';
+import { CategoryIcon } from '@/components/ui/category-icon';
 import { BrandLogo, BrandMark } from '@/components/brand/brand-logo';
 import { CATEGORIES, APP_NAME } from '@apex-work/shared';
 import { CATEGORY_COLORS } from '@/lib/category-colors';
@@ -322,8 +323,8 @@ export function DesktopLanding() {
               href={`/browse?category=${c.slug}`}
               className="group relative mr-4 w-56 shrink-0 overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg"
             >
-              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-2xl transition-transform group-hover:-rotate-6 group-hover:scale-110">
-                {c.icon}
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:-rotate-6 group-hover:scale-110">
+                <CategoryIcon id={c.id} className="h-6 w-6" />
               </div>
               <h3 className="mt-4 text-sm font-semibold md:text-base">{c.label}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{dt('Browse services')}</p>

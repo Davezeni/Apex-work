@@ -307,10 +307,12 @@ function LoginInner() {
 
           {step === 'phone' && (
             <StepBox key="phone">
-              <h1 className="text-3xl font-extrabold tracking-tight">
+              <h1 className="text-center text-3xl font-extrabold tracking-tight">
                 {t('loginSmart.welcomeBack')}
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">{t('loginSmart.smartSubtitle')}</p>
+              <p className="mt-2 text-center text-sm text-muted-foreground">
+                {t('loginSmart.smartSubtitle')}
+              </p>
 
               <label className="mt-8 block text-xs font-semibold text-muted-foreground">
                 {t('auth.phoneLabel')}
@@ -379,10 +381,10 @@ function LoginInner() {
           {step === 'pin' && (
             <StepBox key="pin">
               <LockKeyhole className="mb-4 h-8 w-8 text-primary" />
-              <h1 className="text-3xl font-extrabold tracking-tight">
+              <h1 className="text-center text-3xl font-extrabold tracking-tight">
                 {t('loginSmart.welcomeBack')}
               </h1>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-2 text-center text-sm text-muted-foreground">
                 {t('loginSmart.signedInAs', { phone })}
               </p>
 
@@ -438,8 +440,10 @@ function LoginInner() {
               <div className="grad-hero mb-6 grid h-14 w-14 place-items-center rounded-2xl text-white">
                 <UserPlus className="h-7 w-7" />
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight">{t('auth.noAccount')}</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <h1 className="text-center text-3xl font-extrabold tracking-tight">
+                {t('auth.noAccount')}
+              </h1>
+              <p className="mt-2 text-center text-sm text-muted-foreground">
                 {t('auth.noAccountBody', { phone })}
               </p>
 

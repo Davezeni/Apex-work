@@ -436,12 +436,13 @@ function FilterChip({
       onClick={onClick}
       tabIndex={tabIndex}
       className={cn(
-        'shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-95',
+        'flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-95',
         active
           ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/40'
           : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
       )}
     >
+      {icon}
       {label}
     </button>
   );
