@@ -28,7 +28,7 @@
     "@apex-work/shared": "*",
     "@prisma/client": "^5.20.0",
     "@sentry/node": "^10.75.0",
-    "@simplewebauthn/server": "^11.0.0",
+    "@simplewebauthn/server": "^13.3.2",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.6",
