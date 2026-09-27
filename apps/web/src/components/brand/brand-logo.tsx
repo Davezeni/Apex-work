@@ -12,8 +12,11 @@ import { cn } from '@/lib/utils';
  * logo app-wide, replace these three files (keeping the filenames):
  *
  *   public/brand/logo-mark.png     — the mark alone (current: 333x306)
+ *   public/brand/logo-lockup.png   — mark + wordmark BAKED side by side
+ *                                    (2092x306; regenerate from the two
+ *                                    files above after any swap)
  *   public/brand/logo-full.png     — mark + wordmark, stacked
- *   public/brand/logo-wordmark.png — the wordmark alone (current: 1219x206)
+ *   public/brand/logo-wordmark.png — the wordmark alone (current: 1219x65)
  *
  * …then bump BRAND_VERSION below (cache-busting) — nothing else needs
  * touching. The icon/favicons derive from the SAME folder:
@@ -23,14 +26,17 @@ import { cn } from '@/lib/utils';
 
 export const BRAND = {
   mark: '/brand/logo-mark.png',
+  lockup: '/brand/logo-lockup.png',
   full: '/brand/logo-full.png',
   wordmark: '/brand/logo-wordmark.png',
   markWidth: 333,
   markHeight: 306,
+  lockupWidth: 2092,
+  lockupHeight: 306,
   wordmarkWidth: 1219,
-  wordmarkHeight: 206,
+  wordmarkHeight: 65,
   /** appended to every brand URL (?v=N) — bump to bust caches after a swap */
-  version: '2',
+  version: '3',
 } as const;
 
 /** The mark alone (scales by height in px). */
@@ -57,29 +63,20 @@ export function BrandMark({
 }
 
 /**
- * Horizontal lockup. The wordmark TUCKS into the mark's box (the A-frame
- * slants right, so its top-right corner is empty) and sits slightly low to
- * meet the mark's visual mass. Factors are relative to `height`, derived
- * from the 52px nav lockup: word 0.88x, tuck -0.21x, drop +0.10x.
+ * Horizontal lockup: ONE pre-composed PNG (mark + wordmark baked together
+ * with pixel-measured spacing — big text seated at the mark's base, snug
+ * off the handshake arm). A single image means no CSS gap can appear.
  */
-export function BrandLogo({ height = 32, className }: { height?: number; className?: string }) {
-  const wordHeight = Math.round(height * 0.88);
+export function BrandLogo({ height = 40, className }: { height?: number; className?: string }) {
   return (
-    <span className={cn('inline-flex items-center', className)}>
-      <BrandMark size={height} />
-      <Image
-        src={`${BRAND.wordmark}?v=${BRAND.version}`}
-        alt=""
-        width={Math.round((wordHeight * BRAND.wordmarkWidth) / BRAND.wordmarkHeight)}
-        height={wordHeight}
-        className="h-auto w-auto"
-        style={{
-          height: wordHeight,
-          width: 'auto',
-          marginLeft: -Math.round(height * 0.21),
-          transform: `translateY(${Math.round(height * 0.1)}px)`,
-        }}
-      />
-    </span>
+    <Image
+      src={`${BRAND.lockup}?v=${BRAND.version}`}
+      alt="Apex-Work"
+      width={Math.round((height * BRAND.lockupWidth) / BRAND.lockupHeight)}
+      height={height}
+      priority
+      className={cn('h-auto w-auto', className)}
+      style={{ height, width: 'auto' }}
+    />
   );
 }

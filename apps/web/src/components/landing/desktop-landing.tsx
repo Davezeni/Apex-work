@@ -133,10 +133,10 @@ export function DesktopLanding() {
   return (
     <div className="mesh-bg min-h-screen">
       {/* Navigation */}
-      <nav className="sticky top-4 z-50 mx-auto mt-3 max-w-[1240px] px-4">
-        <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-2 shadow-lg backdrop-blur-xl backdrop-saturate-150">
+      <nav className="sticky top-3 z-50 mx-auto mt-2 max-w-[1240px] px-4">
+        <div className="flex items-center gap-6 rounded-full border border-border bg-background/60 px-5 py-1.5 shadow-lg backdrop-blur-xl backdrop-saturate-150">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            <BrandLogo height={52} />
+            <BrandLogo height={40} />
           </Link>
           <div className="ml-auto hidden gap-1 md:flex">
             {navLinks.map((link) => (
