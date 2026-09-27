@@ -465,8 +465,8 @@ export default function PostGigPage() {
                         className="object-cover"
                       />
                     ) : (
-                      <div className="grid h-full w-full place-items-center text-4xl">
-                        {activeCat?.icon ?? '✨'}
+                      <div className="grid h-full w-full place-items-center">
+                        <CategoryIcon id={activeCat?.id} className="h-10 w-10 text-foreground/70" />
                       </div>
                     )}
                   </div>
