@@ -5,7 +5,18 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Search, Moon, Sun, Menu, X, ArrowRight, Star, MapPin, CheckCircle2 } from 'lucide-react';
+import {
+  Search,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  ArrowRight,
+  Star,
+  MapPin,
+  CheckCircle2,
+  Heart,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { useHomeConfig, type HomeConfig } from '@/hooks/use-home-config';
@@ -401,7 +412,9 @@ export function DesktopLanding() {
         <div className="border-t border-border pt-8">
           <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BrandMark size={24} />© 2026 {APP_NAME} · Made with 🇪🇹 in Addis Ababa
+              <BrandMark size={24} />© 2026 {APP_NAME} · Made with{' '}
+              <Heart className="inline h-3.5 w-3.5 fill-red-500 align-[-2px] text-red-500" /> in
+              Addis Ababa
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <Link className="hover:text-foreground" href="/about">
