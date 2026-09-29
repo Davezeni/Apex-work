@@ -4,6 +4,7 @@ import { ForbiddenError, NotFoundError } from '../lib/errors.js';
 const jobSelect = {
   id: true,
   title: true,
+  categoryId: true,
   budgetMinEtb: true,
   budgetMaxEtb: true,
   isRemote: true,

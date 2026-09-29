@@ -18,23 +18,43 @@ import type { Prisma } from '@prisma/client';
 
 export interface GlobalSearchResult {
   gigs: {
-    id: string; slug: string; title: string; coverImageUrl: string | null;
-    startingPriceEtb: number; rating: number; ratingCount: number;
+    id: string;
+    slug: string;
+    title: string;
+    coverImageUrl: string | null;
+    categoryId: string;
+    startingPriceEtb: number;
+    rating: number;
+    ratingCount: number;
     owner: { username: string; fullName: string; avatarUrl: string | null };
   }[];
   jobs: {
-    id: string; title: string; budgetMinEtb: number | null; budgetMaxEtb: number | null;
-    isRemote: boolean; createdAt: string;
+    id: string;
+    title: string;
+    budgetMinEtb: number | null;
+    budgetMaxEtb: number | null;
+    isRemote: boolean;
+    createdAt: string;
     client: { username: string; fullName: string };
   }[];
   users: {
-    id: string; username: string; fullName: string; avatarUrl: string | null;
-    title: string | null; city: string | null; rating: number; ratingCount: number;
+    id: string;
+    username: string;
+    fullName: string;
+    avatarUrl: string | null;
+    title: string | null;
+    city: string | null;
+    rating: number;
+    ratingCount: number;
     isVerified?: boolean;
   }[];
 }
 
-const clean = (q: string) => q.trim().replace(/[%_\\]/g, '').slice(0, 100);
+const clean = (q: string) =>
+  q
+    .trim()
+    .replace(/[%_\\]/g, '')
+    .slice(0, 100);
 
 /** All three lists at once — used by /search and the top-bar quick suggest. */
 export async function globalSearch(rawQ: string, limit = 5): Promise<GlobalSearchResult> {
@@ -44,7 +64,7 @@ export async function globalSearch(rawQ: string, limit = 5): Promise<GlobalSearc
 
   // Gigs — order by trigram similarity, tie-break on rating
   const gigs = await prisma.$queryRaw<GlobalSearchResult['gigs']>`
-    SELECT g."id", g."slug", g."title", g."coverImageUrl",
+    SELECT g."id", g."slug", g."title", g."coverImageUrl", g."categoryId",
            g."startingPriceEtb", g."rating", g."ratingCount",
            jsonb_build_object(
              'username', u."username",
@@ -87,7 +107,10 @@ export async function globalSearch(rawQ: string, limit = 5): Promise<GlobalSearc
 }
 
 /** Autocomplete suggestion — lightweight typeahead for the search bar. */
-export async function suggest(rawQ: string, limit = 8): Promise<{ items: { text: string; type: 'gig' | 'job' | 'skill' | 'user'; ref?: string }[] }> {
+export async function suggest(
+  rawQ: string,
+  limit = 8,
+): Promise<{ items: { text: string; type: 'gig' | 'job' | 'skill' | 'user'; ref?: string }[] }> {
   const q = clean(rawQ);
   if (!q || q.length < 2) return { items: [] };
   const like = `%${q}%`;
