@@ -15,16 +15,22 @@ interface GigMeta {
 }
 
 async function fetchGig(slug: string): Promise<GigMeta | null> {
-  try {
-    const res = await fetch(`${API_URL}/v1/gigs/${encodeURIComponent(slug)}`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return null;
-    const json = (await res.json()) as { ok?: boolean; data?: GigMeta };
-    return json.data ?? null;
-  } catch {
-    return null;
+  // Render's free tier sleeps: fail fast and retry once so a cold API
+  // (30s+ wake-up) doesn't hang the render. Degrades to default metadata.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${API_URL}/v1/gigs/${encodeURIComponent(slug)}`, {
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(attempt === 0 ? 5_000 : 12_000),
+      });
+      if (!res.ok) return null;
+      const json = (await res.json()) as { ok?: boolean; data?: GigMeta };
+      return json.data ?? null;
+    } catch {
+      if (attempt === 1) return null;
+    }
   }
+  return null;
 }
 
 export async function generateMetadata({
