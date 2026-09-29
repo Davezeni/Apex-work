@@ -3,19 +3,20 @@
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
 import { BrandMark } from '@/components/brand/brand-logo';
-import { Button } from '@/components/ui/button';
 import { dt } from '@/i18n/auto';
 import { useAuthStore } from '@/stores/auth-store';
 
 /**
- * Mobile boarding moment: shown after a successful login ("Welcome back")
- * or first entry after signup ("Welcome to Apex-Work") instead of dropping
- * straight onto the feed. Desktop skips it (auto-continues) — this is a
- * mobile-only screen per product decision. The silent authenticated
- * redirect on /login deliberately does NOT route through here.
+ * Mobile boarding splash: the mark and a warm greeting animate in, hold a
+ * beat, then glide on to the feed/workspace — no tap required. Shown after
+ * login (mode=back) or a fresh client signup (mode=new). Desktop skips it
+ * (auto-continues) — mobile-only surface per product decision. The silent
+ * authenticated redirect on /login deliberately does NOT route through here.
  */
+const HOLD_MS = 2800;
+const EASE = [0.22, 1, 0.36, 1] as const;
+
 export default function WelcomePage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -33,36 +34,34 @@ export default function WelcomePage() {
     // Desktop: not a mobile-mode surface — continue immediately.
     if (window.matchMedia('(min-width: 768px)').matches) {
       router.replace(target);
+      return;
     }
+    const t = setTimeout(() => router.replace(target), HOLD_MS);
+    return () => clearTimeout(t);
   }, [accessToken, router, target]);
 
-  const heading = mode === 'new' ? dt('Welcome to Apex-Work') : dt('Welcome back');
-  const sub =
-    mode === 'new'
-      ? dt('Your account is ready. Explore services or post your first job.')
-      : dt('Good to see you again. Your workspace is ready.');
-
   return (
-    <main className="safe-top flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center">
+    <motion.main
+      className="safe-top flex min-h-dvh flex-col items-center justify-center bg-background px-6 text-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: [0, 1, 1, 0] }}
+      transition={{ duration: HOLD_MS / 1000, times: [0, 0.12, 0.86, 1], ease: 'easeInOut' }}
+    >
       <motion.div
+        initial={{ opacity: 0, scale: 0.84, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: EASE }}
+      >
+        <BrandMark size={92} />
+      </motion.div>
+      <motion.h1
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="flex flex-col items-center"
+        transition={{ duration: 0.7, delay: 0.28, ease: EASE }}
+        className="mt-9 text-3xl font-extrabold tracking-tight"
       >
-        <BrandMark size={84} />
-        <h1 className="mt-8 text-3xl font-extrabold tracking-tight">{heading}</h1>
-        <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">{sub}</p>
-        <Button
-          variant="brand"
-          size="lg"
-          className="mt-10 w-full max-w-xs"
-          onClick={() => router.replace(target)}
-        >
-          {dt('Continue')}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </motion.div>
-    </main>
+        {mode === 'new' ? dt('Welcome to Apex-Work') : dt('Welcome back')}
+      </motion.h1>
+    </motion.main>
   );
 }
