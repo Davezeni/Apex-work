@@ -36,12 +36,19 @@ export async function generateMetadata({
   const gig = await fetchGig(slug);
   if (!gig) return { title: 'Gig' };
   const image = gig.coverImageUrl ?? `/demo/${gig.categoryId}.webp`;
+  // descriptions are rich-text HTML — strip tags for a clean preview line
+  const blurb = gig.description
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&\w+;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 160);
   return {
     title: gig.title,
-    description: gig.description.slice(0, 160),
+    description: blurb,
     openGraph: {
       title: gig.title,
-      description: gig.description.slice(0, 160),
+      description: blurb,
       images: [{ url: image }],
       type: 'website',
     },
