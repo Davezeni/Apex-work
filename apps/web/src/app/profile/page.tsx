@@ -290,7 +290,7 @@ export default function ProfilePage() {
               )
             }
             title={logout.isPending ? t('common.signingOut') : t('common.signOut')}
-            onClick={() => !logout.isPending && logout.mutate(false)}
+            onClick={() => !logout.isPending && logout.mutate(true)}
             destructive
             disabled={logout.isPending}
           />

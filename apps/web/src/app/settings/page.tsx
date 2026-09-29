@@ -153,7 +153,7 @@ export default function SettingsPage() {
 
       <div className="mx-3 mt-6">
         <button
-          onClick={() => !logout.isPending && logout.mutate(false)}
+          onClick={() => !logout.isPending && logout.mutate(true)}
           className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-semibold text-red-500 active:scale-95"
         >
           <LogOut className="h-4 w-4" />

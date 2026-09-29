@@ -83,8 +83,12 @@ function LoginInner() {
   // Already signed in (e.g. back-navigation landed on /login)? Redirect
   // silently — never re-run the trusted-device flow, which toasts
   // 'Welcome back' and made back buttons feel broken.
+  // ONLY for sessions that existed at mount: a login completing right now
+  // (OTP/PIN/auto) must keep its router.push to the /welcome boarding
+  // splash instead of being replaced straight to the feed.
+  const authedOnMount = useRef(!!accessToken);
   useEffect(() => {
-    if (accessToken) router.replace(next);
+    if (accessToken && authedOnMount.current) router.replace(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
 
