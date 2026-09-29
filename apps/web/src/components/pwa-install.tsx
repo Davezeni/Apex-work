@@ -73,7 +73,7 @@ export function PwaInstall() {
     <div
       role="dialog"
       aria-label={dt('Install Apex-Work')}
-      className="safe-bottom fixed inset-x-3 bottom-24 z-50 animate-fade-up rounded-2xl border border-border bg-card p-4 shadow-lg md:inset-x-auto md:bottom-6 md:right-6 md:max-w-sm"
+      className="fixed inset-x-3 bottom-24 z-50 pb-[max(1rem,env(safe-area-inset-bottom))] animate-fade-up rounded-2xl border border-border bg-card p-4 shadow-lg md:inset-x-auto md:bottom-6 md:right-6 md:max-w-sm"
     >
       <button
         onClick={dismiss}

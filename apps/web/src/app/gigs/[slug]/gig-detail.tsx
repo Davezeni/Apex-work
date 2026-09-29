@@ -620,7 +620,7 @@ export function GigDetail() {
       <div className="h-24" />
 
       {/* Sticky bottom bar */}
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-8 pt-3 backdrop-blur-xl">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[max(2rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <div className="mx-auto flex max-w-md items-center gap-2">
           {canMessage && (
             <Button

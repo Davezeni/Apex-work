@@ -393,7 +393,7 @@ export default function NewJobPage() {
         </div>
       </main>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-4 pt-3 backdrop-blur-xl md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden">
         <Button
           variant="brand"
           size="lg"

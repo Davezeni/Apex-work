@@ -452,7 +452,7 @@ export function CallPanel({ conversationId, mode, onEnd }: Props) {
       )}
 
       {/* Controls */}
-      <div className="safe-bottom absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-6">
+      <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <button
           onClick={toggleMute}
           aria-label={muted ? 'Unmute' : 'Mute'}
