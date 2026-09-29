@@ -330,15 +330,12 @@ function CategoryChip({
 }
 
 function GigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
-  // Two layouts:
-  //   - IMAGE cover  → traditional hero (200px image, avatar row below)
-  //   - NO cover     → compact card, no giant gradient block. Avatar +
-  //     freelancer info sit on the top row, title + price below.
-  if (!g.coverImageUrl) return <NoCoverGigCard g={g} saved={saved} />;
+  // One layout for every card: full-width banner image on top (the gig's own
+  // cover, or the category demo photo when it has none), body below.
   return <ImageGigCard g={g} saved={saved} />;
 }
 
-/** Card variant used when the gig has a real image. */
+/** Feed card: banner image (real cover ?? category demo art) + body. */
 function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
   return (
     <Link
@@ -346,7 +343,13 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
       className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
     >
       <div className="relative aspect-[16/9] w-full bg-muted">
-        <Image src={g.coverImageUrl!} alt={g.title} fill sizes="400px" className="object-cover" />
+        <Image
+          src={g.coverImageUrl ?? `/demo/${g.categoryId}.webp`}
+          alt={g.title}
+          fill
+          sizes="400px"
+          className="object-cover"
+        />
         {g.isFeatured ? (
           <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-bold text-black shadow">
             <Zap className="h-3.5 w-3.5" />
@@ -361,66 +364,6 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
         <HomeSaveButton slug={g.slug} saved={saved} />
       </div>
       <CardBody g={g} />
-    </Link>
-  );
-}
-
-/** Compact card variant used when the gig has no cover image. No hero. */
-function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
-  return (
-    <Link
-      href={`/gigs/${g.slug}`}
-      className="block overflow-hidden rounded-2xl border border-border bg-card transition-transform active:scale-[.98]"
-    >
-      <div className="flex items-start gap-3 p-3">
-        <div
-          className={cn(
-            'grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br text-base font-bold text-white',
-            gradientFor(g.owner.id),
-          )}
-        >
-          {g.owner.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={g.owner.avatarUrl}
-              alt={g.owner.fullName}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            initialsOf(g.owner.fullName)
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-sm font-bold">{g.owner.fullName}</h3>
-            {g.owner.isVerified && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-cyan-400" />}
-            {g.isFeatured && (
-              <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
-                <Zap className="h-3 w-3" />
-                Featured
-              </span>
-            )}
-            {!g.isFeatured && g.rating >= 4.8 && g.ratingCount >= 10 && (
-              <span className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-500">
-                <Flame className="h-3 w-3" />
-                Top Rated
-              </span>
-            )}
-          </div>
-          <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
-        </div>
-        <div className="relative ml-auto h-14 w-14 shrink-0 overflow-hidden rounded-xl">
-          <Image
-            src={`/demo/${g.categoryId}.webp`}
-            alt=""
-            fill
-            sizes="56px"
-            className="object-cover"
-          />
-        </div>
-        <HomeSaveButton slug={g.slug} saved={saved} compact />
-      </div>
-      <CardBody g={g} noTopPadding />
     </Link>
   );
 }
