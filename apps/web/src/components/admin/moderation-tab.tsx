@@ -328,7 +328,10 @@ function GigsModeration() {
           </thead>
           <tbody>
             {items.map((g) => (
-              <tr key={g.id} className="border-b border-border/50">
+              <tr
+                key={g.id}
+                className={cn('border-b border-border/50', g.status === 'ARCHIVED' && 'opacity-60')}
+              >
                 <Td className="max-w-[240px]">
                   <div className="truncate font-bold">{g.title}</div>
                   <div className="text-[11px] text-muted-foreground">@{g.owner?.username}</div>
@@ -360,6 +363,34 @@ function GigsModeration() {
                         onClick={() => act.mutate({ id: g.id, body: { status: 'ACTIVE' } })}
                       >
                         {dt('Activate')}
+                      </Button>
+                    )}
+                    {g.status !== 'ARCHIVED' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={act.isPending}
+                        onClick={() => {
+                          if (
+                            !window.confirm(
+                              'Remove this gig? It disappears from the entire platform (listings, search and its public page). You can restore it here later.',
+                            )
+                          )
+                            return;
+                          act.mutate({ id: g.id, body: { status: 'ARCHIVED' } });
+                        }}
+                      >
+                        {dt('Remove')}
+                      </Button>
+                    )}
+                    {g.status === 'ARCHIVED' && (
+                      <Button
+                        size="sm"
+                        variant="brand"
+                        disabled={act.isPending}
+                        onClick={() => act.mutate({ id: g.id, body: { status: 'ACTIVE' } })}
+                      >
+                        {dt('Restore')}
                       </Button>
                     )}
                     <Button
