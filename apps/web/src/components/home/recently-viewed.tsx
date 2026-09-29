@@ -59,6 +59,14 @@ export function RecentlyViewedRow({ dense = false }: { dense?: boolean }) {
                   unoptimized
                   className="object-cover transition-transform group-hover:scale-105"
                 />
+              ) : g.categoryId ? (
+                <Image
+                  src={`/demo/${g.categoryId}.webp`}
+                  alt=""
+                  fill
+                  unoptimized
+                  className="object-cover transition-transform group-hover:scale-105"
+                />
               ) : (
                 <div className="grid h-full w-full place-items-center text-2xl">
                   {g.title.slice(0, 1)}

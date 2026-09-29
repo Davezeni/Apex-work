@@ -92,6 +92,7 @@ export function GigDetail() {
       trackRecentlyViewed({
         slug,
         title: gig.title,
+        categoryId: gig.categoryId,
         coverImageUrl: gig.coverImageUrl,
         startingPriceEtb: gig.startingPriceEtb,
         ownerUsername: gig.owner.username,

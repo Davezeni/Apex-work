@@ -8,6 +8,7 @@ const MAX = 8;
 export interface RecentlyViewedGig {
   slug: string;
   title: string;
+  categoryId?: string;
   coverImageUrl?: string | null;
   startingPriceEtb: number;
   ownerUsername?: string | null;

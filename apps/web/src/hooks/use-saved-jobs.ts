@@ -10,6 +10,7 @@ export interface SavedJob {
   job: {
     id: string;
     title: string;
+    categoryId: string;
     budgetMinEtb: number | null;
     budgetMaxEtb: number | null;
     isRemote: boolean;

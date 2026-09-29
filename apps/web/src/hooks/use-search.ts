@@ -9,6 +9,7 @@ export interface SearchResults {
     slug: string;
     title: string;
     coverImageUrl: string | null;
+    categoryId: string;
     startingPriceEtb: number;
     rating: number;
     ratingCount: number;

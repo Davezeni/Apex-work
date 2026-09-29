@@ -256,15 +256,13 @@ export default function SearchPage() {
                       className="rounded-2xl border border-border bg-card p-2"
                     >
                       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-                        {g.coverImageUrl && (
-                          <Image
-                            src={g.coverImageUrl}
-                            alt={g.title}
-                            fill
-                            unoptimized
-                            className="object-cover"
-                          />
-                        )}
+                        <Image
+                          src={g.coverImageUrl ?? `/demo/${g.categoryId}.webp`}
+                          alt={g.title}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
                       <div className="mt-2 line-clamp-2 text-xs font-semibold">{g.title}</div>
                       <div className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">

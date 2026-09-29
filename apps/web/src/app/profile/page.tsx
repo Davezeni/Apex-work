@@ -359,9 +359,13 @@ function ProfileSavedJobs() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="grid h-full place-items-center text-lg font-extrabold text-primary">
-                      {item.job.title.slice(0, 1).toUpperCase()}
-                    </div>
+                    <Image
+                      src={`/demo/${item.job.categoryId}.webp`}
+                      alt=""
+                      fill
+                      sizes="120px"
+                      className="object-cover"
+                    />
                   )}
                 </div>
                 <div className="p-1.5">
@@ -427,9 +431,13 @@ function ProfileSavedGigs({ saved, isLoading }: { saved: SavedGig[]; isLoading: 
                     className="object-cover"
                   />
                 ) : (
-                  <div className="grid h-full place-items-center text-lg font-extrabold text-primary">
-                    {item.gig.title.slice(0, 1).toUpperCase()}
-                  </div>
+                  <Image
+                    src={`/demo/${item.gig.categoryId}.webp`}
+                    alt=""
+                    fill
+                    sizes="120px"
+                    className="object-cover"
+                  />
                 )}
               </div>
               <div className="truncate px-2 py-2 text-[10px] font-semibold">{item.gig.title}</div>

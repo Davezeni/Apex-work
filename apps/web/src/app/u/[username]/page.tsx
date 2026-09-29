@@ -634,11 +634,17 @@ function GigMiniCard({ g, owner }: { g: PublicUser['gigs'][number]; owner: Publi
     >
       <div
         className={cn(
-          'grid h-20 w-20 shrink-0 place-items-center rounded-xl bg-gradient-to-br text-white',
+          'relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br text-white',
           gradientFor(g.id),
         )}
       >
-        <Package className="h-6 w-6" />
+        <Image
+          src={g.coverImageUrl ?? `/demo/${g.categoryId}.webp`}
+          alt=""
+          fill
+          sizes="80px"
+          className="object-cover"
+        />
       </div>
       <div className="min-w-0 flex-1">
         <div className="line-clamp-2 text-sm font-semibold leading-tight">{g.title}</div>
