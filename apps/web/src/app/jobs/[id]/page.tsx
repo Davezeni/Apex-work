@@ -413,7 +413,7 @@ export default function JobDetailPage() {
 
       {/* Sticky action */}
       {isOwner && job.isOpen ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
           <Button
             variant="outline"
             size="lg"
@@ -428,7 +428,7 @@ export default function JobDetailPage() {
           </Button>
         </div>
       ) : !isOwner && job.isOpen && isFreelancer ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
           <div className="flex gap-2">
             <Button asChild variant="outline" size="lg" className="shrink-0">
               <Link href={`/ai/proposal?job=${job.id}`}>
@@ -450,7 +450,7 @@ export default function JobDetailPage() {
           </div>
         </div>
       ) : !me?.id ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl">
           <Button asChild variant="brand" size="lg" className="w-full">
             <Link href={`/login?next=/jobs/${job.id}`}>{t('jobs.signInToBid')}</Link>
           </Button>

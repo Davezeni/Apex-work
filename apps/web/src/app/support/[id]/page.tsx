@@ -117,7 +117,7 @@ export default function TicketPage() {
       </div>
 
       {!closed && (
-        <div className="sticky bottom-0 border-t border-border bg-background/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
+        <div className="sticky bottom-0 border-t border-border bg-background/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
           <div className="mx-auto flex max-w-md items-end gap-2">
             <textarea
               value={text}
