@@ -181,7 +181,6 @@ export const AUTO_DICT: Record<string, string> = {
   Code: 'ኮድ',
   'Collaborate on larger projects': 'በትላልቅ ፕሮጀክቶች ላይ ተባበሩ',
   'Command palette': 'የትዕዛዝ ፓሌት',
-  'Continue': 'ቀጥል',
   Comment: 'አስተያየት',
   Company: 'ኩባንያ',
   'Company *': 'ኩባንያ *',
@@ -265,7 +264,8 @@ export const AUTO_DICT: Record<string, string> = {
     'ካሜራው አይሰራም — በድምጽ ብቻ መቀጠል እንችላለን።',
   Answer: 'መልስ',
   'Your data, your rules': 'ዳታዎ የእርስዎ ነው',
-  'Your account is ready. Explore services or post your first job.': 'መለያዎ ዝግጁ ነው። አገልግሎቶችን ይመልከቱ ወይም የመጀመሪያዎን ስራ ይለጥፉ።',
+  'Your account is ready. Explore services or post your first job.':
+    'መለያዎ ዝግጁ ነው። አገልግሎቶችን ይመልከቱ ወይም የመጀመሪያዎን ስራ ይለጥፉ።',
   'The simple rules that keep ApexWork fair for everyone.': 'ApexWorkን ለሁሉም ፍትሃዊ የሚያደርጉ ቀላል ህጎች።',
   'The tiny files that keep you signed in — and nothing sneaky.':
     'ወደ መለያዎ እንዲቀሩ የሚያግዙ ትንንሽ ፋይሎች ብቻ።',
