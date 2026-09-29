@@ -69,6 +69,13 @@ function LoginInner() {
 
   const finishLogin = (result: AuthResponse, phoneJustUsed: string) => {
     setSession(result.tokens, phoneJustUsed);
+    // Mobile gets the boarding moment (welcome-back screen) instead of a
+    // cold drop onto the feed; desktop continues straight to the target.
+    const mobile = window.matchMedia('(max-width: 767px)').matches;
+    if (mobile) {
+      router.push(`/welcome?mode=back&next=${encodeURIComponent(next)}`);
+      return;
+    }
     toast.success(t('loginSmart.welcomeBack'));
     router.push(next);
   };

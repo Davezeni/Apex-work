@@ -94,7 +94,13 @@ function PinSetupInner() {
     try {
       await setPinMutation.mutateAsync(finalPin);
       toast.success(t('pin.saved'));
-      router.push(returnTo);
+      // Fresh signups landing on the feed get the mobile welcome moment;
+      // deep links and the freelancer onboarding route go straight there.
+      const target =
+        returnTo === '/' && window.matchMedia('(max-width: 767px)').matches
+          ? '/welcome?mode=new&next=%2F'
+          : returnTo;
+      router.push(target);
     } catch (err) {
       const e = err as { message?: string };
       toast.error(e.message ?? t('pin.saveFailed'));
