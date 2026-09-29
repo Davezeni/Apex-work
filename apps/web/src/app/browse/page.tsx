@@ -465,8 +465,16 @@ function BrowseCard({ g }: { g: GigListItem }) {
             gradientFor(g.id),
           )}
         >
-          {g.coverImageUrl && (
+          {g.coverImageUrl ? (
             <Image src={g.coverImageUrl} alt={g.title} fill sizes="80px" className="object-cover" />
+          ) : (
+            <Image
+              src={`/demo/${g.categoryId}.webp`}
+              alt=""
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -535,13 +543,13 @@ function GridCard({ g }: { g: GigListItem }) {
               className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
             />
           ) : (
-            <>
-              <div className="absolute -right-6 -top-10 h-32 w-32 rounded-full border-[10px] border-white/10" />
-              <div className="absolute -bottom-12 -left-8 h-36 w-36 rounded-full border-[14px] border-white/10" />
-              <span className="absolute inset-0 grid place-items-center text-foreground/70 transition-transform duration-500 group-hover:scale-110">
-                <CategoryIcon id={g.categoryId} className="h-12 w-12" />
-              </span>
-            </>
+            <Image
+              src={`/demo/${g.categoryId}.webp`}
+              alt=""
+              fill
+              sizes="300px"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+            />
           )}
           {/* subtle cover shimmer on hover */}
           <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />

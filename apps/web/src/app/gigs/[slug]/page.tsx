@@ -260,11 +260,11 @@ export default function GigDetailPage() {
           B) Without cover image → tight sticky header with no gradient,
              then the card renders inline. Prevents the 'half covered' look.
       */}
-      {gig.coverImageUrl ? (
+      {gig.coverImageUrl || gig.categoryId ? (
         <>
           <div className={cn('relative h-80 bg-gradient-to-br sm:h-[28rem]', gradientFor(gig.id))}>
             <Image
-              src={gig.coverImageUrl}
+              src={gig.coverImageUrl ?? `/demo/${gig.categoryId}.webp`}
               alt={gig.title}
               fill
               priority

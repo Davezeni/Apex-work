@@ -208,11 +208,15 @@ function JobCard({ job, isMe }: { job: JobSummary; isMe: boolean }) {
       className="relative block rounded-2xl border border-border bg-card p-4 transition-colors active:bg-muted"
     >
       <SaveJobBookmark jobId={job.id} isMe={isMe} />
-      {cover && (
-        <div className="relative mb-3 h-36 w-full overflow-hidden rounded-xl bg-muted">
-          <Image src={cover} alt={job.title} fill sizes="400px" className="object-cover" />
-        </div>
-      )}
+      <div className="relative mb-3 h-36 w-full overflow-hidden rounded-xl bg-muted">
+        <Image
+          src={cover ?? `/demo/${job.categoryId}.webp`}
+          alt={job.title}
+          fill
+          sizes="400px"
+          className="object-cover"
+        />
+      </div>
       <div className="flex items-start gap-3">
         {job.client.avatarUrl ? (
           <Image

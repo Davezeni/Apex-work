@@ -152,11 +152,13 @@ function SavedGigCard({
               className="object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-background/70 text-xl font-extrabold text-primary backdrop-blur">
-                {gig.title.slice(0, 1).toUpperCase()}
-              </div>
-            </div>
+            <Image
+              src={`/demo/${gig.categoryId}.webp`}
+              alt=""
+              fill
+              sizes="(max-width: 640px) 100vw, 50vw"
+              className="object-cover"
+            />
           )}
           {unavailable && (
             <span className="absolute left-2 top-2 rounded-full bg-black/65 px-2.5 py-1 text-[10px] font-bold text-white">

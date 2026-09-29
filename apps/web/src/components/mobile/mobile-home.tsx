@@ -409,6 +409,15 @@ function NoCoverGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
           </div>
           <p className="truncate text-[11px] text-muted-foreground">@{g.owner.username}</p>
         </div>
+        <div className="relative ml-auto h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+          <Image
+            src={`/demo/${g.categoryId}.webp`}
+            alt=""
+            fill
+            sizes="56px"
+            className="object-cover"
+          />
+        </div>
         <HomeSaveButton slug={g.slug} saved={saved} compact />
       </div>
       <CardBody g={g} noTopPadding />
