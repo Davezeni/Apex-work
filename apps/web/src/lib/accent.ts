@@ -25,11 +25,17 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { name: 'Teal', hex: '#0d9488' },
   { name: 'Violet', hex: '#7c3aed' },
   { name: 'Blue', hex: '#2563eb' },
+  { name: 'Indigo', hex: '#4f46e5' },
   { name: 'Emerald', hex: '#059669' },
+  { name: 'Cyan', hex: '#0891b2' },
   { name: 'Amber', hex: '#d97706' },
+  { name: 'Yellow', hex: '#eab308' },
   { name: 'Orange', hex: '#ea580c' },
   { name: 'Rose', hex: '#e11d48' },
   { name: 'Pink', hex: '#db2777' },
+  { name: 'Purple', hex: '#9333ea' },
+  { name: 'Slate', hex: '#475569' },
+  { name: 'Black', hex: '#171717' },
 ];
 
 export const DEFAULT_ACCENT = ACCENT_PRESETS[0]?.hex ?? '#0d9488';

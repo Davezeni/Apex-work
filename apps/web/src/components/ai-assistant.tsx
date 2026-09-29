@@ -98,6 +98,7 @@ export function AIAssistant() {
     pathname.startsWith('/admin') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
+    pathname.startsWith('/welcome') ||
     pathname.startsWith('/resume/preview');
 
   useEffect(() => {
