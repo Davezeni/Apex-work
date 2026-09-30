@@ -36,7 +36,7 @@ export const BRAND = {
   wordmarkWidth: 582,
   wordmarkHeight: 65,
   /** appended to every brand URL (?v=N) — bump to bust caches after a swap */
-  version: '10',
+  version: '11',
 } as const;
 
 /** The mark alone (scales by height in px). */
