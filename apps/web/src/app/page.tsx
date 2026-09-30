@@ -1,7 +1,6 @@
 import { DesktopLanding } from '@/components/landing/desktop-landing';
 import { MobileHome } from '@/components/mobile/mobile-home';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-import { MobileOnly } from '@/components/mobile/mobile-only';
 import { AuthHomeGate } from '@/components/auth-home-gate';
 import type { GigListItem } from '@/hooks/use-gigs';
 
@@ -59,16 +58,15 @@ export default async function HomePage() {
       <div className="max-md:hidden">
         <DesktopLanding />
       </div>
-      {/* Mobile in-app home — hydration-gated (keeps desktop visits from
-          firing feed queries and avoids a double first paint), but now
-          seeded with server-fetched data so cards render in the HTML. */}
-      <MobileOnly>
-        <div className="md:hidden">
-          <MobileShell activeTab="home">
-            <MobileHome initialItems={initialFeed} />
-          </MobileShell>
-        </div>
-      </MobileOnly>
+      {/* Mobile in-app home — present in the server HTML so feed cards
+          (the mobile LCP) are discoverable immediately. CSS-gated only:
+          on desktop it's display:none, and its non-priority images are
+          lazy-loaded, so desktop never fetches the feed. */}
+      <div className="md:hidden">
+        <MobileShell activeTab="home">
+          <MobileHome initialItems={initialFeed} />
+        </MobileShell>
+      </div>
     </>
   );
 }
