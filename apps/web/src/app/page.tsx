@@ -1,50 +1,34 @@
-'use client';
-
-import { useIsMobile } from '@/hooks/use-media-query';
 import { DesktopLanding } from '@/components/landing/desktop-landing';
 import { MobileHome } from '@/components/mobile/mobile-home';
 import { MobileShell } from '@/components/mobile/mobile-shell';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/auth-store';
-import { useEffect, useState } from 'react';
+import { MobileOnly } from '@/components/mobile/mobile-only';
+import { AuthHomeGate } from '@/components/auth-home-gate';
 
+/**
+ * Server-rendered home: BOTH home variants are present in the server HTML,
+ * switched purely with CSS — the marketing landing on md+, the feed on
+ * phones. This is what makes the hero (the LCP element) paint from the
+ * server HTML instead of waiting for client JS to decide which variant to
+ * mount. Signed-in desktop users are redirected by the tiny client island
+ * in <AuthHomeGate />, exactly as before.
+ */
 export default function HomePage() {
-  const isMobile = useIsMobile();
-  const router = useRouter();
-  // Subscribe to the token so this re-renders the moment login/refresh lands.
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  // Avoid hydration flicker: render skeleton until mounted
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="h-16" />
+  return (
+    <>
+      <AuthHomeGate />
+      {/* Desktop marketing landing — the server-rendered first paint. */}
+      <div className="max-md:hidden">
+        <DesktopLanding />
       </div>
-    );
-  }
-
-  if (isMobile) {
-    return (
-      <MobileShell activeTab="home">
-        <MobileHome />
-      </MobileShell>
-    );
-  }
-
-  // Desktop / logged-in users must land INSIDE the app, not on the static
-  // marketing landing — otherwise signing in appears to do nothing (they get
-  // dumped back on the landing page). Route authenticated desktop users to the
-  // marketplace home.
-  if (accessToken) {
-    router.replace('/browse');
-    return (
-      <div className="grid min-h-screen place-items-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  return <DesktopLanding />;
+      {/* Mobile in-app home — hydration-gated (keeps desktop visits from
+          firing feed queries and avoids a double first paint). */}
+      <MobileOnly>
+        <div className="md:hidden">
+          <MobileShell activeTab="home">
+            <MobileHome />
+          </MobileShell>
+        </div>
+      </MobileOnly>
+    </>
+  );
 }
