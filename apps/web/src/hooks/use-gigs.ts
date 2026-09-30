@@ -53,7 +53,14 @@ export interface GigDetail extends GigListItem {
 
 /** Public gig list, cursor-paginated. */
 export function useGigs(
-  params: { category?: string; q?: string; limit?: number; cursor?: string | null } = {},
+  params: {
+    category?: string;
+    q?: string;
+    limit?: number;
+    cursor?: string | null;
+    /** Server-rendered first page — seeds the cache so cards paint from HTML. */
+    initialData?: { items: GigListItem[]; nextCursor: string | null; hasMore: boolean };
+  } = {},
 ) {
   const search = new URLSearchParams();
   if (params.category) search.set('category', params.category);
@@ -65,6 +72,10 @@ export function useGigs(
   return useQuery<{ items: GigListItem[]; nextCursor: string | null; hasMore: boolean }>({
     queryKey: ['gigs', params],
     queryFn: () => apiFetch(`/gigs${qs ? `?${qs}` : ''}`),
+    // Instantly-stale so the client refetches fresh state right after mount,
+    // while the SSR HTML (and the first paint) already carries the cards.
+    initialData: params.initialData,
+    initialDataUpdatedAt: params.initialData ? 1 : undefined,
     placeholderData: keepPreviousData,
     staleTime: 60 * 1000, // Matches API cache TTL — no wasted refetches.
     gcTime: 5 * 60 * 1000,

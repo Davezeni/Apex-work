@@ -54,7 +54,7 @@ function initialsOf(name: string): string {
   );
 }
 
-export function MobileHome() {
+export function MobileHome({ initialItems }: { initialItems?: GigListItem[] }) {
   const [activeCategory, setActiveCategory] = useState<string>('for-you');
   const { data: me } = useMe();
   const { t } = useI18n();
@@ -64,6 +64,10 @@ export function MobileHome() {
   const { data: gigsData, isLoading } = useGigs({
     category: activeCategory !== 'for-you' ? activeCategory : undefined,
     limit: 20,
+    initialData:
+      initialItems && activeCategory === 'for-you'
+        ? { items: initialItems, nextCursor: null, hasMore: true }
+        : undefined,
   });
   const recommendations = useRecommendations();
 
@@ -203,8 +207,8 @@ export function MobileHome() {
                 <p className="mt-1 text-xs text-muted-foreground">{t('home.postFirst')}</p>
               </div>
             )}
-            {gigs.map((g) => (
-              <GigCard key={g.id} g={g} saved={savedSlugs.has(g.slug)} />
+            {gigs.map((g, i) => (
+              <GigCard key={g.id} g={g} saved={savedSlugs.has(g.slug)} priority={i === 0} />
             ))}
           </div>
         </>
@@ -329,14 +333,22 @@ function CategoryChip({
   );
 }
 
-function GigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
+function GigCard({ g, saved, priority }: { g: GigListItem; saved: boolean; priority?: boolean }) {
   // One layout for every card: full-width banner image on top (the gig's own
   // cover, or the category demo photo when it has none), body below.
-  return <ImageGigCard g={g} saved={saved} />;
+  return <ImageGigCard g={g} saved={saved} priority={priority} />;
 }
 
 /** Feed card: banner image (real cover ?? category demo art) + body. */
-function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
+function ImageGigCard({
+  g,
+  saved,
+  priority,
+}: {
+  g: GigListItem;
+  saved: boolean;
+  priority?: boolean;
+}) {
   return (
     <Link
       href={`/gigs/${g.slug}`}
@@ -348,6 +360,7 @@ function ImageGigCard({ g, saved }: { g: GigListItem; saved: boolean }) {
           alt={g.title}
           fill
           sizes="400px"
+          priority={priority}
           className="object-cover"
         />
         {g.isFeatured ? (
