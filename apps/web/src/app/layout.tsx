@@ -17,6 +17,10 @@ const ethiopic = Noto_Sans_Ethiopic({
   subsets: ['ethiopic'],
   variable: '--font-ethiopic',
   display: 'swap',
+  // 193 KB variable font — do NOT preload: English/Latin visitors never
+  // render an Ethiopic glyph, so the file should only download when a
+  // localized UI actually needs it (display: swap keeps that instant-ish).
+  preload: false,
 });
 
 export const metadata: Metadata = {

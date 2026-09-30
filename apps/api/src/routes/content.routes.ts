@@ -30,6 +30,8 @@ router.get(
 router.get(
   '/home',
   asyncHandler(async (_req, res) => {
+    // Landing copy is edited rarely; let browsers/CDN hold it briefly.
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     return success(res, await getHomeConfig());
   }),
 );
